@@ -1,0 +1,79 @@
+# Kamala setup guide
+
+Use this checklist when launching the booking site for a guesthouse or homestay.
+
+## 1. Create services
+
+1. **Supabase** — create a project and copy:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (server only)
+
+2. **Stripe** — create an account (Thailand supported). Copy:
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET` (point webhook to `/api/stripe/webhook`)
+   - Enable THB in Stripe Dashboard if using Thai baht
+
+3. **Resend** — for booking and chat emails:
+   - `RESEND_API_KEY`
+   - `BOOKING_EMAIL_FROM` (verified domain)
+   - `STAFF_NOTIFICATION_EMAIL` (fallback until staff settings are saved)
+
+4. **Hosting** — deploy to Vercel (or similar) and set:
+   - `NEXT_PUBLIC_APP_URL=https://your-domain.com`
+   - `STAFF_ADMIN_USERNAME` / `STAFF_ADMIN_PASSWORD` / `STAFF_SESSION_SECRET`
+
+## 2. Run database migrations
+
+In the Supabase SQL editor, run these files in order (skip any already applied):
+
+1. `supabase/schema.sql` (fresh install) **or** run individual migrations if upgrading
+2. `supabase/migrate-guest-phone.sql`
+3. `supabase/migrate-stay-status.sql`
+4. `supabase/migrate-room-blocks.sql`
+5. `supabase/migrate-stripe-deposit.sql`
+6. `supabase/migrate-staff-emails.sql`
+7. `supabase/migrate-room-promotions.sql`
+8. `supabase/migrate-booking-chat.sql`
+9. `supabase/migrate-property-settings.sql`
+10. `supabase/migrate-room-sort-order.sql`
+11. `supabase/migrate-calendar-colors.sql`
+12. `supabase/migrate-room-gallery.sql`
+13. `supabase/migrate-room-photo-storage.sql`
+14. `supabase/migrate-property-gallery.sql`
+15. `supabase/migrate-hero-image.sql`
+
+## 3. Configure the property
+
+1. Sign in at `/staff/login`
+2. Open **Settings** — set property name, address, currency (THB), policies, LINE/WhatsApp links, and the homepage background photo
+3. Open **Rooms** — update rates, descriptions, and upload room photos
+4. Open **Gallery** — upload guesthouse photos for the public `/gallery` page
+5. Add staff notification emails in Settings
+
+## 4. Test the booking flow
+
+- [ ] Guest can book with card deposit (Stripe test mode)
+- [ ] Staff receives email and sees request on `/staff`
+- [ ] Confirm / decline works; decline refunds deposit
+- [ ] Calendar shows confirmed stays
+- [ ] Guest conversation link works after deposit
+
+## 5. Pre-launch checks
+
+- [ ] Run `npm run build` locally or in CI before deploying
+- [ ] All migrations through `migrate-room-sort-order.sql` are applied in Supabase
+- [ ] Browser tab title shows your property name from Settings (not the default "Kamala")
+- [ ] Room rates, photos, policies, and LINE/WhatsApp links are filled in under Settings and Rooms
+
+## 6. Go live
+
+- Switch Stripe to live keys
+- Verify `BOOKING_EMAIL_FROM` domain
+- Set strong staff password
+- Review legal pages: `/privacy`, `/terms`, `/cancellation`
+
+## Optional
+
+- **Inbound email replies** — configure Resend receiving + `/api/resend/inbound` (not required if guests use the private chat link only)
+- **OneDrive / Windows dev** — use `npm run dev:webpack` if Turbopack file locks occur

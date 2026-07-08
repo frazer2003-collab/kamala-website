@@ -1,0 +1,36 @@
+---
+description: Kamala design context — read PRODUCT.md and DESIGN.md before UI work
+alwaysApply: true
+---
+
+# Design Context
+
+Before designing or building UI, read the project root context files:
+
+- **PRODUCT.md** — register, users, purpose, brand personality, anti-references, strategic principles
+- **DESIGN.md** — visual system (colors, typography, elevation, components, do's/don'ts)
+
+These are the source of truth. Do not invent a parallel aesthetic; extend what they define.
+
+## Quick reference
+
+| | |
+|---|---|
+| **Register** | Brand-led product (guest booking first; staff management second) |
+| **Users** | Guests booking rooms, plus staff managing reservations from the same website |
+| **Personality** | Quiet, warm, trustworthy — hospitable, not playful or fake-luxury |
+| **North star** | *The Trusted Counter* — calm guesthouse front desk; legibility before transaction |
+| **Color** | Restrained: maroon accent ≤10%; tinted neutrals carry the room |
+| **Type** | Single warm humanist sans; one family, multiple weights |
+| **Motion** | Responsive — state transitions only; respect `prefers-reduced-motion` |
+| **Reference** | Stripe-level polish and hierarchy, translated into quiet hospitality |
+
+## Hard lines (from PRODUCT.md)
+
+- No playful/casual travel UI, generic booking-site clichés, fake luxury gold, generic SaaS dashboards, or cold enterprise chrome
+- Hospitality before hype; trust before transaction; one primary action per view
+- WCAG 2.1 AA; availability, booking status, and errors never rely on color alone
+
+## Note
+
+DESIGN.md is currently a **seed** (`<!-- SEED -->`). Token values are placeholders until implementation. Re-run `/impeccable document` in scan mode once CSS/components exist.
