@@ -97,7 +97,9 @@ export async function getStaffPropertyGalleryPhotos() {
       return [];
     }
 
-    return data.map(mapPhoto);
+    return data
+      .map(mapPhoto)
+      .filter((photo): photo is PropertyGalleryPhoto => Boolean(photo));
   } catch {
     return [];
   }
