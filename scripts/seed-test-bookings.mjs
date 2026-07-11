@@ -1,469 +1,637 @@
+/**
+ * Wipe bookings and seed realistic July–August 2026 test stays.
+ * Usage: node scripts/seed-test-bookings.mjs
+ * Loads .env.local (NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY).
+ */
 import { createClient } from "@supabase/supabase-js";
-import { randomUUID } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-function loadEnvFile(path) {
+function loadEnvLocal() {
+  const path = resolve(process.cwd(), ".env.local");
   if (!existsSync(path)) {
-    return;
+    throw new Error("Missing .env.local");
   }
-
-  for (const line of readFileSync(path, "utf8").split("\n")) {
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
     }
-
-    const separator = trimmed.indexOf("=");
-    if (separator === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, separator).trim();
-    const value = trimmed.slice(separator + 1).trim();
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
+    if (!process.env[key]) process.env[key] = value;
   }
-}
-
-loadEnvFile(resolve(process.cwd(), ".env.local"));
-loadEnvFile(resolve(process.cwd(), ".env"));
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!url || !serviceKey) {
-  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
-  process.exit(1);
-}
-
-const supabase = createClient(url, serviceKey);
-
-function addDays(iso, days) {
-  const date = new Date(`${iso}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function nightsBetween(arrival, departure) {
-  const start = new Date(`${arrival}T00:00:00`);
-  const end = new Date(`${departure}T00:00:00`);
-  return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  const a = new Date(`${arrival}T00:00:00Z`);
+  const d = new Date(`${departure}T00:00:00Z`);
+  return Math.round((d - a) / 86400000);
 }
 
-const today = new Date();
-const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+function depositPaidAt(isoDay, hour = 10) {
+  return `${isoDay}T${String(hour).padStart(2, "0")}:15:00.000Z`;
+}
 
-const testBookings = [
+loadEnvLocal();
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!url || !key) {
+  throw new Error("Need NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
+}
+
+const supabase = createClient(url, key, { auth: { persistSession: false } });
+
+const { data: rooms, error: roomsError } = await supabase
+  .from("rooms")
+  .select("id, name, rate")
+  .order("sort_order", { ascending: true });
+
+if (roomsError || !rooms?.length) {
+  throw new Error(roomsError?.message ?? "No rooms found");
+}
+
+const roomById = Object.fromEntries(rooms.map((r) => [r.id, r]));
+
+const { data: unitTypes, error: unitTypesError } = await supabase
+  .from("room_unit_types")
+  .select("room_unit_id, room_id");
+
+if (unitTypesError) {
+  throw new Error(unitTypesError.message);
+}
+
+const { data: units, error: unitsError } = await supabase
+  .from("room_units")
+  .select("id, number")
+  .order("sort_order", { ascending: true });
+
+if (unitsError || !units?.length) {
+  throw new Error(unitsError?.message ?? "No room units found");
+}
+
+const unitNumberById = Object.fromEntries(units.map((u) => [u.id, u.number]));
+const unitsByRoom = new Map();
+for (const link of unitTypes ?? []) {
+  const list = unitsByRoom.get(link.room_id) ?? [];
+  list.push(link.room_unit_id);
+  unitsByRoom.set(link.room_id, list);
+}
+
+function pickUnit(roomId, index) {
+  const list = unitsByRoom.get(roomId) ?? [];
+  if (!list.length) return null;
+  return list[index % list.length];
+}
+
+console.log("Wiping booking_messages, booking_requests, and non-iCal room_blocks…");
+
+const { error: wipeMessages } = await supabase
+  .from("booking_messages")
+  .delete()
+  .neq("id", "00000000-0000-0000-0000-000000000000");
+if (wipeMessages) throw new Error(`messages: ${wipeMessages.message}`);
+
+const { error: wipeBookings } = await supabase
+  .from("booking_requests")
+  .delete()
+  .neq("id", "00000000-0000-0000-0000-000000000000");
+if (wipeBookings) throw new Error(`bookings: ${wipeBookings.message}`);
+
+const { error: wipeBlocks } = await supabase
+  .from("room_blocks")
+  .delete()
+  .is("ical_feed_id", null);
+if (wipeBlocks) throw new Error(`blocks: ${wipeBlocks.message}`);
+
+/** @type {Array<Record<string, unknown>>} */
+const seeds = [
+  // —— July past / current (relative to 2026-07-11) ——
   {
-    guest_name: "Sarah Chen",
-    guest_email: "sarah.chen@example.com",
-    guest_phone: "+66 81 234 5601",
+    guest_name: "Emma Walsh",
+    guest_email: "emma.walsh@example.com",
+    guest_phone: "+44 7700 900121",
     room_id: "courtyard",
-    arrival_offset: 2,
-    nights: 1,
+    arrival_date: "2026-07-03",
+    departure_date: "2026-07-06",
     status: "confirmed",
-    stay_status: "expected",
-    note: "One-night stay to test compact calendar labels.",
-    staff_note: "Test booking — single night.",
+    stay_status: "checked-out",
+    note: "Early flight out — asked for 7am taxi.",
+    staff_note: "Taxi booked with local driver.",
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 20,
   },
   {
-    guest_name: "James Miller",
-    guest_email: "james.miller@example.com",
-    guest_phone: "+44 7700 900123",
-    room_id: "courtyard",
-    arrival_offset: 4,
-    nights: 3,
+    guest_name: "Kenji Sato",
+    guest_email: "kenji.sato@example.jp",
+    guest_phone: "+81 90 1234 5678",
+    room_id: "garden",
+    arrival_date: "2026-07-05",
+    departure_date: "2026-07-09",
     status: "confirmed",
-    stay_status: "expected",
-    note: "Arriving afternoon. Quiet room if possible.",
+    stay_status: "checked-out",
+    note: "Quiet room if possible.",
     staff_note: null,
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 18,
   },
   {
-    guest_name: "Emma Wilson",
-    guest_email: "emma.wilson@example.com",
-    guest_phone: "+61 412 345 678",
-    room_id: "courtyard",
-    arrival_offset: 4,
-    nights: 2,
+    guest_name: "Sofia Alvarez",
+    guest_email: "sofia.alvarez@example.com",
+    guest_phone: "+34 612 345 678",
+    room_id: "veranda",
+    arrival_date: "2026-07-08",
+    departure_date: "2026-07-12",
     status: "confirmed",
     stay_status: "checked-in",
-    note: "Second unit booked — tests rooms-left on a 2-room type.",
-    staff_note: "Overlaps James Miller on first two nights.",
+    note: "Travelling with sister — two beds preferred.",
+    staff_note: "Checked in 3:40pm. Gave city map.",
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 14,
+  },
+  {
+    guest_name: "James Okonkwo",
+    guest_email: "james.okonkwo@example.com",
+    guest_phone: "+1 415 555 0198",
+    room_id: "courtyard",
+    arrival_date: "2026-07-10",
+    departure_date: "2026-07-14",
+    status: "confirmed",
+    stay_status: "checked-in",
+    note: "Arrived late from Bangkok overnight bus.",
+    staff_note: "Key left at desk for late arrival.",
+    deposit: true,
+    unitIndex: 1,
+    created_offset_days: 12,
+  },
+  {
+    guest_name: "Priya Nair",
+    guest_email: "priya.nair@example.com",
+    guest_phone: "+91 98765 43210",
+    room_id: "loft",
+    arrival_date: "2026-07-09",
+    departure_date: "2026-07-13",
+    status: "confirmed",
+    stay_status: "checked-in",
+    note: "Family of four — need extra towels.",
+    staff_note: "Extra towels delivered day 1.",
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 16,
+  },
+  // —— Rest of July ——
+  {
+    guest_name: "Lucas Meyer",
+    guest_email: "lucas.meyer@example.de",
+    guest_phone: "+49 151 23456789",
+    room_id: "garden",
+    arrival_date: "2026-07-14",
+    departure_date: "2026-07-18",
+    status: "confirmed",
+    stay_status: "expected",
+    note: "Vegetarian breakfast please.",
+    staff_note: null,
+    deposit: true,
+    unitIndex: 1,
+    created_offset_days: 9,
+  },
+  {
+    guest_name: "Chloe Martin",
+    guest_email: "chloe.martin@example.fr",
+    guest_phone: "+33 6 12 34 56 78",
+    room_id: "courtyard",
+    arrival_date: "2026-07-15",
+    departure_date: "2026-07-17",
+    status: "awaiting",
+    stay_status: "expected",
+    note: "Can we store luggage after checkout until 6pm?",
+    staff_note: "Waiting on deposit.",
+    deposit: false,
+    unitIndex: null,
+    created_offset_days: 2,
+  },
+  {
+    guest_name: "Daniel Kim",
+    guest_email: "daniel.kim@example.kr",
+    guest_phone: "+82 10 9876 5432",
+    room_id: "veranda",
+    arrival_date: "2026-07-16",
+    departure_date: "2026-07-20",
+    status: "confirmed",
+    stay_status: "expected",
+    note: null,
+    staff_note: null,
+    deposit: true,
+    unitIndex: 1,
+    created_offset_days: 7,
+  },
+  {
+    guest_name: "Hannah Brooks",
+    guest_email: "hannah.brooks@example.com",
+    guest_phone: "+61 412 345 678",
+    room_id: "courtyard",
+    arrival_date: "2026-07-18",
+    departure_date: "2026-07-22",
+    status: "needs-reply",
+    stay_status: "expected",
+    note: "Do you have a twin setup for this room?",
+    staff_note: "Guest asked about twin beds — reply pending.",
+    deposit: true,
+    unitIndex: 2,
+    created_offset_days: 1,
   },
   {
     guest_name: "Marco Rossi",
-    guest_email: "marco.rossi@example.com",
-    guest_phone: "+39 347 123 4567",
+    guest_email: "marco.rossi@example.it",
+    guest_phone: "+39 333 123 4567",
     room_id: "garden",
-    arrival_offset: 1,
-    nights: 3,
-    status: "confirmed",
-    stay_status: "checked-in",
-    note: "Currently in-house guest.",
-    staff_note: "Deluxe balcony room.",
-  },
-  {
-    guest_name: "Lisa Park",
-    guest_email: "lisa.park@example.com",
-    guest_phone: "+82 10 1234 5678",
-    room_id: "veranda",
-    arrival_offset: 7,
-    nights: 3,
+    arrival_date: "2026-07-20",
+    departure_date: "2026-07-25",
     status: "confirmed",
     stay_status: "expected",
-    note: "Travelling with two friends.",
-    staff_note: null,
+    note: "Anniversary trip.",
+    staff_note: "Small welcome fruit plate noted.",
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 5,
   },
   {
-    guest_name: "Tom Davies",
-    guest_email: "walk-in@kamala.local",
-    guest_phone: "+66 89 876 5432",
-    room_id: "garden",
-    arrival_offset: 12,
-    nights: 1,
+    guest_name: "Amy Chen",
+    guest_email: "amy.chen@example.com",
+    guest_phone: "+65 9123 4567",
+    room_id: "loft",
+    arrival_date: "2026-07-22",
+    departure_date: "2026-07-26",
+    status: "pending_payment",
+    stay_status: "expected",
+    note: "Parents + two teens.",
+    staff_note: "Stripe checkout started, not completed.",
+    deposit: false,
+    unitIndex: null,
+    created_offset_days: 0,
+  },
+  {
+    guest_name: "Tom Hughes",
+    guest_email: "tom.hughes@example.com",
+    guest_phone: "+44 7700 900334",
+    room_id: "courtyard",
+    arrival_date: "2026-07-24",
+    departure_date: "2026-07-27",
     status: "confirmed",
-    stay_status: "checked-in",
-    note: "Walk-in booking",
-    staff_note: "Paid cash at front desk. No email on file.",
+    stay_status: "expected",
+    note: null,
+    staff_note: null,
+    deposit: true,
+    unitIndex: 3,
+    created_offset_days: 4,
   },
   {
-    guest_name: "Nina Berg",
-    guest_email: "nina.berg@example.com",
-    guest_phone: "+47 900 12 345",
+    guest_name: "Yuki Tanaka",
+    guest_email: "yuki.tanaka@example.jp",
+    guest_phone: "+81 80 5555 1212",
     room_id: "veranda",
-    arrival_offset: 18,
-    nights: 2,
+    arrival_date: "2026-07-26",
+    departure_date: "2026-07-29",
     status: "new",
     stay_status: "expected",
-    note: "New website request — should appear on staff requests, not calendar.",
+    note: "First time in Chiang Mai.",
     staff_note: null,
+    deposit: false,
+    unitIndex: null,
+    created_offset_days: 0,
   },
   {
-    guest_name: "Alex Turner",
-    guest_email: "alex.turner@example.com",
-    guest_phone: "+1 555 010 8822",
+    guest_name: "Olivia Grant",
+    guest_email: "olivia.grant@example.com",
+    guest_phone: "+1 206 555 0144",
+    room_id: "garden",
+    arrival_date: "2026-07-28",
+    departure_date: "2026-08-01",
+    status: "confirmed",
+    stay_status: "expected",
+    note: "Crossing month boundary.",
+    staff_note: null,
+    deposit: true,
+    unitIndex: 1,
+    created_offset_days: 6,
+  },
+  {
+    guest_name: "Noah Patel",
+    guest_email: "noah.patel@example.com",
+    guest_phone: "+44 7700 900556",
     room_id: "courtyard",
-    arrival_offset: 24,
-    nights: 2,
+    arrival_date: "2026-07-12",
+    departure_date: "2026-07-13",
+    status: "declined",
+    stay_status: "expected",
+    note: "Needed same-day booking — fully booked that night.",
+    staff_note: "Declined — no Superior left for 12 Jul.",
+    deposit: false,
+    unitIndex: null,
+    created_offset_days: 1,
+  },
+  // —— August ——
+  {
+    guest_name: "Isabella Costa",
+    guest_email: "isabella.costa@example.com",
+    guest_phone: "+55 11 98765 4321",
+    room_id: "garden",
+    arrival_date: "2026-08-01",
+    departure_date: "2026-08-05",
+    status: "confirmed",
+    stay_status: "expected",
+    note: "Spanish/Portuguese OK.",
+    staff_note: null,
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 8,
+  },
+  {
+    guest_name: "Felix Weber",
+    guest_email: "felix.weber@example.ch",
+    guest_phone: "+41 79 123 45 67",
+    room_id: "courtyard",
+    arrival_date: "2026-08-02",
+    departure_date: "2026-08-06",
+    status: "confirmed",
+    stay_status: "expected",
+    note: null,
+    staff_note: null,
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 3,
+  },
+  {
+    guest_name: "Mia Johansson",
+    guest_email: "mia.johansson@example.se",
+    guest_phone: "+46 70 123 45 67",
+    room_id: "veranda",
+    arrival_date: "2026-08-04",
+    departure_date: "2026-08-08",
     status: "awaiting",
     stay_status: "expected",
-    note: "Deposit paid online — reserved on calendar.",
+    note: "Arriving after 9pm — please hold key.",
+    staff_note: "Deposit link sent.",
+    deposit: false,
+    unitIndex: null,
+    created_offset_days: 2,
+  },
+  {
+    guest_name: "Ryan Cooper",
+    guest_email: "ryan.cooper@example.com",
+    guest_phone: "+1 312 555 0188",
+    room_id: "loft",
+    arrival_date: "2026-08-06",
+    departure_date: "2026-08-10",
+    status: "confirmed",
+    stay_status: "expected",
+    note: "Two adults, two kids (8 and 11).",
     staff_note: null,
-    deposit_paid: true,
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 10,
   },
-];
-
-// Simulated OTA iCal imports — each block occupies one unit (like a real sync).
-// Designed to overlap direct bookings and push rooms-left / sold-out edge cases.
-const otaFeeds = [
   {
-    label: "Airbnb",
+    guest_name: "Aisha Rahman",
+    guest_email: "aisha.rahman@example.com",
+    guest_phone: "+60 12 345 6789",
     room_id: "courtyard",
-    import_url: "https://example.test/ical/airbnb-superior.ics",
-    blocks: [
-      {
-        uid: "airbnb-superior-jul10",
-        arrival_offset: 2,
-        nights: 1,
-        reason: "Airbnb — Reserved",
-        note: "STRESS: Superior Jul 10 — Sarah Chen (direct) + this = 0 left (2/2).",
-      },
-      {
-        uid: "airbnb-superior-jul12",
-        arrival_offset: 4,
-        nights: 2,
-        reason: "Airbnb — Not available",
-        note: "STRESS: Superior Jul 12–13 — James + Emma (direct) + this = 3 on 2 units (overbooked).",
-      },
-      {
-        uid: "airbnb-superior-jul16",
-        arrival_offset: 8,
-        nights: 1,
-        reason: "Airbnb — Reserved",
-        note: "Superior Jul 16 — clean gap night, 1 unit taken.",
-      },
-    ],
+    arrival_date: "2026-08-08",
+    departure_date: "2026-08-11",
+    status: "confirmed",
+    stay_status: "expected",
+    note: "Halal breakfast options?",
+    staff_note: "Noted for kitchen.",
+    deposit: true,
+    unitIndex: 1,
+    created_offset_days: 4,
   },
   {
-    label: "Booking.com",
+    guest_name: "Benjamin Lee",
+    guest_email: "benjamin.lee@example.com",
+    guest_phone: "+852 9123 4567",
     room_id: "garden",
-    import_url: "https://example.test/ical/booking-deluxe.ics",
-    blocks: [
-      {
-        uid: "booking-deluxe-jul10",
-        arrival_offset: 2,
-        nights: 2,
-        reason: "Booking.com — Closed",
-        note: "STRESS: Deluxe Jul 10–11 — overlaps Marco (Jul 9–12). 1-unit room double-booked.",
-      },
-      {
-        uid: "booking-deluxe-jul20",
-        arrival_offset: 12,
-        nights: 1,
-        reason: "Booking.com — Not available",
-        note: "STRESS: Deluxe Jul 20 — Tom Davies (walk-in) + this = double-booked.",
-      },
-      {
-        uid: "booking-deluxe-jul22",
-        arrival_offset: 14,
-        nights: 3,
-        reason: "Booking.com — Reserved",
-        note: "Deluxe Jul 22–24 — solo OTA block, room sold out.",
-      },
-    ],
+    arrival_date: "2026-08-10",
+    departure_date: "2026-08-14",
+    status: "needs-reply",
+    stay_status: "expected",
+    note: "Is the balcony facing the garden or the street?",
+    staff_note: "Reply with garden balcony photo.",
+    deposit: true,
+    unitIndex: 1,
+    created_offset_days: 1,
   },
   {
-    label: "Expedia",
+    guest_name: "Clara Dubois",
+    guest_email: "clara.dubois@example.fr",
+    guest_phone: "+33 7 89 01 23 45",
     room_id: "veranda",
-    import_url: "https://example.test/ical/expedia-triple.ics",
-    blocks: [
-      {
-        uid: "expedia-triple-jul15",
-        arrival_offset: 7,
-        nights: 3,
-        reason: "Expedia — Reserved",
-        note: "STRESS: Triple Jul 15–17 — Lisa Park (direct) + this = 0 left (2/2).",
-      },
-      {
-        uid: "expedia-triple-jul18",
-        arrival_offset: 10,
-        nights: 1,
-        reason: "Expedia — Not available",
-        note: "Triple Jul 18 — 1 unit, Lisa still in-house until Jul 18 dep = tight turnover.",
-      },
-      {
-        uid: "expedia-triple-jul25",
-        arrival_offset: 17,
-        nights: 2,
-        reason: "Expedia — Reserved",
-        note: "Triple Jul 25–26 — gap before Nina Berg request (Jul 26).",
-      },
-      {
-        uid: "expedia-triple-aug02",
-        arrival_offset: 25,
-        nights: 2,
-        reason: "Expedia — Reserved",
-        note: "STRESS: Triple Aug 2–3 — overlaps Alex Turner on Superior only; clean Triple block in August.",
-      },
-    ],
+    arrival_date: "2026-08-12",
+    departure_date: "2026-08-16",
+    status: "confirmed",
+    stay_status: "expected",
+    note: null,
+    staff_note: null,
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 5,
+  },
+  {
+    guest_name: "Ethan Brown",
+    guest_email: "ethan.brown@example.com",
+    guest_phone: "+1 646 555 0177",
+    room_id: "courtyard",
+    arrival_date: "2026-08-15",
+    departure_date: "2026-08-18",
+    status: "confirmed",
+    stay_status: "expected",
+    note: "Work trip — need desk and strong Wi‑Fi.",
+    staff_note: null,
+    deposit: true,
+    unitIndex: 2,
+    created_offset_days: 7,
+  },
+  {
+    guest_name: "Nadia Petrov",
+    guest_email: "nadia.petrov@example.com",
+    guest_phone: "+7 916 123 45 67",
+    room_id: "garden",
+    arrival_date: "2026-08-18",
+    departure_date: "2026-08-22",
+    status: "confirmed",
+    stay_status: "expected",
+    note: null,
+    staff_note: null,
+    deposit: true,
+    unitIndex: 0,
+    created_offset_days: 6,
+  },
+  {
+    guest_name: "William Scott",
+    guest_email: "william.scott@example.com",
+    guest_phone: "+44 7700 900778",
+    room_id: "loft",
+    arrival_date: "2026-08-20",
+    departure_date: "2026-08-24",
+    status: "awaiting",
+    stay_status: "expected",
+    note: "Need ground-floor access if possible — one guest has limited stairs.",
+    staff_note: "Family room is upstairs — discuss options.",
+    deposit: false,
+    unitIndex: null,
+    created_offset_days: 3,
+  },
+  {
+    guest_name: "Hana Nguyen",
+    guest_email: "hana.nguyen@example.com",
+    guest_phone: "+84 90 123 4567",
+    room_id: "veranda",
+    arrival_date: "2026-08-23",
+    departure_date: "2026-08-26",
+    status: "confirmed",
+    stay_status: "expected",
+    note: null,
+    staff_note: null,
+    deposit: true,
+    unitIndex: 1,
+    created_offset_days: 2,
+  },
+  {
+    guest_name: "Jack Wilson",
+    guest_email: "jack.wilson@example.com",
+    guest_phone: "+61 400 123 456",
+    room_id: "courtyard",
+    arrival_date: "2026-08-25",
+    departure_date: "2026-08-28",
+    status: "new",
+    stay_status: "expected",
+    note: "Sunday walking street week — excited!",
+    staff_note: null,
+    deposit: false,
+    unitIndex: null,
+    created_offset_days: 0,
+  },
+  {
+    guest_name: "Elena Popov",
+    guest_email: "elena.popov@example.com",
+    guest_phone: "+359 88 123 4567",
+    room_id: "garden",
+    arrival_date: "2026-08-27",
+    departure_date: "2026-08-30",
+    status: "confirmed",
+    stay_status: "expected",
+    note: null,
+    staff_note: null,
+    deposit: true,
+    unitIndex: 1,
+    created_offset_days: 9,
   },
 ];
 
-async function wipeIcalData() {
-  console.log("Wiping iCal-imported blocks...");
-  const { error: blocksError } = await supabase
-    .from("room_blocks")
-    .delete()
-    .not("ical_feed_id", "is", null);
+// A couple of staff closed nights for realism
+const closedBlocks = [
+  {
+    room_id: "courtyard",
+    start_date: "2026-07-30",
+    end_date: "2026-07-31",
+    reason: "Maintenance",
+    staff_note: "AC service — one Superior offline.",
+  },
+  {
+    room_id: "garden",
+    start_date: "2026-08-16",
+    end_date: "2026-08-17",
+    reason: "Closed",
+    staff_note: "Owner use.",
+  },
+];
 
-  if (blocksError && !blocksError.message.includes("ical_feed_id")) {
-    console.warn("Could not wipe iCal blocks:", blocksError.message);
-  }
+const now = Date.now();
+const rows = seeds.map((seed) => {
+  const room = roomById[seed.room_id];
+  if (!room) throw new Error(`Unknown room ${seed.room_id}`);
+  const nights = nightsBetween(seed.arrival_date, seed.departure_date);
+  const estimated_total = nights * room.rate;
+  const deposit_amount = Math.round(estimated_total * 0.5);
+  const room_unit_id =
+    seed.unitIndex === null || seed.unitIndex === undefined
+      ? null
+      : pickUnit(seed.room_id, seed.unitIndex);
+  const created = new Date(now - seed.created_offset_days * 86400000);
 
-  console.log("Wiping OTA calendar feeds...");
-  const { error: feedsError } = await supabase
-    .from("room_ical_feeds")
-    .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
-
-  if (feedsError) {
-    if (feedsError.code === "42P01") {
-      console.warn(
-        "room_ical_feeds table missing — run supabase/migrate-room-ical.sql first. Skipping OTA seed.",
-      );
-      return false;
-    }
-    console.error("Failed to wipe room_ical_feeds:", feedsError.message);
-    process.exit(1);
-  }
-
-  return true;
-}
-
-async function seedOtaStressTest(roomById) {
-  const icalReady = await wipeIcalData();
-  if (!icalReady) {
-    return;
-  }
-
-  console.log("\nSeeding OTA stress-test feeds and blocks...\n");
-
-  for (const feed of otaFeeds) {
-    const room = roomById.get(feed.room_id);
-    if (!room) {
-      console.warn(`Skipping OTA feed for unknown room: ${feed.room_id}`);
-      continue;
-    }
-
-    const { data: feedRow, error: feedError } = await supabase
-      .from("room_ical_feeds")
-      .insert({
-        room_id: feed.room_id,
-        label: feed.label,
-        import_url: feed.import_url,
-        last_synced_at: new Date().toISOString(),
-        last_sync_error: null,
-      })
-      .select("id, label")
-      .single();
-
-    if (feedError || !feedRow) {
-      console.error(`Failed to create ${feed.label} feed:`, feedError?.message);
-      process.exit(1);
-    }
-
-    const blockRows = feed.blocks.map((block) => {
-      const start_date = addDays(todayIso, block.arrival_offset);
-      const end_date = addDays(start_date, block.nights);
-      return {
-        room_id: feed.room_id,
-        start_date,
-        end_date,
-        reason: block.reason,
-        staff_note: block.note,
-        ical_feed_id: feedRow.id,
-        ical_uid: block.uid,
-      };
-    });
-
-    const { error: blockError } = await supabase.from("room_blocks").insert(blockRows);
-
-    if (blockError) {
-      console.error(`Failed to insert ${feed.label} blocks:`, blockError.message);
-      if (blockError.message.includes("ical_feed_id")) {
-        console.error("Run supabase/migrate-room-ical.sql in Supabase, then re-run this script.");
-      }
-      process.exit(1);
-    }
-
-    console.log(`  ${feed.label} → ${room.name} (${blockRows.length} blocks)`);
-    for (const block of blockRows) {
-      console.log(`    • ${block.start_date} → ${block.end_date} — ${block.reason}`);
-    }
-  }
-}
-
-function printStressTestGuide() {
-  console.log(`
-Stress-test cheat sheet (today = ${todayIso}):
-
-  SUPERIOR (2 units) — /staff/calendar July
-    Jul 10: Sarah (direct) + Airbnb → 0 left
-    Jul 12–13: James + Emma (direct) + Airbnb → overbooked (3 on 2)
-    Jul 16: Airbnb only → 1 left
-
-  DELUXE (1 unit) — July
-    Jul 10–11: Marco (direct) + Booking.com → double-booked
-    Jul 20: Tom (walk-in) + Booking.com → double-booked
-    Jul 22–24: Booking.com only → sold out
-
-  TRIPLE (2 units) — July / August
-    Jul 15–17: Lisa (direct) + Expedia → 0 left
-    Jul 25–26: Expedia only
-    Aug 2–3: Expedia block (check August on calendar)
-
-  Settings → Rooms: Airbnb / Booking.com / Expedia feeds appear under Import calendars.
-`);
-}
-
-async function main() {
-  console.log("Loading rooms...");
-  const { data: rooms, error: roomsError } = await supabase
-    .from("rooms")
-    .select("id, name, rate, available_count");
-
-  if (roomsError || !rooms?.length) {
-    console.error("Could not load rooms:", roomsError?.message ?? "no rows");
-    process.exit(1);
-  }
-
-  const roomById = new Map(rooms.map((room) => [room.id, room]));
-
-  console.log("Wiping booking messages...");
-  const { error: messagesError } = await supabase
-    .from("booking_messages")
-    .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
-
-  if (messagesError) {
-    console.error("Failed to wipe booking_messages:", messagesError.message);
-    process.exit(1);
-  }
-
-  console.log("Wiping bookings...");
-  const { error: bookingsError } = await supabase
-    .from("booking_requests")
-    .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
-
-  if (bookingsError) {
-    console.error("Failed to wipe booking_requests:", bookingsError.message);
-    process.exit(1);
-  }
-
-  await wipeIcalData();
-
-  const rows = [];
-
-  for (const booking of testBookings) {
-    const room = roomById.get(booking.room_id);
-    if (!room) {
-      console.warn(`Skipping unknown room_id: ${booking.room_id}`);
-      continue;
-    }
-
-    const arrival_date = addDays(todayIso, booking.arrival_offset);
-    const departure_date = addDays(arrival_date, booking.nights);
-    const nights = nightsBetween(arrival_date, departure_date);
-    const estimated_total = room.rate * nights;
-    const deposit_amount = Math.round(estimated_total * 0.5);
-
-    rows.push({
-      guest_name: booking.guest_name,
-      guest_email: booking.guest_email,
-      guest_phone: booking.guest_phone,
-      room_id: room.id,
-      room_name: room.name,
-      arrival_date,
-      departure_date,
-      nights,
-      estimated_total,
-      deposit_amount,
-      deposit_paid_at: booking.deposit_paid ? new Date().toISOString() : null,
-      note: booking.note,
-      staff_note: booking.staff_note,
-      status: booking.status,
-      stay_status: booking.stay_status,
-      conversation_token: randomUUID(),
-    });
-  }
-
-  console.log(`Inserting ${rows.length} test bookings (today = ${todayIso})...`);
-  const { data: inserted, error: insertError } = await supabase
-    .from("booking_requests")
-    .insert(rows)
-    .select("id, guest_name, room_name, arrival_date, departure_date, status, stay_status");
-
-  if (insertError) {
-    console.error("Failed to insert test bookings:", insertError.message);
-    process.exit(1);
-  }
-
-  console.log("\nDirect test bookings:\n");
-  for (const row of inserted ?? []) {
-    console.log(
-      `  • ${row.guest_name} — ${row.room_name} — ${row.arrival_date} → ${row.departure_date} — ${row.status} (${row.stay_status})`,
-    );
-  }
-
-  await seedOtaStressTest(roomById);
-  printStressTestGuide();
-  console.log("Done. Open /staff/calendar — July 2026 for most scenarios, August for Expedia Aug 2–3.");
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
+  return {
+    guest_name: seed.guest_name,
+    guest_email: seed.guest_email,
+    guest_phone: seed.guest_phone,
+    room_id: seed.room_id,
+    room_name: room.name,
+    arrival_date: seed.arrival_date,
+    departure_date: seed.departure_date,
+    nights,
+    estimated_total,
+    note: seed.note,
+    staff_note: seed.staff_note,
+    stay_status: seed.stay_status,
+    status: seed.status,
+    deposit_amount,
+    deposit_paid_at: seed.deposit ? depositPaidAt(seed.arrival_date, 9) : null,
+    conversation_token: crypto.randomUUID().replace(/-/g, ""),
+    room_unit_id,
+    created_at: created.toISOString(),
+    updated_at: created.toISOString(),
+  };
 });
+
+const { data: inserted, error: insertError } = await supabase
+  .from("booking_requests")
+  .insert(rows)
+  .select("id, guest_name, arrival_date, status, room_id, room_unit_id");
+
+if (insertError) {
+  throw new Error(`insert bookings: ${insertError.message}`);
+}
+
+const { error: blockError } = await supabase.from("room_blocks").insert(closedBlocks);
+if (blockError) {
+  throw new Error(`insert blocks: ${blockError.message}`);
+}
+
+// Sample chat on one needs-reply booking
+const needsReply = inserted?.find((b) => b.guest_name === "Hannah Brooks");
+if (needsReply) {
+  await supabase.from("booking_messages").insert([
+    {
+      booking_request_id: needsReply.id,
+      sender: "guest",
+      sender_email: "hannah.brooks@example.com",
+      body: "Hi — can the Superior be set up as twin beds for my friend and me?",
+    },
+    {
+      booking_request_id: needsReply.id,
+      sender: "staff",
+      sender_email: null,
+      body: "Yes, we can set twin beds. We'll confirm the layout before you arrive.",
+    },
+  ]);
+}
+
+console.log(`Inserted ${inserted?.length ?? 0} bookings and ${closedBlocks.length} closed blocks.`);
+for (const b of inserted ?? []) {
+  const door = b.room_unit_id ? unitNumberById[b.room_unit_id] ?? "?" : "—";
+  console.log(
+    `  ${b.arrival_date}  ${b.status.padEnd(16)}  ${b.room_id.padEnd(10)}  #${door}  ${b.guest_name}`,
+  );
+}
+
+console.log("\nStaff login (local): admin / admin");
+console.log("Done.");
