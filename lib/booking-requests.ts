@@ -181,7 +181,7 @@ async function fetchBookingsFromSupabase(
     }
 
     return {
-      bookings: data.map(mapBookingRequest),
+      bookings: data.map((row) => mapBookingRequest(row)),
       source: "supabase",
       error: null,
     };

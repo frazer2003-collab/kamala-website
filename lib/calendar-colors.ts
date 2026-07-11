@@ -48,3 +48,29 @@ export function getCalendarColorStyleProps(colors: CalendarColors) {
     ["--calendar-color-sold-out" as string]: colors.soldOut,
   };
 }
+
+export type RoomCalendarDayState = "available" | "booked" | "closed";
+
+export function getRoomCalendarDayState(
+  iso: string,
+  bookings: Array<{ arrivalDate: string; departureDate: string }>,
+  blocks: Array<{ startDate: string; endDate: string }>,
+): RoomCalendarDayState {
+  const closed = blocks.some((block) => iso >= block.startDate && iso < block.endDate);
+  if (closed) {
+    return "closed";
+  }
+
+  const booked = bookings.some(
+    (booking) => iso >= booking.arrivalDate && iso < booking.departureDate,
+  );
+  if (booked) {
+    return "booked";
+  }
+
+  return "available";
+}
+
+export function getCalendarDayStateClass(state: RoomCalendarDayState) {
+  return `calendar-day-cell--${state}`;
+}

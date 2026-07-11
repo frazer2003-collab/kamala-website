@@ -205,6 +205,7 @@ export type Database = {
           | "deposit_paid_at"
           | "stripe_checkout_session_id"
           | "stripe_payment_intent_id"
+          | "room_unit_id"
         > & {
           id?: string;
           created_at?: string;
@@ -257,6 +258,7 @@ export type Database = {
           | "guest_phone"
           | "ical_feed_id"
           | "ical_uid"
+          | "room_unit_id"
         > & {
           id?: string;
           created_at?: string;
@@ -358,7 +360,42 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      staff_set_booking_room_unit: {
+        Args: {
+          p_booking_id: string;
+          p_room_unit_id: string | null;
+        };
+        Returns: undefined;
+      };
+      staff_update_channel_reservation: {
+        Args: {
+          p_block_id: string;
+          p_guest_name: string | null;
+          p_guest_email: string | null;
+          p_guest_phone: string | null;
+          p_start_date: string;
+          p_end_date: string;
+          p_staff_note: string | null;
+          p_room_unit_id: string | null;
+        };
+        Returns: undefined;
+      };
+      staff_booking_room_unit_map: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          room_unit_id: string;
+        }[];
+      };
+      staff_room_block_unit_map: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          room_unit_id: string;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
