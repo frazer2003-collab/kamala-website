@@ -34,48 +34,48 @@ values
     'courtyard',
     'Superior Double or Twin Room',
     'Superior',
-    142,
+    700,
     'Sleeps 2',
-    'Comfortable room with double or twin bed configuration',
-    2,
-    'A calm room for short stays, with flexible bedding, morning light, and a quiet position in the guesthouse.',
-    array['Double or twin beds', 'Private bath', 'Breakfast included'],
+    '33 m² · king or twin · city view · non-smoking',
+    5,
+    'A comfortable room a minute from Tha Phae Gate, with blackout curtains, work desk, safe, and a private bathroom with shower and bidet. Flexible king or twin setup for couples or friends.',
+    array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'King or twin beds', 'Cable TV', 'Safe', 'Desk', 'Breakfast included'],
     'courtyard'
   ),
   (
     'garden',
     'Deluxe Double Room with Balcony',
     'Deluxe',
-    168,
+    950,
     'Sleeps 2',
-    'Deluxe double room opening onto a private balcony',
-    1,
-    'A little more room for longer visits, with balcony seating and a bright outlook over the guesthouse grounds.',
-    array['Double bed', 'Private balcony', 'Private bath', 'Breakfast included'],
+    '45 m² · king bed · balcony · garden view',
+    4,
+    'More space for longer stays — 45 m² with a private balcony over the guesthouse garden, seating for two, refrigerator, and en-suite bathroom. Quiet room facing greenery above the old city.',
+    array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'King bed', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
     'garden'
   ),
   (
     'veranda',
     'Triple Room with Balcony',
     'Triple',
-    136,
+    900,
     'Sleeps 3',
-    'Triple room with balcony seating for small groups',
-    2,
-    'A practical room for friends or family, with space for three guests and a balcony for evening air.',
-    array['Three beds', 'Private balcony', 'Private bath', 'Breakfast included'],
+    '45 m² · queen + single · balcony · garden view',
+    4,
+    'Ideal for three guests travelling together — queen and single bed configuration, private balcony with seating, and room to spread out after a day around Chiang Mai''s old city.',
+    array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'Queen and single beds', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
     'veranda'
   ),
   (
     'loft',
     'Family Room with Balcony',
     'Family',
-    210,
+    1100,
     'Sleeps 4',
-    'Spacious family room with balcony and separated sleeping areas',
-    0,
-    'A spacious room for a family stay, with balcony access and enough space for parents and children.',
-    array['Family bedding', 'Private balcony', 'Bath + shower', 'Breakfast included'],
+    '70 m² · four single beds · balcony · fits families',
+    1,
+    'The largest room in the house — 70 m² with four single beds, private balcony, and space for a family stay steps from Tha Phae Gate and the Sunday walking street.',
+    array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'Four single beds', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
     'attic'
   )
 on conflict (id) do update
@@ -114,6 +114,7 @@ create table if not exists public.booking_requests (
   stripe_checkout_session_id text,
   stripe_payment_intent_id text,
   conversation_token text unique,
+  room_unit_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -251,8 +252,8 @@ with check (true);
 
 create table if not exists public.property_settings (
   id text primary key default 'default',
-  property_name text not null default 'Kamala Guesthouse',
-  property_tagline text not null default 'Guesthouse',
+  property_name text not null default 'Kamala''s Boutique Guesthouse',
+  property_tagline text not null default 'Boutique Guesthouse',
   contact_email text,
   contact_phone text,
   address_line text,
@@ -274,6 +275,7 @@ create table if not exists public.property_settings (
   calendar_color_available text not null default '#bbf7d0',
   calendar_color_closed text not null default '#fecaca',
   calendar_color_booking text not null default '#fef08a',
+  calendar_color_sold_out text not null default '#fdba74',
   updated_at timestamptz not null default now()
 );
 
@@ -350,6 +352,9 @@ execute function public.set_updated_at();
 -- See supabase/migrate-room-count.sql
 -- Run once to add calendar management fields:
 -- See supabase/migrate-stay-status.sql
+-- Run once for physical room numbers + assignment:
+-- See supabase/migrate-room-units.sql
+-- See supabase/migrate-room-block-units.sql (OTA / channel stays)
 
 drop trigger if exists rooms_set_updated_at on public.rooms;
 create trigger rooms_set_updated_at

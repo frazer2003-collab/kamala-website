@@ -11,6 +11,24 @@ type PhotoCarouselProps = {
   placeholder?: ReactNode;
 };
 
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(media.matches);
+
+    function onChange() {
+      setReduced(media.matches);
+    }
+
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  return reduced;
+}
+
 export function PhotoCarousel({
   photos,
   alt = "",
@@ -20,23 +38,33 @@ export function PhotoCarousel({
 }: PhotoCarouselProps) {
   const [index, setIndex] = useState(0);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const scrollToIndex = useCallback(
+    (nextIndex: number, behavior: ScrollBehavior) => {
+      const viewport = scrollerRef.current;
+      if (!viewport) {
+        return;
+      }
+
+      viewport.scrollTo({ left: nextIndex * viewport.clientWidth, behavior });
+    },
+    [],
+  );
 
   const goTo = useCallback(
     (next: number) => {
       const clamped = Math.max(0, Math.min(photos.length - 1, next));
       setIndex(clamped);
-      const viewport = scrollerRef.current;
-      if (viewport) {
-        viewport.scrollTo({ left: clamped * viewport.clientWidth, behavior: "smooth" });
-      }
+      scrollToIndex(clamped, prefersReducedMotion ? "auto" : "smooth");
     },
-    [photos.length],
+    [photos.length, prefersReducedMotion, scrollToIndex],
   );
 
   useEffect(() => {
     setIndex(0);
-    scrollerRef.current?.scrollTo({ left: 0 });
-  }, [photos]);
+    scrollToIndex(0, "auto");
+  }, [photos, scrollToIndex]);
 
   useEffect(() => {
     const viewport = scrollerRef.current;
@@ -63,7 +91,23 @@ export function PhotoCarousel({
       return null;
     }
 
-    return <div className={`photo-carousel photo-carousel--empty ${className ?? ""}`}>{placeholder}</div>;
+    return (
+      <div className={`photo-carousel photo-carousel--empty ${className ?? ""}`}>
+        {placeholder}
+      </div>
+    );
+  }
+
+  function photoAlt(photoIndex: number) {
+    if (!alt) {
+      return "";
+    }
+
+    if (photos.length === 1) {
+      return alt;
+    }
+
+    return `${alt} (photo ${photoIndex + 1} of ${photos.length})`;
   }
 
   return (
@@ -75,11 +119,12 @@ export function PhotoCarousel({
         ref={scrollerRef}
       >
         {photos.map((photo, photoIndex) => (
-          <div className="photo-carousel__slide" key={photo}>
+          <div className="photo-carousel__slide" key={`${photo}-${photoIndex}`}>
             <OptimizedImage
-              alt={photoIndex === 0 ? alt : ""}
+              alt={photoAlt(photoIndex)}
               className="photo-carousel__image"
               fill
+              loading={photoIndex === 0 ? undefined : "lazy"}
               priority={photoIndex === 0}
               sizes={sizes}
               src={photo}
@@ -89,21 +134,16 @@ export function PhotoCarousel({
       </div>
 
       {photos.length > 1 ? (
-        <div
-          aria-label="Choose photo"
-          className="photo-carousel__dots"
-          role="tablist"
-        >
+        <div aria-label="Choose photo" className="photo-carousel__dots" role="group">
           {photos.map((photo, photoIndex) => (
             <button
+              aria-current={photoIndex === index ? "true" : undefined}
               aria-label={`Photo ${photoIndex + 1} of ${photos.length}`}
-              aria-selected={photoIndex === index}
               className={`photo-carousel__dot${
                 photoIndex === index ? " photo-carousel__dot--active" : ""
               }`}
-              key={photo}
+              key={`${photo}-${photoIndex}`}
               onClick={() => goTo(photoIndex)}
-              role="tab"
               type="button"
             />
           ))}

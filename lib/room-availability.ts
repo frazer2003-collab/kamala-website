@@ -4,7 +4,7 @@ export function isRoomBookable(availableCount: number) {
 
 export function getRoomAvailabilityLabel(availableCount: number) {
   if (availableCount <= 0) {
-    return "FULL";
+    return "Fully booked";
   }
 
   if (availableCount === 1) {
@@ -16,7 +16,7 @@ export function getRoomAvailabilityLabel(availableCount: number) {
 
 export function formatRoomTypeAvailabilityCount(availableCount: number) {
   if (availableCount <= 0) {
-    return "FULL";
+    return "Fully booked";
   }
 
   if (availableCount === 1) {

@@ -147,7 +147,7 @@ export function StaffRoomIcalFields({
             />
           </div>
           {addState.error ? (
-            <p className="form-message form-message--error" role="status">
+            <p className="form-message form-message--error" role="alert">
               {addState.error}
             </p>
           ) : null}

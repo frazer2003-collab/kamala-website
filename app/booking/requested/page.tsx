@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { GuestTopbar } from "@/components/guest-topbar";
+import { SiteFooter } from "@/components/site-footer";
 import { getGuestChatUrl } from "@/lib/booking-chat";
 import { getPropertySettings } from "@/lib/property-settings";
 import { createStaffSupabaseClient } from "@/lib/supabase";
@@ -32,9 +34,9 @@ export default async function BookingRequestedPage({
   }
 
   return (
-    <main className="site-shell">
+    <main className="guest-site site-shell">
+      <GuestTopbar settings={settings} />
       <section className="section booking-result">
-        <p className="section-note">Request sent</p>
         <h1>We received your booking request.</h1>
         <p>
           Staff at {settings.propertyName} will review your dates and reply with
@@ -51,6 +53,7 @@ export default async function BookingRequestedPage({
           Back to home
         </Link>
       </section>
+      <SiteFooter settings={settings} />
     </main>
   );
 }

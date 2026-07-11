@@ -23,6 +23,8 @@ export type TimelineBar = {
   compact: boolean;
   continuesLeft: boolean;
   continuesRight: boolean;
+  /** Waiting for staff to assign a physical room number. */
+  needsRoom?: boolean;
 };
 
 function addIsoDays(iso: string, days: number) {
@@ -102,10 +104,100 @@ export function buildRoomTimelineBars({
   bookings,
   channelReservations = [],
   calendarDays,
+  /** When true, only stays without a room number. */
+  unassignedOnly = false,
 }: {
   bookings: StaffBooking[];
   channelReservations?: StaffRoomBlock[];
   calendarDays: CalendarDay[];
+  unassignedOnly?: boolean;
+}): TimelineBar[] {
+  const bars: Omit<TimelineBar, "lane">[] = [];
+  const visibleBookings = unassignedOnly
+    ? bookings.filter((booking) => !booking.roomUnitId)
+    : bookings;
+  const visibleChannels = unassignedOnly
+    ? channelReservations.filter((reservation) => !reservation.roomUnitId)
+    : channelReservations;
+
+  for (const booking of visibleBookings) {
+    const range = getClippedBarRange(
+      booking.arrivalDate,
+      booking.departureDate,
+      calendarDays,
+    );
+
+    if (!range) {
+      continue;
+    }
+
+    const needsRoom = !booking.roomUnitId;
+    bars.push({
+      key: `booking-${getStaffBookingKey(booking)}-${range.startCol}`,
+      itemKey: getStaffBookingKey(booking),
+      kind: "booking",
+      label: booking.guest,
+      sublabel: needsRoom
+        ? "Needs room #"
+        : booking.roomNumber
+          ? `Room ${booking.roomNumber}`
+          : STAY_STATUS_LABELS[booking.stayStatus],
+      stayStatus: booking.stayStatus,
+      showLabel: true,
+      compact: range.span < 2,
+      needsRoom,
+      ...range,
+    });
+  }
+
+  for (const reservation of visibleChannels) {
+    const range = getClippedBarRange(
+      reservation.startDate,
+      reservation.endDate,
+      calendarDays,
+    );
+
+    if (!range) {
+      continue;
+    }
+
+    const channel = reservation.channelLabel ?? "Channel";
+    const needsRoom = !reservation.roomUnitId;
+    const label = reservation.guestName.trim() || channel;
+
+    bars.push({
+      key: `channel-${getStaffRoomBlockKey(reservation)}-${range.startCol}`,
+      itemKey: getStaffRoomBlockKey(reservation),
+      kind: "channel",
+      label,
+      sublabel: needsRoom
+        ? "Needs room #"
+        : reservation.roomNumber
+          ? `Room ${reservation.roomNumber}`
+          : channel,
+      stayStatus: "blocked",
+      showLabel: true,
+      compact: range.span < 2,
+      needsRoom,
+      ...range,
+    });
+  }
+
+  return assignTimelineLanes(bars);
+}
+
+export function buildUnitTimelineBars({
+  bookings,
+  channelReservations = [],
+  calendarDays,
+  roomShortNameById,
+  currentRoomId,
+}: {
+  bookings: StaffBooking[];
+  channelReservations?: StaffRoomBlock[];
+  calendarDays: CalendarDay[];
+  roomShortNameById: Map<string, string>;
+  currentRoomId: string;
 }): TimelineBar[] {
   const bars: Omit<TimelineBar, "lane">[] = [];
 
@@ -120,12 +212,19 @@ export function buildRoomTimelineBars({
       continue;
     }
 
+    const otherType =
+      booking.roomId !== currentRoomId
+        ? roomShortNameById.get(booking.roomId) ?? booking.room
+        : null;
+
     bars.push({
-      key: `booking-${getStaffBookingKey(booking)}-${range.startCol}`,
+      key: `unit-booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
       label: booking.guest,
-      sublabel: STAY_STATUS_LABELS[booking.stayStatus],
+      sublabel: otherType
+        ? `${otherType} · ${STAY_STATUS_LABELS[booking.stayStatus]}`
+        : STAY_STATUS_LABELS[booking.stayStatus],
       stayStatus: booking.stayStatus,
       showLabel: true,
       compact: range.span < 2,
@@ -145,13 +244,18 @@ export function buildRoomTimelineBars({
     }
 
     const channel = reservation.channelLabel ?? "Channel";
+    const otherType =
+      reservation.roomId !== currentRoomId
+        ? roomShortNameById.get(reservation.roomId) ?? reservation.roomId
+        : null;
+    const label = reservation.guestName.trim() || channel;
 
     bars.push({
-      key: `channel-${getStaffRoomBlockKey(reservation)}-${range.startCol}`,
+      key: `unit-channel-${getStaffRoomBlockKey(reservation)}-${range.startCol}`,
       itemKey: getStaffRoomBlockKey(reservation),
       kind: "channel",
-      label: channel,
-      sublabel: "Channel booking",
+      label,
+      sublabel: otherType ? `${otherType} · ${channel}` : channel,
       stayStatus: "blocked",
       showLabel: true,
       compact: range.span < 2,
@@ -192,7 +296,8 @@ export function getStatusCellHref(
     );
   }
 
-  return `${getTimelineDayHref(roomId, iso, monthKey)}&mode=block`;
+  // Bookable / open days open the day choice panel — never jump straight to Close.
+  return getTimelineDayHref(roomId, iso, monthKey);
 }
 
 export function getTimelineLaneCount(bars: TimelineBar[]) {
@@ -392,6 +497,11 @@ export function getTimelineBarHref(
 
 export function getTimelineDayHref(roomId: string, iso: string, monthKey: string) {
   return `/staff/calendar?month=${monthKey}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(iso)}`;
+}
+
+/** Open the day panel to set a temporary rooms-to-sell override. */
+export function getTimelineAllotmentHref(roomId: string, iso: string, monthKey: string) {
+  return `${getTimelineDayHref(roomId, iso, monthKey)}&mode=allotment`;
 }
 
 /** Bulk open/close room status (availability), not allotments. */

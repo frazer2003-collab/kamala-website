@@ -17,40 +17,48 @@ export function ToursCatalog({ tours, propertyName }: ToursCatalogProps) {
   }
 
   return (
-    <div className="tours-grid">
-      {tours.map((tour, index) => {
-        const ctaHref = tour.linkUrl?.trim() || null;
-        const ctaLabel = tour.linkLabel?.trim() || "Enquire";
-        const isExternal = Boolean(ctaHref?.startsWith("http"));
+    <section aria-label="Available tours" className="tours-catalog">
+      <div className="tours-grid">
+        {tours.map((tour, index) => {
+          const ctaHref = tour.linkUrl?.trim() || null;
+          const ctaLabel = tour.linkLabel?.trim() || "Enquire";
+          const isExternal = Boolean(ctaHref?.startsWith("http"));
 
-        return (
-          <article className="tour-card" key={tour.id}>
-            <div className="tour-card__media">
-              {tour.imageUrl ? (
-                <OptimizedImage
-                  alt=""
-                  className="tour-card__image"
-                  fill
-                  priority={index < 2}
-                  sizes="(max-width: 720px) 100vw, (max-width: 1100px) 50vw, 33vw"
-                  src={tour.imageUrl}
-                />
-              ) : (
-                <div aria-hidden="true" className="tour-card__placeholder">
-                  <span>{tour.title.charAt(0)}</span>
+          return (
+            <article
+              className={`tour-card ${index === 0 ? "tour-card--feature" : ""}`.trim()}
+              key={tour.id}
+            >
+              <div className="tour-card__media">
+                {tour.imageUrl ? (
+                  <OptimizedImage
+                    alt=""
+                    className="tour-card__image"
+                    fill
+                    priority={index < 2}
+                    sizes="(max-width: 640px) 7rem, (max-width: 960px) 9rem, 10.5rem"
+                    src={tour.imageUrl}
+                  />
+                ) : (
+                  <div aria-hidden="true" className="tour-card__placeholder">
+                    <span>{tour.title.charAt(0)}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="tour-card__body">
+                <div className="tour-card__copy">
+                  <h2>{tour.title}</h2>
+                  {tour.durationLabel || tour.priceLabel ? (
+                    <div className="tour-card__meta">
+                      {tour.durationLabel ? (
+                        <span className="tour-card__duration">{tour.durationLabel}</span>
+                      ) : null}
+                      {tour.priceLabel ? <p className="tour-card__price">{tour.priceLabel}</p> : null}
+                    </div>
+                  ) : null}
+                  <p className="tour-card__summary">{tour.summary}</p>
                 </div>
-              )}
-              <div aria-hidden="true" className="tour-card__scrim" />
-              {tour.durationLabel ? (
-                <span className="tour-card__duration">{tour.durationLabel}</span>
-              ) : null}
-            </div>
-
-            <div className="tour-card__body">
-              <div className="tour-card__copy">
-                <h2>{tour.title}</h2>
-                {tour.priceLabel ? <p className="tour-card__price">{tour.priceLabel}</p> : null}
-                <p className="tour-card__summary">{tour.summary}</p>
               </div>
 
               {ctaHref ? (
@@ -61,6 +69,7 @@ export function ToursCatalog({ tours, propertyName }: ToursCatalogProps) {
                     rel="noopener noreferrer"
                     target="_blank"
                   >
+                    <span className="sr-only">(opens in a new tab) </span>
                     {ctaLabel}
                   </a>
                 ) : (
@@ -69,14 +78,21 @@ export function ToursCatalog({ tours, propertyName }: ToursCatalogProps) {
                   </a>
                 )
               ) : (
-                <p className="tour-card__note">
-                  Ask at {propertyName} when you arrive — we can help arrange this tour.
+                <p className="tour-card__enquire">
+                  {ctaLabel === "Ask the front desk" || ctaLabel === "Enquire"
+                    ? "Arrange at the front desk"
+                    : ctaLabel}
                 </p>
               )}
-            </div>
-          </article>
-        );
-      })}
-    </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <p className="tours-catalog__note">
+        Prefer to book ahead? Tell us which experience you want when you request a stay, or ask
+        at {propertyName} when you arrive.
+      </p>
+    </section>
   );
 }

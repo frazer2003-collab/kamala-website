@@ -1,5 +1,5 @@
 import { bookings, type Booking, type BookingStatus } from "@/lib/content";
-import { monthOverlapsBooking } from "@/lib/calendar";
+import { getCalendarMonthBounds, monthOverlapsBooking } from "@/lib/calendar";
 import {
   createStaffSupabaseClient,
   hasStaffSupabaseConfig,
@@ -65,7 +65,10 @@ function mapStatus(status: BookingRequestRow["status"]): BookingStatus {
   return status;
 }
 
-function mapBookingRequest(row: BookingRequestRow): StaffBooking {
+function mapBookingRequest(
+  row: BookingRequestRow,
+  roomUnitIdOverride?: string | null,
+): StaffBooking {
   return {
     databaseId: row.id,
     id: row.id.slice(0, 8).toUpperCase(),
@@ -86,6 +89,8 @@ function mapBookingRequest(row: BookingRequestRow): StaffBooking {
     depositPaid: Boolean(row.deposit_paid_at),
     stayStatus: row.stay_status ?? "expected",
     staffNote: row.staff_note ?? "",
+    roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
+    roomNumber: null,
   };
 }
 
@@ -94,6 +99,24 @@ function mapFallbackBooking(booking: Booking): StaffBooking {
     ...booking,
     databaseId: null,
   };
+}
+
+async function getBookingRoomUnitMap(
+  supabase: ReturnType<typeof createStaffSupabaseClient>,
+) {
+  const map = new Map<string, string>();
+  const { data, error } = await supabase.rpc("staff_booking_room_unit_map");
+  if (error || !data) {
+    return map;
+  }
+
+  for (const row of data) {
+    if (row.id && row.room_unit_id) {
+      map.set(row.id, row.room_unit_id);
+    }
+  }
+
+  return map;
 }
 
 function isPendingBooking(booking: Booking) {
@@ -240,12 +263,21 @@ export async function getConfirmedBookings(month?: { year: number; month: number
 
   try {
     const supabase = createStaffSupabaseClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from("booking_requests")
       .select("*")
       .or(CALENDAR_BOOKING_FILTER)
-      .order("arrival_date", { ascending: true })
-      .limit(100);
+      .order("arrival_date", { ascending: true });
+
+    if (month) {
+      const { monthStart, monthEnd } = getCalendarMonthBounds(month.year, month.month);
+      query = query.lte("arrival_date", monthEnd).gt("departure_date", monthStart);
+    } else {
+      query = query.limit(300);
+    }
+
+    const { data, error } = await query;
+    const unitMap = error || !data ? new Map<string, string>() : await getBookingRoomUnitMap(supabase);
 
     if (error || !data) {
       const calendarBookings = bookings.filter(isCalendarBooking).map(mapFallbackBooking);
@@ -260,20 +292,12 @@ export async function getConfirmedBookings(month?: { year: number; month: number
       };
     }
 
-    const calendarBookings = data.map(mapBookingRequest).filter(isCalendarBooking);
-
-    if (!month) {
-      return {
-        bookings: calendarBookings,
-        source: "supabase" as const,
-        error: null,
-      };
-    }
+    const calendarBookings = data
+      .map((row) => mapBookingRequest(row, unitMap.get(row.id) ?? row.room_unit_id ?? null))
+      .filter(isCalendarBooking);
 
     return {
-      bookings: calendarBookings.filter((booking) =>
-        monthOverlapsBooking(booking, month.year, month.month),
-      ),
+      bookings: calendarBookings,
       source: "supabase" as const,
       error: null,
     };
@@ -307,11 +331,10 @@ export async function getConfirmedBookingById(bookingId: string) {
 
   try {
     const supabase = createStaffSupabaseClient();
-    const { data, error } = await supabase
-      .from("booking_requests")
-      .select("*")
-      .eq("id", bookingId)
-      .maybeSingle();
+    const [{ data, error }, unitMap] = await Promise.all([
+      supabase.from("booking_requests").select("*").eq("id", bookingId).maybeSingle(),
+      getBookingRoomUnitMap(supabase),
+    ]);
 
     if (
       error ||
@@ -322,7 +345,7 @@ export async function getConfirmedBookingById(bookingId: string) {
       return null;
     }
 
-    return mapBookingRequest(data);
+    return mapBookingRequest(data, unitMap.get(data.id) ?? data.room_unit_id ?? null);
   } catch {
     return null;
   }

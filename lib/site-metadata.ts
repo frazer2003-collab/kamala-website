@@ -1,3 +1,4 @@
+import { getGuesthouseLocationLabel, isCoastalLocation } from "@/lib/home-hero-copy";
 import type { PropertySettings } from "@/lib/property-settings";
 
 export type SiteMetadataCopy = {
@@ -9,10 +10,14 @@ export type SiteMetadataCopy = {
 export function buildSiteMetadataCopy(settings: PropertySettings): SiteMetadataCopy {
   const propertyName = settings.propertyName.trim() || "Guesthouse";
   const tagline = settings.propertyTagline.trim();
-  const defaultTitle = tagline ? `${propertyName} — ${tagline}` : propertyName;
+  const locationLabel = getGuesthouseLocationLabel(settings.addressLine, propertyName);
+  const nearbyNote = isCoastalLocation(locationLabel) ? "Beach nearby." : "Quiet neighborhood.";
+  const defaultTitle = tagline
+    ? `${propertyName} — ${tagline} in ${locationLabel}`
+    : `${propertyName} — Garden guesthouse in ${locationLabel}`;
   const description = tagline
-    ? `Book a room at ${propertyName}. ${tagline}`
-    : `Book a room at ${propertyName}. View rooms, check availability, and reserve with a deposit.`;
+    ? `Stay at ${propertyName}, a local ${tagline.toLowerCase()} in ${locationLabel}. Garden rooms. ${nearbyNote} Book direct.`
+    : `Stay at ${propertyName}, a local guesthouse in ${locationLabel}. Garden rooms. ${nearbyNote} Book direct.`;
 
   return { defaultTitle, description, propertyName };
 }

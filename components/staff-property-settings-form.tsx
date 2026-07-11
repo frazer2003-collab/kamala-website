@@ -130,7 +130,7 @@ export function StaffPropertySettingsForm({
       <div className="field-pair field-pair--wide staff-settings-calendar-colors">
         <h3 className="staff-settings-subheading">Staff calendar colors</h3>
         <p className="staff-settings-calendar-colors__hint">
-          Available dates, room closures, and bookings on the staff calendar.
+          Available, closed, sold out, and reservation colors on the staff calendar.
         </p>
         <div className="staff-settings-calendar-colors__grid">
           <div className="field-pair">
@@ -154,7 +154,17 @@ export function StaffPropertySettingsForm({
             />
           </div>
           <div className="field-pair">
-            <label htmlFor="calendar-color-booking">Bookings</label>
+            <label htmlFor="calendar-color-sold-out">Sold out</label>
+            <input
+              defaultValue={settings.calendarColors.soldOut}
+              disabled={disabled}
+              id="calendar-color-sold-out"
+              name="calendar-color-sold-out"
+              type="color"
+            />
+          </div>
+          <div className="field-pair">
+            <label htmlFor="calendar-color-booking">Reservations</label>
             <input
               defaultValue={settings.calendarColors.booking}
               disabled={disabled}
@@ -176,10 +186,15 @@ export function StaffPropertySettingsForm({
           />
           Closed
           <span
+            className="calendar-color-legend__swatch"
+            style={{ background: settings.calendarColors.soldOut }}
+          />
+          Sold out
+          <span
             className="calendar-color-legend__swatch calendar-color-legend__swatch--booking"
             style={{ background: settings.calendarColors.booking }}
           />
-          Bookings
+          Reservations
         </div>
       </div>
       <div className="field-pair field-pair--wide">
@@ -223,7 +238,7 @@ export function StaffPropertySettingsForm({
         />
       </div>
       {state.error ? (
-        <p className="form-message form-message--error" role="status">
+        <p className="form-message form-message--error" role="alert">
           {state.error}
         </p>
       ) : null}

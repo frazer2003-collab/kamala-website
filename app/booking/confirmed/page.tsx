@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { GuestTopbar } from "@/components/guest-topbar";
+import { SiteFooter } from "@/components/site-footer";
 import { fulfillBookingDeposit } from "@/lib/booking-payments";
 import { getGuestChatUrl } from "@/lib/booking-chat";
+import { getPropertySettings } from "@/lib/property-settings";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 import { getStripe, hasStripeServerConfig } from "@/lib/stripe";
 
@@ -22,6 +25,7 @@ export default async function BookingConfirmedPage({
     redirect_status: redirectStatus,
     session_id: sessionId,
   } = await searchParams;
+  const settings = await getPropertySettings();
   let roomName = "your room";
   let chatUrl: string | null = null;
   let paymentPending = false;
@@ -86,9 +90,9 @@ export default async function BookingConfirmedPage({
   }
 
   return (
-    <main className="site-shell">
+    <main className="guest-site site-shell">
+      <GuestTopbar settings={settings} />
       <section className="section booking-result">
-        <p className="section-note">Stripe payment</p>
         <h1>{paymentPending ? "Payment received" : "Your room is reserved."}</h1>
         <p>
           {paymentPending
@@ -112,6 +116,7 @@ export default async function BookingConfirmedPage({
           Back to home
         </Link>
       </section>
+      <SiteFooter settings={settings} />
     </main>
   );
 }

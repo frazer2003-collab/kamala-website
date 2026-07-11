@@ -1,9 +1,12 @@
 import Image, { type ImageProps } from "next/image";
 
-function canOptimizeRemoteImage(src: string) {
+function canOptimizeImage(src: string) {
+  if (src.startsWith("/")) {
+    return true;
+  }
+
   try {
-    const hostname = new URL(src).hostname;
-    return hostname.endsWith(".supabase.co");
+    return new URL(src).hostname.endsWith(".supabase.co");
   } catch {
     return false;
   }
@@ -22,15 +25,23 @@ export function OptimizedImage({
   fill,
   width,
   height,
+  loading,
 }: OptimizedImageProps) {
   if (!src) {
     return null;
   }
 
-  if (!canOptimizeRemoteImage(src)) {
+  if (!canOptimizeImage(src)) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img alt={alt} className={className} height={height} src={src} width={width} />
+      <img
+        alt={alt}
+        className={className}
+        height={height}
+        loading={loading ?? (priority ? "eager" : "lazy")}
+        src={src}
+        width={width}
+      />
     );
   }
 
@@ -40,6 +51,7 @@ export function OptimizedImage({
       className={className}
       fill={fill}
       height={height}
+      loading={loading}
       priority={priority}
       sizes={sizes}
       src={src}

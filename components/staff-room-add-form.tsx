@@ -89,7 +89,7 @@ export function StaffRoomAddForm({
         </div>
       </div>
       {state.error ? (
-        <p className="form-message form-message--error" role="status">
+        <p className="form-message form-message--error" role="alert">
           {state.error}
         </p>
       ) : null}

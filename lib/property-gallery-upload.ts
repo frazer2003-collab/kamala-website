@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient } from "@/lib/supabase";
-import { getRoomPhotoValidationError } from "@/lib/room-photo-upload";
+import {
+  MAX_PROPERTY_GALLERY_PHOTOS,
+  PROPERTY_GALLERY_BUCKET,
+  getRoomPhotoValidationError,
+} from "@/lib/room-photo-shared";
 
-export const PROPERTY_GALLERY_BUCKET = "property-gallery";
-export const MAX_PROPERTY_GALLERY_PHOTOS = 30;
+export { MAX_PROPERTY_GALLERY_PHOTOS, PROPERTY_GALLERY_BUCKET };
 
 function getFileExtension(file: File) {
   switch (file.type) {

@@ -44,8 +44,21 @@ export type BookingRequestRow = {
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   conversation_token: string | null;
+  room_unit_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type RoomUnitRow = {
+  id: string;
+  number: string;
+  sort_order: number;
+  created_at: string;
+};
+
+export type RoomUnitTypeRow = {
+  room_unit_id: string;
+  room_id: string;
 };
 
 export type BookingMessageRow = {
@@ -70,6 +83,7 @@ export type RoomBlockRow = {
   guest_phone: string | null;
   ical_feed_id: string | null;
   ical_uid: string | null;
+  room_unit_id: string | null;
   created_at: string;
 };
 
@@ -129,6 +143,7 @@ export type PropertySettingsRow = {
   calendar_color_available: string;
   calendar_color_closed: string;
   calendar_color_booking: string;
+  calendar_color_sold_out?: string | null;
   hero_image_url: string | null;
   hero_image_storage_path: string | null;
   updated_at: string;
@@ -201,8 +216,24 @@ export type Database = {
           stripe_checkout_session_id?: string | null;
           stripe_payment_intent_id?: string | null;
           conversation_token?: string | null;
+          room_unit_id?: string | null;
         };
         Update: Partial<Omit<BookingRequestRow, "id" | "created_at">>;
+        Relationships: [];
+      };
+      room_units: {
+        Row: RoomUnitRow;
+        Insert: Omit<RoomUnitRow, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<RoomUnitRow, "id" | "created_at">>;
+        Relationships: [];
+      };
+      room_unit_types: {
+        Row: RoomUnitTypeRow;
+        Insert: RoomUnitTypeRow;
+        Update: Partial<RoomUnitTypeRow>;
         Relationships: [];
       };
       booking_messages: {
@@ -234,6 +265,7 @@ export type Database = {
           guest_phone?: string | null;
           ical_feed_id?: string | null;
           ical_uid?: string | null;
+          room_unit_id?: string | null;
         };
         Update: Partial<Omit<RoomBlockRow, "id" | "created_at">>;
         Relationships: [];

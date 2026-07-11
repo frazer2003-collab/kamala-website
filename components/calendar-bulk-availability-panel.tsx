@@ -29,7 +29,7 @@ function getErrorMessage(error?: string) {
   }
 
   if (error === "save-failed") {
-    return "Could not save. Run supabase/migrate-room-blocks.sql if this is a new install.";
+    return "Could not save availability. Try again, or ask whoever set up the site if the problem continues.";
   }
 
   return null;
@@ -143,7 +143,7 @@ export function CalendarBulkAvailabilityPanel({
       </form>
       {!canManage ? (
         <p className="detail-help">
-          Connect Supabase to save availability changes.
+          Connect the site to save availability changes.
         </p>
       ) : (
         <p className="detail-help">

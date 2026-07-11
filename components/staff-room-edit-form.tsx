@@ -101,8 +101,10 @@ export function StaffRoomEditForm({
               type="number"
             />
             <span className="field-help">
-              How many rooms of this type you have. Availability updates
-              automatically as bookings come in. Set to 0 to hide the room.
+              Default how many rooms of this type you have. The calendar can
+              override rooms to sell for specific nights without changing this
+              number. Availability still updates as bookings come in. Set to 0
+              to hide the room.
             </span>
           </div>
           <div className="field-pair field-pair--wide">
@@ -140,7 +142,7 @@ export function StaffRoomEditForm({
           <StaffRoomPhotoFields disabled={disabled} room={room} />
         </div>
         {state.error ? (
-          <p className="form-message form-message--error" role="status">
+          <p className="form-message form-message--error" role="alert">
             {state.error}
           </p>
         ) : null}

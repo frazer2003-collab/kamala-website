@@ -133,23 +133,30 @@ export function BookingPaymentElement({
       appearance: {
         theme: "stripe",
         variables: {
-          colorPrimary: "oklch(36% 0.105 18)",
+          colorPrimary: "oklch(48% 0.18 12)",
           colorBackground: "oklch(100% 0 0)",
-          colorText: "oklch(23% 0.026 345)",
-          colorDanger: "oklch(42% 0.12 24)",
+          colorText: "oklch(23% 0.028 12)",
+          colorDanger: "oklch(50% 0.17 12)",
           fontFamily:
-            '"Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-          borderRadius: "0.55rem",
+            '"Plus Jakarta Sans", "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+          borderRadius: "0.75rem",
           spacingUnit: "4px",
         },
         rules: {
           ".Input": {
-            border: "1px solid oklch(86% 0.02 350)",
+            border: "1px solid oklch(88% 0.012 12)",
             boxShadow: "none",
           },
           ".Input:focus": {
-            border: "1px solid oklch(36% 0.105 18)",
-            boxShadow: "0 0 0 3px oklch(93% 0.035 18)",
+            border: "1px solid oklch(48% 0.18 12)",
+            boxShadow: "0 0 0 3px oklch(96.5% 0.025 12)",
+          },
+          ".Tab": {
+            border: "1px solid oklch(88% 0.012 12)",
+          },
+          ".Tab--selected": {
+            border: "1px solid oklch(48% 0.18 12 / 0.35)",
+            backgroundColor: "oklch(96.5% 0.025 12)",
           },
         },
       },
@@ -160,7 +167,7 @@ export function BookingPaymentElement({
   return (
     <div className="booking-payment-shell">
       <p className="booking-payment-shell__title">{t(locale, "paymentDetails")}</p>
-      <p className="booking-summary__hint">{t(locale, "stripeSecureCheckout")}</p>
+      <p className="booking-payment-shell__secure">{t(locale, "stripeSecureCheckout")}</p>
       <Elements options={options} stripe={stripe}>
         <PaymentForm
           bookingId={bookingId}

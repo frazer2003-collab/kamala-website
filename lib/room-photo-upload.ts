@@ -1,16 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient } from "@/lib/supabase";
+import {
+  MAX_GALLERY_PHOTOS,
+  MAX_ROOM_PHOTO_BYTES,
+  ROOM_PHOTO_BUCKET,
+  getRoomPhotoValidationError,
+} from "@/lib/room-photo-shared";
 
-export const ROOM_PHOTO_BUCKET = "room-photos";
-export const MAX_ROOM_PHOTO_BYTES = 4 * 1024 * 1024;
-export const MAX_GALLERY_PHOTOS = 8;
-
-const allowedMimeTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
+export {
+  MAX_GALLERY_PHOTOS,
+  MAX_ROOM_PHOTO_BYTES,
+  ROOM_PHOTO_BUCKET,
+  getRoomPhotoValidationError,
+};
 
 function getFileExtension(file: File) {
   switch (file.type) {
@@ -25,22 +27,6 @@ function getFileExtension(file: File) {
     default:
       return "jpg";
   }
-}
-
-export function getRoomPhotoValidationError(file: File) {
-  if (file.size <= 0) {
-    return null;
-  }
-
-  if (!allowedMimeTypes.has(file.type)) {
-    return "Photos must be JPEG, PNG, WebP, or GIF.";
-  }
-
-  if (file.size > MAX_ROOM_PHOTO_BYTES) {
-    return "Each photo must be 4 MB or smaller.";
-  }
-
-  return null;
 }
 
 export async function uploadRoomPhoto(roomId: string, file: File) {

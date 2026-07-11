@@ -4,8 +4,8 @@ alter table public.rooms
 
 create table if not exists public.property_settings (
   id text primary key default 'default',
-  property_name text not null default 'Kamala Guesthouse',
-  property_tagline text not null default 'Guesthouse',
+  property_name text not null default 'Kamala''s Boutique Guesthouse',
+  property_tagline text not null default 'Boutique Guesthouse',
   contact_email text,
   contact_phone text,
   address_line text,

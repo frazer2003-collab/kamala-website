@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient } from "@/lib/supabase";
-import { getRoomPhotoValidationError } from "@/lib/room-photo-upload";
-import { PROPERTY_GALLERY_BUCKET } from "@/lib/property-gallery-upload";
+import { getRoomPhotoValidationError, PROPERTY_GALLERY_BUCKET } from "@/lib/room-photo-shared";
 
 function getFileExtension(file: File) {
   switch (file.type) {

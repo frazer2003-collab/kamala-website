@@ -20,3 +20,12 @@ pnpm-debug.log*
 
 # misc
 .DS_Store
+
+# local photo scratch / scrape workspace
+tmp-room-photos/
+_check*_*.txt
+_checks_result.txt
+.detect-staff-result.json
+.impeccable-detect-out.json
+.impeccable/
+

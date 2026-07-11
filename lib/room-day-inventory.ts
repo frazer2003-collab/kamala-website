@@ -1,4 +1,4 @@
-import { monthOverlapsBooking } from "@/lib/calendar";
+import { getCalendarMonthBounds, monthOverlapsBooking } from "@/lib/calendar";
 import type { Room } from "@/lib/content";
 import {
   createStaffSupabaseClient,
@@ -70,11 +70,13 @@ export async function getRoomDayInventoryForMonth(month: { year: number; month: 
 
   try {
     const supabase = createStaffSupabaseClient();
+    const { monthStart, monthEnd } = getCalendarMonthBounds(month.year, month.month);
     const { data, error } = await supabase
       .from("room_day_inventory")
       .select("*")
-      .order("date", { ascending: true })
-      .limit(500);
+      .gte("date", monthStart)
+      .lte("date", monthEnd)
+      .order("date", { ascending: true });
 
     if (error || !data) {
       return {
@@ -85,15 +87,7 @@ export async function getRoomDayInventoryForMonth(month: { year: number; month: 
     }
 
     return {
-      entries: data
-        .map(mapInventoryRow)
-        .filter((entry) =>
-          monthOverlapsBooking(
-            { arrivalDate: entry.date, departureDate: addIsoDays(entry.date, 1) },
-            month.year,
-            month.month,
-          ),
-        ),
+      entries: data.map(mapInventoryRow),
       source: "supabase" as const,
       error: null,
     };

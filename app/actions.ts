@@ -15,11 +15,21 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getRoomForBooking } from "@/lib/rooms";
 import { isPastCalendarDate } from "@/lib/calendar";
-import { addIsoDays } from "@/lib/room-day-inventory";
+import { addIsoDays, eachIsoDayInclusive } from "@/lib/room-day-inventory";
 import { calculateStayQuote, type StayQuote } from "@/lib/pricing";
 import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 import { isRoomBookable } from "@/lib/room-availability";
 import { isStayStatus } from "@/lib/stay-status";
+import { getConfirmedBookings } from "@/lib/booking-requests";
+import {
+  findUnitAssignmentConflict,
+  getRoomUnitById,
+  getStaffRoomUnits,
+  isUnitEligibleForRoom,
+  occupancyFromBooking,
+  occupancyFromChannelBlock,
+} from "@/lib/room-units";
+import { getChannelReservations } from "@/lib/room-blocks";
 import {
   calculateDepositAmount,
   createDepositPaymentIntent,
@@ -71,6 +81,49 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function isValidPhone(value: string) {
   const digits = value.replace(/\D/g, "");
   return digits.length >= 7 && digits.length <= 15 && value.length <= 30;
+}
+
+function appendCalendarError(href: string, code: string, detail?: string) {
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set("error", code);
+  if (detail?.trim()) {
+    params.set("detail", detail.trim().slice(0, 280));
+  } else {
+    params.delete("detail");
+  }
+  return `${path}?${params.toString()}`;
+}
+
+function classifyRoomUnitSaveError(message: string): {
+  code: "room-unit-setup" | "room-unit-cache" | "invalid-room-number" | "save-failed";
+  detail: string;
+} {
+  const detail = message.trim() || "Unknown database error.";
+
+  if (/schema cache/i.test(message) || /Could not find the ['"]room_unit_id['"] column/i.test(message)) {
+    return {
+      code: "room-unit-cache",
+      detail:
+        "Supabase API cache is stale. In the SQL editor run: NOTIFY pgrst, 'reload schema'; — or Dashboard → Settings → API → Reload schema.",
+    };
+  }
+
+  if (/column ['"]?room_unit_id['"]? .* does not exist|room_blocks\.room_unit_id/i.test(message)) {
+    return {
+      code: "room-unit-setup",
+      detail: "Column room_blocks.room_unit_id is missing. Run migrate-room-block-units.sql, then NOTIFY pgrst, 'reload schema';",
+    };
+  }
+
+  if (/foreign key|not present in table ['"]?room_units['"]?/i.test(message)) {
+    return {
+      code: "invalid-room-number",
+      detail: "That door number is not in room_units. Re-run migrate-room-units.sql to seed numbers.",
+    };
+  }
+
+  return { code: "save-failed", detail };
 }
 
 function getValue(formData: FormData, key: string) {
@@ -471,6 +524,8 @@ export async function updateConfirmedBooking(
   const guestPhone = getValue(formData, "guest-phone");
   const guestEmailInput = getValue(formData, "guest-email").toLowerCase();
   const guestEmail = guestEmailInput || walkInEmailFallback;
+  const roomUnitIdRaw = getValue(formData, "room-unit-id");
+  const roomUnitId = roomUnitIdRaw || null;
   const booking = await getBookingForStaff(bookingId);
 
   if (!bookingId || !booking || booking.status !== "confirmed" || booking.id !== bookingId) {
@@ -519,6 +574,34 @@ export async function updateConfirmedBooking(
     );
   }
 
+  if (roomUnitId) {
+    const [{ units }, confirmed, channels] = await Promise.all([
+      getStaffRoomUnits(),
+      getConfirmedBookings(),
+      getChannelReservations(),
+    ]);
+    const unit = getRoomUnitById(units, roomUnitId);
+    if (!unit || !isUnitEligibleForRoom(unit, booking.room_id)) {
+      redirect(`${bookingHref}&error=invalid-room-number`);
+    }
+
+    const occupancies = [
+      ...confirmed.bookings.map(occupancyFromBooking),
+      ...channels.blocks.map(occupancyFromChannelBlock),
+    ];
+    const conflict = findUnitAssignmentConflict({
+      units,
+      unitId: roomUnitId,
+      arrivalDate: arrival,
+      departureDate: departure,
+      excludeId: bookingId,
+      occupancies,
+    });
+    if (conflict) {
+      redirect(`${bookingHref}&error=room-number-taken`);
+    }
+  }
+
   const promotions = await getRoomPromotionsForStay(booking.room_id, arrival, departure);
   const quote = calculateStayQuote({
     roomId: booking.room_id,
@@ -530,6 +613,8 @@ export async function updateConfirmedBooking(
   });
   const estimatedTotal = quote.total;
   const supabase = createStaffSupabaseClient();
+
+  // Update core fields without room_unit_id first (avoids stale-column failures).
   const { error } = await supabase
     .from("booking_requests")
     .update({
@@ -546,12 +631,202 @@ export async function updateConfirmedBooking(
     .eq("id", bookingId);
 
   if (error) {
-    redirect(`${bookingHref}&error=save-failed`);
+    redirect(appendCalendarError(bookingHref, "save-failed", error.message));
+  }
+
+  const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
+    p_booking_id: bookingId,
+    p_room_unit_id: roomUnitId,
+  });
+
+  if (unitError) {
+    if (/Could not find the function|schema cache|PGRST202/i.test(unitError.message)) {
+      const { error: fallbackError } = await supabase
+        .from("booking_requests")
+        .update({ room_unit_id: roomUnitId })
+        .eq("id", bookingId);
+
+      if (fallbackError) {
+        const classified = classifyRoomUnitSaveError(fallbackError.message);
+        redirect(
+          appendCalendarError(
+            bookingHref,
+            classified.code === "room-unit-cache" ? "room-unit-rpc" : classified.code,
+            classified.code === "room-unit-cache"
+              ? "Run supabase/migrate-room-unit-rpc.sql in the SQL editor, then try again."
+              : classified.detail,
+          ),
+        );
+      }
+    } else if (/room_unit_not_found/i.test(unitError.message)) {
+      redirect(
+        appendCalendarError(
+          bookingHref,
+          "invalid-room-number",
+          "That door number is not in room_units.",
+        ),
+      );
+    } else if (!/booking_not_found/i.test(unitError.message)) {
+      redirect(appendCalendarError(bookingHref, "save-failed", unitError.message));
+    }
+  }
+
+  revalidatePath("/staff/calendar");
+  redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
+}
+
+/** Quick door-number assign from the Needs room # timeline row. */
+export async function assignStayRoomUnit(formData: FormData) {
+  await requireStaffSession();
+
+  const kind = getValue(formData, "kind");
+  const stayId = getValue(formData, "stay-id");
+  const month = getValue(formData, "month");
+  const roomUnitId = getValue(formData, "room-unit-id");
+  const guestLabel = getValue(formData, "guest-label");
+  const monthKey = month || new Date().toISOString().slice(0, 7);
+  const fallbackHref = `/staff/calendar?month=${monthKey}`;
+
+  const assignedRedirect = (guest: string, unitNumber: string) => {
+    const params = new URLSearchParams({
+      month: monthKey,
+      saved: "room-assigned",
+      assignGuest: guest.slice(0, 80),
+      assignUnit: unitNumber,
+    });
+    return `/staff/calendar?${params.toString()}`;
+  };
+
+  if (!stayId || !roomUnitId || (kind !== "booking" && kind !== "channel")) {
+    redirect(fallbackHref);
+  }
+
+  const [{ units }, confirmed, channels] = await Promise.all([
+    getStaffRoomUnits(),
+    getConfirmedBookings(),
+    getChannelReservations(),
+  ]);
+
+  const occupancies = [
+    ...confirmed.bookings.map(occupancyFromBooking),
+    ...channels.blocks.map(occupancyFromChannelBlock),
+  ];
+
+  if (kind === "booking") {
+    const booking = confirmed.bookings.find((entry) => entry.databaseId === stayId);
+    if (!booking) {
+      redirect(fallbackHref);
+    }
+
+    const unit = getRoomUnitById(units, roomUnitId);
+    if (!unit || !isUnitEligibleForRoom(unit, booking.roomId)) {
+      redirect(appendCalendarError(fallbackHref, "invalid-room-number"));
+    }
+
+    const conflict = findUnitAssignmentConflict({
+      units,
+      unitId: roomUnitId,
+      arrivalDate: booking.arrivalDate,
+      departureDate: booking.departureDate,
+      excludeId: stayId,
+      occupancies,
+    });
+    if (conflict) {
+      redirect(appendCalendarError(fallbackHref, "room-number-taken", conflict.error));
+    }
+
+    const supabase = createStaffSupabaseClient();
+    const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
+      p_booking_id: stayId,
+      p_room_unit_id: roomUnitId,
+    });
+
+    if (unitError) {
+      if (/Could not find the function|schema cache|PGRST202/i.test(unitError.message)) {
+        const { error: fallbackError } = await supabase
+          .from("booking_requests")
+          .update({ room_unit_id: roomUnitId })
+          .eq("id", stayId);
+        if (fallbackError) {
+          const classified = classifyRoomUnitSaveError(fallbackError.message);
+          redirect(
+            appendCalendarError(
+              fallbackHref,
+              classified.code === "room-unit-cache" ? "room-unit-rpc" : classified.code,
+              classified.detail,
+            ),
+          );
+        }
+      } else {
+        redirect(appendCalendarError(fallbackHref, "save-failed", unitError.message));
+      }
+    }
+
+    revalidatePath("/staff/calendar");
+    redirect(assignedRedirect(guestLabel || booking.guest, unit.number));
+  }
+
+  const channel = channels.blocks.find((entry) => entry.databaseId === stayId);
+  if (!channel || !channel.icalFeedId) {
+    redirect(fallbackHref);
+  }
+
+  const unit = getRoomUnitById(units, roomUnitId);
+  if (!unit || !isUnitEligibleForRoom(unit, channel.roomId)) {
+    redirect(appendCalendarError(fallbackHref, "invalid-room-number"));
+  }
+
+  const conflict = findUnitAssignmentConflict({
+    units,
+    unitId: roomUnitId,
+    arrivalDate: channel.startDate,
+    departureDate: channel.endDate,
+    excludeId: stayId,
+    occupancies,
+  });
+  if (conflict) {
+    redirect(appendCalendarError(fallbackHref, "room-number-taken", conflict.error));
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { error: rpcError } = await supabase.rpc("staff_update_channel_reservation", {
+    p_block_id: stayId,
+    p_guest_name: channel.guestName || null,
+    p_guest_email: channel.guestEmail || null,
+    p_guest_phone: channel.guestPhone || null,
+    p_start_date: channel.startDate,
+    p_end_date: channel.endDate,
+    p_staff_note: channel.staffNote || null,
+    p_room_unit_id: roomUnitId,
+  });
+
+  if (rpcError) {
+    if (/Could not find the function|schema cache|PGRST202/i.test(rpcError.message)) {
+      const { error: fallbackError } = await supabase
+        .from("room_blocks")
+        .update({ room_unit_id: roomUnitId })
+        .eq("id", stayId);
+      if (fallbackError) {
+        const classified = classifyRoomUnitSaveError(fallbackError.message);
+        redirect(
+          appendCalendarError(
+            fallbackHref,
+            classified.code === "room-unit-cache" ? "room-unit-rpc" : classified.code,
+            classified.detail,
+          ),
+        );
+      }
+    } else {
+      redirect(appendCalendarError(fallbackHref, "save-failed", rpcError.message));
+    }
   }
 
   revalidatePath("/staff/calendar");
   redirect(
-    `/staff/calendar?month=${arrival.slice(0, 7)}&booking=${encodeURIComponent(bookingId)}&saved=1`,
+    assignedRedirect(
+      guestLabel || channel.guestName || channel.channelLabel || "Guest",
+      unit.number,
+    ),
   );
 }
 
@@ -869,6 +1144,8 @@ export async function updateChannelReservation(
   const arrival = getValue(formData, "arrival");
   const departure = getValue(formData, "departure");
   const staffNote = getValue(formData, "staff-note");
+  const roomUnitIdRaw = getValue(formData, "room-unit-id");
+  const roomUnitId = roomUnitIdRaw || null;
 
   if (guestName && guestName.length < 2) {
     redirect(`${blockHref}&error=invalid-name`);
@@ -908,26 +1185,106 @@ export async function updateChannelReservation(
     );
   }
 
-  const { error } = await supabase
-    .from("room_blocks")
-    .update({
-      guest_name: guestName || null,
-      guest_email: guestEmail || null,
-      guest_phone: guestPhone || null,
-      start_date: arrival,
-      end_date: departure,
-      staff_note: staffNote || null,
-    })
-    .eq("id", blockId);
+  if (roomUnitId) {
+    const [{ units }, confirmed, channels] = await Promise.all([
+      getStaffRoomUnits(),
+      getConfirmedBookings(),
+      getChannelReservations(),
+    ]);
+    const unit = getRoomUnitById(units, roomUnitId);
+    if (!unit || !isUnitEligibleForRoom(unit, block.room_id)) {
+      redirect(
+        appendCalendarError(
+          blockHref,
+          "invalid-room-number",
+          units.length === 0
+            ? "No room numbers loaded from the database."
+            : `Door id ${roomUnitId.slice(0, 8)}… is not linked to this room type.`,
+        ),
+      );
+    }
 
-  if (error) {
-    redirect(`${blockHref}&error=save-failed`);
+    const occupancies = [
+      ...confirmed.bookings.map(occupancyFromBooking),
+      ...channels.blocks.map(occupancyFromChannelBlock),
+    ];
+    const conflict = findUnitAssignmentConflict({
+      units,
+      unitId: roomUnitId,
+      arrivalDate: arrival,
+      departureDate: departure,
+      excludeId: blockId,
+      occupancies,
+    });
+    if (conflict) {
+      redirect(appendCalendarError(blockHref, "room-number-taken", conflict.error));
+    }
   }
 
-  revalidatePath("/staff/calendar");
-  redirect(
-    `/staff/calendar?month=${arrival.slice(0, 7)}&block=${encodeURIComponent(blockId)}&saved=1`,
-  );
+  // Prefer RPC so assignment works even when PostgREST's table schema cache is stale.
+  const { error: rpcError } = await supabase.rpc("staff_update_channel_reservation", {
+    p_block_id: blockId,
+    p_guest_name: guestName || null,
+    p_guest_email: guestEmail || null,
+    p_guest_phone: guestPhone || null,
+    p_start_date: arrival,
+    p_end_date: departure,
+    p_staff_note: staffNote || null,
+    p_room_unit_id: roomUnitId,
+  });
+
+  if (!rpcError) {
+    revalidatePath("/staff/calendar");
+    redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
+  }
+
+  // RPC missing → fall back to direct update (needs a fresh schema cache).
+  if (/Could not find the function|schema cache|PGRST202/i.test(rpcError.message)) {
+    const { error: saveError } = await supabase
+      .from("room_blocks")
+      .update({
+        guest_name: guestName || null,
+        guest_email: guestEmail || null,
+        guest_phone: guestPhone || null,
+        start_date: arrival,
+        end_date: departure,
+        staff_note: staffNote || null,
+        room_unit_id: roomUnitId,
+      })
+      .eq("id", blockId);
+
+    if (!saveError) {
+      revalidatePath("/staff/calendar");
+      redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
+    }
+
+    const classified = classifyRoomUnitSaveError(saveError.message);
+    redirect(
+      appendCalendarError(
+        blockHref,
+        classified.code === "room-unit-cache" ? "room-unit-rpc" : classified.code,
+        classified.code === "room-unit-cache"
+          ? "Run supabase/migrate-room-unit-rpc.sql in the SQL editor (same project as your app), then try again."
+          : classified.detail,
+      ),
+    );
+  }
+
+  if (/room_unit_not_found/i.test(rpcError.message)) {
+    redirect(
+      appendCalendarError(
+        blockHref,
+        "invalid-room-number",
+        "That door number is not in room_units.",
+      ),
+    );
+  }
+
+  if (/channel_block_not_found/i.test(rpcError.message)) {
+    redirect(appendCalendarError(blockHref, "save-failed", "Channel reservation not found."));
+  }
+
+  redirect(appendCalendarError(blockHref, "save-failed", rpcError.message));
 }
 
 export async function removeRoomBlock(blockId: string, month: string, _formData: FormData) {
@@ -1056,4 +1413,79 @@ export async function bulkUpdateRoomAvailability(formData: FormData) {
 
   revalidatePath("/staff/calendar");
   redirect(`/staff/calendar?month=${month}&saved=bulk-status`);
+}
+
+export async function updateRoomDayAllotment(formData: FormData) {
+  await requireStaffSession();
+
+  const month = getValue(formData, "month");
+  const roomId = getValue(formData, "room-id");
+  const startDate = getValue(formData, "start-date");
+  const endDateInclusive = getValue(formData, "end-date");
+  const action = getValue(formData, "allotment-action");
+  const roomsToSellRaw = Number.parseInt(getValue(formData, "rooms-to-sell"), 10);
+  const room = await getRoomForBooking(roomId);
+  const start = parseDate(startDate);
+  const endInclusive = parseDate(endDateInclusive);
+
+  const allotmentHref = month
+    ? `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(startDate || "")}&mode=allotment`
+    : "/staff/calendar";
+
+  if (!room || !start || !endInclusive || endInclusive < start) {
+    redirect(`${allotmentHref}&error=invalid-dates`);
+  }
+
+  if (isPastCalendarDate(startDate)) {
+    redirect(`${allotmentHref}&error=past-date`);
+  }
+
+  if (action !== "set" && action !== "reset") {
+    redirect(`${allotmentHref}&error=invalid-dates`);
+  }
+
+  const days = eachIsoDayInclusive(startDate, endDateInclusive);
+  const supabase = createStaffSupabaseClient();
+
+  if (action === "reset") {
+    const { error } = await supabase
+      .from("room_day_inventory")
+      .delete()
+      .eq("room_id", room.id)
+      .gte("date", startDate)
+      .lte("date", endDateInclusive);
+
+    if (error) {
+      redirect(`${allotmentHref}&error=save-failed`);
+    }
+
+    revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+    revalidatePath("/");
+    revalidatePath("/staff/calendar");
+    redirect(`/staff/calendar?month=${month}&saved=allotment-reset`);
+  }
+
+  if (!Number.isFinite(roomsToSellRaw) || roomsToSellRaw < 0) {
+    redirect(`${allotmentHref}&error=invalid-allotment`);
+  }
+
+  const roomsToSell = Math.min(roomsToSellRaw, room.availableCount);
+  const rows = days.map((date) => ({
+    room_id: room.id,
+    date,
+    rooms_to_sell: roomsToSell,
+  }));
+
+  const { error } = await supabase.from("room_day_inventory").upsert(rows, {
+    onConflict: "room_id,date",
+  });
+
+  if (error) {
+    redirect(`${allotmentHref}&error=save-failed`);
+  }
+
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+  revalidatePath("/");
+  revalidatePath("/staff/calendar");
+  redirect(`/staff/calendar?month=${month}&saved=allotment`);
 }

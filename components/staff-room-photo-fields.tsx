@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Room } from "@/lib/content";
 import { prepareRoomPhotoFile } from "@/lib/prepare-room-photo";
-import { MAX_GALLERY_PHOTOS } from "@/lib/room-photo-upload";
+import { MAX_GALLERY_PHOTOS } from "@/lib/room-photo-shared";
 
 type StaffRoomPhotoFieldsProps = {
   room: Room;

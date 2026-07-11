@@ -7,15 +7,18 @@ type HomeDateSearchSectionProps = {
   arrival?: string;
   departure?: string;
   propertyName: string;
+  propertyTagline: string;
   addressLine: string | null;
-  contactPhone: string | null;
   dateError?: boolean;
-  showLocationMap?: boolean;
 };
 
 export function HomeDateSearchSection(props: HomeDateSearchSectionProps) {
   return (
-    <Suspense fallback={<div className="hero-search hero-search--loading" aria-hidden="true" />}>
+    <Suspense
+      fallback={
+        <div className="hero-atmosphere hero-atmosphere--loading" aria-hidden="true" />
+      }
+    >
       <HomeDateSearch {...props} />
     </Suspense>
   );

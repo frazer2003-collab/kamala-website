@@ -2,17 +2,20 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useState } from "react";
-import { PropertyLocation } from "@/components/property-location";
+import {
+  buildAtmosphereHeadline,
+  buildAtmosphereLede,
+  getGuesthouseLocationLabel,
+} from "@/lib/home-hero-copy";
 import { getPropertyTodayIso } from "@/lib/calendar";
 
 type HomeDateSearchProps = {
   arrival?: string;
   departure?: string;
   propertyName: string;
+  propertyTagline: string;
   addressLine: string | null;
-  contactPhone: string | null;
   dateError?: boolean;
-  showLocationMap?: boolean;
 };
 
 function addIsoDays(iso: string, days: number) {
@@ -66,29 +69,12 @@ function SearchDateSegment({
         name={name}
         onChange={onChange}
         onClick={(event) => openPicker(event.currentTarget)}
-        onKeyDown={(event) => {
-          if (
-            event.key === "Tab" ||
-            event.key === "Escape" ||
-            event.key.startsWith("Arrow")
-          ) {
-            return;
-          }
-
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            openPicker(event.currentTarget);
-          } else {
-            event.preventDefault();
-          }
-        }}
-        onPaste={(event) => event.preventDefault()}
         required
         type="date"
         value={value}
       />
       <span aria-hidden="true" className="search-bar__value">
-        {value ? formatSegmentDate(value) : "Add dates"}
+        {value ? formatSegmentDate(value) : "Pick a date"}
       </span>
     </label>
   );
@@ -98,10 +84,9 @@ export function HomeDateSearch({
   arrival,
   departure,
   propertyName,
+  propertyTagline,
   addressLine,
-  contactPhone,
   dateError,
-  showLocationMap = true,
 }: HomeDateSearchProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -112,6 +97,19 @@ export function HomeDateSearch({
     departure ?? (arrival ? addIsoDays(arrival, 1) : addIsoDays(propertyToday, 1));
   const [arrivalValue, setArrivalValue] = useState(defaultArrival);
   const [departureValue, setDepartureValue] = useState(defaultDeparture);
+
+  const locationLabel = useMemo(
+    () => getGuesthouseLocationLabel(addressLine, propertyName),
+    [addressLine, propertyName],
+  );
+  const headline = useMemo(
+    () => buildAtmosphereHeadline(locationLabel, propertyName),
+    [locationLabel, propertyName],
+  );
+  const lede = useMemo(
+    () => buildAtmosphereLede(locationLabel, propertyTagline, addressLine),
+    [addressLine, locationLabel, propertyTagline],
+  );
 
   useEffect(() => {
     const nextArrival = arrival ?? propertyToday;
@@ -147,20 +145,18 @@ export function HomeDateSearch({
   }
 
   return (
-    <section className="hero-search" aria-labelledby={`${formId}-title`}>
-      <div className="hero-search__intro">
-        <h1 id={`${formId}-title`}>Book your stay at {propertyName}</h1>
-        <p className="hero-search__lede">
-          Choose your dates to see which rooms are free.
-        </p>
-        <PropertyLocation
-          addressLine={addressLine}
-          contactPhone={contactPhone}
-          showMap={showLocationMap}
-        />
+    <section className="hero-atmosphere" aria-labelledby={`${formId}-title`} id="dates">
+      <div className="hero-atmosphere__copy">
+        <p className="hero-atmosphere__brand">{locationLabel}</p>
+        <h1 id={`${formId}-title`}>{headline}</h1>
+        <p className="hero-atmosphere__lede">{lede}</p>
       </div>
 
-      <form className="search-bar" onSubmit={handleSubmit}>
+      <form
+        aria-label="Check availability for your stay"
+        className="search-bar search-bar--atmosphere hero-atmosphere__search"
+        onSubmit={handleSubmit}
+      >
         <div className="search-bar__fields">
           <SearchDateSegment
             id={`${formId}-arrival`}
@@ -181,16 +177,14 @@ export function HomeDateSearch({
           />
         </div>
         <button className="search-bar__submit button button--primary" type="submit">
-          <span className="search-bar__submit-label">Search</span>
-          <span aria-hidden="true" className="search-bar__submit-icon">
-            ⌕
-          </span>
+          <span className="search-bar__submit-label">See available rooms</span>
         </button>
       </form>
 
       {dateError ? (
-        <p className="form-message form-message--error hero-search__message" role="alert">
-          Choose valid future dates with a stay between 1 and 21 nights.
+        <p className="form-message form-message--error hero-atmosphere__message" role="alert">
+          Check-out must be after check-in. Choose a stay between 1 and 21 nights, starting
+          from today.
         </p>
       ) : null}
     </section>

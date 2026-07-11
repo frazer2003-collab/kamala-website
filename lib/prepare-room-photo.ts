@@ -1,7 +1,7 @@
 import {
   MAX_ROOM_PHOTO_BYTES,
   getRoomPhotoValidationError,
-} from "@/lib/room-photo-upload";
+} from "@/lib/room-photo-shared";
 
 export const ROOM_PHOTO_MAX_WIDTH = 1600;
 export const ROOM_PHOTO_MAX_HEIGHT = 1200;

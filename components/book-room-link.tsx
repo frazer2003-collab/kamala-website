@@ -61,7 +61,9 @@ export function BookRoomLink({
         onNavigate?.();
         window.history.replaceState(null, "", `/?${params.toString()}#booking`);
         document.getElementById("booking")?.scrollIntoView({
-          behavior: "smooth",
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
           block: "start",
         });
       }}

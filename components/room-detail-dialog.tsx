@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
 import type { Room } from "@/lib/content";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
 import { getTodayIso } from "@/lib/calendar";
@@ -46,41 +46,54 @@ export function RoomDetailDialog({
   onClose,
 }: RoomDetailDialogProps) {
   const titleId = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const price = useMemo(() => {
+  const pricing = useMemo(() => {
     if (!room) {
       return null;
     }
 
-    if (stayDates) {
-      const quote = calculateStayQuote({
-        roomId: room.id,
-        baseRate: room.rate,
-        arrival: stayDates.arrival,
-        departure: stayDates.departure,
-        promotions,
-      });
+    const stayQuote = stayDates
+      ? calculateStayQuote({
+          roomId: room.id,
+          baseRate: room.rate,
+          arrival: stayDates.arrival,
+          departure: stayDates.departure,
+          promotions,
+        })
+      : null;
 
-      if (quote.nights > 0 && quote.hasPromotion) {
-        return {
-          baseRate: room.rate,
-          rate: Math.round(quote.total / quote.nights),
-          percentOff: Math.round(
-            ((quote.baseTotal - quote.total) / quote.baseTotal) * 100,
-          ),
-          hasPromotion: true,
-        };
-      }
-    } else {
-      const promo = getActivePromotionForRoom(room.id, promotions, getTodayIso());
-      if (promo) {
-        return {
-          baseRate: room.rate,
-          rate: applyPercentOff(room.rate, promo.percentOff),
-          percentOff: promo.percentOff,
-          hasPromotion: true,
-        };
-      }
+    if (stayDates && stayQuote && stayQuote.nights > 0 && stayQuote.hasPromotion) {
+      return {
+        baseRate: room.rate,
+        rate: Math.round(stayQuote.total / stayQuote.nights),
+        percentOff: Math.round(
+          ((stayQuote.baseTotal - stayQuote.total) / stayQuote.baseTotal) * 100,
+        ),
+        hasPromotion: true,
+        stayQuote,
+      };
+    }
+
+    if (stayDates && stayQuote && stayQuote.nights > 0) {
+      return {
+        baseRate: room.rate,
+        rate: room.rate,
+        percentOff: 0,
+        hasPromotion: false,
+        stayQuote,
+      };
+    }
+
+    const promo = getActivePromotionForRoom(room.id, promotions, getTodayIso());
+    if (promo) {
+      return {
+        baseRate: room.rate,
+        rate: applyPercentOff(room.rate, promo.percentOff),
+        percentOff: promo.percentOff,
+        hasPromotion: true,
+        stayQuote: null,
+      };
     }
 
     return {
@@ -88,45 +101,73 @@ export function RoomDetailDialog({
       rate: room.rate,
       percentOff: 0,
       hasPromotion: false,
+      stayQuote: null,
     };
   }, [promotions, room, stayDates]);
 
-  if (!room || !price) {
-    return null;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+
+    if (room) {
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+      return;
+    }
+
+    if (dialog.open) {
+      dialog.close();
+    }
+  }, [room]);
+
+  if (!room || !pricing) {
+    return (
+      <dialog
+        className="room-detail-dialog"
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        onClose={onClose}
+        ref={dialogRef}
+      />
+    );
   }
 
   const photos = getRoomPhotos(room);
   const bookable = isRoomBookable(availableCount);
+  const photoAlt = `${room.name} — ${room.outlook}`;
 
   return (
-    <div className="room-detail-dialog">
-      <button
-        aria-label="Close room details"
-        className="room-detail-dialog__backdrop"
-        onClick={onClose}
-        type="button"
-      />
-      <section
-        aria-labelledby={titleId}
-        aria-modal="true"
-        className="room-detail-dialog__panel"
-        role="dialog"
-      >
+    <dialog
+      aria-labelledby={titleId}
+      className="room-detail-dialog"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClose={onClose}
+      ref={dialogRef}
+    >
+      <div className="room-detail-dialog__panel">
         <div className="room-detail-dialog__header">
-          <div>
-            <p className="section-note">{room.shortName}</p>
-            <h2 id={titleId}>{room.name}</h2>
-          </div>
+          <h2 id={titleId}>{room.name}</h2>
           <button className="button button--quiet" onClick={onClose} type="button">
             Close
           </button>
         </div>
 
         <PhotoCarousel
+          alt={photoAlt}
           className="room-detail-dialog__carousel"
           photos={photos}
           placeholder={
-            <div className={`room-figure room-figure--${room.tone} room-detail-dialog__photo room-detail-dialog__photo--placeholder`}>
+            <div
+              className={`room-figure room-figure--${room.tone} room-detail-dialog__photo room-detail-dialog__photo--placeholder`}
+            >
               <span>{room.shortName}</span>
             </div>
           }
@@ -134,19 +175,30 @@ export function RoomDetailDialog({
 
         <div className="room-detail-dialog__body">
           <div className="room-detail-dialog__meta">
-            {price.hasPromotion ? (
+            {pricing.hasPromotion ? (
               <div className="room-detail-dialog__price room-detail-dialog__price--promo">
                 <span className="listing-card__price-was">
-                  {formatMoney(price.baseRate, currency)}
+                  {formatMoney(pricing.baseRate, currency)}
                 </span>
-                <strong>{formatMoney(price.rate, currency)}</strong>
-                <span className="listing-card__price-off">{price.percentOff}% off</span>
+                <strong>{formatMoney(pricing.rate, currency)}</strong>
+                <span className="listing-card__price-off">{pricing.percentOff}% off</span>
               </div>
             ) : (
-              <strong>{formatMoney(price.rate, currency)}</strong>
+              <strong>{formatMoney(pricing.rate, currency)}</strong>
             )}
+            <span className="room-detail-dialog__unit">per night</span>
             <span>{room.sleeps}</span>
           </div>
+
+          {pricing.stayQuote && pricing.stayQuote.nights > 0 ? (
+            <p className="room-detail-dialog__stay-total">
+              {formatMoney(pricing.stayQuote.total, currency)} total for{" "}
+              {pricing.stayQuote.nights}{" "}
+              {pricing.stayQuote.nights === 1 ? "night" : "nights"} (
+              {formatStayDateRange(stayDates!.arrival, stayDates!.departure)})
+            </p>
+          ) : null}
+
           <p className="room-detail-dialog__outlook">{room.outlook}</p>
           <p>{room.summary}</p>
           <RoomAmenitiesList amenities={room.amenities} label={`${room.name} amenities`} />
@@ -163,8 +215,8 @@ export function RoomDetailDialog({
           </div>
         </div>
 
-        <div className="room-detail-dialog__actions">
-          {bookable ? (
+        {bookable ? (
+          <div className="room-detail-dialog__actions">
             <BookRoomLink
               arrival={stayDates?.arrival}
               className="button button--primary"
@@ -174,16 +226,9 @@ export function RoomDetailDialog({
             >
               Reserve
             </BookRoomLink>
-          ) : (
-            <span
-              aria-disabled="true"
-              className="button button--primary room-card__book--disabled"
-            >
-              Unavailable
-            </span>
-          )}
-        </div>
-      </section>
-    </div>
+          </div>
+        ) : null}
+      </div>
+    </dialog>
   );
 }

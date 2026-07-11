@@ -1,4 +1,3 @@
-import { AmenityIcon } from "@/components/amenity-icon";
 import { sortAmenitiesByImportance } from "@/lib/amenities";
 
 type RoomAmenitiesListProps = {
@@ -9,7 +8,7 @@ type RoomAmenitiesListProps = {
 
 export function RoomAmenitiesList({
   amenities,
-  heading = "What this place offers",
+  heading = "Included with your stay",
   label,
 }: RoomAmenitiesListProps) {
   const orderedAmenities = sortAmenitiesByImportance(amenities);
@@ -21,12 +20,9 @@ export function RoomAmenitiesList({
   return (
     <section aria-label={label} className="amenity-offers">
       <h3 className="amenity-offers__title">{heading}</h3>
-      <ul className="amenity-grid">
+      <ul className="amenity-plain-list">
         {orderedAmenities.map((amenity) => (
-          <li className="amenity-grid__item" key={amenity}>
-            <AmenityIcon amenity={amenity} className="amenity-grid__icon" />
-            <span className="amenity-grid__label">{amenity}</span>
-          </li>
+          <li key={amenity}>{amenity}</li>
         ))}
       </ul>
     </section>

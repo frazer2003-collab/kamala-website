@@ -1,15 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { removeRoomBlock, updateChannelReservation } from "@/app/actions";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
 import type { Room } from "@/lib/content";
+import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
+import { getRoomUnitById, getUnitOptionsForStay } from "@/lib/room-units";
 
 type CalendarBlockPanelProps = {
   block: StaffRoomBlock;
   room: Room | undefined;
   monthKey: string;
   canManage: boolean;
+  roomUnits: RoomUnit[];
+  occupancies: UnitOccupancy[];
+  formError?: string | null;
 };
 
 function formatDateRange(startDate: string, endDate: string) {
@@ -28,6 +33,9 @@ export function CalendarBlockPanel({
   room,
   monthKey,
   canManage,
+  roomUnits,
+  occupancies,
+  formError,
 }: CalendarBlockPanelProps) {
   const removeAction = useMemo(
     () => removeRoomBlock.bind(null, block.databaseId ?? "", monthKey),
@@ -39,6 +47,45 @@ export function CalendarBlockPanel({
   );
   const isChannel = block.channelLabel !== null;
   const fieldPrefix = block.databaseId ?? block.id;
+  const [confirmReopen, setConfirmReopen] = useState(false);
+  const [fields, setFields] = useState({
+    arrivalDate: block.startDate,
+    departureDate: block.endDate,
+    roomUnitId: block.roomUnitId ?? "",
+  });
+
+  useEffect(() => {
+    setConfirmReopen(false);
+    setFields({
+      arrivalDate: block.startDate,
+      departureDate: block.endDate,
+      roomUnitId: block.roomUnitId ?? "",
+    });
+  }, [block.databaseId, block.startDate, block.endDate, block.roomUnitId]);
+
+  const unitOptions = useMemo(() => {
+    if (!room) {
+      return [];
+    }
+
+    return getUnitOptionsForStay({
+      units: roomUnits,
+      roomId: room.id,
+      arrivalDate: fields.arrivalDate,
+      departureDate: fields.departureDate,
+      excludeId: block.databaseId || undefined,
+      occupancies,
+    });
+  }, [
+    block.databaseId,
+    fields.arrivalDate,
+    fields.departureDate,
+    occupancies,
+    room,
+    roomUnits,
+  ]);
+
+  const currentUnit = getRoomUnitById(roomUnits, fields.roomUnitId);
 
   return (
     <>
@@ -54,7 +101,14 @@ export function CalendarBlockPanel({
       <dl className="detail-list">
         <div>
           <dt>Room</dt>
-          <dd>{room?.name ?? block.roomId}</dd>
+          <dd>
+            {room?.name ?? block.roomId}
+            {isChannel
+              ? block.roomNumber
+                ? ` · #${block.roomNumber}`
+                : " · Unassigned"
+              : null}
+          </dd>
         </div>
         {isChannel ? (
           <div>
@@ -83,6 +137,11 @@ export function CalendarBlockPanel({
 
       {isChannel ? (
         <>
+          {formError ? (
+            <p className="form-message form-message--error" role="alert">
+              {formError}
+            </p>
+          ) : null}
           <form action={saveChannelAction} className="calendar-manage-form">
             <div className="field-pair field-pair--wide">
               <label htmlFor={`channel-guest-name-${fieldPrefix}`}>Guest name</label>
@@ -120,24 +179,80 @@ export function CalendarBlockPanel({
             <div className="field-pair">
               <label htmlFor={`channel-arrival-${fieldPrefix}`}>Arrival</label>
               <input
-                defaultValue={block.startDate}
                 disabled={!canManage}
                 id={`channel-arrival-${fieldPrefix}`}
                 name="arrival"
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    arrivalDate: event.target.value,
+                  }))
+                }
                 required
                 type="date"
+                value={fields.arrivalDate}
               />
             </div>
             <div className="field-pair">
               <label htmlFor={`channel-departure-${fieldPrefix}`}>Departure</label>
               <input
-                defaultValue={block.endDate}
                 disabled={!canManage}
                 id={`channel-departure-${fieldPrefix}`}
                 name="departure"
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    departureDate: event.target.value,
+                  }))
+                }
                 required
                 type="date"
+                value={fields.departureDate}
               />
+            </div>
+            <div className="field-pair">
+              <label htmlFor={`channel-room-unit-${fieldPrefix}`}>Room number</label>
+              <select
+                disabled={!canManage || (unitOptions.length === 0 && !currentUnit)}
+                id={`channel-room-unit-${fieldPrefix}`}
+                name="room-unit-id"
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    roomUnitId: event.target.value,
+                  }))
+                }
+                value={fields.roomUnitId}
+              >
+                <option value="">Not assigned yet</option>
+                {currentUnit &&
+                !unitOptions.some((option) => option.unit.id === currentUnit.id) ? (
+                  <option value={currentUnit.id}>
+                    {currentUnit.number}
+                    {currentUnit.roomIds.length > 1 ? " (shared)" : ""}
+                  </option>
+                ) : null}
+                {unitOptions.map(({ unit, available, conflictGuest }) => (
+                  <option
+                    disabled={!available && unit.id !== fields.roomUnitId}
+                    key={unit.id}
+                    value={unit.id}
+                  >
+                    {unit.number}
+                    {unit.roomIds.length > 1 ? " (shared)" : ""}
+                    {!available && conflictGuest ? ` — taken (${conflictGuest})` : ""}
+                  </option>
+                ))}
+              </select>
+              {unitOptions.length === 0 ? (
+                <p className="field-hint">
+                  {!room
+                    ? "This channel stay is not linked to a room type, so a door number cannot be assigned."
+                    : roomUnits.length === 0
+                      ? "Room numbers aren’t set up yet. Ask whoever set up the site to finish room-number setup."
+                      : `No door numbers are linked to ${room.name}. Ask whoever set up the site to link doors to this room type.`}
+                </p>
+              ) : null}
             </div>
             <div className="field-pair field-pair--wide">
               <label htmlFor={`channel-note-${fieldPrefix}`}>Staff note</label>
@@ -149,28 +264,58 @@ export function CalendarBlockPanel({
                 rows={2}
               />
             </div>
-            <button className="button" disabled={!canManage} type="submit">
+            <button className="button button--primary" disabled={!canManage} type="submit">
               Save reservation
             </button>
           </form>
 
           <p className="detail-help">
-            Guest details and staff notes you add are kept when the calendar
-            syncs. Dates come from the channel, so they may update on the next
-            sync.
+            Assign a room number so this OTA stay appears on the room-number
+            rows. Guest details and assignment are kept when the calendar syncs;
+            dates may still update from the channel.
           </p>
         </>
       ) : (
         <>
-          <form action={removeAction} className="detail-actions">
-            <button
-              className="button button--secondary"
-              disabled={!canManage}
-              type="submit"
-            >
-              Reopen dates
-            </button>
-          </form>
+          {confirmReopen ? (
+            <div className="calendar-cancel-confirm">
+              <p className="calendar-cancel-confirm__summary">
+                Reopen these closed dates for{" "}
+                <strong>{room?.name ?? "this room"}</strong>? Guests will be able
+                to book them again.
+              </p>
+              <div className="calendar-cancel-confirm__actions">
+                <form action={removeAction}>
+                  <button
+                    className="button button--primary"
+                    disabled={!canManage}
+                    type="submit"
+                  >
+                    Yes, reopen dates
+                  </button>
+                </form>
+                <button
+                  className="button button--secondary"
+                  disabled={!canManage}
+                  onClick={() => setConfirmReopen(false)}
+                  type="button"
+                >
+                  Keep closed
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="detail-actions">
+              <button
+                className="button button--secondary"
+                disabled={!canManage}
+                onClick={() => setConfirmReopen(true)}
+                type="button"
+              >
+                Reopen dates
+              </button>
+            </div>
+          )}
 
           <p className="detail-help">
             Reopening removes this closure. Closed nights stay visible in the room

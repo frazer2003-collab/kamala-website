@@ -10,6 +10,7 @@ import {
   type BookingQuoteResult,
 } from "@/app/actions";
 import { BookingPaymentElement } from "@/components/booking-payment-element";
+import { BookingProgress } from "@/components/booking-progress";
 import {
   SELECT_ROOM_EVENT,
   SELECT_ROOM_STORAGE_KEY,
@@ -26,6 +27,24 @@ const initialState: BookingActionState = {
   status: "idle",
   message: "",
 };
+
+function QuoteAmount({
+  amount,
+  currency,
+  className = "",
+  as: Tag = "span",
+}: {
+  amount: number;
+  currency: PropertyCurrency;
+  className?: string;
+  as?: "span" | "strong";
+}) {
+  return (
+    <Tag key={amount} className={`quote-amount ${className}`.trim()}>
+      {formatMoney(amount, currency)}
+    </Tag>
+  );
+}
 
 function SubmitButton({
   disabled,
@@ -271,6 +290,13 @@ export function BookingRequest({
   const paymentReturnUrl = paymentStep
     ? getBookingPaymentReturnUrl(paymentStep.bookingId)
     : "";
+  const hasDates = hasValidStayDates(fields.arrival, fields.departure);
+  const progressStep: 1 | 2 | 3 = paymentStep ? 3 : hasDates ? 2 : 1;
+  const nightlyRate =
+    displayQuote.effectiveNightlyRate ?? selectedRoom.rate;
+  const promoSavings = showPromoPricing
+    ? displayQuote.baseTotal - displayQuote.total
+    : 0;
 
   function handleCancelPayment() {
     if (!paymentStep) {
@@ -285,7 +311,11 @@ export function BookingRequest({
   }
 
   return (
-    <section className="booking-panel" aria-labelledby="booking-title" id="booking">
+    <section
+      className={`booking-panel${paymentStep ? " booking-panel--payment" : ""}`}
+      aria-labelledby="booking-title"
+      id="booking"
+    >
       <div className="booking-panel__intro">
         <div className="booking-panel__intro-top">
           <p className="section-note">{t(locale, "requestStay")}</p>
@@ -305,6 +335,7 @@ export function BookingRequest({
             </select>
           </label>
         </div>
+        <BookingProgress locale={locale} step={progressStep} />
         <h2 id="booking-title">Request your stay</h2>
         <p>
           A 50% deposit holds your room. Staff confirm every booking and email
@@ -377,7 +408,7 @@ export function BookingRequest({
             aria-describedby={
               state.fieldErrors?.["guest-phone"] ? "guest-phone-error" : undefined
             }
-            placeholder="Include country code if outside the UK"
+            placeholder="Include country code, e.g. +66"
             required
           />
           {state.fieldErrors?.["guest-phone"] ? (
@@ -492,42 +523,67 @@ export function BookingRequest({
           />
         </div>
 
-        <div className="booking-summary" aria-live="polite">
-          <div className="booking-summary__row">
-            <span className="booking-summary__label">{t(locale, "estimatedTotal")}</span>
-            {hasValidStayDates(fields.arrival, fields.departure) ? (
-              showPromoPricing ? (
-                <div className="booking-summary__price">
-                  <span className="booking-summary__was">
-                    {formatMoney(displayQuote.baseTotal, currency)}
+        <div className="booking-summary booking-summary--receipt" aria-live="polite">
+          {hasDates ? (
+            <>
+              <div className="booking-receipt__lines">
+                <div className="booking-receipt__line">
+                  <span>
+                    {nights} {t(locale, "nightsLine")}{" "}
+                    {formatMoney(nightlyRate, currency)}/night
                   </span>
-                  <strong>{formatMoney(estimate, currency)}</strong>
-                  <span className="booking-summary__promo">
-                    {displayQuote.promoLabel ?? "Promotional rate"}
-                  </span>
+                  <QuoteAmount
+                    amount={showPromoPricing ? displayQuote.baseTotal : estimate}
+                    className="booking-receipt__value"
+                    currency={currency}
+                  />
                 </div>
-              ) : (
-                <strong>{formatMoney(estimate, currency)}</strong>
-              )
-            ) : (
-              <p className="booking-summary__hint">
-                Choose arrival and departure to see your total, including any
-                promotional rates.
-              </p>
-            )}
-          </div>
-          <div className="booking-summary__row">
-            <span className="booking-summary__label">{t(locale, "depositDue")}</span>
-            <strong>{formatMoney(deposit, currency)}</strong>
-          </div>
-          <p>
+                {showPromoPricing ? (
+                  <div className="booking-receipt__line booking-receipt__line--promo">
+                    <span>{displayQuote.promoLabel ?? t(locale, "promoSavings")}</span>
+                    <QuoteAmount
+                      amount={-promoSavings}
+                      className="booking-receipt__value booking-receipt__value--promo"
+                      currency={currency}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <div className="booking-receipt__divider" aria-hidden="true" />
+              <div className="booking-receipt__line booking-receipt__line--total">
+                <span className="booking-summary__label">{t(locale, "estimatedTotal")}</span>
+                <QuoteAmount
+                  amount={estimate}
+                  as="strong"
+                  className="booking-receipt__total"
+                  currency={currency}
+                />
+              </div>
+              <div className="booking-receipt__line booking-receipt__line--deposit">
+                <span className="booking-summary__label">{t(locale, "depositDue")}</span>
+                <QuoteAmount
+                  amount={deposit}
+                  as="strong"
+                  className="booking-receipt__deposit"
+                  currency={currency}
+                />
+              </div>
+            </>
+          ) : (
+            <p className="booking-summary__hint">
+              Choose arrival and departure to see your total, including any
+              promotional rates.
+            </p>
+          )}
+          <p className="booking-receipt__meta">
             {selectedRoom.name} · {selectedRoom.sleeps} ·{" "}
             {getRoomAvailabilityLabel(
               getRoomAvailableCount(selectedRoom, availabilityByRoomId),
-            )}.
+            )}
+            .
             {showPromoPricing
               ? ` Promotional pricing applies to ${displayQuote.promoNights} of ${nights} night${nights === 1 ? "" : "s"}.`
-              : hasValidStayDates(fields.arrival, fields.departure)
+              : hasDates
                 ? ""
                 : ` Standard rate is ${formatMoney(selectedRoom.rate, currency)}/night.`}
           </p>

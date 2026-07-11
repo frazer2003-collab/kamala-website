@@ -1,4 +1,5 @@
 import { sampleTours, type Tour } from "@/lib/content";
+import { sanitizeMediaUrl, sanitizeMediaUrlList } from "@/lib/media-url";
 import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -14,6 +15,17 @@ export type StaffTour = Tour & {
   createdAt: string;
 };
 
+/** Bundled covers for known Chiang Mai seed titles when DB image_url is empty. */
+const bundledTourCoverByTitle = new Map(
+  sampleTours
+    .filter((tour) => tour.imageUrl)
+    .map((tour) => [tour.title, tour.imageUrl as string]),
+);
+
+function resolveTourImageUrl(imageUrl: string | null | undefined, title: string): string | null {
+  return sanitizeMediaUrl(imageUrl) ?? bundledTourCoverByTitle.get(title) ?? null;
+}
+
 function mapTourRow(row: TourRow): Tour {
   return {
     id: row.id,
@@ -21,8 +33,8 @@ function mapTourRow(row: TourRow): Tour {
     summary: row.summary,
     durationLabel: row.duration_label,
     priceLabel: row.price_label,
-    imageUrl: row.image_url,
-    galleryUrls: row.gallery_urls ?? [],
+    imageUrl: resolveTourImageUrl(row.image_url, row.title),
+    galleryUrls: sanitizeMediaUrlList(row.gallery_urls),
     linkUrl: row.link_url,
     linkLabel: row.link_label,
     sortOrder: row.sort_order,
@@ -42,7 +54,7 @@ export async function getPublicTours(): Promise<Tour[]> {
 }
 
 const getPublicToursCached = cache(
-  unstable_cache(fetchPublicTours, ["public-tours"], {
+  unstable_cache(fetchPublicTours, ["public-tours-v2"], {
     revalidate: 120,
     tags: [PUBLIC_CACHE_TAGS.publicTours],
   }),

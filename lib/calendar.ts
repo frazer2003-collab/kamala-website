@@ -413,7 +413,12 @@ export function monthOverlapsBooking(
   year: number,
   month: number,
 ) {
-  const monthStart = formatCalendarMonth(year, month) + "-01";
-  const monthEnd = formatCalendarMonth(year, month) + `-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
+  const { monthStart, monthEnd } = getCalendarMonthBounds(year, month);
   return booking.arrivalDate <= monthEnd && booking.departureDate > monthStart;
+}
+
+export function getCalendarMonthBounds(year: number, month: number) {
+  const monthStart = `${formatCalendarMonth(year, month)}-01`;
+  const monthEnd = `${formatCalendarMonth(year, month)}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
+  return { monthStart, monthEnd };
 }

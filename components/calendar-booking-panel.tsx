@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { cancelConfirmedBooking, updateConfirmedBooking } from "@/app/actions";
 import type { StayStatus } from "@/lib/content";
+import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
+import { getAssignableUnitsForStay, getRoomUnitById } from "@/lib/room-units";
 
 const WALK_IN_EMAIL_PLACEHOLDER = "walk-in@kamala.local";
 
@@ -19,7 +21,23 @@ type CalendarBookingPanelProps = {
   stayStatus: StayStatus;
   note: string;
   staffNote: string;
+  roomId: string;
+  roomUnitId: string | null;
+  roomUnits: RoomUnit[];
+  occupancies: UnitOccupancy[];
+  depositPaid: boolean;
+  formError?: string | null;
 };
+
+function formatStayDates(arrival: string, departure: string) {
+  const formatter = new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+  });
+  const start = formatter.format(new Date(`${arrival}T00:00:00`));
+  const end = formatter.format(new Date(`${departure}T00:00:00`));
+  return `${start} – ${end}`;
+}
 
 export function CalendarBookingPanel({
   bookingKey,
@@ -34,8 +52,15 @@ export function CalendarBookingPanel({
   stayStatus,
   note,
   staffNote,
+  roomId,
+  roomUnitId,
+  roomUnits,
+  occupancies,
+  depositPaid,
+  formError,
 }: CalendarBookingPanelProps) {
   const initialEmail = guestEmail === WALK_IN_EMAIL_PLACEHOLDER ? "" : guestEmail;
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [fields, setFields] = useState({
     guestName,
     guestEmail: initialEmail,
@@ -44,9 +69,11 @@ export function CalendarBookingPanel({
     departureDate,
     stayStatus,
     staffNote,
+    roomUnitId: roomUnitId ?? "",
   });
 
   useEffect(() => {
+    setConfirmCancel(false);
     setFields({
       guestName,
       guestEmail: guestEmail === WALK_IN_EMAIL_PLACEHOLDER ? "" : guestEmail,
@@ -55,6 +82,7 @@ export function CalendarBookingPanel({
       departureDate,
       stayStatus,
       staffNote,
+      roomUnitId: roomUnitId ?? "",
     });
   }, [
     bookingKey,
@@ -65,6 +93,7 @@ export function CalendarBookingPanel({
     departureDate,
     stayStatus,
     staffNote,
+    roomUnitId,
   ]);
 
   const saveAction = useMemo(
@@ -77,8 +106,37 @@ export function CalendarBookingPanel({
     [databaseId, monthKey],
   );
 
+  const assignableUnits = useMemo(() => {
+    const free = getAssignableUnitsForStay({
+      units: roomUnits,
+      roomId,
+      arrivalDate: fields.arrivalDate,
+      departureDate: fields.departureDate,
+      excludeId: databaseId || undefined,
+      occupancies,
+    });
+    const current = getRoomUnitById(roomUnits, fields.roomUnitId);
+    if (current && !free.some((unit) => unit.id === current.id)) {
+      return [current, ...free];
+    }
+    return free;
+  }, [
+    databaseId,
+    fields.arrivalDate,
+    fields.departureDate,
+    fields.roomUnitId,
+    occupancies,
+    roomId,
+    roomUnits,
+  ]);
+
   return (
     <>
+      {formError ? (
+        <p className="form-message form-message--error" role="alert">
+          {formError}
+        </p>
+      ) : null}
       <form action={saveAction} className="calendar-manage-form">
         <input name="month" type="hidden" value={monthKey} />
         <div className="field-pair field-pair--wide">
@@ -156,6 +214,26 @@ export function CalendarBookingPanel({
           />
         </div>
         <div className="field-pair">
+          <label htmlFor={`calendar-room-unit-${bookingKey}`}>Room number</label>
+          <select
+            disabled={!canManage}
+            id={`calendar-room-unit-${bookingKey}`}
+            name="room-unit-id"
+            onChange={(event) =>
+              setFields((current) => ({ ...current, roomUnitId: event.target.value }))
+            }
+            value={fields.roomUnitId}
+          >
+            <option value="">Not assigned yet</option>
+            {assignableUnits.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.number}
+                {unit.roomIds.length > 1 ? " (shared)" : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field-pair">
           <label htmlFor={`calendar-stay-status-${bookingKey}`}>Check-in status</label>
           <select
             disabled={!canManage}
@@ -197,11 +275,47 @@ export function CalendarBookingPanel({
         </button>
       </form>
 
-      <form action={cancelAction} className="detail-actions">
-        <button className="button button--secondary" disabled={!canManage} type="submit">
-          Cancel stay
-        </button>
-      </form>
+      {confirmCancel ? (
+        <div className="calendar-cancel-confirm">
+          <p className="calendar-cancel-confirm__summary">
+            Cancel <strong>{fields.guestName || guestName}</strong> for{" "}
+            <strong>
+              {formatStayDates(
+                fields.arrivalDate || arrivalDate,
+                fields.departureDate || departureDate,
+              )}
+            </strong>
+            ? This removes the stay from the calendar
+            {depositPaid ? " and releases inventory held by the deposit" : ""}.
+          </p>
+          <div className="calendar-cancel-confirm__actions">
+            <form action={cancelAction}>
+              <button className="button button--danger" disabled={!canManage} type="submit">
+                Yes, cancel stay
+              </button>
+            </form>
+            <button
+              className="button button--secondary"
+              disabled={!canManage}
+              onClick={() => setConfirmCancel(false)}
+              type="button"
+            >
+              Keep stay
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="detail-actions">
+          <button
+            className="button button--secondary"
+            disabled={!canManage}
+            onClick={() => setConfirmCancel(true)}
+            type="button"
+          >
+            Cancel stay
+          </button>
+        </div>
+      )}
     </>
   );
 }

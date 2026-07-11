@@ -1,0 +1,82 @@
+Kamala's Boutique Guesthouse (Chiang Mai, Tha Phae / Chang Khlan) — room photo credits
+Reassigned 2026-07-11 after visual review of prior mislabels
+Processed with sharp: max width 1400px, JPEG quality 80, progressive
+
+SOURCES:
+1. Official https://www.kamalaguesthouse.com/photo-gallery — 25 Wix originals in public/rooms/_wix-raw/
+2. Expedia images.trvl-media.com hotel 7116200 — partial set in public/rooms/_expedia-raw/ (live Expedia HTML bot-blocked)
+3. Tripadvisor dynamic-media-cdn — elephant-art double
+
+REASSIGNMENT (prior wrong → corrected):
+- prior superior.jpg was 4-bed family → now family.jpg
+- prior deluxe.jpg was dining/common → replaced with balcony bedroom
+- prior triple.jpg was elephant double → now superior.jpg
+- prior family.jpg was queen+single balcony → now triple.jpg
+
+FILES:
+
+superior.jpg
+  maps_to: Superior Double or Twin Room
+  bytes: 105850
+  dimensions: 1000x1200
+  source: https://dynamic-media-cdn.tripadvisor.com/media/photo-o/05/cc/d4/18/kamala-s-boutique-guesthouse.jpg?w=1600&h=1200&s=1
+  confidence: high
+  note: Double bed with blue elephant wall art. User-verified as Superior/Deluxe-suitable; assigned Superior (no multi-bed alcove).
+
+deluxe.jpg
+  maps_to: Deluxe Double Room with Balcony
+  bytes: 132175
+  dimensions: 1400x1050
+  source: https://static.wixstatic.com/media/f85ca0_13626b331e2946c38ad84f568a3dab1d~mv2.jpg
+  confidence: medium-high
+  note: Bedroom facing glass doors/windows with garden greenery beyond — replaces prior dining/common-area misassignment.
+
+deluxe-2.jpg
+  maps_to: Deluxe Double Room with Balcony (garden gallery)
+  bytes: 147094
+  dimensions: 1400x1050
+  source: https://static.wixstatic.com/media/f85ca0_3160f01b0dd249f0bfa5ced8daac645a~mv2.jpg
+  confidence: high
+  note: Garden/courtyard exterior (same scene as prior Expedia 66f241b7; official Wix original).
+
+triple.jpg
+  maps_to: Triple Room with Balcony
+  bytes: 168123
+  dimensions: 1400x1050
+  source: https://images.trvl-media.com/lodging/8000000/7120000/7116200/7116200/cb43403c.jpg
+  confidence: high
+  note: Queen+single layout with bright balcony/window light. Was mislabeled family.jpg; user-verified Triple fit.
+
+family.jpg
+  maps_to: Family Room with Balcony
+  bytes: 127318
+  dimensions: 1400x1050
+  source: https://static.wixstatic.com/media/f85ca0_c0c2e1240e1544c8a9dd8f5f60bdf1a2~mv2.jpg
+  confidence: high
+  note: 4-bed family room (same content as prior superior.jpg / Expedia ad1715ad; official Wix high-res).
+
+superior-2.jpg
+  maps_to: Superior Double or Twin Room (alternate)
+  bytes: 131186
+  dimensions: 1400x933
+  source: https://static.wixstatic.com/media/f85ca0_d9c620988487484d9488a74f051a3762~mv2.jpg
+  confidence: medium
+  note: Official gallery double bedroom with wall art; alternate Superior angle.
+
+triple-2.jpg
+  maps_to: Triple Room with Balcony (alternate)
+  bytes: 161314
+  dimensions: 1400x1050
+  source: https://static.wixstatic.com/media/f85ca0_34d5505faaac40528c213a2af44580d6~mv2.jpg
+  confidence: medium
+  note: Bedroom with balcony/window view; phash-near prior Triple; alternate angle.
+
+family-2.jpg
+  maps_to: Family Room with Balcony (bathroom)
+  bytes: 139908
+  dimensions: 1400x1050
+  source: https://static.wixstatic.com/media/f85ca0_4a58cfed4a7c44c4960de298d8b3dde8~mv2.jpg
+  confidence: low-medium
+  note: Bathroom interior from official gallery; optional gallery extra (room-type not labeled).
+
+See also: public/rooms/_inventory.json (all downloaded candidates with visual guesses)

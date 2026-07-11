@@ -1,13 +1,17 @@
 import Link from "next/link";
 import type { PropertySettings } from "@/lib/property-settings";
+import { formatPropertyTagline } from "@/lib/property-brand";
 
 export function SiteFooter({ settings }: { settings: PropertySettings }) {
+  const tagline = formatPropertyTagline(settings.propertyName, settings.propertyTagline);
+
   return (
     <footer className="site-footer">
       <div className="site-footer__inner">
         <div>
           <strong>
-            {settings.propertyName} {settings.propertyTagline}
+            {settings.propertyName}
+            {tagline ? ` · ${tagline}` : null}
           </strong>
           {settings.addressLine ? <p>{settings.addressLine}</p> : null}
           {settings.contactPhone || settings.contactEmail ? (

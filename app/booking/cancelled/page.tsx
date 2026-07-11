@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { GuestTopbar } from "@/components/guest-topbar";
+import { SiteFooter } from "@/components/site-footer";
+import { getPropertySettings } from "@/lib/property-settings";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +12,7 @@ export default async function BookingCancelledPage({
   searchParams: Promise<{ booking_id?: string }>;
 }) {
   const { booking_id: bookingId } = await searchParams;
+  const settings = await getPropertySettings();
 
   if (bookingId) {
     try {
@@ -24,9 +28,9 @@ export default async function BookingCancelledPage({
   }
 
   return (
-    <main className="site-shell">
+    <main className="guest-site site-shell">
+      <GuestTopbar settings={settings} />
       <section className="section booking-result">
-        <p className="section-note">Payment cancelled</p>
         <h1>No deposit was taken.</h1>
         <p>
           Your room was not reserved. You can return to the booking form and try
@@ -36,6 +40,7 @@ export default async function BookingCancelledPage({
           Return to booking form
         </Link>
       </section>
+      <SiteFooter settings={settings} />
     </main>
   );
 }

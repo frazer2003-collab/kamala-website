@@ -28,6 +28,11 @@ const messages = {
     sendingRequest: "Sending request...",
     estimatedTotal: "Estimated total",
     depositDue: "Deposit due now",
+    progressStay: "Your stay",
+    progressDetails: "Guest details",
+    progressPay: "Pay deposit",
+    nightsLine: "nights at",
+    promoSavings: "Promotional savings",
     language: "Language",
   },
   th: {
@@ -51,6 +56,11 @@ const messages = {
     sendingRequest: "กำลังส่งคำขอ...",
     estimatedTotal: "ยอดรวมโดยประมาณ",
     depositDue: "มัดจำที่ต้องชำระตอนนี้",
+    progressStay: "ที่พักของคุณ",
+    progressDetails: "รายละเอียดผู้เข้าพัก",
+    progressPay: "ชำระมัดจำ",
+    nightsLine: "คืนที่",
+    promoSavings: "ส่วนลดโปรโมชัน",
     language: "ภาษา",
   },
 } as const;

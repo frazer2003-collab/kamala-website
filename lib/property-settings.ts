@@ -13,6 +13,9 @@ import {
 } from "@/lib/supabase";
 import type { PropertyCurrency } from "@/lib/currency";
 import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache";
+import { DEFAULT_HERO_IMAGE_URL } from "@/lib/home-hero-media";
+import { sanitizeMediaUrl } from "@/lib/media-url";
+import { normalizePropertyBrand } from "@/lib/property-brand";
 
 export type PropertySettings = {
   propertyName: string;
@@ -37,11 +40,12 @@ export type PropertySettings = {
 };
 
 const defaultSettings: PropertySettings = {
-  propertyName: "Kamala",
-  propertyTagline: "Guesthouse",
+  propertyName: "Kamala's Boutique Guesthouse",
+  propertyTagline: "Chiang Mai Old City",
   contactEmail: null,
   contactPhone: null,
-  addressLine: null,
+  addressLine:
+    "2/7 Tha Phae Rd Soi 6, Changklan, Mueang Chiang Mai District, Chiang Mai 50100",
   checkInFrom: "3:00 pm",
   checkInUntil: "8:00 pm",
   quietHours: "10:00 pm",
@@ -57,7 +61,7 @@ const defaultSettings: PropertySettings = {
   lineUrl: null,
   whatsappUrl: null,
   calendarColors: { ...DEFAULT_CALENDAR_COLORS },
-  heroImageUrl: null,
+  heroImageUrl: DEFAULT_HERO_IMAGE_URL,
   source: "defaults",
 };
 
@@ -83,8 +87,9 @@ function mapPropertySettings(row: PropertySettingsRow): PropertySettings {
       available: row.calendar_color_available,
       closed: row.calendar_color_closed,
       booking: row.calendar_color_booking,
+      soldOut: row.calendar_color_sold_out ?? undefined,
     }),
-    heroImageUrl: row.hero_image_url ?? null,
+    heroImageUrl: sanitizeMediaUrl(row.hero_image_url),
     source: "supabase",
   };
 }
@@ -101,9 +106,13 @@ const getPropertySettingsCached = cache(
   ),
 );
 
+function finalizePropertySettings(settings: PropertySettings): PropertySettings {
+  return normalizePropertyBrand(settings);
+}
+
 async function fetchPropertySettings(): Promise<PropertySettings> {
   if (!hasStaffSupabaseConfig()) {
-    return defaultSettings;
+    return finalizePropertySettings(defaultSettings);
   }
 
   try {
@@ -115,12 +124,12 @@ async function fetchPropertySettings(): Promise<PropertySettings> {
       .maybeSingle();
 
     if (error || !data) {
-      return defaultSettings;
+      return finalizePropertySettings(defaultSettings);
     }
 
-    return mapPropertySettings(data);
+    return finalizePropertySettings(mapPropertySettings(data));
   } catch {
-    return defaultSettings;
+    return finalizePropertySettings(defaultSettings);
   }
 }
 
@@ -165,6 +174,7 @@ export function toPropertySettingsRow(input: PropertySettingsInput) {
     calendar_color_available: input.calendarColors.available,
     calendar_color_closed: input.calendarColors.closed,
     calendar_color_booking: input.calendarColors.booking,
+    calendar_color_sold_out: input.calendarColors.soldOut,
     updated_at: new Date().toISOString(),
   };
 }

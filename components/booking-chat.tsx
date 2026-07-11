@@ -137,11 +137,31 @@ export function BookingChat(props: BookingChatProps) {
       return;
     }
 
-    const interval = window.setInterval(() => {
-      void refreshMessages(false);
-    }, 5000);
+    function getPollInterval() {
+      return document.visibilityState === "visible" ? 5000 : 20000;
+    }
 
-    return () => window.clearInterval(interval);
+    let intervalId = window.setInterval(() => {
+      void refreshMessages(false);
+    }, getPollInterval());
+
+    function handleVisibilityChange() {
+      window.clearInterval(intervalId);
+      intervalId = window.setInterval(() => {
+        void refreshMessages(false);
+      }, getPollInterval());
+
+      if (document.visibilityState === "visible") {
+        void refreshMessages(false);
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [disabled, readOnly, refreshMessages]);
 
   useEffect(() => {
@@ -192,7 +212,7 @@ export function BookingChat(props: BookingChatProps) {
       </div>
 
       {loadError ? (
-        <p className="form-message form-message--error" role="status">
+        <p className="form-message form-message--error" role="alert">
           {loadError}
         </p>
       ) : null}
@@ -271,7 +291,7 @@ export function BookingChat(props: BookingChatProps) {
             rows={4}
           />
           {actionState.error ? (
-            <p className="form-message form-message--error" role="status">
+            <p className="form-message form-message--error" role="alert">
               {actionState.error}
             </p>
           ) : null}

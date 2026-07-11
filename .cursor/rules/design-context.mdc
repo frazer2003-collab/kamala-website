@@ -33,4 +33,4 @@ These are the source of truth. Do not invent a parallel aesthetic; extend what t
 
 ## Note
 
-DESIGN.md is currently a **seed** (`<!-- SEED -->`). Token values are placeholders until implementation. Re-run `/impeccable document` in scan mode once CSS/components exist.
+DESIGN.md is the live visual system (scanned from `app/globals.css` and staff/guest components). Prefer tokens and patterns documented there over inventing new ones.

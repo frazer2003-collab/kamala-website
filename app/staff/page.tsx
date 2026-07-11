@@ -1,9 +1,6 @@
 import Link from "next/link";
-import {
-  confirmBookingRequest,
-  declineBookingRequest,
-} from "@/app/actions";
-import { BookingChat } from "@/components/booking-chat";
+import nextDynamic from "next/dynamic";
+import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import {
   getStaffBookingKey,
@@ -12,6 +9,17 @@ import {
   getStaffBookingRequests,
 } from "@/lib/booking-requests";
 import { requireStaffSession } from "@/lib/staff-auth";
+
+const BookingChat = nextDynamic(
+  () => import("@/components/booking-chat").then((module) => module.BookingChat),
+  {
+    loading: () => (
+      <p className="booking-summary__hint" aria-live="polite">
+        Loading messages…
+      </p>
+    ),
+  },
+);
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +31,9 @@ const statusCopy = {
 };
 
 const nextActions = {
-  new: "Review request",
-  awaiting: "Review request",
-  "needs-reply": "Review request",
+  new: "Review & decide",
+  awaiting: "Confirm deposit",
+  "needs-reply": "Reply to guest",
 };
 
 export default async function StaffBookingsPage({
@@ -61,46 +69,39 @@ export default async function StaffBookingsPage({
   const newRequestCount = staffBookings.bookings.filter(
     (booking) => booking.status === "new",
   ).length;
+  const needsReplyCount = staffBookings.bookings.filter(
+    (booking) => booking.status === "needs-reply",
+  ).length;
 
   return (
     <main className="staff-shell">
       <StaffSidebar current="requests" />
 
       <section className="staff-main" aria-labelledby="staff-title">
-        <div className="staff-header">
+        <div className="staff-header staff-header--compact">
           <div>
-            <p className="section-note">Staff bookings</p>
-            <h1 id="staff-title">Requests that need a clear next step.</h1>
+            <h1 id="staff-title">Requests</h1>
             <p>
-              Review new guest requests here. Confirming moves a stay to the
-              calendar; declining removes it from the record. Set rooms to sell
-              and closures from the calendar.
+              {staffBookings.bookings.length === 0
+                ? "No open requests. Confirmed stays live on the calendar."
+                : [
+                    `${staffBookings.bookings.length} open`,
+                    newRequestCount > 0 ? `${newRequestCount} new` : null,
+                    needsReplyCount > 0 ? `${needsReplyCount} need reply` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+              {" · "}
+              <Link href="/staff/calendar">Calendar</Link>
             </p>
           </div>
-          <Link className="button button--secondary" href="/">
-            View guest site
+          <Link className="button button--quiet" href="/">
+            Guest site
           </Link>
         </div>
 
-        <div className="staff-stats" aria-label="Booking summary">
-          <div>
-            <span>Open requests</span>
-            <strong>{staffBookings.bookings.length}</strong>
-          </div>
-          <div>
-            <span>New today</span>
-            <strong>{newRequestCount}</strong>
-          </div>
-          <div>
-            <span>Confirmed stays</span>
-            <strong>
-              <Link href="/staff/calendar">View calendar</Link>
-            </strong>
-          </div>
-        </div>
-
         {staffBookings.error ? (
-          <p className="form-message form-message--error" role="status">
+          <p className="form-message form-message--error" role="alert">
             {staffBookings.error}
           </p>
         ) : null}
@@ -113,11 +114,9 @@ export default async function StaffBookingsPage({
         <div className="booking-board" id="bookings">
           <section className="booking-list" aria-labelledby="requests-title">
             <div className="booking-list__header">
-              <h2 id="requests-title">Booking requests</h2>
+              <h2 id="requests-title">Open inbox</h2>
               <span>
-                {staffBookings.source === "supabase"
-                  ? "Live from Supabase"
-                  : "Sample data"}
+                {staffBookings.source === "supabase" ? "Live" : "Sample"}
               </span>
             </div>
             {staffBookings.bookings.length > 0 ? (
@@ -144,7 +143,7 @@ export default async function StaffBookingsPage({
                           <span aria-hidden="true" />
                           {statusCopy[booking.status as keyof typeof statusCopy]}
                         </div>
-                        <span className="button button--quiet">
+                        <span className="booking-row__action">
                           {nextActions[booking.status as keyof typeof nextActions]}
                         </span>
                       </Link>
@@ -165,11 +164,11 @@ export default async function StaffBookingsPage({
               </div>
             )}
             {declinedBookings.bookings.length > 0 ? (
-              <>
-                <div className="booking-list__header booking-list__header--sub">
-                  <h2 id="closed-title">Closed conversations</h2>
-                  <span>History kept on record</span>
-                </div>
+              <details className="booking-closed">
+                <summary>
+                  Closed conversations{" "}
+                  <span>({declinedBookings.bookings.length})</span>
+                </summary>
                 <div className="booking-rows">
                   {declinedBookings.bookings.map((booking) => {
                     const bookingKey = getStaffBookingKey(booking);
@@ -193,13 +192,13 @@ export default async function StaffBookingsPage({
                             <span aria-hidden="true" />
                             {statusCopy.declined}
                           </div>
-                          <span className="button button--quiet">View history</span>
+                          <span className="booking-row__action">View</span>
                         </Link>
                       </article>
                     );
                   })}
                 </div>
-              </>
+              </details>
             ) : null}
           </section>
 
@@ -218,115 +217,88 @@ export default async function StaffBookingsPage({
                 </div>
               </div>
               <h2 id="detail-title">{selected.guest}</h2>
-              <dl className="detail-list">
-                <div>
-                  <dt>Room</dt>
-                  <dd>{selected.room}</dd>
-                </div>
-                <div>
-                  <dt>Dates</dt>
-                  <dd>
-                    {selected.dates} · {selected.nights} nights
-                  </dd>
-                </div>
-                <div>
-                  <dt>Total</dt>
-                  <dd>${selected.estimatedTotal}</dd>
-                </div>
-                <div>
-                  <dt>Deposit paid</dt>
-                  <dd>
-                    {selected.depositPaid
-                      ? `$${selected.depositAmount}`
-                      : "Not received yet"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{selected.contact}</dd>
-                </div>
-                <div>
-                  <dt>Phone</dt>
-                  <dd>{selected.phone || "Not provided"}</dd>
-                </div>
-                <div>
-                  <dt>Requested</dt>
-                  <dd>{selected.requestedAt}</dd>
-                </div>
-              </dl>
+
+              <div className="reservation-detail__groups">
+                <dl className="detail-list detail-list--group" aria-label="Stay">
+                  <div>
+                    <dt>Room</dt>
+                    <dd>{selected.room}</dd>
+                  </div>
+                  <div>
+                    <dt>Dates</dt>
+                    <dd>
+                      {selected.dates} · {selected.nights} nights
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Total</dt>
+                    <dd>${selected.estimatedTotal}</dd>
+                  </div>
+                  <div>
+                    <dt>Deposit</dt>
+                    <dd>
+                      {selected.depositPaid
+                        ? `$${selected.depositAmount} paid`
+                        : "Not received yet"}
+                    </dd>
+                  </div>
+                </dl>
+
+                <dl className="detail-list detail-list--group" aria-label="Guest">
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{selected.contact}</dd>
+                  </div>
+                  <div>
+                    <dt>Phone</dt>
+                    <dd>{selected.phone || "Not provided"}</dd>
+                  </div>
+                  <div>
+                    <dt>Requested</dt>
+                    <dd>{selected.requestedAt}</dd>
+                  </div>
+                </dl>
+              </div>
+
               <div className="guest-note">
                 <span>Guest note</span>
                 <p>{selected.note || "No guest note added."}</p>
               </div>
-              {selected.databaseId ? (
-                <BookingChat
-                  bookingId={selected.databaseId}
-                  disabled={!canManageSelected}
-                  readOnly={isClosedConversation}
-                  variant="staff"
-                />
-              ) : null}
+
               {!isClosedConversation ? (
-                <div className="detail-actions">
-                  <form action={confirmBookingRequest}>
-                    <input
-                      name="booking-id"
-                      type="hidden"
-                      value={selected.databaseId ?? ""}
-                    />
-                    <input
-                      name="staff-message"
-                      type="hidden"
-                      value="Good news — your room is confirmed. We will follow up with arrival details and the remaining balance shortly."
-                    />
-                    <button
-                      className="button button--primary"
-                      disabled={!canManageSelected}
-                      type="submit"
-                    >
-                      Confirm and email
-                    </button>
-                  </form>
-                  <form action={declineBookingRequest}>
-                    <input
-                      name="booking-id"
-                      type="hidden"
-                      value={selected.databaseId ?? ""}
-                    />
-                    <input
-                      name="staff-message"
-                      type="hidden"
-                      value="Thank you for your request. We are sorry, but this room is not available for those dates. Reply with flexible dates and we can help find another option."
-                    />
-                    <button
-                      className="button button--secondary"
-                      disabled={!canManageSelected}
-                      type="submit"
-                    >
-                      Decline and email
-                    </button>
-                  </form>
-                </div>
+                <StaffRequestDecisionPanel
+                  bookingId={selected.databaseId ?? ""}
+                  canManage={canManageSelected}
+                  depositAmount={selected.depositAmount}
+                  depositPaid={selected.depositPaid}
+                  guestEmail={selected.contact}
+                  guestName={selected.guest}
+                />
               ) : (
                 <p className="detail-help">
-                  This request is closed. The conversation history remains available
-                  above.
+                  This request is closed. Conversation history stays available
+                  below.
                 </p>
               )}
-              {!isClosedConversation ? (
-                <p className="detail-help">
-                  Confirming sends the guest an email and moves the stay to the
-                  calendar. The room is already reserved by their deposit.
-                  Declining refunds the deposit and releases the room.
-                </p>
+
+              {selected.databaseId ? (
+                <details className="staff-request-chat" open={!isClosedConversation}>
+                  <summary>Conversation</summary>
+                  <BookingChat
+                    bookingId={selected.databaseId}
+                    disabled={!canManageSelected}
+                    readOnly={isClosedConversation}
+                    variant="staff"
+                  />
+                </details>
               ) : null}
             </aside>
           ) : (
             <aside className="reservation-detail" aria-labelledby="detail-title">
               <h2 id="detail-title">Waiting for the first request.</h2>
               <p>
-                Once a guest sends the form, staff will see their dates, room,
-                contact email, and note here.
+                Once a guest sends the form, their dates, room, contact, and note
+                appear here.
               </p>
             </aside>
           )}

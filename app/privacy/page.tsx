@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { getPropertySettings } from "@/lib/property-settings";
 
@@ -13,7 +14,9 @@ export default async function PrivacyPage() {
   const settings = await getPropertySettings();
 
   return (
-    <main className="site-shell">
+    <main className="guest-site site-shell">
+      <GuestTopbar settings={settings} tone="on-dark" />
+
       <section className="section legal-page">
         <p className="section-note">Privacy</p>
         <h1>Privacy policy</h1>

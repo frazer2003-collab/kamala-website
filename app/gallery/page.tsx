@@ -23,10 +23,10 @@ export default async function GalleryPage() {
   ]);
 
   return (
-    <main className="site-shell gallery-page">
-      <GuestTopbar current="gallery" settings={settings} />
+    <main className="guest-site site-shell guest-page gallery-page">
+      <GuestTopbar current="gallery" settings={settings} tone="on-dark" />
 
-      <div className="gallery-page__intro">
+      <div className="guest-page__intro gallery-page__intro">
         <p className="section-note">Gallery</p>
         <h1>A look around {settings.propertyName}.</h1>
         <p>
@@ -36,9 +36,12 @@ export default async function GalleryPage() {
 
       <PropertyGallery photos={photos} propertyName={settings.propertyName} />
 
-      <div className="gallery-page__actions">
+      <div className="guest-page__actions gallery-page__actions">
         <Link className="button button--secondary" href="/">
           Back to home
+        </Link>
+        <Link className="button button--primary" href="/#booking">
+          Request a stay
         </Link>
       </div>
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { removeRoomPromotion } from "@/app/staff/auth-actions";
 import { StaffPromotionAddForm } from "@/components/staff-promotion-add-form";
+import { StaffPromotionListItem } from "@/components/staff-promotion-list-item";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import { getTodayIso } from "@/lib/calendar";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
@@ -27,9 +27,24 @@ function formatPromotionDates(startDate: string, endDate: string) {
   return `${formatter.format(start)} to ${formatter.format(end)}`;
 }
 
-export default async function StaffPromotionsPage() {
+function promotionTiming(startDate: string, endDate: string, today: string) {
+  if (endDate < today) {
+    return "ended" as const;
+  }
+  if (startDate > today) {
+    return "upcoming" as const;
+  }
+  return "live" as const;
+}
+
+export default async function StaffPromotionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
   await requireStaffSession();
 
+  const { edit: editId } = await searchParams;
   const [promotions, rooms, supabaseReady] = await Promise.all([
     getStaffRoomPromotions(),
     getStaffRooms(),
@@ -40,86 +55,97 @@ export default async function StaffPromotionsPage() {
   const activePromotions = promotions
     .filter((promotion) => promotion.endDate >= today)
     .sort((left, right) => left.startDate.localeCompare(right.startDate));
+  const endedPromotions = promotions
+    .filter((promotion) => promotion.endDate < today)
+    .sort((left, right) => right.endDate.localeCompare(left.endDate));
+  const editing = editId ? promotions.find((promotion) => promotion.id === editId) ?? null : null;
 
   return (
     <main className="staff-shell">
       <StaffSidebar current="promotions" />
 
       <section className="staff-main" aria-labelledby="staff-promotions-title">
-        <div className="staff-header">
+        <div className="staff-header staff-header--compact">
           <div>
-            <p className="section-note">Staff promotions</p>
-            <h1 id="staff-promotions-title">Room offers by date.</h1>
-            <p>
-              Set a percentage discount for a room type across any date range.
-              Guests see the sale price on the homepage, calendar, and booking
-              form, and pay the matching deposit at checkout.
-            </p>
+            <h1 id="staff-promotions-title">Room discounts</h1>
+            <p>Sale prices for specific nights. Guests see them on booking.</p>
           </div>
-          <Link className="button button--secondary" href="/staff">
+          <Link className="button button--quiet" href="/staff">
             Back to requests
           </Link>
         </div>
 
         {!supabaseReady ? (
           <p className="form-message form-message--setup" role="status">
-            Add Supabase environment variables before managing promotions here.
+            Add Supabase environment variables before managing discounts here.
           </p>
         ) : null}
 
-        <div className="staff-settings-grid">
-          <section className="staff-settings-card" aria-labelledby="add-promotion-title">
-            <h2 id="add-promotion-title">Add promotion</h2>
-            <StaffPromotionAddForm disabled={!supabaseReady} rooms={rooms} />
-          </section>
-
+        <div className="staff-promotions-layout">
           <section className="staff-promotions-panel" aria-labelledby="promotion-list-title">
             <header className="staff-promotions-panel__header">
-              <h2 id="promotion-list-title">Scheduled offers</h2>
+              <h2 id="promotion-list-title">Current &amp; upcoming</h2>
               <span>
                 {activePromotions.length} active
-                {promotions.length > activePromotions.length
-                  ? ` · ${promotions.length - activePromotions.length} ended`
-                  : ""}
+                {endedPromotions.length > 0 ? ` · ${endedPromotions.length} ended` : ""}
               </span>
             </header>
 
             {activePromotions.length > 0 ? (
               <ul className="staff-promotions-list">
                 {activePromotions.map((promotion) => (
-                  <li className="staff-promotions-list__item" key={promotion.id}>
-                    <div className="staff-promotions-list__main">
-                      <strong>{roomNames.get(promotion.roomId) ?? promotion.roomId}</strong>
-                      <span className="staff-promotions-list__meta">
-                        <span className="staff-promotions-list__rate">
-                          {promotion.percentOff}% off
-                        </span>
-                        <span className="staff-promotions-list__dates">
-                          {formatPromotionDates(promotion.startDate, promotion.endDate)}
-                        </span>
-                      </span>
-                      {promotion.label ? (
-                        <span className="staff-promotions-list__label">{promotion.label}</span>
-                      ) : null}
-                    </div>
-                    <form action={removeRoomPromotion}>
-                      <input name="promotion-id" type="hidden" value={promotion.id} />
-                      <button className="button button--quiet" type="submit">
-                        Remove
-                      </button>
-                    </form>
-                  </li>
+                  <StaffPromotionListItem
+                    dateLabel={formatPromotionDates(promotion.startDate, promotion.endDate)}
+                    editing={editing?.id === promotion.id}
+                    key={promotion.id}
+                    promotion={promotion}
+                    roomName={roomNames.get(promotion.roomId) ?? promotion.roomId}
+                    timing={promotionTiming(promotion.startDate, promotion.endDate, today)}
+                  />
                 ))}
               </ul>
             ) : (
               <div className="staff-promotions-panel__empty">
-                <h3>No active promotions.</h3>
-                <p>
-                  Standard room rates apply until you add a percentage discount
-                  for specific dates.
-                </p>
+                <h3>No active discounts.</h3>
+                <p>Standard room rates apply until you add a percentage off for specific nights.</p>
               </div>
             )}
+
+            {endedPromotions.length > 0 ? (
+              <details className="staff-promotions-ended">
+                <summary>
+                  Ended discounts <span>({endedPromotions.length})</span>
+                </summary>
+                <ul className="staff-promotions-list staff-promotions-list--ended">
+                  {endedPromotions.map((promotion) => (
+                    <StaffPromotionListItem
+                      dateLabel={formatPromotionDates(promotion.startDate, promotion.endDate)}
+                      editing={false}
+                      key={promotion.id}
+                      promotion={promotion}
+                      roomName={roomNames.get(promotion.roomId) ?? promotion.roomId}
+                      timing="ended"
+                    />
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </section>
+
+          <section className="staff-settings-card" aria-labelledby="add-promotion-title">
+            <h2 id="add-promotion-title">{editing ? "Edit discount" : "Add discount"}</h2>
+            {editing ? (
+              <p className="staff-promotion-form__editing-note">
+                Updating {roomNames.get(editing.roomId) ?? "this room"} ·{" "}
+                {formatPromotionDates(editing.startDate, editing.endDate)}
+              </p>
+            ) : null}
+            <StaffPromotionAddForm
+              disabled={!supabaseReady}
+              editing={editing}
+              key={editing?.id ?? "new"}
+              rooms={rooms}
+            />
           </section>
         </div>
       </section>

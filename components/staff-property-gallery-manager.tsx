@@ -8,7 +8,7 @@ import {
 } from "@/app/staff/auth-actions";
 import type { PropertyGalleryPhoto } from "@/lib/property-gallery";
 import { prepareRoomPhotoFile } from "@/lib/prepare-room-photo";
-import { MAX_PROPERTY_GALLERY_PHOTOS } from "@/lib/property-gallery-upload";
+import { MAX_PROPERTY_GALLERY_PHOTOS } from "@/lib/room-photo-shared";
 
 type StaffPropertyGalleryManagerProps = {
   initialPhotos: PropertyGalleryPhoto[];

@@ -39,6 +39,7 @@ import {
   PUBLIC_CACHE_TAGS,
   revalidatePublicCache,
 } from "@/lib/public-cache";
+import { ALL_ROOMS_PROMOTION_ID } from "@/lib/room-promotion-constants";
 
 export type StaffLoginState = {
   error?: string;
@@ -191,6 +192,7 @@ export async function addRoomPromotion(
     return { error: "Supabase is not configured yet." };
   }
 
+  const promotionId = getValue(formData, "promotion-id");
   const roomId = getValue(formData, "room-id");
   const startDate = getValue(formData, "start-date");
   const endDate = getValue(formData, "end-date");
@@ -210,18 +212,60 @@ export async function addRoomPromotion(
   }
 
   const supabase = createStaffSupabaseClient();
-  const { error } = await supabase.from("room_promotions").insert({
-    room_id: roomId,
-    start_date: startDate,
-    end_date: endDate,
-    percent_off: percentOff,
-    label,
-  });
+
+  if (promotionId) {
+    if (roomId === ALL_ROOMS_PROMOTION_ID) {
+      return { error: "Edit one room at a time, or remove and add a new all-rooms discount." };
+    }
+
+    const { error } = await supabase
+      .from("room_promotions")
+      .update({
+        room_id: roomId,
+        start_date: startDate,
+        end_date: endDate,
+        percent_off: percentOff,
+        label,
+      })
+      .eq("id", promotionId);
+
+    if (error) {
+      return { error: "Could not update that discount. Try again." };
+    }
+
+    revalidatePublicCache(PUBLIC_CACHE_TAGS.publicPromotions);
+    revalidatePath("/staff/promotions");
+    revalidatePath("/staff/calendar");
+    revalidatePath("/");
+    redirect("/staff/promotions");
+  }
+
+  let roomIds = [roomId];
+
+  if (roomId === ALL_ROOMS_PROMOTION_ID) {
+    const { data: rooms, error: roomsError } = await supabase.from("rooms").select("id");
+
+    if (roomsError || !rooms?.length) {
+      return { error: "Add at least one room before creating a discount." };
+    }
+
+    roomIds = rooms.map((room) => room.id);
+  }
+
+  const { error } = await supabase.from("room_promotions").insert(
+    roomIds.map((id) => ({
+      room_id: id,
+      start_date: startDate,
+      end_date: endDate,
+      percent_off: percentOff,
+      label,
+    })),
+  );
 
   if (error) {
     if (error.code === "42P01") {
       return {
-        error: "Run supabase/migrate-room-promotions.sql in Supabase before adding promotions.",
+        error: "Run supabase/migrate-room-promotions.sql in Supabase before adding discounts.",
       };
     }
 
@@ -235,14 +279,19 @@ export async function addRoomPromotion(
       };
     }
 
-    return { error: "Could not save that promotion. Try again." };
+    return { error: "Could not save that discount. Try again." };
   }
 
   revalidatePublicCache(PUBLIC_CACHE_TAGS.publicPromotions);
   revalidatePath("/staff/promotions");
   revalidatePath("/staff/calendar");
   revalidatePath("/");
-  return { success: "Promotion saved. Guests see the percentage off on those nights." };
+  return {
+    success:
+      roomIds.length > 1
+        ? `Discount saved for all ${roomIds.length} room types. Guests see the sale price on those nights.`
+        : "Discount saved. Guests see the sale price on those nights.",
+  };
 }
 
 export async function removeRoomPromotion(formData: FormData) {
@@ -295,6 +344,7 @@ export async function updatePropertySettings(
       available: getValue(formData, "calendar-color-available"),
       closed: getValue(formData, "calendar-color-closed"),
       booking: getValue(formData, "calendar-color-booking"),
+      soldOut: getValue(formData, "calendar-color-sold-out"),
     }),
   };
 

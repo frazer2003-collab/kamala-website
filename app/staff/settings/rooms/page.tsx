@@ -52,8 +52,9 @@ export default async function StaffSettingsRoomsPage({
             <h1 id="staff-rooms-title">Room types on your guest site.</h1>
             <p>
               Up to {MAX_ROOM_TYPES} room types. New rooms are added to the bottom.
-              Set how many rooms of each type you have here — the calendar shows
-              rooms left automatically as bookings come in.
+              Set the default rooms of each type here. The calendar can override
+              rooms to sell for specific nights; rooms left still update as
+              bookings come in.
             </p>
           </div>
           <Link className="button button--secondary" href="/staff/settings">
