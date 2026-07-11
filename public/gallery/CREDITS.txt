@@ -1,0 +1,25 @@
+Kamala Boutique Guesthouse — property photos
+
+Source: Official photo gallery at https://www.kamalaguesthouse.com/photo-gallery
+Media hosted on Wix CDN (static.wixstatic.com).
+
+Downloaded at ~1400px via Wix /v1/fill/ fill transforms, then recompressed
+locally with sharp (max 1600px wide, JPEG quality 80, progressive).
+
+Files:
+- hero.jpg — garden/courtyard (media f85ca0_3160f01b0dd249f0bfa5ced8daac645a~mv2.jpg)
+- garden-01.jpg — same garden motif, reused from public/rooms/deluxe-2.jpg (Wix source above)
+- gallery-01.jpg — f85ca0_2613edf078ed484791823ccc69f391c6~mv2.jpg
+- gallery-02.jpg — f85ca0_3038ed99a886487c9eb44095541bec5a~mv2.jpg
+- gallery-03.jpg — f85ca0_74028efbdf9b4f6ca3221644137ee7e2~mv2.jpg
+- gallery-04.jpg — f85ca0_7ccd15423b4142d98e825d064cb3f196~mv2.jpg
+- gallery-05.jpg — f85ca0_a8da3a86bc7a4d3ca4bde51a4fffe725~mv2.jpg
+- gallery-06.jpg — f85ca0_e527f6a436fc4fea87007479e5139b3e~mv2.jpg
+- gallery-07.jpg — f85ca0_3ff33802e6c6490d98d0e896b6e4e7e9~mv2.jpg (exterior)
+- gallery-08.jpg — 8477bf_1268db884e5a48f0aa616310632aa1f6~mv2.jpg (exterior)
+- gallery-09.jpg — f85ca0_4fa82d5ba4df479a862272610c2a8ebc~mv2.jpg
+- gallery-10.jpg — f85ca0_0dc4de9e78b24af681eb62600e385bfe~mv2.jpg (common area)
+- gallery-11.jpg — f85ca0_ae67d3ac0ea148ed9dfd4a9e85a0dfbc~mv2.jpeg (bedroom)
+
+Copyright: Kamala Boutique Guesthouse / kamalaguesthouse.com
+Downloaded for use on the Kamala booking site property hero and gallery.

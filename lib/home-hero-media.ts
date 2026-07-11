@@ -1,7 +1,7 @@
 import { sanitizeMediaUrl } from "@/lib/media-url";
 
-/** No remote default — staff upload or garden fallback atmosphere. */
-export const DEFAULT_HERO_IMAGE_URL: string | null = null;
+/** Bundled courtyard/garden photo when staff have not uploaded a hero. */
+export const DEFAULT_HERO_IMAGE_URL = "/gallery/hero.jpg";
 
 export function resolveHeroImageUrl(heroImageUrl: string | null | undefined): string | null {
   return sanitizeMediaUrl(heroImageUrl) ?? DEFAULT_HERO_IMAGE_URL;

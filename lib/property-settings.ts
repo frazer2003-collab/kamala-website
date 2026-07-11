@@ -89,7 +89,7 @@ function mapPropertySettings(row: PropertySettingsRow): PropertySettings {
       booking: row.calendar_color_booking,
       soldOut: row.calendar_color_sold_out ?? undefined,
     }),
-    heroImageUrl: sanitizeMediaUrl(row.hero_image_url),
+    heroImageUrl: sanitizeMediaUrl(row.hero_image_url) ?? DEFAULT_HERO_IMAGE_URL,
     source: "supabase",
   };
 }
@@ -101,7 +101,7 @@ export async function getPropertySettings(): Promise<PropertySettings> {
 const getPropertySettingsCached = cache(
   unstable_cache(
     async (): Promise<PropertySettings> => fetchPropertySettings(),
-    ["property-settings"],
+    ["property-settings-v2"],
     { revalidate: 120, tags: [PUBLIC_CACHE_TAGS.propertySettings] },
   ),
 );
