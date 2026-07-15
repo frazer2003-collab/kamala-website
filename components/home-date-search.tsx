@@ -103,8 +103,8 @@ export function HomeDateSearch({
     [addressLine, propertyName],
   );
   const headline = useMemo(
-    () => buildAtmosphereHeadline(locationLabel, propertyName),
-    [locationLabel, propertyName],
+    () => buildAtmosphereHeadline(locationLabel, propertyName, addressLine),
+    [addressLine, locationLabel, propertyName],
   );
   const lede = useMemo(
     () => buildAtmosphereLede(locationLabel, propertyTagline, addressLine),

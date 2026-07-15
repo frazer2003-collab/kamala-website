@@ -22,7 +22,7 @@ export function HomeStayStory({
   houseRules,
 }: HomeStayStoryProps) {
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
-  const heading = buildStayStoryHeading(locationLabel);
+  const heading = buildStayStoryHeading(locationLabel, addressLine);
   const lede = buildStayStoryLede(propertyName, locationLabel, addressLine);
 
   return (

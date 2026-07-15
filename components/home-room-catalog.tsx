@@ -29,6 +29,7 @@ type HomeRoomCatalogProps = {
   promotions: RoomPromotionRate[];
   stayDates?: { arrival: string; departure: string };
   hasStayDates: boolean;
+  addressLine?: string | null;
 };
 
 type RoomPriceDisplay = {
@@ -251,6 +252,7 @@ export function HomeRoomCatalog({
   promotions,
   stayDates,
   hasStayDates,
+  addressLine = null,
 }: HomeRoomCatalogProps) {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
 
@@ -288,7 +290,7 @@ export function HomeRoomCatalog({
               </a>
             ) : null}
           </div>
-          <p className="section__subhead">{buildRoomsSectionSubhead(rooms.length)}</p>
+          <p className="section__subhead">{buildRoomsSectionSubhead(rooms.length, addressLine)}</p>
         </div>
 
         <div className="listing-showcase">

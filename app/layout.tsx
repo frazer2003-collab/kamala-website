@@ -31,6 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       type: "website",
       siteName: propertyName,
+      locale: "en_TH",
     },
   };
 }

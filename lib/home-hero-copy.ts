@@ -64,11 +64,15 @@ export function isChiangMaiLocation(locationLabel: string): boolean {
   return locationLabel.toLowerCase().includes("chiang mai");
 }
 
-function isNearThaPhaeGate(addressLine: string | null): boolean {
+export function isNearThaPhaeGate(addressLine: string | null): boolean {
   return /tha\s*phae/i.test(addressLine ?? "");
 }
 
-export function buildAtmosphereHeadline(locationLabel: string, propertyName: string): string {
+export function buildAtmosphereHeadline(
+  locationLabel: string,
+  propertyName: string,
+  addressLine: string | null = null,
+): string {
   const place =
     locationLabel.toLowerCase() === propertyName.toLowerCase()
       ? propertyName
@@ -76,6 +80,10 @@ export function buildAtmosphereHeadline(locationLabel: string, propertyName: str
 
   if (isCoastalLocation(locationLabel)) {
     return `Sleep under the palms in ${place}.`;
+  }
+
+  if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
+    return "A guesthouse near Tha Phae Gate, Chiang Mai.";
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -114,9 +122,16 @@ export function buildAtmosphereLede(
   return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast — book here and we reply to confirm.`;
 }
 
-export function buildStayStoryHeading(locationLabel: string): string {
+export function buildStayStoryHeading(
+  locationLabel: string,
+  addressLine: string | null = null,
+): string {
+  if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
+    return "A garden guesthouse near Tha Phae Gate";
+  }
+
   if (isChiangMaiLocation(locationLabel)) {
-    return "A garden guesthouse in Chiang Mai";
+    return "A garden guesthouse in Chiang Mai Old City";
   }
 
   return `A garden guesthouse in ${locationLabel}`;
@@ -160,8 +175,19 @@ export function buildMetadataNearbyNote(
   return "Garden rooms in a quiet neighborhood.";
 }
 
-export function buildRoomsSectionSubhead(roomCount: number): string {
+export function buildRoomsSectionSubhead(
+  roomCount: number,
+  addressLine: string | null = null,
+): string {
   const types = roomCount === 1 ? "1 room type" : `${roomCount} room types`;
+
+  if (addressLine && /chiang\s*mai/i.test(addressLine)) {
+    const locationNote = isNearThaPhaeGate(addressLine)
+      ? "near Tha Phae Gate"
+      : "in Chiang Mai Old City";
+    return `${types} ${locationNote} · breakfast included · book directly with us`;
+  }
+
   return `${types} · breakfast included · you book directly with us`;
 }
 

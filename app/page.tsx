@@ -8,8 +8,9 @@ import { HomeStayStory } from "@/components/home-stay-story";
 import { SiteFooter } from "@/components/site-footer";
 import { isLocale } from "@/lib/i18n";
 import { HomeStickyDates } from "@/components/home-sticky-dates";
-import { buildMetadataNearbyNote, getGuesthouseLocationLabel } from "@/lib/home-hero-copy";
+import { HomePageJsonLd } from "@/components/home-page-json-ld";
 import { resolveHeroImageUrl } from "@/lib/home-hero-media";
+import { buildHomePageJsonLd, buildHomePageMetadata } from "@/lib/home-seo";
 import { getPropertySettings } from "@/lib/property-settings";
 import { hasStripeClientConfig, getStripePublishableKey } from "@/lib/stripe";
 import { getPublicRooms } from "@/lib/rooms";
@@ -19,24 +20,7 @@ import { parseStayDates } from "@/lib/stay-dates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
-  const locationLabel = getGuesthouseLocationLabel(
-    settings.addressLine,
-    settings.propertyName,
-  );
-  const title = `${settings.propertyName} — Garden guesthouse in ${locationLabel}`;
-  const nearbyNote = buildMetadataNearbyNote(locationLabel, settings.addressLine);
-  const description = `Book a room at ${settings.propertyName} in ${locationLabel}. ${nearbyNote} Request dates on this site — staff confirm every stay.`;
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: "website",
-      siteName: settings.propertyName,
-    },
-  };
+  return buildHomePageMetadata(settings);
 }
 
 export default async function Home({
@@ -66,9 +50,12 @@ export default async function Home({
       availableCount: room.availableCount,
     }))).map((entry) => [entry.roomId, entry.availableCount]),
   );
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? null;
+  const jsonLd = buildHomePageJsonLd(settings, rooms, appUrl);
 
   return (
     <main className="guest-site">
+      <HomePageJsonLd data={jsonLd} />
       <HomeHeroShell heroImageUrl={resolveHeroImageUrl(settings.heroImageUrl)}>
         <GuestTopbar current="home" settings={settings} />
 
@@ -91,6 +78,7 @@ export default async function Home({
 
       <div className="site-shell home-body">
         <HomeRoomCatalog
+          addressLine={settings.addressLine}
           availabilityByRoomId={availabilityByRoomId}
           currency={settings.currency}
           hasStayDates={Boolean(stayDates)}
