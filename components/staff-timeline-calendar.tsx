@@ -2,6 +2,7 @@
 
 import { memo, useMemo, type ReactNode } from "react";
 import Link from "next/link";
+import { CalendarJumpToToday } from "@/components/calendar-jump-to-today";
 import {
   buildRoomTimelineBars,
   buildUnitTimelineBars,
@@ -107,14 +108,22 @@ function MetricRowLabel({
   children,
   action,
   className,
+  hint,
 }: {
   children: ReactNode;
   action?: ReactNode;
   className?: string;
+  hint?: string;
 }) {
   return (
-    <div className={["extranet-row__label", className].filter(Boolean).join(" ")}>
-      <span>{children}</span>
+    <div
+      className={["extranet-row__label", className].filter(Boolean).join(" ")}
+      title={hint}
+    >
+      <span>
+        {children}
+        {hint ? <span className="extranet-row__hint">{hint}</span> : null}
+      </span>
       {action}
     </div>
   );
@@ -149,9 +158,18 @@ function DayCell({
     return (
       <div
         aria-disabled={disabled ? true : undefined}
-        aria-label={ariaLabel}
+        aria-label={
+          disabled
+            ? `${ariaLabel}. Past dates are locked — only future days can be changed.`
+            : ariaLabel
+        }
         className={classes}
         style={{ gridColumn: columnIndex + 2 }}
+        title={
+          disabled
+            ? "Past dates are locked — only future days can be changed."
+            : undefined
+        }
       >
         {children}
       </div>
@@ -172,8 +190,6 @@ function DayCell({
 
 function StatusPill({ status }: { status: DaySaleStatus }) {
   const label = getDaySaleStatusLabel(status);
-  const shortLabel =
-    status === "closed" ? "Clsd" : status === "sold-out" ? "Sold" : "Open";
 
   return (
     <span
@@ -187,10 +203,7 @@ function StatusPill({ status }: { status: DaySaleStatus }) {
       ].join(" ")}
       title={label}
     >
-      <span className="extranet-pill__full">{label}</span>
-      <span aria-hidden="true" className="extranet-pill__short">
-        {shortLabel}
-      </span>
+      {label}
     </span>
   );
 }
@@ -518,7 +531,9 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         className="extranet-room__grid"
         style={{ ["--timeline-days" as string]: dayCount }}
       >
-        <MetricRowLabel>Room status</MetricRowLabel>
+        <MetricRowLabel hint="Click a day to open, close, or mark sold out">
+          Room status
+        </MetricRowLabel>
         {dayMetrics.map((day) => (
           <DayCell
             ariaLabel={`${room.name} status on ${day.iso}: ${getDaySaleStatusLabel(day.saleStatus)}`}
@@ -541,7 +556,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           </DayCell>
         ))}
 
-        <MetricRowLabel>
+        <MetricRowLabel hint="Click a day to set a temporary allotment">
           Rooms left
           <span className="extranet-row__meta">of {room.availableCount}</span>
         </MetricRowLabel>
@@ -582,7 +597,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
 
         {unassignedCount > 0 ? (
           <>
-            <MetricRowLabel>
+            <MetricRowLabel hint="Assign a room number on the stay bar">
               Needs room #
               <span className="extranet-row__meta">{unassignedCount} waiting</span>
             </MetricRowLabel>
@@ -855,8 +870,9 @@ export function StaffTimelineCalendar({
       ].join(" ")}
       style={getCalendarColorStyleProps(calendarColors)}
     >
+      <CalendarJumpToToday />
       <h2 className="sr-only">Room availability by day</h2>
-      <div className="staff-extranet__scroll">
+      <div className="staff-extranet__scroll" id="calendar-today">
         <div
           className="staff-extranet__dates"
           style={{ ["--timeline-days" as string]: dayCount }}
@@ -870,7 +886,7 @@ export function StaffTimelineCalendar({
                 className={[
                   "staff-extranet__dayhead",
                   header.isWeekend ? "staff-extranet__dayhead--weekend" : "",
-                  header.isToday ? "staff-extranet__dayhead--today" : "",
+                  header.isToday ? "staff-extranet__dayhead--today extranet-cell--today" : "",
                   !day.inCurrentMonth ? "staff-extranet__dayhead--muted" : "",
                 ]
                   .filter(Boolean)

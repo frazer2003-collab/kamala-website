@@ -54,7 +54,11 @@ export function StaffPromotionListItem({
         ) : null}
 
         {confirming ? (
-          <form action={removeRoomPromotion} className="staff-promotions-list__confirm">
+          <form
+            action={removeRoomPromotion}
+            aria-label={`Confirm remove ${promotion.percentOff}% off ${roomName}`}
+            className="staff-promotions-list__confirm"
+          >
             <input name="promotion-id" type="hidden" value={promotion.id} />
             <p className="staff-promotions-list__confirm-copy">
               Remove {promotion.percentOff}% off {roomName} ({dateLabel})? Guests will see the
@@ -75,6 +79,7 @@ export function StaffPromotionListItem({
           </form>
         ) : (
           <button
+            aria-expanded={false}
             className="button button--quiet"
             onClick={() => setConfirming(true)}
             type="button"

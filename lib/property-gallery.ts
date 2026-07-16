@@ -46,22 +46,19 @@ function mapPhoto(row: PropertyGalleryPhotoRow): PropertyGalleryPhoto | null {
   };
 }
 
-function withGalleryFallback(photos: PropertyGalleryPhoto[]) {
-  return photos.length > 0 ? photos : samplePropertyGalleryPhotos;
-}
-
+/** Stored property photos only (no sample fallback). Empty when none uploaded. */
 export async function getPublicPropertyGalleryPhotos() {
   return getPublicPropertyGalleryPhotosCached();
 }
 
 const getPublicPropertyGalleryPhotosCached = cache(
-  unstable_cache(fetchPublicPropertyGalleryPhotos, ["property-gallery-v2"], {
+  unstable_cache(fetchPublicPropertyGalleryPhotos, ["property-gallery-v3"], {
     revalidate: 120,
     tags: [PUBLIC_CACHE_TAGS.propertyGallery],
   }),
 );
 
-async function fetchPublicPropertyGalleryPhotos() {
+async function fetchPublicPropertyGalleryPhotos(): Promise<PropertyGalleryPhoto[]> {
   try {
     const supabase = createGuestSupabaseClient();
     const { data, error } = await supabase
@@ -71,12 +68,12 @@ async function fetchPublicPropertyGalleryPhotos() {
       .order("created_at", { ascending: true });
 
     if (error || !data) {
-      return samplePropertyGalleryPhotos;
+      return [];
     }
 
-    return withGalleryFallback(data.map(mapPhoto).filter((photo): photo is PropertyGalleryPhoto => Boolean(photo)));
+    return data.map(mapPhoto).filter((photo): photo is PropertyGalleryPhoto => Boolean(photo));
   } catch {
-    return samplePropertyGalleryPhotos;
+    return [];
   }
 }
 

@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { BookingChat } from "@/components/booking-chat";
+import { CopyConversationLink } from "@/components/copy-conversation-link";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
-import { getBookingByConversationToken, isChatReadOnly } from "@/lib/booking-chat";
+import {
+  getBookingByConversationToken,
+  getGuestChatUrl,
+  isChatReadOnly,
+} from "@/lib/booking-chat";
 import { getPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
@@ -43,8 +48,10 @@ export default async function BookingMessagesPage({
         <p>
           Messages here stay with your reservation for {booking.room_name} (
           {booking.arrival_date} to {booking.departure_date}). Use this private
-          page to read and send messages about your stay.
+          page to read and send messages about your stay. We email you when
+          Kamala replies.
         </p>
+        <CopyConversationLink url={getGuestChatUrl(token)} />
         <BookingChat
           readOnly={isChatReadOnly(booking.status)}
           token={token}

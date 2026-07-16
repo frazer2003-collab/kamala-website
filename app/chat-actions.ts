@@ -15,6 +15,11 @@ import { createStaffSupabaseClient } from "@/lib/supabase";
 
 export type ChatActionState = {
   error?: string;
+  message?: ChatMessage;
+  /** true = notified, false = notify failed, null/undefined = no email attempt */
+  emailSent?: boolean | null;
+  /** Increments on each successful send so the client can reset the form once. */
+  sentAt?: number;
 };
 
 async function getStaffBooking(bookingId: string) {
@@ -93,13 +98,17 @@ export async function sendStaffChatMessage(
   }
 
   const result = await recordStaffChatMessage({ booking, body });
-  if (!result.ok) {
+  if (!result.ok || !("message" in result) || !result.message) {
     return { error: "Could not send your message. Try again." };
   }
 
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
-  return {};
+  return {
+    message: result.message,
+    emailSent: result.emailSent ?? null,
+    sentAt: Date.now(),
+  };
 }
 
 export async function sendGuestChatMessage(
@@ -128,10 +137,14 @@ export async function sendGuestChatMessage(
     senderEmail: booking.guest_email,
   });
 
-  if (!result.ok) {
+  if (!result.ok || !("message" in result) || !result.message) {
     return { error: "Could not send your message. Try again." };
   }
 
   revalidatePath("/booking/messages");
-  return {};
+  return {
+    message: result.message,
+    emailSent: result.emailSent ?? null,
+    sentAt: Date.now(),
+  };
 }

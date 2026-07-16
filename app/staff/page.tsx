@@ -7,8 +7,12 @@ import {
   getDeclinedBookings,
   getStaffBookingById,
   getStaffBookingRequests,
+  type StaffBooking,
 } from "@/lib/booking-requests";
+import { formatMoneySuffix } from "@/lib/currency";
+import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffSession } from "@/lib/staff-auth";
+import type { BookingStatus } from "@/lib/content";
 
 const BookingChat = nextDynamic(
   () => import("@/components/booking-chat").then((module) => module.BookingChat),
@@ -23,31 +27,89 @@ const BookingChat = nextDynamic(
 
 export const dynamic = "force-dynamic";
 
-const statusCopy = {
+type InboxFilter = "all" | "new" | "awaiting" | "needs-reply";
+
+const statusCopy: Record<BookingStatus, string> = {
   new: "New request",
-  awaiting: "Deposit paid",
+  pending_payment: "Awaiting deposit",
+  awaiting: "Deposit received",
   "needs-reply": "Needs staff reply",
+  confirmed: "Confirmed",
   declined: "Closed",
 };
 
-const nextActions = {
-  new: "Review & decide",
-  awaiting: "Confirm deposit",
-  "needs-reply": "Reply to guest",
+const STATUS_SORT: Partial<Record<BookingStatus, number>> = {
+  "needs-reply": 0,
+  new: 1,
+  awaiting: 2,
 };
+
+function parseInboxFilter(value: string | undefined): InboxFilter {
+  if (value === "new" || value === "awaiting" || value === "needs-reply") {
+    return value;
+  }
+
+  return "all";
+}
+
+function buildStaffHref(options: {
+  booking?: string | null;
+  filter?: InboxFilter;
+  view?: "inbox" | null;
+}) {
+  const params = new URLSearchParams();
+
+  if (options.booking) {
+    params.set("booking", options.booking);
+  }
+
+  if (options.filter && options.filter !== "all") {
+    params.set("filter", options.filter);
+  }
+
+  if (options.view === "inbox") {
+    params.set("view", "inbox");
+  }
+
+  const query = params.toString();
+  return query ? `/staff?${query}` : "/staff";
+}
+
+function sortInboxBookings(bookings: StaffBooking[]) {
+  return [...bookings].sort((left, right) => {
+    const leftRank = STATUS_SORT[left.status] ?? 9;
+    const rightRank = STATUS_SORT[right.status] ?? 9;
+    return leftRank - rightRank;
+  });
+}
 
 export default async function StaffBookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking?: string }>;
+  searchParams: Promise<{ booking?: string; filter?: string; view?: string }>;
 }) {
   await requireStaffSession();
 
-  const { booking: selectedBookingId } = await searchParams;
-  const [staffBookings, declinedBookings] = await Promise.all([
+  const {
+    booking: selectedBookingId,
+    filter: filterParam,
+    view: viewParam,
+  } = await searchParams;
+  const inboxFilter = parseInboxFilter(filterParam);
+  const preferInboxView = viewParam === "inbox";
+
+  const [staffBookings, declinedBookings, settings] = await Promise.all([
     getStaffBookingRequests(),
     getDeclinedBookings(),
+    getPropertySettings(),
   ]);
+
+  const sortedOpen = sortInboxBookings(staffBookings.bookings);
+  const visibleOpen =
+    inboxFilter === "all"
+      ? sortedOpen
+      : sortedOpen.filter((booking) => booking.status === inboxFilter);
+
   let selected =
     staffBookings.bookings.find(
       (booking) => getStaffBookingKey(booking) === selectedBookingId,
@@ -61,8 +123,18 @@ export default async function StaffBookingsPage({
     selected = await getStaffBookingById(selectedBookingId);
   }
 
-  selected ??= staffBookings.bookings[0] ?? declinedBookings.bookings[0] ?? null;
+  if (!preferInboxView) {
+    selected ??=
+      visibleOpen[0] ??
+      staffBookings.bookings[0] ??
+      declinedBookings.bookings[0] ??
+      null;
+  }
 
+  const isPracticeMode =
+    staffBookings.source === "sample" &&
+    Boolean(selected) &&
+    !selected?.databaseId;
   const canManageSelected =
     Boolean(selected?.databaseId) && selected?.status !== "declined";
   const isClosedConversation = selected?.status === "declined";
@@ -72,6 +144,18 @@ export default async function StaffBookingsPage({
   const needsReplyCount = staffBookings.bookings.filter(
     (booking) => booking.status === "needs-reply",
   ).length;
+  const awaitingCount = staffBookings.bookings.filter(
+    (booking) => booking.status === "awaiting",
+  ).length;
+  const focusDetailOnMobile = Boolean(selected) && !preferInboxView;
+  const selectedKey = selected ? getStaffBookingKey(selected) : null;
+
+  const filterTabs: { id: InboxFilter; label: string; count: number }[] = [
+    { id: "all", label: "All", count: staffBookings.bookings.length },
+    { id: "needs-reply", label: "Need reply", count: needsReplyCount },
+    { id: "new", label: "New", count: newRequestCount },
+    { id: "awaiting", label: "Deposit in", count: awaitingCount },
+  ];
 
   return (
     <main className="staff-shell">
@@ -82,15 +166,43 @@ export default async function StaffBookingsPage({
           <div>
             <h1 id="staff-title">Requests</h1>
             <p>
-              {staffBookings.bookings.length === 0
-                ? "No open requests. Confirmed stays live on the calendar."
-                : [
-                    `${staffBookings.bookings.length} open`,
-                    newRequestCount > 0 ? `${newRequestCount} new` : null,
-                    needsReplyCount > 0 ? `${needsReplyCount} need reply` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+              {staffBookings.bookings.length === 0 ? (
+                "No open requests. Confirmed stays live on the calendar."
+              ) : (
+                <>
+                  <Link
+                    href={buildStaffHref({ filter: "all", view: "inbox" })}
+                  >
+                    {staffBookings.bookings.length} open
+                  </Link>
+                  {newRequestCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "new",
+                          view: "inbox",
+                        })}
+                      >
+                        {newRequestCount} new
+                      </Link>
+                    </>
+                  ) : null}
+                  {needsReplyCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "needs-reply",
+                          view: "inbox",
+                        })}
+                      >
+                        {needsReplyCount} need reply
+                      </Link>
+                    </>
+                  ) : null}
+                </>
+              )}
               {" · "}
               <Link href="/staff/calendar">Calendar</Link>
             </p>
@@ -107,29 +219,75 @@ export default async function StaffBookingsPage({
         ) : null}
         {staffBookings.source === "sample" && !staffBookings.error ? (
           <p className="form-message form-message--setup" role="status">
-            Add Supabase environment variables to show real booking requests here.
+            Practice mode — confirm and decline work here without emailing
+            guests. Add Supabase environment variables for live requests.
           </p>
         ) : null}
 
-        <div className="booking-board" id="bookings">
+        <div
+          className={`booking-board${
+            focusDetailOnMobile ? " booking-board--has-selection" : ""
+          }`}
+          id="bookings"
+        >
           <section className="booking-list" aria-labelledby="requests-title">
             <div className="booking-list__header">
               <h2 id="requests-title">Open inbox</h2>
-              <span>
+              <span
+                className={`booking-list__source booking-list__source--${staffBookings.source}`}
+              >
                 {staffBookings.source === "supabase" ? "Live" : "Sample"}
               </span>
             </div>
+
             {staffBookings.bookings.length > 0 ? (
+              <nav className="booking-list__filters" aria-label="Filter requests">
+                {filterTabs.map((tab) => {
+                  if (tab.id !== "all" && tab.count === 0) {
+                    return null;
+                  }
+
+                  const isActive = inboxFilter === tab.id;
+
+                  return (
+                    <Link
+                      aria-current={isActive ? "page" : undefined}
+                      className={`booking-list__filter${
+                        isActive ? " booking-list__filter--active" : ""
+                      }`}
+                      href={buildStaffHref({
+                        filter: tab.id,
+                        view: "inbox",
+                      })}
+                      key={tab.id}
+                    >
+                      {tab.label}
+                      <span>{tab.count}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            ) : null}
+
+            {visibleOpen.length > 0 ? (
               <div className="booking-rows">
-                {staffBookings.bookings.map((booking) => {
+                {visibleOpen.map((booking) => {
                   const bookingKey = getStaffBookingKey(booking);
-                  const bookingHref = `/staff?booking=${encodeURIComponent(bookingKey)}#detail-title`;
-                  const isSelected =
-                    selected && getStaffBookingKey(selected) === bookingKey;
+                  const bookingHref = `${buildStaffHref({
+                    booking: bookingKey,
+                    filter: inboxFilter,
+                  })}#detail-title`;
+                  const isSelected = selectedKey === bookingKey;
 
                   return (
                     <article
-                      className={`booking-row${isSelected ? " booking-row--selected" : ""}`}
+                      className={`booking-row${
+                        isSelected ? " booking-row--selected" : ""
+                      }${
+                        booking.status === "needs-reply"
+                          ? " booking-row--urgent"
+                          : ""
+                      }`}
                       key={bookingKey}
                     >
                       <Link className="booking-row__link" href={bookingHref}>
@@ -139,17 +297,27 @@ export default async function StaffBookingsPage({
                             {booking.room} · {booking.dates}
                           </span>
                         </div>
-                        <div className={`staff-status staff-status--${booking.status}`}>
+                        <div
+                          className={`staff-status staff-status--${booking.status}`}
+                        >
                           <span aria-hidden="true" />
-                          {statusCopy[booking.status as keyof typeof statusCopy]}
+                          {statusCopy[booking.status]}
                         </div>
-                        <span className="booking-row__action">
-                          {nextActions[booking.status as keyof typeof nextActions]}
-                        </span>
                       </Link>
                     </article>
                   );
                 })}
+              </div>
+            ) : staffBookings.bookings.length > 0 ? (
+              <div className="staff-empty-state">
+                <h3>No requests in this filter.</h3>
+                <p>Try another filter, or show the full open inbox.</p>
+                <Link
+                  className="button button--secondary"
+                  href={buildStaffHref({ filter: "all", view: "inbox" })}
+                >
+                  Show all open
+                </Link>
               </div>
             ) : (
               <div className="staff-empty-state">
@@ -172,13 +340,17 @@ export default async function StaffBookingsPage({
                 <div className="booking-rows">
                   {declinedBookings.bookings.map((booking) => {
                     const bookingKey = getStaffBookingKey(booking);
-                    const bookingHref = `/staff?booking=${encodeURIComponent(bookingKey)}#detail-title`;
-                    const isSelected =
-                      selected && getStaffBookingKey(selected) === bookingKey;
+                    const bookingHref = `${buildStaffHref({
+                      booking: bookingKey,
+                      filter: inboxFilter,
+                    })}#detail-title`;
+                    const isSelected = selectedKey === bookingKey;
 
                     return (
                       <article
-                        className={`booking-row${isSelected ? " booking-row--selected" : ""}`}
+                        className={`booking-row${
+                          isSelected ? " booking-row--selected" : ""
+                        }`}
                         key={bookingKey}
                       >
                         <Link className="booking-row__link" href={bookingHref}>
@@ -192,7 +364,6 @@ export default async function StaffBookingsPage({
                             <span aria-hidden="true" />
                             {statusCopy.declined}
                           </div>
-                          <span className="booking-row__action">View</span>
                         </Link>
                       </article>
                     );
@@ -206,17 +377,56 @@ export default async function StaffBookingsPage({
             <aside
               className="reservation-detail"
               aria-labelledby="detail-title"
-              key={getStaffBookingKey(selected)}
+              key={selectedKey}
             >
+              <Link
+                className="reservation-detail__back"
+                href={buildStaffHref({
+                  filter: inboxFilter,
+                  view: "inbox",
+                })}
+              >
+                ← Inbox
+              </Link>
               <div className="reservation-detail__top">
                 <span>{selected.id}</span>
                 <div className={`staff-status staff-status--${selected.status}`}>
                   <span aria-hidden="true" />
-                  {statusCopy[selected.status as keyof typeof statusCopy] ??
-                    selected.status}
+                  {statusCopy[selected.status] ?? selected.status}
                 </div>
               </div>
               <h2 id="detail-title">{selected.guest}</h2>
+
+              {selected.note ? (
+                <div className="guest-note guest-note--priority">
+                  <span>Guest note</span>
+                  <p>{selected.note}</p>
+                </div>
+              ) : (
+                <div className="guest-note">
+                  <span>Guest note</span>
+                  <p>No guest note added.</p>
+                </div>
+              )}
+
+              {selected.databaseId ? (
+                <div className="staff-request-chat">
+                  <h3 className="staff-request-chat__title">Conversation</h3>
+                  <BookingChat
+                    bookingId={selected.databaseId}
+                    disabled={!canManageSelected}
+                    guestLabel={selected.guest}
+                    readOnly={isClosedConversation}
+                    showHeading={false}
+                    variant="staff"
+                  />
+                </div>
+              ) : isPracticeMode ? (
+                <p className="detail-help">
+                  Conversation appears on live requests once Supabase is
+                  connected.
+                </p>
+              ) : null}
 
               <div className="reservation-detail__groups">
                 <dl className="detail-list detail-list--group" aria-label="Stay">
@@ -232,13 +442,18 @@ export default async function StaffBookingsPage({
                   </div>
                   <div>
                     <dt>Total</dt>
-                    <dd>${selected.estimatedTotal}</dd>
+                    <dd>
+                      {formatMoneySuffix(
+                        selected.estimatedTotal,
+                        settings.currency,
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>Deposit</dt>
                     <dd>
                       {selected.depositPaid
-                        ? `$${selected.depositAmount} paid`
+                        ? `${formatMoneySuffix(selected.depositAmount, settings.currency)} paid`
                         : "Not received yet"}
                     </dd>
                   </div>
@@ -260,45 +475,35 @@ export default async function StaffBookingsPage({
                 </dl>
               </div>
 
-              <div className="guest-note">
-                <span>Guest note</span>
-                <p>{selected.note || "No guest note added."}</p>
-              </div>
-
               {!isClosedConversation ? (
                 <StaffRequestDecisionPanel
                   bookingId={selected.databaseId ?? ""}
                   canManage={canManageSelected}
+                  currency={settings.currency}
                   depositAmount={selected.depositAmount}
                   depositPaid={selected.depositPaid}
                   guestEmail={selected.contact}
                   guestName={selected.guest}
+                  practiceMode={isPracticeMode}
                 />
               ) : (
                 <p className="detail-help">
                   This request is closed. Conversation history stays available
-                  below.
+                  above.
                 </p>
               )}
-
-              {selected.databaseId ? (
-                <details className="staff-request-chat" open={!isClosedConversation}>
-                  <summary>Conversation</summary>
-                  <BookingChat
-                    bookingId={selected.databaseId}
-                    disabled={!canManageSelected}
-                    readOnly={isClosedConversation}
-                    variant="staff"
-                  />
-                </details>
-              ) : null}
             </aside>
           ) : (
             <aside className="reservation-detail" aria-labelledby="detail-title">
-              <h2 id="detail-title">Waiting for the first request.</h2>
+              <h2 id="detail-title">
+                {preferInboxView
+                  ? "Select a request"
+                  : "Waiting for the first request."}
+              </h2>
               <p>
-                Once a guest sends the form, their dates, room, contact, and note
-                appear here.
+                {preferInboxView
+                  ? "Choose a guest from the inbox to review stay details and decide."
+                  : "Once a guest sends the form, their dates, room, contact, and note appear here."}
               </p>
             </aside>
           )}

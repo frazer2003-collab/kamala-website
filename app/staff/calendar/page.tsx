@@ -8,6 +8,7 @@ import {
   CalendarBookingDialog,
   StaffTimelineCalendar,
 } from "@/components/staff-lazy";
+import { CalendarGridGuide } from "@/components/calendar-grid-guide";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import {
@@ -131,6 +132,11 @@ export default async function StaffCalendarPage({
   const inventoryLookup = buildInventoryLookup(dayInventory.entries);
   const channelCount = calendarBlocks.filter(isChannelReservation).length;
   const manualClosureCount = calendarBlocks.length - channelCount;
+  const unassignedCount =
+    calendarBookings.filter((booking) => !booking.roomUnitId).length +
+    calendarBlocks.filter(
+      (block) => isChannelReservation(block) && !block.roomUnitId,
+    ).length;
   const monthStats = getCalendarMonthStats({
     bookings: calendarBookings,
     blocks: calendarBlocks,
@@ -409,8 +415,11 @@ export default async function StaffCalendarPage({
             selectedBookingKey={selectedKey || undefined}
             stats={monthStats}
             stayCount={calendarBookings.length}
+            unassignedCount={unassignedCount}
             year={year}
           />
+
+          <CalendarGridGuide />
 
           <StaffTimelineCalendar
             blocks={calendarBlocks}
@@ -499,14 +508,6 @@ export default async function StaffCalendarPage({
                 stayStatus={selected.stayStatus}
               />
 
-              {selected.databaseId ? (
-                <BookingChat
-                  bookingId={selected.databaseId}
-                  disabled={!canManageSelected}
-                  variant="staff"
-                />
-              ) : null}
-
               <p className="detail-help">
                 {selected.status === "awaiting" ? (
                   <>
@@ -521,6 +522,20 @@ export default async function StaffCalendarPage({
                   </>
                 )}
               </p>
+
+              {selected.databaseId ? (
+                <details className="staff-request-chat staff-request-chat--collapsible">
+                  <summary className="staff-request-chat__title">Conversation</summary>
+                  <BookingChat
+                    bookingId={selected.databaseId}
+                    disabled={!canManageSelected}
+                    guestLabel={selected.guest}
+                    readOnly={selected.status === "declined"}
+                    showHeading={false}
+                    variant="staff"
+                  />
+                </details>
+              ) : null}
           </CalendarBookingDialog>
         ) : null}
 

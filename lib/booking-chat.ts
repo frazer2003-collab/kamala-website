@@ -332,9 +332,10 @@ export async function recordGuestChatMessage({
 
   await markNeedsReply(booking);
 
+  let emailSent: boolean | null = null;
+
   if (!skipNotify) {
-    const token = await ensureConversationToken(booking.id);
-    await sendStaffChatNotificationEmail({
+    const notify = await sendStaffChatNotificationEmail({
       bookingRef: getBookingRef(booking.id),
       guestName: booking.guest_name,
       roomName: booking.room_name,
@@ -343,11 +344,16 @@ export async function recordGuestChatMessage({
       message: trimmed,
       staffUrl: `${getAppBaseUrl()}/staff?booking=${encodeURIComponent(booking.id)}#booking-chat`,
     });
+    emailSent = notify.ok;
   }
 
   revalidateChatPaths();
 
-  return { ok: true as const, message: mapChatMessage(message) };
+  return {
+    ok: true as const,
+    message: mapChatMessage(message),
+    emailSent,
+  };
 }
 
 export async function recordStaffChatMessage({
@@ -385,22 +391,29 @@ export async function recordStaffChatMessage({
 
   await markStaffReplied(booking);
 
+  let emailSent: boolean | null = null;
+
   if (!skipNotify && booking.guest_email !== "walk-in@kamala.local") {
     const token = (await ensureConversationToken(booking.id)) ?? "";
     const chatUrl = token ? getGuestChatUrl(token) : getAppBaseUrl();
 
-    await sendGuestChatNotificationEmail({
+    const notify = await sendGuestChatNotificationEmail({
       to: booking.guest_email,
       guestName: booking.guest_name,
       roomName: booking.room_name,
       message: trimmed,
       chatUrl,
     });
+    emailSent = notify.ok;
   }
 
   revalidateChatPaths();
 
-  return { ok: true as const, message: mapChatMessage(message) };
+  return {
+    ok: true as const,
+    message: mapChatMessage(message),
+    emailSent,
+  };
 }
 
 export async function fetchInboundEmailContent(emailId: string) {

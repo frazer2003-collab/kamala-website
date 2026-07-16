@@ -3,6 +3,7 @@ import { StaffPromotionAddForm } from "@/components/staff-promotion-add-form";
 import { StaffPromotionListItem } from "@/components/staff-promotion-list-item";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import { getTodayIso } from "@/lib/calendar";
+import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
 import { requireStaffSession } from "@/lib/staff-auth";
@@ -40,14 +41,15 @@ function promotionTiming(startDate: string, endDate: string, today: string) {
 export default async function StaffPromotionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; updated?: string }>;
 }) {
   await requireStaffSession();
 
-  const { edit: editId } = await searchParams;
-  const [promotions, rooms, supabaseReady] = await Promise.all([
+  const { edit: editId, updated } = await searchParams;
+  const [promotions, rooms, settings, supabaseReady] = await Promise.all([
     getStaffRoomPromotions(),
     getStaffRooms(),
+    getPropertySettings(),
     Promise.resolve(hasStaffSupabaseConfig()),
   ]);
   const roomNames = new Map(rooms.map((room) => [room.id, room.name]));
@@ -59,6 +61,7 @@ export default async function StaffPromotionsPage({
     .filter((promotion) => promotion.endDate < today)
     .sort((left, right) => right.endDate.localeCompare(left.endDate));
   const editing = editId ? promotions.find((promotion) => promotion.id === editId) ?? null : null;
+  const showUpdated = updated === "1" && !editing;
 
   return (
     <main className="staff-shell">
@@ -67,10 +70,10 @@ export default async function StaffPromotionsPage({
       <section className="staff-main" aria-labelledby="staff-promotions-title">
         <div className="staff-header staff-header--compact">
           <div>
-            <h1 id="staff-promotions-title">Room discounts</h1>
-            <p>Sale prices for specific nights. Guests see them on booking.</p>
+            <h1 id="staff-promotions-title">Discounts</h1>
+            <p>Percentage off for specific nights. Guests see the sale price when booking.</p>
           </div>
-          <Link className="button button--quiet" href="/staff">
+          <Link className="button button--secondary" href="/staff">
             Back to requests
           </Link>
         </div>
@@ -81,7 +84,15 @@ export default async function StaffPromotionsPage({
           </p>
         ) : null}
 
-        <div className="staff-promotions-layout">
+        {showUpdated ? (
+          <p className="form-message form-message--success" role="status">
+            Discount updated. Guests see the sale price on those nights.
+          </p>
+        ) : null}
+
+        <div
+          className={`staff-promotions-layout${editing ? " staff-promotions-layout--editing" : ""}`}
+        >
           <section className="staff-promotions-panel" aria-labelledby="promotion-list-title">
             <header className="staff-promotions-panel__header">
               <h2 id="promotion-list-title">Current &amp; upcoming</h2>
@@ -132,7 +143,10 @@ export default async function StaffPromotionsPage({
             ) : null}
           </section>
 
-          <section className="staff-settings-card" aria-labelledby="add-promotion-title">
+          <section
+            className="staff-settings-card staff-promotions-form-panel"
+            aria-labelledby="add-promotion-title"
+          >
             <h2 id="add-promotion-title">{editing ? "Edit discount" : "Add discount"}</h2>
             {editing ? (
               <p className="staff-promotion-form__editing-note">
@@ -141,8 +155,10 @@ export default async function StaffPromotionsPage({
               </p>
             ) : null}
             <StaffPromotionAddForm
+              currency={settings.currency}
               disabled={!supabaseReady}
               editing={editing}
+              existingPromotions={promotions}
               key={editing?.id ?? "new"}
               rooms={rooms}
             />

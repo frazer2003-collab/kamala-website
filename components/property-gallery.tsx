@@ -1,15 +1,34 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { OptimizedImage } from "@/components/optimized-image";
+import type { GuestGallerySection } from "@/lib/gallery-sections";
 import type { PropertyGalleryPhoto } from "@/lib/property-gallery";
 
 type PropertyGalleryProps = {
-  photos: PropertyGalleryPhoto[];
+  sections: GuestGallerySection[];
   propertyName: string;
 };
 
-function getGalleryLayoutClass(index: number) {
+type FlatPhoto = PropertyGalleryPhoto & {
+  sectionId: string;
+  sectionIndex: number;
+  globalIndex: number;
+};
+
+function getGalleryLayoutClass(index: number, total: number) {
+  if (total === 1) {
+    return "property-gallery__item--solo";
+  }
+
+  if (total === 2) {
+    return "property-gallery__item--half";
+  }
+
+  if (total === 3) {
+    return index === 0 ? "property-gallery__item--wide" : "";
+  }
+
   const pattern = index % 8;
 
   switch (pattern) {
@@ -30,14 +49,31 @@ function getFocusableElements(container: HTMLElement) {
   ).filter((element) => !element.hasAttribute("aria-hidden"));
 }
 
-export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) {
+export function PropertyGallery({ sections, propertyName }: PropertyGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
 
-  const activePhoto = activeIndex === null ? null : (photos[activeIndex] ?? null);
+  const flatPhotos = useMemo(() => {
+    const items: FlatPhoto[] = [];
+
+    for (const section of sections) {
+      section.photos.forEach((photo, sectionIndex) => {
+        items.push({
+          ...photo,
+          sectionId: section.id,
+          sectionIndex,
+          globalIndex: items.length,
+        });
+      });
+    }
+
+    return items;
+  }, [sections]);
+
+  const activePhoto = activeIndex === null ? null : (flatPhotos[activeIndex] ?? null);
 
   useEffect(() => {
     if (activeIndex === null) {
@@ -63,7 +99,7 @@ export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) 
       if (event.key === "ArrowRight") {
         event.preventDefault();
         setActiveIndex((current) =>
-          current === null ? null : (current + 1) % photos.length,
+          current === null ? null : (current + 1) % flatPhotos.length,
         );
         return;
       }
@@ -71,7 +107,7 @@ export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
         setActiveIndex((current) =>
-          current === null ? null : (current - 1 + photos.length) % photos.length,
+          current === null ? null : (current - 1 + flatPhotos.length) % flatPhotos.length,
         );
         return;
       }
@@ -109,9 +145,9 @@ export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) 
         previous.focus();
       }
     };
-  }, [activeIndex, photos.length]);
+  }, [activeIndex, flatPhotos.length]);
 
-  if (photos.length === 0) {
+  if (flatPhotos.length === 0) {
     return (
       <div className="property-gallery__empty">
         <p>Gallery photos are being prepared. Check back soon for images of the guesthouse.</p>
@@ -121,29 +157,54 @@ export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) 
 
   return (
     <>
-      <ul className="property-gallery__grid">
-        {photos.map((photo, index) => (
-          <li
-            className={`property-gallery__item ${getGalleryLayoutClass(index)}`.trim()}
-            key={photo.id}
-          >
-            <button
-              className="property-gallery__button"
-              onClick={() => setActiveIndex(index)}
-              type="button"
+      <div className="property-gallery">
+        {sections.map((section) =>
+          section.photos.length === 0 ? null : (
+            <section
+              aria-labelledby={`gallery-section-${section.id}`}
+              className="property-gallery__section"
+              key={section.id}
             >
-              <OptimizedImage
-                alt={photo.caption ?? `Photo ${index + 1} of ${propertyName}`}
-                className="property-gallery__image"
-                fill
-                priority={index < 2}
-                sizes="(max-width: 720px) 100vw, (max-width: 1100px) 50vw, 33vw"
-                src={photo.url}
-              />
-            </button>
-          </li>
-        ))}
-      </ul>
+              <header className="property-gallery__section-header">
+                <h2 id={`gallery-section-${section.id}`}>{section.title}</h2>
+                <p>{section.description}</p>
+              </header>
+              <ul className="property-gallery__grid">
+                {section.photos.map((photo, index) => {
+                  const globalIndex = flatPhotos.findIndex(
+                    (item) => item.id === photo.id && item.sectionId === section.id,
+                  );
+
+                  return (
+                    <li
+                      className={`property-gallery__item ${getGalleryLayoutClass(index, section.photos.length)}`.trim()}
+                      key={photo.id}
+                    >
+                      <button
+                        className="property-gallery__button"
+                        onClick={() => setActiveIndex(globalIndex)}
+                        type="button"
+                      >
+                        <OptimizedImage
+                          alt={
+                            photo.caption ??
+                            `${section.title} photo ${index + 1} of ${propertyName}`
+                          }
+                          className="property-gallery__image"
+                          fill
+                          priority={globalIndex >= 0 && globalIndex < 2}
+                          sizes="(max-width: 720px) 100vw, (max-width: 1100px) 50vw, 33vw"
+                          src={photo.url}
+                        />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ),
+        )}
+      </div>
 
       {activePhoto ? (
         <div className="property-gallery-lightbox" ref={dialogRef}>
@@ -164,7 +225,9 @@ export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) 
           >
             <div className="property-gallery-lightbox__toolbar">
               <span id={titleId}>
-                {activeIndex! + 1} / {photos.length}
+                {activePhoto.caption
+                  ? `${activePhoto.caption} · ${activeIndex! + 1} / ${flatPhotos.length}`
+                  : `${activeIndex! + 1} / ${flatPhotos.length}`}
               </span>
               <button
                 className="button button--quiet"
@@ -175,7 +238,10 @@ export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) 
               </button>
             </div>
             <OptimizedImage
-              alt={activePhoto.caption ?? `Photo ${activeIndex! + 1} of ${propertyName}`}
+              alt={
+                activePhoto.caption ??
+                `Photo ${activeIndex! + 1} of ${propertyName}`
+              }
               className="property-gallery-lightbox__image"
               height={900}
               priority
@@ -188,7 +254,9 @@ export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) 
                 className="button button--secondary"
                 onClick={() =>
                   setActiveIndex((current) =>
-                    current === null ? null : (current - 1 + photos.length) % photos.length,
+                    current === null
+                      ? null
+                      : (current - 1 + flatPhotos.length) % flatPhotos.length,
                   )
                 }
                 type="button"
@@ -199,7 +267,7 @@ export function PropertyGallery({ photos, propertyName }: PropertyGalleryProps) 
                 className="button button--secondary"
                 onClick={() =>
                   setActiveIndex((current) =>
-                    current === null ? null : (current + 1) % photos.length,
+                    current === null ? null : (current + 1) % flatPhotos.length,
                   )
                 }
                 type="button"

@@ -41,6 +41,23 @@ function restoreCalendarFocus(previous: HTMLElement | null, returnKey?: string) 
   });
 }
 
+function useDesktopDrawer() {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 920px)");
+    function sync() {
+      setIsDesktop(media.matches);
+    }
+
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  return isDesktop;
+}
+
 export function CalendarBookingDialog({
   open,
   closeHref,
@@ -55,6 +72,7 @@ export function CalendarBookingDialog({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const returnKeyRef = useRef(focusReturnKey);
   const [mounted, setMounted] = useState(false);
+  const isDesktopDrawer = useDesktopDrawer();
 
   returnKeyRef.current = focusReturnKey;
 
@@ -73,7 +91,12 @@ export function CalendarBookingDialog({
     const shell = document.querySelector<HTMLElement>(".staff-shell");
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    shell?.setAttribute("inert", "");
+
+    // Mobile modal: inert the shell. Desktop drawer: keep the timeline visible
+    // (not interactive under the light backdrop) without fully blanking context.
+    if (!isDesktopDrawer) {
+      shell?.setAttribute("inert", "");
+    }
 
     dialogRef.current?.scrollTo({ top: 0 });
 
@@ -123,14 +146,17 @@ export function CalendarBookingDialog({
       window.removeEventListener("keydown", handleKeyDown);
       restoreCalendarFocus(previousFocusRef.current, returnKeyRef.current);
     };
-  }, [closeHref, open, router]);
+  }, [closeHref, isDesktopDrawer, open, router]);
 
   if (!open || !mounted) {
     return null;
   }
 
   return createPortal(
-    <div className="calendar-dialog" ref={dialogRef}>
+    <div
+      className={`calendar-dialog${isDesktopDrawer ? " calendar-dialog--drawer" : ""}`}
+      ref={dialogRef}
+    >
       <button
         aria-label="Close dialog"
         className="calendar-dialog__backdrop"

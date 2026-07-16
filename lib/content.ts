@@ -194,7 +194,7 @@ export const bookings: Booking[] = [
     nights: 2,
     status: "awaiting",
     requestedAt: "1 hour ago",
-    note: "Needs parking confirmation before paying deposit.",
+    note: "Deposit received. Asked whether street parking near the gate is fine overnight.",
     contact: "theo@example.com",
     phone: "+1 555 010 1047",
     arrivalDate: "2026-06-25",

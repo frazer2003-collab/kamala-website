@@ -237,7 +237,7 @@ export async function addRoomPromotion(
     revalidatePath("/staff/promotions");
     revalidatePath("/staff/calendar");
     revalidatePath("/");
-    redirect("/staff/promotions");
+    redirect("/staff/promotions?updated=1");
   }
 
   let roomIds = [roomId];
@@ -634,7 +634,76 @@ export async function removePropertyGalleryPhoto(
   revalidatePublicCache(PUBLIC_CACHE_TAGS.propertyGallery);
   revalidatePath("/gallery");
   revalidatePath("/staff/gallery");
-  return { success: "Photo removed." };
+  return { success: "Photo removed. Guests no longer see it on the gallery page." };
+}
+
+export async function movePropertyGalleryPhoto(
+  _prevState: StaffGalleryState,
+  formData: FormData,
+): Promise<StaffGalleryState> {
+  await requireStaffSession();
+
+  if (!hasStaffSupabaseConfig()) {
+    return { error: "Supabase is not configured yet." };
+  }
+
+  const photoId = getValue(formData, "photo-id");
+  const direction = getValue(formData, "direction");
+
+  if (!photoId || (direction !== "up" && direction !== "down")) {
+    return { error: "Could not reorder that photo." };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data, error } = await supabase
+    .from("property_gallery_photos")
+    .select("id, sort_order")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error || !data?.length) {
+    return { error: "Could not reorder that photo." };
+  }
+
+  const index = data.findIndex((row) => row.id === photoId);
+  if (index < 0) {
+    return { error: "Could not find this photo." };
+  }
+
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (swapIndex < 0 || swapIndex >= data.length) {
+    return {};
+  }
+
+  const current = data[index];
+  const neighbor = data[swapIndex];
+
+  const { error: firstError } = await supabase
+    .from("property_gallery_photos")
+    .update({ sort_order: neighbor.sort_order })
+    .eq("id", current.id);
+
+  if (firstError) {
+    return { error: "Could not reorder that photo. Try again." };
+  }
+
+  const { error: secondError } = await supabase
+    .from("property_gallery_photos")
+    .update({ sort_order: current.sort_order })
+    .eq("id", neighbor.id);
+
+  if (secondError) {
+    await supabase
+      .from("property_gallery_photos")
+      .update({ sort_order: current.sort_order })
+      .eq("id", current.id);
+    return { error: "Could not reorder that photo. Try again." };
+  }
+
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.propertyGallery);
+  revalidatePath("/gallery");
+  revalidatePath("/staff/gallery");
+  return { success: "Photo order updated." };
 }
 
 export async function addTour(

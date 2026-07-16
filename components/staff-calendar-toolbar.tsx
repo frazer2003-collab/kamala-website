@@ -13,6 +13,7 @@ type StaffCalendarToolbarProps = {
   monthKey: string;
   stats: CalendarMonthStats;
   stayCount: number;
+  unassignedCount: number;
   closureCount: number;
   channelCount: number;
   roomCount: number;
@@ -49,6 +50,7 @@ export function StaffCalendarToolbar({
   monthKey,
   stats,
   stayCount,
+  unassignedCount,
   closureCount,
   channelCount,
   roomCount,
@@ -97,14 +99,12 @@ export function StaffCalendarToolbar({
         >
           <span aria-hidden="true">→</span>
         </Link>
-        {monthKey !== currentMonthKey ? (
-          <Link
-            className="staff-calendar-toolbar__today"
-            href={buildMonthHref(currentMonthKey, selectedBookingKey, selectedBlockKey, densityMode)}
-          >
-            Today
-          </Link>
-        ) : null}
+        <Link
+          className="staff-calendar-toolbar__today"
+          href={`${buildMonthHref(currentMonthKey, selectedBookingKey, selectedBlockKey, densityMode)}#calendar-today`}
+        >
+          Jump to today
+        </Link>
         <div
           aria-label="Calendar density"
           className="staff-calendar-toolbar__density"
@@ -139,15 +139,22 @@ export function StaffCalendarToolbar({
 
       <div className="staff-calendar-toolbar__meta" aria-label="Month summary">
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
-          <strong>{stats.occupancyPercent}%</strong> occupancy
-        </span>
-        <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
-          <strong>{stayCount}</strong> stays
-        </span>
-        <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
           <strong>{stats.arrivals}</strong> arrivals
         </span>
+        <span
+          className={`staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary${
+            unassignedCount > 0 ? " staff-calendar-toolbar__stat--urgent" : ""
+          }`}
+        >
+          <strong>{unassignedCount}</strong> need room #
+        </span>
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
+          <strong>{stats.occupancyPercent}%</strong> occupancy
+        </span>
+        <span className="staff-calendar-toolbar__stat">
+          <strong>{stayCount}</strong> stays
+        </span>
+        <span className="staff-calendar-toolbar__stat">
           <strong>{stats.departures}</strong> departures
         </span>
         {channelCount > 0 ? (
@@ -163,42 +170,45 @@ export function StaffCalendarToolbar({
         </span>
       </div>
 
-      <div className="staff-calendar-toolbar__legend" aria-label="Status colors">
-        <span
-          className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--bookable"
-          style={{ background: calendarColors.available }}
-        />
-        Bookable
-        <span
-          className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--closed"
-          style={{ background: calendarColors.closed }}
-        />
-        Closed
-        <span
-          className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--sold"
-          style={{ background: calendarColors.soldOut }}
-        />
-        Sold out
-        <span
-          className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--booking"
-          style={{ background: calendarColors.booking }}
-        />
-        Reservation
-        <span
-          className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--needs-room"
-          aria-hidden="true"
-        />
-        Needs room #
-        <span
-          className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--channel"
-          aria-hidden="true"
-        />
-        Channel
-        <span className="staff-calendar-toolbar__mark" aria-hidden="true">
-          *
-        </span>
-        Temp allotment
-      </div>
+      <details className="staff-calendar-toolbar__legend-details">
+        <summary>Colors</summary>
+        <div className="staff-calendar-toolbar__legend" aria-label="Status colors">
+          <span
+            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--bookable"
+            style={{ background: calendarColors.available }}
+          />
+          Bookable
+          <span
+            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--closed"
+            style={{ background: calendarColors.closed }}
+          />
+          Closed
+          <span
+            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--sold"
+            style={{ background: calendarColors.soldOut }}
+          />
+          Sold out
+          <span
+            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--booking"
+            style={{ background: calendarColors.booking }}
+          />
+          Reservation
+          <span
+            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--needs-room"
+            aria-hidden="true"
+          />
+          Needs room #
+          <span
+            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--channel"
+            aria-hidden="true"
+          />
+          Channel
+          <span className="staff-calendar-toolbar__mark" aria-hidden="true">
+            *
+          </span>
+          Temp allotment
+        </div>
+      </details>
     </div>
   );
 }

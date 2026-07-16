@@ -169,9 +169,9 @@ const seeds = [
     status: "confirmed",
     stay_status: "checked-in",
     note: "Arrived late from Bangkok overnight bus.",
-    staff_note: "Key left at desk for late arrival.",
+    staff_note: "Key left at desk for late arrival — room number still to assign.",
     deposit: true,
-    unitIndex: 1,
+    unitIndex: null,
     created_offset_days: 12,
   },
   {
@@ -202,7 +202,7 @@ const seeds = [
     note: "Vegetarian breakfast please.",
     staff_note: null,
     deposit: true,
-    unitIndex: 1,
+    unitIndex: null,
     created_offset_days: 9,
   },
   {
@@ -232,7 +232,7 @@ const seeds = [
     note: null,
     staff_note: null,
     deposit: true,
-    unitIndex: 1,
+    unitIndex: null,
     created_offset_days: 7,
   },
   {
@@ -247,7 +247,7 @@ const seeds = [
     note: "Do you have a twin setup for this room?",
     staff_note: "Guest asked about twin beds — reply pending.",
     deposit: true,
-    unitIndex: 2,
+    unitIndex: null,
     created_offset_days: 1,
   },
   {
@@ -262,7 +262,7 @@ const seeds = [
     note: "Anniversary trip.",
     staff_note: "Small welcome fruit plate noted.",
     deposit: true,
-    unitIndex: 0,
+    unitIndex: null,
     created_offset_days: 5,
   },
   {
@@ -292,7 +292,7 @@ const seeds = [
     note: null,
     staff_note: null,
     deposit: true,
-    unitIndex: 3,
+    unitIndex: null,
     created_offset_days: 4,
   },
   {
@@ -322,7 +322,7 @@ const seeds = [
     note: "Crossing month boundary.",
     staff_note: null,
     deposit: true,
-    unitIndex: 1,
+    unitIndex: null,
     created_offset_days: 6,
   },
   {
@@ -353,7 +353,7 @@ const seeds = [
     note: "Spanish/Portuguese OK.",
     staff_note: null,
     deposit: true,
-    unitIndex: 0,
+    unitIndex: null,
     created_offset_days: 8,
   },
   {
@@ -368,7 +368,7 @@ const seeds = [
     note: null,
     staff_note: null,
     deposit: true,
-    unitIndex: 0,
+    unitIndex: null,
     created_offset_days: 3,
   },
   {
@@ -398,7 +398,7 @@ const seeds = [
     note: "Two adults, two kids (8 and 11).",
     staff_note: null,
     deposit: true,
-    unitIndex: 0,
+    unitIndex: null,
     created_offset_days: 10,
   },
   {
@@ -413,7 +413,7 @@ const seeds = [
     note: "Halal breakfast options?",
     staff_note: "Noted for kitchen.",
     deposit: true,
-    unitIndex: 1,
+    unitIndex: null,
     created_offset_days: 4,
   },
   {
@@ -428,7 +428,7 @@ const seeds = [
     note: "Is the balcony facing the garden or the street?",
     staff_note: "Reply with garden balcony photo.",
     deposit: true,
-    unitIndex: 1,
+    unitIndex: null,
     created_offset_days: 1,
   },
   {
@@ -443,7 +443,7 @@ const seeds = [
     note: null,
     staff_note: null,
     deposit: true,
-    unitIndex: 0,
+    unitIndex: null,
     created_offset_days: 5,
   },
   {
@@ -458,7 +458,7 @@ const seeds = [
     note: "Work trip — need desk and strong Wi‑Fi.",
     staff_note: null,
     deposit: true,
-    unitIndex: 2,
+    unitIndex: null,
     created_offset_days: 7,
   },
   {
@@ -473,7 +473,7 @@ const seeds = [
     note: null,
     staff_note: null,
     deposit: true,
-    unitIndex: 0,
+    unitIndex: null,
     created_offset_days: 6,
   },
   {
@@ -503,7 +503,7 @@ const seeds = [
     note: null,
     staff_note: null,
     deposit: true,
-    unitIndex: 1,
+    unitIndex: null,
     created_offset_days: 2,
   },
   {
@@ -533,10 +533,11 @@ const seeds = [
     note: null,
     staff_note: null,
     deposit: true,
-    unitIndex: 1,
+    unitIndex: null,
     created_offset_days: 9,
   },
 ];
+
 
 // A couple of staff closed nights for realism
 const closedBlocks = [

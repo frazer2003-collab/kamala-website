@@ -139,6 +139,73 @@ export function CalendarBookingPanel({
       ) : null}
       <form action={saveAction} className="calendar-manage-form">
         <input name="month" type="hidden" value={monthKey} />
+        <div className="field-pair">
+          <label htmlFor={`calendar-stay-status-${bookingKey}`}>Check-in status</label>
+          <select
+            disabled={!canManage}
+            id={`calendar-stay-status-${bookingKey}`}
+            name="stay-status"
+            onChange={(event) =>
+              setFields((current) => ({
+                ...current,
+                stayStatus: event.target.value as StayStatus,
+              }))
+            }
+            value={fields.stayStatus}
+          >
+            <option value="expected">Expected</option>
+            <option value="checked-in">Checked in</option>
+            <option value="checked-out">Checked out</option>
+          </select>
+        </div>
+        <div className="field-pair">
+          <label htmlFor={`calendar-room-unit-${bookingKey}`}>Room number</label>
+          <select
+            disabled={!canManage}
+            id={`calendar-room-unit-${bookingKey}`}
+            name="room-unit-id"
+            onChange={(event) =>
+              setFields((current) => ({ ...current, roomUnitId: event.target.value }))
+            }
+            value={fields.roomUnitId}
+          >
+            <option value="">Not assigned yet</option>
+            {assignableUnits.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.number}
+                {unit.roomIds.length > 1 ? " (shared)" : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field-pair">
+          <label htmlFor={`calendar-arrival-${bookingKey}`}>Arrival</label>
+          <input
+            disabled={!canManage}
+            id={`calendar-arrival-${bookingKey}`}
+            name="arrival"
+            onChange={(event) =>
+              setFields((current) => ({ ...current, arrivalDate: event.target.value }))
+            }
+            required
+            type="date"
+            value={fields.arrivalDate}
+          />
+        </div>
+        <div className="field-pair">
+          <label htmlFor={`calendar-departure-${bookingKey}`}>Departure</label>
+          <input
+            disabled={!canManage}
+            id={`calendar-departure-${bookingKey}`}
+            name="departure"
+            onChange={(event) =>
+              setFields((current) => ({ ...current, departureDate: event.target.value }))
+            }
+            required
+            type="date"
+            value={fields.departureDate}
+          />
+        </div>
         <div className="field-pair field-pair--wide">
           <label htmlFor={`calendar-guest-name-${bookingKey}`}>Guest name</label>
           <input
@@ -184,73 +251,6 @@ export function CalendarBookingPanel({
             type="email"
             value={fields.guestEmail}
           />
-        </div>
-        <div className="field-pair">
-          <label htmlFor={`calendar-arrival-${bookingKey}`}>Arrival</label>
-          <input
-            disabled={!canManage}
-            id={`calendar-arrival-${bookingKey}`}
-            name="arrival"
-            onChange={(event) =>
-              setFields((current) => ({ ...current, arrivalDate: event.target.value }))
-            }
-            required
-            type="date"
-            value={fields.arrivalDate}
-          />
-        </div>
-        <div className="field-pair">
-          <label htmlFor={`calendar-departure-${bookingKey}`}>Departure</label>
-          <input
-            disabled={!canManage}
-            id={`calendar-departure-${bookingKey}`}
-            name="departure"
-            onChange={(event) =>
-              setFields((current) => ({ ...current, departureDate: event.target.value }))
-            }
-            required
-            type="date"
-            value={fields.departureDate}
-          />
-        </div>
-        <div className="field-pair">
-          <label htmlFor={`calendar-room-unit-${bookingKey}`}>Room number</label>
-          <select
-            disabled={!canManage}
-            id={`calendar-room-unit-${bookingKey}`}
-            name="room-unit-id"
-            onChange={(event) =>
-              setFields((current) => ({ ...current, roomUnitId: event.target.value }))
-            }
-            value={fields.roomUnitId}
-          >
-            <option value="">Not assigned yet</option>
-            {assignableUnits.map((unit) => (
-              <option key={unit.id} value={unit.id}>
-                {unit.number}
-                {unit.roomIds.length > 1 ? " (shared)" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field-pair">
-          <label htmlFor={`calendar-stay-status-${bookingKey}`}>Check-in status</label>
-          <select
-            disabled={!canManage}
-            id={`calendar-stay-status-${bookingKey}`}
-            name="stay-status"
-            onChange={(event) =>
-              setFields((current) => ({
-                ...current,
-                stayStatus: event.target.value as StayStatus,
-              }))
-            }
-            value={fields.stayStatus}
-          >
-            <option value="expected">Expected</option>
-            <option value="checked-in">Checked in</option>
-            <option value="checked-out">Checked out</option>
-          </select>
         </div>
         <div className="field-pair field-pair--wide guest-note">
           <span>Guest note</span>

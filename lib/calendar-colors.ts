@@ -6,11 +6,12 @@ export type CalendarColors = {
   soldOut: string;
 };
 
+/** Soft OKLCH-adjacent hexes tinted toward Kamala maroon neutrals (not neon Bootstrap). */
 export const DEFAULT_CALENDAR_COLORS: CalendarColors = {
-  available: "#bbf7d0",
-  closed: "#fecaca",
-  booking: "#fef08a",
-  soldOut: "#fdba74",
+  available: "#d8e6d4",
+  closed: "#e8d4d2",
+  booking: "#ebe0c8",
+  soldOut: "#e6d0bc",
 };
 
 const hexPattern = /^#[0-9A-Fa-f]{6}$/;
