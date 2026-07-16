@@ -5697,35 +5697,80 @@ textarea:focus {
   gap: var(--space-2);
 }
 
-.staff-calendar-toolbar__arrow {
-  display: grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.staff-calendar-toolbar__arrow:hover {
-  background: var(--color-surface-muted);
-}
-
 .staff-calendar-toolbar__title {
   margin: 0;
-  min-width: 8rem;
+  min-width: 10rem;
   font-size: 1rem;
   font-weight: 750;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
-.staff-calendar-toolbar__arrow:focus-visible,
-.staff-calendar-toolbar__today:focus-visible {
+.staff-calendar-toolbar__month-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 2.1rem 0 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.staff-calendar-toolbar__month-picker:hover {
+  background: var(--color-surface-muted);
+}
+
+.staff-calendar-toolbar__month-picker::after {
+  content: "";
+  position: absolute;
+  right: 0.75rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.5px solid var(--color-ink);
+  border-bottom: 1.5px solid var(--color-ink);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.staff-calendar-toolbar__month-label {
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  pointer-events: none;
+}
+
+.staff-calendar-toolbar__month-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0.01;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+.staff-calendar-toolbar__month-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.staff-calendar-toolbar__month-picker:focus-within,
+.staff-calendar-toolbar__today:focus-visible,
+.staff-calendar-toolbar__density-btn:focus-visible {
   outline: 2px solid var(--color-maroon);
   outline-offset: 2px;
 }

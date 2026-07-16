@@ -408,7 +408,6 @@ export default async function StaffCalendarPage({
             channelCount={channelCount}
             closureCount={manualClosureCount}
             densityMode={densityMode}
-            month={month}
             monthKey={monthKey}
             roomCount={rooms.length}
             selectedBlockKey={selectedBlockKey || undefined}
@@ -416,7 +415,6 @@ export default async function StaffCalendarPage({
             stats={monthStats}
             stayCount={calendarBookings.length}
             unassignedCount={unassignedCount}
-            year={year}
           />
 
           <CalendarGridGuide />

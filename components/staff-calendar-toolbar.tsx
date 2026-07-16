@@ -1,15 +1,10 @@
 import Link from "next/link";
-import {
-  formatCalendarMonth,
-  formatCalendarMonthLabel,
-  shiftCalendarMonth,
-} from "@/lib/calendar";
+import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
+import { formatCalendarMonth } from "@/lib/calendar";
 import type { CalendarMonthStats } from "@/lib/calendar-timeline";
 import type { CalendarColors } from "@/lib/calendar-colors";
 
 type StaffCalendarToolbarProps = {
-  year: number;
-  month: number;
   monthKey: string;
   stats: CalendarMonthStats;
   stayCount: number;
@@ -45,8 +40,6 @@ function buildMonthHref(
 }
 
 export function StaffCalendarToolbar({
-  year,
-  month,
   monthKey,
   stats,
   stayCount,
@@ -59,46 +52,20 @@ export function StaffCalendarToolbar({
   selectedBlockKey,
   densityMode = "desk",
 }: StaffCalendarToolbarProps) {
-  const previousMonth = shiftCalendarMonth(year, month, -1);
-  const nextMonth = shiftCalendarMonth(year, month, 1);
-  const previousMonthLabel = formatCalendarMonthLabel(
-    previousMonth.year,
-    previousMonth.month,
-  );
-  const nextMonthLabel = formatCalendarMonthLabel(nextMonth.year, nextMonth.month);
   const today = new Date();
   const currentMonthKey = formatCalendarMonth(today.getFullYear(), today.getMonth() + 1);
 
   return (
     <div className="staff-calendar-toolbar">
       <div className="staff-calendar-toolbar__nav">
-        <Link
-          aria-label={`Previous month, ${previousMonthLabel}`}
-          className="staff-calendar-toolbar__arrow"
-          href={buildMonthHref(
-            formatCalendarMonth(previousMonth.year, previousMonth.month),
-            selectedBookingKey,
-            selectedBlockKey,
-            densityMode,
-          )}
-        >
-          <span aria-hidden="true">←</span>
-        </Link>
-        <h2 className="staff-calendar-toolbar__title">
-          {formatCalendarMonthLabel(year, month)}
+        <h2 className="staff-calendar-toolbar__title" id="staff-calendar-month-heading">
+          <StaffCalendarMonthPicker
+            densityMode={densityMode}
+            monthKey={monthKey}
+            selectedBlockKey={selectedBlockKey}
+            selectedBookingKey={selectedBookingKey}
+          />
         </h2>
-        <Link
-          aria-label={`Next month, ${nextMonthLabel}`}
-          className="staff-calendar-toolbar__arrow"
-          href={buildMonthHref(
-            formatCalendarMonth(nextMonth.year, nextMonth.month),
-            selectedBookingKey,
-            selectedBlockKey,
-            densityMode,
-          )}
-        >
-          <span aria-hidden="true">→</span>
-        </Link>
         <Link
           className="staff-calendar-toolbar__today"
           href={`${buildMonthHref(currentMonthKey, selectedBookingKey, selectedBlockKey, densityMode)}#calendar-today`}
