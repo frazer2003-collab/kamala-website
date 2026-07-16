@@ -148,7 +148,9 @@ export function HomeDateSearch({
     <section className="hero-atmosphere" aria-labelledby={`${formId}-title`} id="dates">
       <div className="hero-atmosphere__copy">
         <p className="hero-atmosphere__brand">{locationLabel}</p>
+
         <h1 id={`${formId}-title`}>{headline}</h1>
+
         <p className="hero-atmosphere__lede">{lede}</p>
       </div>
 

@@ -12,6 +12,7 @@ import type { Locale } from "@/lib/i18n";
 import type { RoomPromotionRate } from "@/lib/pricing";
 import type { Room } from "@/lib/content";
 import { buildBookingPaymentNote } from "@/lib/property-brand";
+import { buildBookingSectionHeading } from "@/lib/home-hero-copy";
 import { t } from "@/lib/i18n";
 
 const BookingRequest = dynamic(
@@ -47,6 +48,7 @@ const BookingRequest = dynamic(
 
 type HomeBookingSectionProps = {
   allowPayOnArrival: boolean;
+  addressLine?: string | null;
   availabilityByRoomId: Record<string, number>;
   currency: PropertyCurrency;
   initialArrival?: string;
@@ -74,6 +76,7 @@ function readStoredSelection(): SelectRoomDetail | null {
 
 export function HomeBookingSection({
   allowPayOnArrival,
+  addressLine = null,
   initialRoomId,
   initialArrival,
   initialDeparture,
@@ -123,7 +126,7 @@ export function HomeBookingSection({
         id="booking"
         aria-labelledby="booking-prompt-title"
       >
-        <h2 id="booking-prompt-title">Book your room</h2>
+        <h2 id="booking-prompt-title">{buildBookingSectionHeading(addressLine)}</h2>
         <p>
           Set your dates above, choose a room, then select <strong>Reserve</strong>. The
           booking form opens here — we reply within a day to confirm your stay.

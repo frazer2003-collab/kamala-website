@@ -12,12 +12,10 @@ const PUBLIC_PATHS = [
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const metadataBase = getMetadataBase();
-  const lastModified = new Date();
 
   if (!metadataBase) {
     return PUBLIC_PATHS.map(({ path, changeFrequency, priority }) => ({
       url: path,
-      lastModified,
       changeFrequency,
       priority,
     }));
@@ -25,7 +23,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return PUBLIC_PATHS.map(({ path, changeFrequency, priority }) => ({
     url: new URL(path, metadataBase).toString(),
-    lastModified,
     changeFrequency,
     priority,
   }));

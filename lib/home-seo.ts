@@ -3,20 +3,26 @@ import type { Room } from "@/lib/content";
 import {
   getGuesthouseLocationLabel,
   isChiangMaiLocation,
-  isNearThaPhaeGate,
 } from "@/lib/home-hero-copy";
 import { resolveHeroImageUrl } from "@/lib/home-hero-media";
 import { getMetadataBase } from "@/lib/site-metadata";
 import type { PropertySettings } from "@/lib/property-settings";
+import {
+  buildGoogleMapsSearchUrl,
+  isThaPhaeSeoContext,
+  THA_PHAE_GATE_GEO,
+  toSchemaTime,
+} from "@/lib/tha-phae-seo";
 
 const SEO_KEYWORDS = [
-  "guesthouse near Tha Phae Gate",
+  "guesthouses near Tha Phae Gate Chiang Mai",
+  "guesthouse near Tha Phae Gate Chiang Mai",
+  "guesthouses near Tha Phae Gate",
+  "accommodation near Tha Phae Gate Chiang Mai",
   "hotel near Tha Phae Gate Chiang Mai",
   "Chiang Mai Old City guesthouse",
-  "boutique guesthouse Chiang Mai",
-  "accommodation near Tha Phae Gate",
+  "boutique guesthouse Chiang Mai Old City",
   "book guesthouse Chiang Mai",
-  "family guesthouse Chiang Mai",
 ] as const;
 
 function parseAddressParts(addressLine: string | null) {
@@ -40,8 +46,8 @@ export function buildHomePageTitle(settings: PropertySettings): string {
   const { propertyName, addressLine } = settings;
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
 
-  if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return `${propertyName} — Guesthouse near Tha Phae Gate, Chiang Mai`;
+  if (isThaPhaeSeoContext(locationLabel, addressLine)) {
+    return `${propertyName} — Guesthouse Near Tha Phae Gate, Chiang Mai`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -55,8 +61,8 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   const { propertyName, addressLine } = settings;
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
 
-  if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return `Book a room at ${propertyName}, a family-run guesthouse one minute from Tha Phae Gate in Chiang Mai Old City. Garden rooms, breakfast included — request dates here and we confirm every stay.`;
+  if (isThaPhaeSeoContext(locationLabel, addressLine)) {
+    return `Book ${propertyName}, a family-run guesthouse one minute from Tha Phae Gate in Chiang Mai Old City. Garden rooms, breakfast included — request dates here and we confirm every stay.`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -64,6 +70,23 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   }
 
   return `Book a room at ${propertyName} in ${locationLabel}. Garden rooms, breakfast included — request dates on this site and staff confirm every stay.`;
+}
+
+function buildOpenGraphImageAlt(settings: PropertySettings): string {
+  const locationLabel = getGuesthouseLocationLabel(
+    settings.addressLine,
+    settings.propertyName,
+  );
+
+  if (isThaPhaeSeoContext(locationLabel, settings.addressLine)) {
+    return `${settings.propertyName} garden guesthouse near Tha Phae Gate, Chiang Mai`;
+  }
+
+  if (isChiangMaiLocation(locationLabel)) {
+    return `${settings.propertyName} garden guesthouse in Chiang Mai Old City`;
+  }
+
+  return `${settings.propertyName} garden guesthouse in ${locationLabel}`;
 }
 
 export function buildHomePageMetadata(settings: PropertySettings): Metadata {
@@ -81,7 +104,7 @@ export function buildHomePageMetadata(settings: PropertySettings): Metadata {
             : heroImage,
           width: 1400,
           height: 1050,
-          alt: `${settings.propertyName} courtyard and garden near Tha Phae Gate, Chiang Mai`,
+          alt: buildOpenGraphImageAlt(settings),
         },
       ]
     : undefined;
@@ -123,13 +146,26 @@ export function buildHomePageMetadata(settings: PropertySettings): Metadata {
   };
 }
 
+function roomOfferAvailability(
+  room: Room,
+  availabilityByRoomId?: Record<string, number>,
+): string {
+  const count = availabilityByRoomId?.[room.id] ?? room.availableCount;
+  return count > 0
+    ? "https://schema.org/InStock"
+    : "https://schema.org/SoldOut";
+}
+
 export function buildHomePageJsonLd(
   settings: PropertySettings,
   rooms: Room[],
   appUrl: string | null,
+  availabilityByRoomId?: Record<string, number>,
 ) {
-  const { propertyName, addressLine, contactEmail, contactPhone } = settings;
+  const { propertyName, addressLine, contactEmail, contactPhone, checkInFrom, checkInUntil } =
+    settings;
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
+  const nearThaPhae = isThaPhaeSeoContext(locationLabel, addressLine);
   const address = parseAddressParts(addressLine);
   const heroImage = resolveHeroImageUrl(settings.heroImageUrl);
   const siteUrl = appUrl?.replace(/\/$/, "") ?? undefined;
@@ -152,6 +188,8 @@ export function buildHomePageJsonLd(
       : undefined;
 
   const description = buildHomePageDescription(settings);
+  const checkInOpens = toSchemaTime(checkInFrom);
+  const checkInCloses = toSchemaTime(checkInUntil);
 
   return {
     "@context": "https://schema.org",
@@ -170,9 +208,39 @@ export function buildHomePageJsonLd(
           ...address,
         }
       : undefined,
+    geo: nearThaPhae
+      ? {
+          "@type": "GeoCoordinates",
+          latitude: THA_PHAE_GATE_GEO.latitude,
+          longitude: THA_PHAE_GATE_GEO.longitude,
+        }
+      : undefined,
+    hasMap:
+      addressLine?.trim() && nearThaPhae
+        ? buildGoogleMapsSearchUrl(addressLine)
+        : undefined,
+    openingHoursSpecification:
+      checkInOpens && checkInCloses
+        ? [
+            {
+              "@type": "OpeningHoursSpecification",
+              dayOfWeek: [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ],
+              opens: checkInOpens,
+              closes: checkInCloses,
+            },
+          ]
+        : undefined,
     areaServed: {
       "@type": "City",
-      name: locationLabel,
+      name: "Chiang Mai",
     },
     amenityFeature: [
       { "@type": "LocationFeatureSpecification", name: "Free Wi-Fi", value: true },
@@ -180,16 +248,42 @@ export function buildHomePageJsonLd(
       { "@type": "LocationFeatureSpecification", name: "Air conditioning", value: true },
       { "@type": "LocationFeatureSpecification", name: "Garden", value: true },
     ],
-    knowsAbout: isNearThaPhaeGate(addressLine)
-      ? ["Tha Phae Gate", "Chiang Mai Old City", "Sunday Walking Street"]
-      : ["Chiang Mai Old City"],
-    makesOffer: rooms.slice(0, 6).map((room) => ({
+    knowsAbout: nearThaPhae
+      ? ["Tha Phae Gate", "Chiang Mai Old City"]
+      : isChiangMaiLocation(locationLabel)
+        ? ["Chiang Mai Old City"]
+        : undefined,
+    makesOffer: rooms.map((room) => ({
       "@type": "Offer",
       name: room.name,
       price: room.rate,
       priceCurrency: settings.currency.toUpperCase(),
-      availability: "https://schema.org/InStock",
+      availability: roomOfferAvailability(room, availabilityByRoomId),
       url: siteUrl ? `${siteUrl}/#rooms` : undefined,
     })),
+  };
+}
+
+export function buildHomePageWebSiteJsonLd(
+  settings: PropertySettings,
+  appUrl: string | null,
+) {
+  const siteUrl = appUrl?.replace(/\/$/, "") ?? undefined;
+
+  if (!siteUrl) {
+    return null;
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
+    name: settings.propertyName,
+    url: siteUrl,
+    description: buildHomePageDescription(settings),
+    inLanguage: "en-TH",
+    publisher: {
+      "@id": `${siteUrl}/#lodging`,
+    },
   };
 }

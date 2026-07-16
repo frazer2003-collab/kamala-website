@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PropertySettings } from "@/lib/property-settings";
 import { formatPropertyTagline } from "@/lib/property-brand";
+import { normalizeTelHref } from "@/lib/tha-phae-seo";
 
 export function SiteFooter({ settings }: { settings: PropertySettings }) {
   const tagline = formatPropertyTagline(settings.propertyName, settings.propertyTagline);
@@ -16,9 +17,13 @@ export function SiteFooter({ settings }: { settings: PropertySettings }) {
           {settings.addressLine ? <p>{settings.addressLine}</p> : null}
           {settings.contactPhone || settings.contactEmail ? (
             <p>
-              {settings.contactPhone ? <span>{settings.contactPhone}</span> : null}
+              {settings.contactPhone ? (
+                <a href={normalizeTelHref(settings.contactPhone)}>{settings.contactPhone}</a>
+              ) : null}
               {settings.contactPhone && settings.contactEmail ? " · " : null}
-              {settings.contactEmail ? <span>{settings.contactEmail}</span> : null}
+              {settings.contactEmail ? (
+                <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
+              ) : null}
             </p>
           ) : null}
         </div>

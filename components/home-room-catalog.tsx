@@ -19,7 +19,7 @@ import {
   isRoomBookable,
 } from "@/lib/room-availability";
 import { formatStayDateRange } from "@/lib/stay-dates";
-import { buildRoomsSectionSubhead } from "@/lib/home-hero-copy";
+import { buildRoomsSectionSubhead, buildRoomsSectionHeading } from "@/lib/home-hero-copy";
 import { formatRoomEssentials } from "@/lib/room-essentials";
 
 type HomeRoomCatalogProps = {
@@ -161,6 +161,7 @@ function RoomListingCard({
       <article className="listing-card listing-card--rail" role="listitem">
         <button
           className="listing-card__rail-main"
+          data-room-trigger={room.id}
           onClick={() => onOpenDetails(room.id)}
           type="button"
         >
@@ -205,6 +206,7 @@ function RoomListingCard({
     <article className="listing-card listing-card--feature">
       <button
         className="listing-card__hit"
+        data-room-trigger={room.id}
         onClick={() => onOpenDetails(room.id)}
         type="button"
       >
@@ -280,9 +282,11 @@ export function HomeRoomCatalog({
         <div className="section__heading section__heading--compact">
           <div className="section__heading-row">
             <h2 id="rooms-title">
-              {hasStayDates && stayDates
-                ? `Rooms for ${formatStayDateRange(stayDates.arrival, stayDates.departure)}`
-                : "Choose your room"}
+              {buildRoomsSectionHeading(
+                hasStayDates,
+                stayDates ? formatStayDateRange(stayDates.arrival, stayDates.departure) : null,
+                addressLine,
+              )}
             </h2>
             {hasStayDates ? (
               <a className="section__change-dates" href="#dates">
@@ -342,8 +346,10 @@ export function HomeRoomCatalog({
         }
         currency={currency}
         onClose={() => setSelectedRoomId(null)}
+        onSelectRoom={setSelectedRoomId}
         promotions={promotions}
         room={selectedRoom}
+        rooms={rooms}
         stayDates={stayDates}
       />
     </>

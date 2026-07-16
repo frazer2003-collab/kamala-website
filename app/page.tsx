@@ -10,7 +10,7 @@ import { isLocale } from "@/lib/i18n";
 import { HomeStickyDates } from "@/components/home-sticky-dates";
 import { HomePageJsonLd } from "@/components/home-page-json-ld";
 import { resolveHeroImageUrl } from "@/lib/home-hero-media";
-import { buildHomePageJsonLd, buildHomePageMetadata } from "@/lib/home-seo";
+import { buildHomePageJsonLd, buildHomePageMetadata, buildHomePageWebSiteJsonLd } from "@/lib/home-seo";
 import { getPropertySettings } from "@/lib/property-settings";
 import { hasStripeClientConfig, getStripePublishableKey } from "@/lib/stripe";
 import { getPublicRooms } from "@/lib/rooms";
@@ -51,7 +51,14 @@ export default async function Home({
     }))).map((entry) => [entry.roomId, entry.availableCount]),
   );
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? null;
-  const jsonLd = buildHomePageJsonLd(settings, rooms, appUrl);
+  const lodgingJsonLd = buildHomePageJsonLd(
+    settings,
+    rooms,
+    appUrl,
+    availabilityByRoomId,
+  );
+  const websiteJsonLd = buildHomePageWebSiteJsonLd(settings, appUrl);
+  const jsonLd = websiteJsonLd ? [lodgingJsonLd, websiteJsonLd] : lodgingJsonLd;
 
   return (
     <main className="guest-site">
@@ -97,6 +104,7 @@ export default async function Home({
         />
 
         <HomeBookingSection
+          addressLine={settings.addressLine}
           allowPayOnArrival={settings.allowPayOnArrival}
           availabilityByRoomId={availabilityByRoomId}
           currency={settings.currency}

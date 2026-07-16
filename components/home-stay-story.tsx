@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  buildStayStoryCheckInDetails,
   buildStayStoryHeading,
   buildStayStoryLede,
   getGuesthouseLocationLabel,
@@ -24,6 +25,11 @@ export function HomeStayStory({
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
   const heading = buildStayStoryHeading(locationLabel, addressLine);
   const lede = buildStayStoryLede(propertyName, locationLabel, addressLine);
+  const checkInDetails = buildStayStoryCheckInDetails(
+    houseRules,
+    checkInFrom,
+    checkInUntil,
+  );
 
   return (
     <section
@@ -35,10 +41,7 @@ export function HomeStayStory({
         <div className="stay-story__main">
           <h2 id="stay-story-title">{heading}</h2>
           <p className="stay-story__lede">{lede}</p>
-          <p className="stay-story__details">
-            Check in from {checkInFrom} to {checkInUntil}. After you reserve a room, we
-            reply by email to confirm your stay and send arrival details.
-          </p>
+          <p className="stay-story__details">{checkInDetails}</p>
           <p className="stay-story__link-row">
             <Link className="stay-story__gallery-link" href="/gallery">
               View the garden →

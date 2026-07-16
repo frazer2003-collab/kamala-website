@@ -1,3 +1,9 @@
+import {
+  THA_PHAE_BOOKING_HEADING,
+  THA_PHAE_PRIMARY_HEADLINE,
+  THA_PHAE_ROOMS_HEADING,
+} from "@/lib/tha-phae-seo";
+
 function looksLikeStreetPart(part: string): boolean {
   return /^\d/.test(part) || /\b(soi|road|rd\.?|street|st\.?|lane|ave\.?)\b/i.test(part);
 }
@@ -68,6 +74,30 @@ export function isNearThaPhaeGate(addressLine: string | null): boolean {
   return /tha\s*phae/i.test(addressLine ?? "");
 }
 
+export function buildRoomsSectionHeading(
+  hasStayDates: boolean,
+  stayDateLabel: string | null,
+  addressLine: string | null,
+): string {
+  if (hasStayDates && stayDateLabel) {
+    return `Rooms for ${stayDateLabel}`;
+  }
+
+  if (isNearThaPhaeGate(addressLine)) {
+    return THA_PHAE_ROOMS_HEADING;
+  }
+
+  return "Choose your room";
+}
+
+export function buildBookingSectionHeading(addressLine: string | null): string {
+  if (isNearThaPhaeGate(addressLine)) {
+    return THA_PHAE_BOOKING_HEADING;
+  }
+
+  return "Book your room";
+}
+
 export function buildAtmosphereHeadline(
   locationLabel: string,
   propertyName: string,
@@ -83,7 +113,7 @@ export function buildAtmosphereHeadline(
   }
 
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return "A guesthouse near Tha Phae Gate, Chiang Mai.";
+    return THA_PHAE_PRIMARY_HEADLINE;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -127,7 +157,7 @@ export function buildStayStoryHeading(
   addressLine: string | null = null,
 ): string {
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return "A garden guesthouse near Tha Phae Gate";
+    return "A garden guesthouse in Chiang Mai Old City";
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -181,14 +211,29 @@ export function buildRoomsSectionSubhead(
 ): string {
   const types = roomCount === 1 ? "1 room type" : `${roomCount} room types`;
 
+  if (addressLine && isNearThaPhaeGate(addressLine)) {
+    return `${types} · breakfast included · book directly with us`;
+  }
+
   if (addressLine && /chiang\s*mai/i.test(addressLine)) {
-    const locationNote = isNearThaPhaeGate(addressLine)
-      ? "near Tha Phae Gate"
-      : "in Chiang Mai Old City";
-    return `${types} ${locationNote} · breakfast included · book directly with us`;
+    return `${types} in Chiang Mai Old City · breakfast included · book directly with us`;
   }
 
   return `${types} · breakfast included · you book directly with us`;
+}
+
+export function buildStayStoryCheckInDetails(
+  houseRules: string[],
+  checkInFrom: string,
+  checkInUntil: string,
+): string {
+  const checkInRule = houseRules.find((rule) => /^check[\s-]?in/i.test(rule.trim()));
+
+  const checkInLine = checkInRule
+    ? checkInRule.trim().replace(/\.+$/, "")
+    : `Check-in is from ${checkInFrom} to ${checkInUntil}`;
+
+  return `${checkInLine}. After you reserve a room, we reply by email to confirm your stay and send arrival details.`;
 }
 
 export function buildStayStoryAtmosphereLine(locationLabel: string): string {
