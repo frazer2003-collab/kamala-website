@@ -316,7 +316,7 @@ export async function createBookingRequest(
 
   if (!hasStripeConfig()) {
     return bookingErrorState(
-      "Card payments are not configured yet. Add STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY before accepting bookings.",
+      "Payments are not configured yet. Add STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY before accepting bookings.",
       formData,
     );
   }

@@ -19,11 +19,12 @@ const messages = {
     payDeposit: "Pay deposit",
     continueToPayment: "Continue to payment",
     stripeSecureCheckout:
-      "Enter your card details below. Payment is processed securely by Stripe.",
-    paymentDetails: "Card payment",
+      "Pay by card or Thai QR (PromptPay). Payment is processed securely by Stripe.",
+    paymentDetails: "Pay deposit",
     editBookingDetails: "Edit booking details",
     processingPayment: "Processing payment...",
-    paymentFailed: "Payment could not be completed. Check your card details and try again.",
+    paymentFailed:
+      "Payment could not be completed. Try another card or PromptPay QR, then try again.",
     startingCheckout: "Preparing secure payment...",
     sendingRequest: "Sending request...",
     estimatedTotal: "Estimated total",
@@ -47,11 +48,12 @@ const messages = {
     payDeposit: "ชำระมัดจำ",
     continueToPayment: "ดำเนินการชำระเงิน",
     stripeSecureCheckout:
-      "กรอกรายละเอียดบัตรด้านล่าง การชำระเงินดำเนินการอย่างปลอดภัยผ่าน Stripe",
-    paymentDetails: "ชำระเงินด้วยบัตร",
+      "ชำระด้วยบัตรหรือพร้อมเพย์ (QR) การชำระเงินดำเนินการอย่างปลอดภัยผ่าน Stripe",
+    paymentDetails: "ชำระมัดจำ",
     editBookingDetails: "แก้ไขรายละเอียดการจอง",
     processingPayment: "กำลังดำเนินการชำระเงิน...",
-    paymentFailed: "ชำระเงินไม่สำเร็จ กรุณาตรวจสอบรายละเอียดบัตรแล้วลองอีกครั้ง",
+    paymentFailed:
+      "ชำระเงินไม่สำเร็จ ลองใช้บัตรอื่นหรือพร้อมเพย์ QR แล้วลองอีกครั้ง",
     startingCheckout: "กำลังเตรียมการชำระเงิน...",
     sendingRequest: "กำลังส่งคำขอ...",
     estimatedTotal: "ยอดรวมโดยประมาณ",

@@ -84,19 +84,25 @@ export async function createDepositPaymentIntent({
     ? `${arrival} to ${departure} · promotional rate · 50% deposit`
     : `${arrival} to ${departure} · 50% deposit`;
 
+  const stripeCurrency = getStripeCurrencyCode(currency);
+
+  // THB: card + PromptPay (Thai QR). USD: card only.
+  // PromptPay must be enabled in the Stripe Dashboard for the account.
+  const paymentMethodTypes =
+    stripeCurrency === "thb" ? (["card", "promptpay"] as const) : (["card"] as const);
+
   return stripe.paymentIntents.create({
     amount: depositAmount * 100,
-    currency: getStripeCurrencyCode(currency),
+    currency: stripeCurrency,
     receipt_email: guestEmail,
     description: `${propertyName} stay deposit — ${roomName}`,
     metadata: {
       booking_id: bookingId,
       room_name: roomName,
       stay_description: description,
+      payment_methods: paymentMethodTypes.join(","),
     },
-    automatic_payment_methods: {
-      enabled: true,
-    },
+    payment_method_types: [...paymentMethodTypes],
   });
 }
 

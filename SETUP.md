@@ -10,9 +10,23 @@ Use this checklist when launching the booking site for a guesthouse or homestay.
    - `SUPABASE_SERVICE_ROLE_KEY` (server only)
 
 2. **Stripe** — create an account (Thailand supported). Copy:
-   - `STRIPE_SECRET_KEY`
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (`pk_test_…` or `pk_live_…`)
+   - `STRIPE_SECRET_KEY` (`sk_test_…` or `sk_live_…`)
    - `STRIPE_WEBHOOK_SECRET` (point webhook to `/api/stripe/webhook`)
-   - Enable THB in Stripe Dashboard if using Thai baht
+   - Enable **THB** and **PromptPay** in Stripe Dashboard (Settings → Payment methods)
+   - Webhook events: `payment_intent.succeeded`, `payment_intent.canceled`
+
+### Switching Stripe accounts
+
+Deposit payments use only these three env vars (no account ID in code):
+
+| Variable | Where |
+|----------|--------|
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Local: `.env.local` · Production: Vercel → Project → **Settings → Environment Variables** |
+| `STRIPE_SECRET_KEY` | Same |
+| `STRIPE_WEBHOOK_SECRET` | Same (create a **new** webhook on the new account for `https://your-domain.com/api/stripe/webhook`) |
+
+After swapping keys: redeploy (or restart `npm run dev`), and confirm property currency in `/staff/settings` is **THB** so guests see card + PromptPay QR.
 
 3. **Resend** — for booking and chat emails:
    - `RESEND_API_KEY`
@@ -53,7 +67,8 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 
 ## 4. Test the booking flow
 
-- [ ] Guest can book with card deposit (Stripe test mode)
+- [ ] Guest can book with **card** deposit (Stripe test mode)
+- [ ] Guest can book with **PromptPay QR** deposit when currency is THB
 - [ ] Staff receives email and sees request on `/staff`
 - [ ] Confirm / decline works; decline refunds deposit
 - [ ] Calendar shows confirmed stays
@@ -65,10 +80,11 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 - [ ] All migrations through `migrate-room-sort-order.sql` are applied in Supabase
 - [ ] Browser tab title shows your property name from Settings (not the default "Kamala")
 - [ ] Room rates, photos, policies, and LINE/WhatsApp links are filled in under Settings and Rooms
+- [ ] Stripe PromptPay enabled for the live account; webhook URL uses production domain
 
 ## 6. Go live
 
-- Switch Stripe to live keys
+- Switch Stripe to **live** keys (see “Switching Stripe accounts” above)
 - Verify `BOOKING_EMAIL_FROM` domain
 - Set strong staff password
 - Review legal pages: `/privacy`, `/terms`, `/cancellation`

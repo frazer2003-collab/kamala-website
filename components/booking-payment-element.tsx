@@ -71,6 +71,8 @@ function PaymentForm({
           id="booking-payment-element"
           options={{
             layout: "tabs",
+            paymentMethodOrder:
+              currency === "thb" ? ["promptpay", "card"] : ["card"],
           }}
         />
       </div>

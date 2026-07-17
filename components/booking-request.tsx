@@ -628,7 +628,7 @@ export function BookingRequest({
 
         {paymentStep && !stripePublishableKey ? (
           <p className="form-message form-message--error" role="alert">
-            Card payments are not configured yet. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
+            Payments are not configured yet. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
           </p>
         ) : null}
 
