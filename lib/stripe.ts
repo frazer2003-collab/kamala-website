@@ -55,6 +55,11 @@ export function calculateDepositAmount(totalAmount: number) {
   return calculatePaymentAmount(totalAmount);
 }
 
+/** Stripe currency minimums (major units). See Stripe docs: minimum charge amounts. */
+export function getStripeMinimumChargeAmount(currency: PropertyCurrency) {
+  return currency === "thb" ? 10 : 1;
+}
+
 type CreateDepositPaymentIntentInput = {
   bookingId: string;
   guestEmail: string;

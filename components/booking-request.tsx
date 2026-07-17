@@ -375,6 +375,7 @@ export function BookingRequest({
         </p>
       </div>
 
+      <div className="booking-panel__main">
       <form className="booking-form" action={formAction}>
         <fieldset className="booking-form__fields" disabled={Boolean(paymentStep)}>
         <div className="field-pair">
@@ -679,6 +680,7 @@ export function BookingRequest({
           {t(locale, "paymentsNotConfigured")}
         </p>
       ) : null}
+      </div>
     </section>
   );
 }

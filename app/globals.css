@@ -3359,7 +3359,6 @@ p {
 }
 
 .booking-payment-shell {
-  grid-column: 1 / -1;
   display: grid;
   gap: var(--space-4);
   margin-top: var(--space-2);
@@ -3484,6 +3483,12 @@ p {
 .booking-panel__intro {
   position: sticky;
   top: 7rem;
+}
+
+.booking-panel__main {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-4);
 }
 
 .booking-form {

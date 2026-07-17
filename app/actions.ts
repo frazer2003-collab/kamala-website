@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 import { sendGuestBookingEmail } from "@/lib/email";
 import { recordStaffChatMessage, seedGuestNoteMessage } from "@/lib/booking-chat";
-import { getStripeCurrencyCode } from "@/lib/currency";
+import { formatMoneySuffix, getStripeCurrencyCode } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffSession } from "@/lib/staff-auth";
 import { hasCapacityForStay, getUnavailableStayDays } from "@/lib/booking-capacity";
@@ -34,6 +34,7 @@ import {
   calculateDepositAmount,
   createDepositPaymentIntent,
   getStripe,
+  getStripeMinimumChargeAmount,
   hasStripeConfig,
   hasStripeServerConfig,
 } from "@/lib/stripe";
@@ -331,6 +332,14 @@ export async function createBookingRequest(
   });
   const estimatedTotal = quote.total;
   const depositAmount = calculateDepositAmount(estimatedTotal);
+  const minimumCharge = getStripeMinimumChargeAmount(propertySettings.currency);
+
+  if (depositAmount < minimumCharge) {
+    return bookingErrorState(
+      `Stripe needs at least ${formatMoneySuffix(minimumCharge, propertySettings.currency)} to take a payment. This stay totals ${formatMoneySuffix(depositAmount, propertySettings.currency)} — raise the room rate in staff settings, then try again.`,
+      formData,
+    );
+  }
 
   const hasCapacity = await hasCapacityForStay(
     selectedRoom.id,
@@ -460,6 +469,42 @@ export async function cancelPendingBooking(bookingId: string) {
     .delete()
     .eq("id", bookingId)
     .eq("status", "pending_payment");
+}
+
+export async function setPendingBookingPaymentMethods(
+  bookingId: string,
+  methods: Array<"card" | "promptpay">,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!bookingId || methods.length === 0) {
+    return { ok: false, message: "Payment method update failed. Try again." };
+  }
+
+  if (!hasStripeServerConfig()) {
+    return { ok: false, message: "Payments are not configured yet." };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: booking } = await supabase
+    .from("booking_requests")
+    .select("stripe_payment_intent_id, status")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking || booking.status !== "pending_payment" || !booking.stripe_payment_intent_id) {
+    return { ok: false, message: "This payment session expired. Edit details and try again." };
+  }
+
+  try {
+    await getStripe().paymentIntents.update(booking.stripe_payment_intent_id, {
+      payment_method_types: methods,
+    });
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      message: "Could not switch payment method. Try again in a moment.",
+    };
+  }
 }
 
 async function getBookingForStaff(bookingId: string) {
