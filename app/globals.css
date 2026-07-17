@@ -3692,6 +3692,26 @@ textarea:focus {
   padding: var(--space-1) 0;
 }
 
+.booking-payment__card-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.booking-payment__card-field {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.booking-payment__card-field:focus-within {
+  border-color: oklch(48% 0.18 12);
+  box-shadow: 0 0 0 3px oklch(96.5% 0.025 12);
+}
+
 .booking-payment__actions {
   display: flex;
   flex-wrap: wrap;
