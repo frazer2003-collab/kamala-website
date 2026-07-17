@@ -653,32 +653,32 @@ export function BookingRequest({
           />
         ) : null}
 
-        {paymentStep && stripePublishableKey ? (
-          <BookingPaymentElement
-            bookingId={paymentStep.bookingId}
-            clientSecret={paymentStep.clientSecret}
-            currency={currency}
-            deposit={deposit}
-            guestEmail={fields.guestEmail}
-            locale={locale}
-            onCancel={handleCancelPayment}
-            publishableKey={stripePublishableKey}
-            returnUrl={paymentReturnUrl}
-          />
-        ) : null}
-
-        {paymentStep && !stripePublishableKey ? (
-          <p className="form-message form-message--error" role="alert">
-            {t(locale, "paymentsNotConfigured")}
-          </p>
-        ) : null}
-
         {isCancelingPayment ? (
           <p className="booking-summary__hint" aria-live="polite">
             {t(locale, "startingCheckout")}
           </p>
         ) : null}
       </form>
+
+      {paymentStep && stripePublishableKey ? (
+        <BookingPaymentElement
+          bookingId={paymentStep.bookingId}
+          clientSecret={paymentStep.clientSecret}
+          currency={currency}
+          deposit={deposit}
+          guestEmail={fields.guestEmail}
+          locale={locale}
+          onCancel={handleCancelPayment}
+          publishableKey={stripePublishableKey}
+          returnUrl={paymentReturnUrl}
+        />
+      ) : null}
+
+      {paymentStep && !stripePublishableKey ? (
+        <p className="form-message form-message--error" role="alert">
+          {t(locale, "paymentsNotConfigured")}
+        </p>
+      ) : null}
     </section>
   );
 }

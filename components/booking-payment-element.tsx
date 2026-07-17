@@ -1,12 +1,16 @@
 "use client";
 
 import {
+  CardElement,
   Elements,
-  PaymentElement,
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
-import { loadStripe, type StripeElementsOptions } from "@stripe/stripe-js";
+import {
+  loadStripe,
+  type StripeCardElementOptions,
+  type StripeElementsOptions,
+} from "@stripe/stripe-js";
 import { useEffect, useMemo, useState } from "react";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
 import { t, type Locale } from "@/lib/i18n";
@@ -23,17 +27,39 @@ function getStripePromise(publishableKey: string) {
 
 type PayMethod = "promptpay" | "card";
 
+const cardElementOptions: StripeCardElementOptions = {
+  hidePostalCode: true,
+  style: {
+    base: {
+      color: "oklch(23% 0.028 12)",
+      fontFamily:
+        '"Plus Jakarta Sans", "Aptos", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
+      fontSize: "16px",
+      "::placeholder": {
+        color: "oklch(55% 0.02 12)",
+      },
+    },
+    invalid: {
+      color: "oklch(50% 0.17 12)",
+    },
+  },
+};
+
 function CardPaymentForm({
   bookingId,
+  clientSecret,
   currency,
   deposit,
+  guestEmail,
   locale,
   onCancel,
   returnUrl,
 }: {
   bookingId: string;
+  clientSecret: string;
   currency: PropertyCurrency;
   deposit: number;
+  guestEmail: string;
   locale: Locale;
   onCancel: () => void;
   returnUrl: string;
@@ -42,40 +68,59 @@ function CardPaymentForm({
   const elements = useElements();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  async function handlePay() {
     if (!stripe || !elements) {
+      return;
+    }
+
+    const card = elements.getElement(CardElement);
+    if (!card) {
       return;
     }
 
     setIsPaying(true);
     setErrorMessage(null);
 
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: returnUrl,
+    const email = guestEmail.trim();
+    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card,
+        billing_details: email ? { email } : undefined,
       },
+      return_url: returnUrl,
     });
 
     if (error) {
       setErrorMessage(error.message ?? t(locale, "paymentFailed"));
       setIsPaying(false);
+      return;
     }
+
+    if (paymentIntent?.status === "succeeded" || paymentIntent?.status === "processing") {
+      window.location.assign(returnUrl);
+      return;
+    }
+
+    setIsPaying(false);
   }
 
   return (
-    <form className="booking-payment" onSubmit={handleSubmit}>
-      <div className="booking-payment__element">
-        <PaymentElement
-          id="booking-payment-element"
-          options={{
-            layout: "tabs",
-            paymentMethodOrder: ["card"],
-          }}
-        />
+    <div className="booking-payment">
+      <div className="booking-payment__element booking-payment__element--card">
+        <label className="booking-payment__card-label" htmlFor="booking-card-element">
+          {t(locale, "payWithCard")}
+        </label>
+        <div className="booking-payment__card-field" id="booking-card-element">
+          <CardElement
+            options={cardElementOptions}
+            onChange={(event) => {
+              setCardComplete(event.complete);
+              setErrorMessage(event.error?.message ?? null);
+            }}
+          />
+        </div>
       </div>
 
       {errorMessage ? (
@@ -87,8 +132,9 @@ function CardPaymentForm({
       <div className="booking-payment__actions">
         <button
           className="button button--primary"
-          disabled={!stripe || !elements || isPaying}
-          type="submit"
+          disabled={!stripe || !elements || !cardComplete || isPaying}
+          onClick={() => void handlePay()}
+          type="button"
         >
           {isPaying
             ? t(locale, "processingPayment")
@@ -105,7 +151,7 @@ function CardPaymentForm({
       </div>
 
       <input name="booking-id" type="hidden" value={bookingId} />
-    </form>
+    </div>
   );
 }
 
@@ -349,9 +395,11 @@ export function BookingPaymentElement({
   );
   const stripe = useMemo(() => getStripePromise(publishableKey), [publishableKey]);
 
+  // Card path uses CardElement (card-only). Do not pass clientSecret here —
+  // Payment Element would otherwise list every method on the PaymentIntent
+  // (including PromptPay), duplicating our top toggle.
   const options = useMemo<StripeElementsOptions>(
     () => ({
-      clientSecret,
       appearance: {
         theme: "stripe",
         variables: {
@@ -364,26 +412,9 @@ export function BookingPaymentElement({
           borderRadius: "0.75rem",
           spacingUnit: "4px",
         },
-        rules: {
-          ".Input": {
-            border: "1px solid oklch(88% 0.012 12)",
-            boxShadow: "none",
-          },
-          ".Input:focus": {
-            border: "1px solid oklch(48% 0.18 12)",
-            boxShadow: "0 0 0 3px oklch(96.5% 0.025 12)",
-          },
-          ".Tab": {
-            border: "1px solid oklch(88% 0.012 12)",
-          },
-          ".Tab--selected": {
-            border: "1px solid oklch(48% 0.18 12 / 0.35)",
-            backgroundColor: "oklch(96.5% 0.025 12)",
-          },
-        },
       },
     }),
-    [clientSecret],
+    [],
   );
 
   return (
@@ -436,8 +467,10 @@ export function BookingPaymentElement({
         <Elements options={options} stripe={stripe}>
           <CardPaymentForm
             bookingId={bookingId}
+            clientSecret={clientSecret}
             currency={currency}
             deposit={deposit}
+            guestEmail={guestEmail}
             locale={locale}
             onCancel={onCancel}
             returnUrl={returnUrl}
