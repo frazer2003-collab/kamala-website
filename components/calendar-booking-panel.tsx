@@ -286,7 +286,7 @@ export function CalendarBookingPanel({
               )}
             </strong>
             ? This removes the stay from the calendar
-            {depositPaid ? " and releases inventory held by the deposit" : ""}.
+            {depositPaid ? " and releases inventory held by the payment" : ""}.
           </p>
           <div className="calendar-cancel-confirm__actions">
             <form action={cancelAction}>

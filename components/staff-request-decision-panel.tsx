@@ -11,7 +11,7 @@ import {
 } from "@/lib/currency";
 
 const CONFIRM_DEFAULT =
-  "Good news — your room is confirmed. We will follow up with arrival details and the remaining balance shortly.";
+  "Good news — your room is confirmed. We will follow up shortly with arrival details.";
 
 const DECLINE_DEFAULT =
   "Thank you for your request. We are sorry, but this room is not available for those dates. Reply with flexible dates and we can help find another option.";
@@ -66,7 +66,7 @@ export function StaffRequestDecisionPanel({
         <p className="staff-decide__summary">
           {practiceResult === "confirmed"
             ? "In live mode this would email the guest and move the stay to the calendar."
-            : "In live mode this would email the guest, close the request, and refund a deposit if one was paid."}
+            : "In live mode this would email the guest, close the request, and refund payment if one was paid."}
         </p>
         <div className="staff-decide__actions">
           <button
@@ -105,8 +105,8 @@ export function StaffRequestDecisionPanel({
           Email <strong>{guestName}</strong> at <strong>{guestEmail}</strong>,
           then move this stay to the calendar.
           {depositPaid
-            ? ` Their ${depositLabel} deposit already holds the room.`
-            : " No deposit is on record yet."}
+            ? ` They already paid ${depositLabel} in full for the stay.`
+            : " No payment is on record yet."}
         </p>
         <form
           action={practiceMode ? undefined : confirmBookingRequest}
@@ -160,7 +160,7 @@ export function StaffRequestDecisionPanel({
         <p className="staff-decide__summary">
           Email <strong>{guestName}</strong> at <strong>{guestEmail}</strong>,
           then close this request
-          {depositPaid ? ` and refund their ${depositLabel} deposit` : ""}.
+          {depositPaid ? ` and refund their ${depositLabel} payment` : ""}.
           This cannot be undone from here.
         </p>
         <form
@@ -219,7 +219,7 @@ export function StaffRequestDecisionPanel({
       <p className="detail-help">
         Confirm moves the stay to the calendar and emails the guest. Decline
         closes the request
-        {depositPaid ? ", refunds the deposit," : ""} and emails them. You will
+        {depositPaid ? ", refunds their payment," : ""} and emails them. You will
         review the message before it sends.
       </p>
       <div className="staff-decide__actions">

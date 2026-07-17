@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef } from "react";
 import type { Room } from "@/lib/content";
-import { formatMoney, type PropertyCurrency } from "@/lib/currency";
+import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
 import { getTodayIso } from "@/lib/calendar";
 import {
   applyPercentOff,
@@ -213,22 +213,22 @@ export function RoomDetailDialog({
       {pricing.hasPromotion ? (
         <div className="room-detail-dialog__price room-detail-dialog__price--promo">
           <span className="room-detail-dialog__price-was">
-            {formatMoney(pricing.baseRate, currency)}
+            {formatMoneySuffix(pricing.baseRate, currency)}
           </span>
-          <strong>{formatMoney(pricing.rate, currency)}</strong>
+          <strong>{formatMoneySuffix(pricing.rate, currency)}</strong>
           <span className="room-detail-dialog__price-off">
             {pricing.percentOff}% off
           </span>
         </div>
       ) : (
         <strong className="room-detail-dialog__price-now">
-          {formatMoney(pricing.rate, currency)}
+          {formatMoneySuffix(pricing.rate, currency)}
         </strong>
       )}
       <span className="room-detail-dialog__unit">per night</span>
       {pricing.stayQuote && pricing.stayQuote.nights > 0 ? (
         <span className="room-detail-dialog__stay-total">
-          {formatMoney(pricing.stayQuote.total, currency)} total ·{" "}
+          {formatMoneySuffix(pricing.stayQuote.total, currency)} total ·{" "}
           {pricing.stayQuote.nights}{" "}
           {pricing.stayQuote.nights === 1 ? "night" : "nights"}
         </span>

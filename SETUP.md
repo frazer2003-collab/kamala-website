@@ -18,7 +18,7 @@ Use this checklist when launching the booking site for a guesthouse or homestay.
 
 ### Switching Stripe accounts
 
-Deposit payments use only these three env vars (no account ID in code):
+Stay payments (full amount at booking) use only these three env vars (no account ID in code):
 
 | Variable | Where |
 |----------|--------|
@@ -67,12 +67,12 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 
 ## 4. Test the booking flow
 
-- [ ] Guest can book with **card** deposit (Stripe test mode)
-- [ ] Guest can book with **PromptPay QR** deposit when currency is THB
+- [ ] Guest can book with **card** (full stay, Stripe test mode)
+- [ ] Guest can book with **PromptPay QR** (full stay) when currency is THB
 - [ ] Staff receives email and sees request on `/staff`
-- [ ] Confirm / decline works; decline refunds deposit
+- [ ] Confirm / decline works; decline refunds payment
 - [ ] Calendar shows confirmed stays
-- [ ] Guest conversation link works after deposit
+- [ ] Guest conversation link works after payment
 
 ## 5. Pre-launch checks
 

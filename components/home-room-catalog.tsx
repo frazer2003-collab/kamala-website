@@ -5,7 +5,7 @@ import { BookRoomLink } from "@/components/book-room-link";
 import { OptimizedImage } from "@/components/optimized-image";
 import { RoomDetailDialog } from "@/components/room-detail-dialog";
 import type { Room } from "@/lib/content";
-import { formatMoney, type PropertyCurrency } from "@/lib/currency";
+import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
 import { getTodayIso } from "@/lib/calendar";
 import {
   applyPercentOff,
@@ -123,15 +123,15 @@ function RoomListingCard({
       {price.hasPromotion ? (
         <>
           <span className="listing-card__price-was">
-            {formatMoney(price.baseRate, currency)}
+            {formatMoneySuffix(price.baseRate, currency)}
           </span>
           <strong className="listing-card__price-now">
-            {formatMoney(price.rate, currency)}
+            {formatMoneySuffix(price.rate, currency)}
           </strong>
           <span className="listing-card__price-off">{price.percentOff}% off</span>
         </>
       ) : (
-        <strong>{formatMoney(price.rate, currency)}</strong>
+        <strong>{formatMoneySuffix(price.rate, currency)}</strong>
       )}
       <span>per night</span>
     </div>

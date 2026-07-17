@@ -52,8 +52,14 @@ export function getAppBaseUrl() {
   return "http://localhost:3000";
 }
 
-export function calculateDepositAmount(totalDollars: number) {
-  return Math.max(1, Math.round(totalDollars * 0.5));
+/** Full stay total charged at booking (no partial deposit). */
+export function calculatePaymentAmount(totalAmount: number) {
+  return Math.max(1, Math.round(totalAmount));
+}
+
+/** @deprecated Use calculatePaymentAmount — kept for call-site clarity during rename. */
+export function calculateDepositAmount(totalAmount: number) {
+  return calculatePaymentAmount(totalAmount);
 }
 
 type CreateDepositPaymentIntentInput = {
@@ -81,8 +87,8 @@ export async function createDepositPaymentIntent({
 }: CreateDepositPaymentIntentInput) {
   const stripe = getStripe();
   const description = hasPromotion
-    ? `${arrival} to ${departure} · promotional rate · 50% deposit`
-    : `${arrival} to ${departure} · 50% deposit`;
+    ? `${arrival} to ${departure} · promotional rate · paid in full`
+    : `${arrival} to ${departure} · paid in full`;
 
   const stripeCurrency = getStripeCurrencyCode(currency);
 
@@ -95,7 +101,7 @@ export async function createDepositPaymentIntent({
     amount: depositAmount * 100,
     currency: stripeCurrency,
     receipt_email: guestEmail,
-    description: `${propertyName} stay deposit — ${roomName}`,
+    description: `${propertyName} stay — ${roomName}`,
     metadata: {
       booking_id: bookingId,
       room_name: roomName,

@@ -37,11 +37,11 @@ export async function sendStaffBookingEmail(
   }
 
   const subject = booking.depositPaid
-    ? `Deposit paid: ${booking.roomName}`
+    ? `Paid in full: ${booking.roomName}`
     : `New booking request: ${booking.roomName}`;
   const note = booking.note || "No note added.";
   const text = [
-    booking.depositPaid ? "Deposit paid — room reserved" : "New booking request",
+    booking.depositPaid ? "Paid in full — room reserved" : "New booking request",
     "",
     `Guest: ${booking.guestName}`,
     `Email: ${booking.guestEmail}`,
@@ -49,8 +49,8 @@ export async function sendStaffBookingEmail(
     `Room: ${booking.roomName}`,
     `Dates: ${booking.arrivalDate} to ${booking.departureDate}`,
     `Nights: ${booking.nights}`,
-    `Estimated total: $${booking.estimatedTotal}`,
-    booking.depositPaid ? `Deposit paid: $${booking.depositPaid}` : "",
+    `Stay total: $${booking.estimatedTotal}`,
+    booking.depositPaid ? `Amount paid: $${booking.depositPaid}` : "",
     "",
     "Guest note:",
     note,
@@ -62,8 +62,8 @@ export async function sendStaffBookingEmail(
 
   const html = `
     <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5;">
-      <h1 style="font-size: 22px;">${booking.depositPaid ? "Deposit paid — room reserved" : "New booking request"}</h1>
-      <p>${booking.depositPaid ? "A guest paid the 50% deposit and the room is reserved pending your review." : "A guest has requested a room through the Kamala website."}</p>
+      <h1 style="font-size: 22px;">${booking.depositPaid ? "Paid in full — room reserved" : "New booking request"}</h1>
+      <p>${booking.depositPaid ? "A guest paid the full stay and the room is reserved pending your review." : "A guest has requested a room through the Kamala website."}</p>
       <table style="border-collapse: collapse; width: 100%; max-width: 560px;">
         <tr><td style="padding: 8px 0; color: #6b5559;">Guest</td><td>${escapeHtml(booking.guestName)}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b5559;">Email</td><td>${escapeHtml(booking.guestEmail)}</td></tr>
@@ -71,8 +71,8 @@ export async function sendStaffBookingEmail(
         <tr><td style="padding: 8px 0; color: #6b5559;">Room</td><td>${escapeHtml(booking.roomName)}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b5559;">Dates</td><td>${escapeHtml(booking.arrivalDate)} to ${escapeHtml(booking.departureDate)}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b5559;">Nights</td><td>${booking.nights}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b5559;">Estimated total</td><td>$${booking.estimatedTotal}</td></tr>
-        ${booking.depositPaid ? `<tr><td style="padding: 8px 0; color: #6b5559;">Deposit paid</td><td>$${booking.depositPaid}</td></tr>` : ""}
+        <tr><td style="padding: 8px 0; color: #6b5559;">Stay total</td><td>$${booking.estimatedTotal}</td></tr>
+        ${booking.depositPaid ? `<tr><td style="padding: 8px 0; color: #6b5559;">Amount paid</td><td>$${booking.depositPaid}</td></tr>` : ""}
       </table>
       <h2 style="font-size: 16px; margin-top: 24px;">Guest note</h2>
       <p>${escapeHtml(note)}</p>

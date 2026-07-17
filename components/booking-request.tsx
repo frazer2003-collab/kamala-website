@@ -18,10 +18,32 @@ import {
 } from "@/components/book-room-link";
 import type { Room } from "@/lib/content";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
+import { GUEST_LOCALE_COOKIE } from "@/lib/guest-locale-cookie";
 import { isLocale, t, type Locale } from "@/lib/i18n";
 import { calculateStayQuote, type RoomPromotionRate } from "@/lib/pricing";
 import { getRoomAvailabilityLabel, isRoomBookable } from "@/lib/room-availability";
 import { getBookingPaymentReturnUrl } from "@/lib/booking-payment-url";
+
+function persistGuestLocale(nextLocale: Locale) {
+  try {
+    document.cookie = `${GUEST_LOCALE_COOKIE}=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    // Ignore cookie errors in restricted contexts.
+  }
+}
+
+function formatStayDate(value: string, locale: Locale) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
 const initialState: BookingActionState = {
   status: "idle",
@@ -165,6 +187,10 @@ export function BookingRequest({
   const [locale, setLocale] = useState<Locale>(
     isLocale(initialLocale) ? initialLocale : "en",
   );
+
+  useEffect(() => {
+    persistGuestLocale(locale);
+  }, [locale]);
   const [fields, setFields] = useState<BookingFormValues>(() =>
     emptyFormFields(initialRoom, initialArrival ?? "", initialDeparture ?? ""),
   );
@@ -284,13 +310,14 @@ export function BookingRequest({
     : emptyDisplayQuote(selectedRoom.rate);
   const nights = displayQuote.nights > 0 ? displayQuote.nights : 1;
   const estimate = displayQuote.nights > 0 ? displayQuote.total : selectedRoom.rate;
-  const deposit = Math.max(1, Math.round(estimate * 0.5));
+  const deposit = Math.max(1, Math.round(estimate));
   const showPromoPricing =
     displayQuote.hasPromotion && displayQuote.baseTotal > displayQuote.total;
-  const paymentReturnUrl = paymentStep
-    ? getBookingPaymentReturnUrl(paymentStep.bookingId)
-    : "";
   const hasDates = hasValidStayDates(fields.arrival, fields.departure);
+  const paymentReturnUrl = paymentStep
+    ? getBookingPaymentReturnUrl(paymentStep.bookingId, locale)
+    : "";
+  const showSeparateDueLine = hasDates && deposit !== estimate;
   const progressStep: 1 | 2 | 3 = paymentStep ? 3 : hasDates ? 2 : 1;
   const nightlyRate =
     displayQuote.effectiveNightlyRate ?? selectedRoom.rate;
@@ -336,10 +363,15 @@ export function BookingRequest({
           </label>
         </div>
         <BookingProgress locale={locale} step={progressStep} />
-        <h2 id="booking-title">Request your stay</h2>
+        <h2 id="booking-title">
+          {paymentStep
+            ? t(locale, "completeReservation")
+            : t(locale, "requestStayTitle")}
+        </h2>
         <p>
-          A 50% deposit holds your room. Staff confirm every booking and email
-          arrival details. The balance is due before check-in.
+          {paymentStep
+            ? t(locale, "bookingIntroPayment")
+            : t(locale, "bookingIntro")}
         </p>
       </div>
 
@@ -369,7 +401,8 @@ export function BookingRequest({
         </div>
         <div className="field-pair">
           <label htmlFor="guest-email">
-            {t(locale, "guestEmail")} <span className="field-required">Required</span>
+            {t(locale, "guestEmail")}{" "}
+            <span className="field-required">{t(locale, "required")}</span>
           </label>
           <input
             id="guest-email"
@@ -393,7 +426,8 @@ export function BookingRequest({
         </div>
         <div className="field-pair">
           <label htmlFor="guest-phone">
-            {t(locale, "guestPhone")} <span className="field-required">Required</span>
+            {t(locale, "guestPhone")}{" "}
+            <span className="field-required">{t(locale, "required")}</span>
           </label>
           <input
             id="guest-phone"
@@ -408,7 +442,7 @@ export function BookingRequest({
             aria-describedby={
               state.fieldErrors?.["guest-phone"] ? "guest-phone-error" : undefined
             }
-            placeholder="Include country code, e.g. +66"
+            placeholder={t(locale, "phonePlaceholder")}
             required
           />
           {state.fieldErrors?.["guest-phone"] ? (
@@ -483,7 +517,7 @@ export function BookingRequest({
                 value={room.id}
               >
                 {roomLabel}
-                {!isRoomBookable(availableCount) ? " · FULL" : ""}
+                {!isRoomBookable(availableCount) ? t(locale, "roomFullSuffix") : ""}
               </option>
               );
             })}
@@ -494,19 +528,19 @@ export function BookingRequest({
             </span>
           ) : roomIsFull ? (
             <span className="field-error" id="room-full-error">
-              This room is full. Choose another room to send a request.
+              {t(locale, "roomFull")}
             </span>
           ) : null}
         </div>
         <div className="field-pair">
-          <label htmlFor="nights">Nights</label>
+          <label htmlFor="nights">{t(locale, "nights")}</label>
           <input
             id="nights"
             inputMode="numeric"
             type="number"
             value={nights}
             readOnly
-            aria-label="Calculated nights"
+            aria-label={t(locale, "nightsAria")}
           />
         </div>
         <div className="field-pair field-pair--wide">
@@ -519,7 +553,7 @@ export function BookingRequest({
             onChange={(event) =>
               setFields((current) => ({ ...current, note: event.target.value }))
             }
-            placeholder="Arrival time, breakfast needs, or questions about the room."
+            placeholder={t(locale, "notePlaceholder")}
           />
         </div>
 
@@ -550,15 +584,19 @@ export function BookingRequest({
                 ) : null}
               </div>
               <div className="booking-receipt__divider" aria-hidden="true" />
-              <div className="booking-receipt__line booking-receipt__line--total">
-                <span className="booking-summary__label">{t(locale, "estimatedTotal")}</span>
-                <QuoteAmount
-                  amount={estimate}
-                  as="strong"
-                  className="booking-receipt__total"
-                  currency={currency}
-                />
-              </div>
+              {showSeparateDueLine ? (
+                <div className="booking-receipt__line booking-receipt__line--total">
+                  <span className="booking-summary__label">
+                    {t(locale, "estimatedTotal")}
+                  </span>
+                  <QuoteAmount
+                    amount={estimate}
+                    as="strong"
+                    className="booking-receipt__total"
+                    currency={currency}
+                  />
+                </div>
+              ) : null}
               <div className="booking-receipt__line booking-receipt__line--deposit">
                 <span className="booking-summary__label">{t(locale, "depositDue")}</span>
                 <QuoteAmount
@@ -570,12 +608,15 @@ export function BookingRequest({
               </div>
             </>
           ) : (
-            <p className="booking-summary__hint">
-              Choose arrival and departure to see your total, including any
-              promotional rates.
-            </p>
+            <p className="booking-summary__hint">{t(locale, "quoteHint")}</p>
           )}
           <p className="booking-receipt__meta">
+            {hasDates
+              ? `${t(locale, "staySummaryDates")}: ${formatStayDate(fields.arrival, locale)} – ${formatStayDate(fields.departure, locale)}. `
+              : null}
+            {fields.guestName.trim()
+              ? `${fields.guestName.trim()}. `
+              : null}
             {selectedRoom.name} · {selectedRoom.sleeps} ·{" "}
             {getRoomAvailabilityLabel(
               getRoomAvailableCount(selectedRoom, availabilityByRoomId),
@@ -592,8 +633,7 @@ export function BookingRequest({
 
         {bookableRooms.length === 0 ? (
           <p className="form-message form-message--error" role="alert">
-            All rooms are currently full. Please check back later or contact staff
-            directly.
+            {t(locale, "allRoomsFull")}
           </p>
         ) : null}
 
@@ -619,6 +659,7 @@ export function BookingRequest({
             clientSecret={paymentStep.clientSecret}
             currency={currency}
             deposit={deposit}
+            guestEmail={fields.guestEmail}
             locale={locale}
             onCancel={handleCancelPayment}
             publishableKey={stripePublishableKey}
@@ -628,7 +669,7 @@ export function BookingRequest({
 
         {paymentStep && !stripePublishableKey ? (
           <p className="form-message form-message--error" role="alert">
-            Payments are not configured yet. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
+            {t(locale, "paymentsNotConfigured")}
           </p>
         ) : null}
 

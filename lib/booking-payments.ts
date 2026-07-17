@@ -82,7 +82,7 @@ export async function fulfillBookingDeposit({
     nights: booking.nights,
     estimatedTotal: booking.estimated_total,
     note: booking.note ?? "",
-    depositPaid: booking.deposit_amount ?? Math.round(booking.estimated_total * 0.5),
+    depositPaid: booking.deposit_amount ?? booking.estimated_total,
   });
 
   if (booking.guest_email !== "walk-in@kamala.local") {
@@ -93,7 +93,7 @@ export async function fulfillBookingDeposit({
       guestName: booking.guest_name,
       roomName: booking.room_name,
       message:
-        "Thank you — we received your deposit and your room is reserved. Staff will review your request and message you here with arrival details.",
+        "Thank you — we received payment for your stay and your room is reserved. Staff will review your request and message you here with arrival details.",
       chatUrl: getGuestChatUrl(token),
       kind: "welcome",
     });

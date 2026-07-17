@@ -483,7 +483,7 @@ export async function confirmBookingRequest(formData: FormData) {
   const bookingId = getValue(formData, "booking-id");
   const message =
     getValue(formData, "staff-message") ||
-    "Good news — your room is confirmed. We will follow up with arrival details and the remaining balance shortly.";
+    "Good news — your room is confirmed. We will follow up shortly with arrival details.";
 
   const booking = await getBookingForStaff(bookingId);
   if (!booking) {

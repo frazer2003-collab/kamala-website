@@ -468,7 +468,7 @@ export default async function StaffCalendarPage({
                   <dd>{selected.requestedAt}</dd>
                 </div>
                 <div>
-                  <dt>Deposit paid</dt>
+                  <dt>Paid in full</dt>
                   <dd>
                     {selected.depositPaid
                       ? formatMoneySuffix(selected.depositAmount, settings.currency)
@@ -509,7 +509,7 @@ export default async function StaffCalendarPage({
               <p className="detail-help">
                 {selected.status === "awaiting" ? (
                   <>
-                    This stay is reserved by the guest deposit. Confirm it from
+                    This stay is reserved by the guest payment. Confirm it from
                     the requests page to finalize staff review.
                   </>
                 ) : (

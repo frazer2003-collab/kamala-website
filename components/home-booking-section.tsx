@@ -37,7 +37,7 @@ const BookingRequest = dynamic(
           </li>
           <li className="booking-progress__step">
             <span className="booking-progress__marker">3</span>
-            <span className="booking-progress__label">Pay deposit</span>
+            <span className="booking-progress__label">Pay in full</span>
           </li>
         </ol>
         <p>{t("en", "startingCheckout")}</p>

@@ -31,8 +31,8 @@ type InboxFilter = "all" | "new" | "awaiting" | "needs-reply";
 
 const statusCopy: Record<BookingStatus, string> = {
   new: "New request",
-  pending_payment: "Awaiting deposit",
-  awaiting: "Deposit received",
+  pending_payment: "Awaiting payment",
+  awaiting: "Paid in full",
   "needs-reply": "Needs staff reply",
   confirmed: "Confirmed",
   declined: "Closed",
@@ -154,7 +154,7 @@ export default async function StaffBookingsPage({
     { id: "all", label: "All", count: staffBookings.bookings.length },
     { id: "needs-reply", label: "Need reply", count: needsReplyCount },
     { id: "new", label: "New", count: newRequestCount },
-    { id: "awaiting", label: "Deposit in", count: awaitingCount },
+    { id: "awaiting", label: "Paid", count: awaitingCount },
   ];
 
   return (
@@ -450,7 +450,7 @@ export default async function StaffBookingsPage({
                     </dd>
                   </div>
                   <div>
-                    <dt>Deposit</dt>
+                    <dt>Payment</dt>
                     <dd>
                       {selected.depositPaid
                         ? `${formatMoneySuffix(selected.depositAmount, settings.currency)} paid`

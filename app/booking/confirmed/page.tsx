@@ -3,6 +3,8 @@ import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { fulfillBookingDeposit } from "@/lib/booking-payments";
 import { getGuestChatUrl } from "@/lib/booking-chat";
+import { getRequestGuestLocale } from "@/lib/guest-locale";
+import { t, tReplace } from "@/lib/i18n";
 import { getPropertySettings } from "@/lib/property-settings";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 import { getStripe, hasStripeServerConfig } from "@/lib/stripe";
@@ -17,6 +19,7 @@ export default async function BookingConfirmedPage({
     payment_intent?: string;
     redirect_status?: string;
     session_id?: string;
+    locale?: string;
   }>;
 }) {
   const {
@@ -24,9 +27,11 @@ export default async function BookingConfirmedPage({
     payment_intent: paymentIntentId,
     redirect_status: redirectStatus,
     session_id: sessionId,
+    locale: localeParam,
   } = await searchParams;
+  const locale = await getRequestGuestLocale(localeParam);
   const settings = await getPropertySettings();
-  let roomName = "your room";
+  let roomName = locale === "th" ? "ห้องของคุณ" : "your room";
   let chatUrl: string | null = null;
   let paymentPending = false;
 
@@ -93,27 +98,28 @@ export default async function BookingConfirmedPage({
     <main className="guest-site site-shell">
       <GuestTopbar settings={settings} />
       <section className="section booking-result">
-        <h1>{paymentPending ? "Payment received" : "Your room is reserved."}</h1>
+        <h1>
+          {paymentPending
+            ? t(locale, "confirmedPendingTitle")
+            : t(locale, "confirmedTitle")}
+        </h1>
         <p>
           {paymentPending
-            ? "Stripe confirmed your payment. We are finalizing your reservation now — refresh in a moment or check your email."
-            : `We received your 50% deposit through Stripe and held ${roomName} for your dates. Staff will review the request and message you with arrival details. The remaining balance is due before check-in.`}
+            ? t(locale, "confirmedPendingBody")
+            : tReplace(locale, "confirmedBody", { room: roomName })}
         </p>
         {chatUrl ? (
           <>
-            <p>
-              Save your private conversation link — it is the only way to message
-              us about this booking. We also email you when there is a new message.
-            </p>
+            <p>{t(locale, "confirmedChatHint")}</p>
             <p>
               <Link className="button button--primary" href={chatUrl}>
-                Open booking conversation
+                {t(locale, "openBookingConversation")}
               </Link>
             </p>
           </>
         ) : null}
         <Link className="button button--secondary" href="/">
-          Back to home
+          {t(locale, "backToHome")}
         </Link>
       </section>
       <SiteFooter settings={settings} />

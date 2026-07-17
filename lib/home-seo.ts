@@ -183,8 +183,8 @@ export function buildHomePageJsonLd(
   const priceRange =
     minRate && maxRate
       ? minRate === maxRate
-        ? `THB ${minRate}`
-        : `THB ${minRate}-${maxRate}`
+        ? `${minRate} THB`
+        : `${minRate}-${maxRate} THB`
       : undefined;
 
   const description = buildHomePageDescription(settings);

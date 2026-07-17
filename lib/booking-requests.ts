@@ -85,7 +85,7 @@ function mapBookingRequest(
     departureDate: row.departure_date,
     roomId: row.room_id,
     estimatedTotal: row.estimated_total,
-    depositAmount: row.deposit_amount ?? Math.round(row.estimated_total * 0.5),
+    depositAmount: row.deposit_amount ?? row.estimated_total,
     depositPaid: Boolean(row.deposit_paid_at),
     stayStatus: row.stay_status ?? "expected",
     staffNote: row.staff_note ?? "",

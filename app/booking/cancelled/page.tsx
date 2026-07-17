@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
+import { getRequestGuestLocale } from "@/lib/guest-locale";
+import { t } from "@/lib/i18n";
 import { getPropertySettings } from "@/lib/property-settings";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 
@@ -9,9 +11,10 @@ export const dynamic = "force-dynamic";
 export default async function BookingCancelledPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking_id?: string }>;
+  searchParams: Promise<{ booking_id?: string; locale?: string }>;
 }) {
-  const { booking_id: bookingId } = await searchParams;
+  const { booking_id: bookingId, locale: localeParam } = await searchParams;
+  const locale = await getRequestGuestLocale(localeParam);
   const settings = await getPropertySettings();
 
   if (bookingId) {
@@ -31,13 +34,10 @@ export default async function BookingCancelledPage({
     <main className="guest-site site-shell">
       <GuestTopbar settings={settings} />
       <section className="section booking-result">
-        <h1>No deposit was taken.</h1>
-        <p>
-          Your room was not reserved. You can return to the booking form and try
-          again when you are ready.
-        </p>
+        <h1>{t(locale, "cancelledTitle")}</h1>
+        <p>{t(locale, "cancelledBody")}</p>
         <Link className="button button--primary" href="/#booking">
-          Return to booking form
+          {t(locale, "returnToBooking")}
         </Link>
       </section>
       <SiteFooter settings={settings} />

@@ -84,16 +84,16 @@ export function buildBookingPaymentNote(
   hasStripe: boolean,
 ): string {
   if (allowPayOnArrival && hasStripe) {
-    return "A 50% deposit reserves your room — pay online by card or on arrival. Details appear in the booking form.";
+    return "Pay the full stay online by card or Thai QR (PromptPay), or arrange pay on arrival if offered. Details appear in the booking form.";
   }
 
   if (allowPayOnArrival) {
-    return "A 50% deposit reserves your room — pay on arrival unless staff confirm another arrangement.";
+    return "Pay the full stay on arrival unless staff confirm another arrangement.";
   }
 
   if (hasStripe) {
-    return "A 50% deposit reserves your room — pay online by card or Thai QR (PromptPay) when you book. The rest is due before check-in.";
+    return "Pay the full stay online by card or Thai QR (PromptPay) when you book. Staff then confirm your reservation.";
   }
 
-  return "A 50% deposit reserves your room — we confirm by email and send payment details with your stay.";
+  return "We confirm by email and send payment details for the full stay.";
 }

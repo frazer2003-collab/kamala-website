@@ -53,11 +53,11 @@ const defaultSettings: PropertySettings = {
   allowPayOnArrival: false,
   houseRules: [...houseRules],
   cancellationPolicy:
-    "Cancel at least 7 days before arrival for a full deposit refund. Later cancellations are reviewed case by case.",
+    "Cancel at least 7 days before arrival for a full refund. Later cancellations are reviewed case by case.",
   privacyPolicy:
     "We use your contact details only to manage your booking and stay. We do not sell guest data.",
   termsSummary:
-    "A 50% deposit reserves your room. The remaining balance is due before check-in unless staff confirm another arrangement.",
+    "Payment in full reserves your room when you book. Staff confirm every reservation.",
   lineUrl: null,
   whatsappUrl: null,
   calendarColors: { ...DEFAULT_CALENDAR_COLORS },
