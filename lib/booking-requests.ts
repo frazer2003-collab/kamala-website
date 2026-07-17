@@ -148,14 +148,10 @@ async function fetchBookingsFromSupabase(
   orderBy: "created_at" | "arrival_date" | "updated_at",
 ) {
   if (!hasStaffSupabaseConfig()) {
-    const filtered = bookings
-      .filter((booking) => statuses.includes(booking.status))
-      .map(mapFallbackBooking);
-
     return {
-      bookings: filtered,
+      bookings: [],
       source: "sample",
-      error: null,
+      error: "Supabase is not configured. Connect the database to load live bookings.",
     };
   }
 
@@ -172,11 +168,9 @@ async function fetchBookingsFromSupabase(
 
     if (error || !data) {
       return {
-        bookings: bookings
-          .filter((booking) => statuses.includes(booking.status))
-          .map(mapFallbackBooking),
-        source: "sample",
-        error: "Could not load Supabase bookings. Showing sample data.",
+        bookings: [],
+        source: "supabase",
+        error: "Could not load bookings from Supabase.",
       };
     }
 
@@ -187,11 +181,9 @@ async function fetchBookingsFromSupabase(
     };
   } catch {
     return {
-      bookings: bookings
-        .filter((booking) => statuses.includes(booking.status))
-        .map(mapFallbackBooking),
-      source: "sample",
-      error: "Supabase is not configured correctly. Showing sample data.",
+      bookings: [],
+      source: "supabase",
+      error: "Supabase is not configured correctly.",
     };
   }
 }
@@ -215,11 +207,7 @@ export async function getStaffBookingById(bookingId: string) {
   }
 
   if (!hasStaffSupabaseConfig()) {
-    return (
-      bookings
-        .map(mapFallbackBooking)
-        .find((booking) => getStaffBookingKey(booking) === bookingId) ?? null
-    );
+    return null;
   }
 
   try {
@@ -242,22 +230,10 @@ export async function getStaffBookingById(bookingId: string) {
 
 export async function getConfirmedBookings(month?: { year: number; month: number }) {
   if (!hasStaffSupabaseConfig()) {
-    const calendarBookings = bookings.filter(isCalendarBooking).map(mapFallbackBooking);
-
-    if (!month) {
-      return {
-        bookings: calendarBookings,
-        source: "sample" as const,
-        error: null,
-      };
-    }
-
     return {
-      bookings: calendarBookings.filter((booking) =>
-        monthOverlapsBooking(booking, month.year, month.month),
-      ),
+      bookings: [],
       source: "sample" as const,
-      error: null,
+      error: "Supabase is not configured. Connect the database to load the calendar.",
     };
   }
 
@@ -280,15 +256,10 @@ export async function getConfirmedBookings(month?: { year: number; month: number
     const unitMap = error || !data ? new Map<string, string>() : await getBookingRoomUnitMap(supabase);
 
     if (error || !data) {
-      const calendarBookings = bookings.filter(isCalendarBooking).map(mapFallbackBooking);
       return {
-        bookings: month
-          ? calendarBookings.filter((booking) =>
-              monthOverlapsBooking(booking, month.year, month.month),
-            )
-          : calendarBookings,
-        source: "sample" as const,
-        error: "Could not load Supabase bookings. Showing sample data.",
+        bookings: [],
+        source: "supabase" as const,
+        error: "Could not load bookings from Supabase.",
       };
     }
 
@@ -302,15 +273,10 @@ export async function getConfirmedBookings(month?: { year: number; month: number
       error: null,
     };
   } catch {
-    const calendarBookings = bookings.filter(isCalendarBooking).map(mapFallbackBooking);
     return {
-      bookings: month
-        ? calendarBookings.filter((booking) =>
-            monthOverlapsBooking(booking, month.year, month.month),
-          )
-        : calendarBookings,
-      source: "sample" as const,
-      error: "Supabase is not configured correctly. Showing sample data.",
+      bookings: [],
+      source: "supabase" as const,
+      error: "Supabase is not configured correctly.",
     };
   }
 }
@@ -321,12 +287,7 @@ export async function getConfirmedBookingById(bookingId: string) {
   }
 
   if (!hasStaffSupabaseConfig()) {
-    return (
-      bookings
-        .filter(isCalendarBooking)
-        .map(mapFallbackBooking)
-        .find((booking) => getStaffBookingKey(booking) === bookingId) ?? null
-    );
+    return null;
   }
 
   try {
