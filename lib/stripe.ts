@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import type { PropertyCurrency } from "@/lib/currency";
 import { getStripeCurrencyCode } from "@/lib/currency";
+import { getSiteUrl } from "@/lib/site-url";
 
 let stripeClient: Stripe | null = null;
 
@@ -41,15 +42,7 @@ export function getStripe() {
 }
 
 export function getAppBaseUrl() {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
-  }
-
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-
-  return "http://localhost:3000";
+  return getSiteUrl();
 }
 
 /** Full stay total charged at booking (no partial deposit). */

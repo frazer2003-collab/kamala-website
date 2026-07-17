@@ -14,9 +14,15 @@ export async function GET(
 
   const calendar = await buildRoomIcalExport(room.id, room.name);
 
+  const safeName = (room.short_name || room.name || "calendar")
+    .replace(/[^\w.\- ]+/g, "_")
+    .trim()
+    .slice(0, 80);
+
   return new NextResponse(calendar, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${safeName || "calendar"}.ics"`,
       "Cache-Control": "public, max-age=300",
     },
   });
