@@ -1,14 +1,23 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { uploadRoomPhoto } from "@/lib/room-photo-upload";
-import { STAFF_SESSION_COOKIE_NAME, verifyStaffSessionToken } from "@/lib/staff-auth";
+import {
+  STAFF_SESSION_COOKIE_NAME,
+  readStaffSessionFromToken,
+  staffCanWriteCalendar,
+} from "@/lib/staff-auth";
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get(STAFF_SESSION_COOKIE_NAME)?.value;
+  const session = readStaffSessionFromToken(token);
 
-  if (!verifyStaffSessionToken(token)) {
+  if (!session) {
     return NextResponse.json({ error: "Staff login required." }, { status: 401 });
+  }
+
+  if (!staffCanWriteCalendar(session)) {
+    return NextResponse.json({ error: "Calendar write access required." }, { status: 403 });
   }
 
   const formData = await request.formData();

@@ -9,6 +9,7 @@ import { createStaffSupabaseClient, hasStaffSupabaseConfig, type RoomIcalFeedRow
 export type RoomIcalFeed = {
   id: string;
   roomId: string;
+  roomUnitId: string | null;
   label: string;
   importUrl: string;
   lastSyncedAt: string | null;
@@ -32,6 +33,7 @@ function mapRoomIcalFeed(row: RoomIcalFeedRow): RoomIcalFeed {
   return {
     id: row.id,
     roomId: row.room_id,
+    roomUnitId: row.room_unit_id ?? null,
     label: row.label,
     importUrl: row.import_url,
     lastSyncedAt: row.last_synced_at,
@@ -60,7 +62,25 @@ export async function getStaffRoomIcalFeeds() {
       .select("*")
       .order("created_at", { ascending: true });
 
-    if (error || !data) {
+    if (error) {
+      if (/room_unit_id|column .* does not exist/i.test(error.message)) {
+        const legacy = await supabase
+          .from("room_ical_feeds")
+          .select(
+            "id, room_id, label, import_url, last_synced_at, last_sync_error, created_at",
+          )
+          .order("created_at", { ascending: true });
+        if (legacy.error || !legacy.data) {
+          return [];
+        }
+        return legacy.data.map((row) =>
+          mapRoomIcalFeed({ ...row, room_unit_id: null }),
+        );
+      }
+      return [];
+    }
+
+    if (!data) {
       return [];
     }
 
@@ -93,6 +113,33 @@ export async function getRoomByIcalExportToken(token: string) {
   }
 }
 
+export async function getRoomUnitByIcalExportToken(token: string) {
+  if (!token || !hasStaffSupabaseConfig()) {
+    return null;
+  }
+
+  try {
+    const supabase = createStaffSupabaseClient();
+    const { data, error } = await supabase
+      .from("room_units")
+      .select("id, number, ical_export_token")
+      .eq("ical_export_token", token)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Room-type export for Booking.com-style OTAs: all confirmed stays on the type
+ * plus type-level manual closures. Does not include Airbnb channel imports.
+ */
 export async function getRoomIcalExportEvents(roomId: string): Promise<IcalEvent[]> {
   if (!hasStaffSupabaseConfig()) {
     return [];
@@ -137,8 +184,61 @@ export async function getRoomIcalExportEvents(roomId: string): Promise<IcalEvent
   return events;
 }
 
+/**
+ * Per room-number export for Airbnb: website stays assigned to that unit only.
+ * Unassigned bookings are omitted. OTA imports are not re-exported (avoids loops).
+ */
+export async function getRoomUnitIcalExportEvents(unitId: string): Promise<IcalEvent[]> {
+  if (!hasStaffSupabaseConfig()) {
+    return [];
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const [{ data: bookings }, { data: blocks }] = await Promise.all([
+    supabase
+      .from("booking_requests")
+      .select("id, guest_name, arrival_date, departure_date, status")
+      .eq("room_unit_id", unitId)
+      .eq("status", "confirmed")
+      .order("arrival_date", { ascending: true }),
+    supabase
+      .from("room_blocks")
+      .select("id, start_date, end_date, reason")
+      .eq("room_unit_id", unitId)
+      .is("ical_feed_id", null)
+      .order("start_date", { ascending: true }),
+  ]);
+
+  const events: IcalEvent[] = [];
+
+  for (const booking of bookings ?? []) {
+    events.push({
+      uid: `kamala-booking-${booking.id}`,
+      summary: booking.guest_name,
+      startDate: booking.arrival_date,
+      endDate: booking.departure_date,
+    });
+  }
+
+  for (const block of blocks ?? []) {
+    events.push({
+      uid: `kamala-block-${block.id}`,
+      summary: block.reason?.trim() || "Closed",
+      startDate: block.start_date,
+      endDate: block.end_date,
+    });
+  }
+
+  return events;
+}
+
 export async function buildRoomIcalExport(roomId: string, calendarName: string) {
   const events = await getRoomIcalExportEvents(roomId);
+  return buildIcsCalendar(events, calendarName);
+}
+
+export async function buildRoomUnitIcalExport(unitId: string, calendarName: string) {
+  const events = await getRoomUnitIcalExportEvents(unitId);
   return buildIcsCalendar(events, calendarName);
 }
 
@@ -177,7 +277,7 @@ type PreservedChannelFields = {
 /**
  * Full refresh for one feed: fetch ICS, then replace every imported stay for
  * that feed. Staff room # / guest details are kept when the same UID returns.
- * On fetch/parse failure, existing stays are left untouched.
+ * Unit-linked feeds default new stays to that room number.
  */
 export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResult> {
   if (!hasStaffSupabaseConfig()) {
@@ -243,6 +343,8 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
       throw new Error(deleteError.message);
     }
 
+    const defaultUnitId = feed.room_unit_id ?? null;
+
     if (events.length > 0) {
       const rows = events.map((event) => {
         const preserved = preservedByUid.get(event.uid);
@@ -253,7 +355,7 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
           reason: event.summary || feed.label,
           ical_feed_id: feed.id,
           ical_uid: event.uid,
-          room_unit_id: preserved?.room_unit_id ?? null,
+          room_unit_id: preserved?.room_unit_id ?? defaultUnitId,
           guest_name: preserved?.guest_name ?? null,
           guest_email: preserved?.guest_email ?? null,
           guest_phone: preserved?.guest_phone ?? null,
@@ -411,8 +513,6 @@ export async function syncRoomIcalFeedsForRoom(roomId: string): Promise<RoomIcal
     results.push(await syncRoomIcalFeed(feed.id));
   }
 
-  // Keep stays for every still-connected feed (including failed fetches).
-  // Only blocks from calendars removed from this room type are cleared.
   const removedOrphans = await removeOrphanedChannelBlocksForRoom(
     roomId,
     feeds.map((feed) => feed.id),

@@ -3,7 +3,7 @@
 import {
   clearStaffSessionCookie,
   hasStaffAuthConfig,
-  requireStaffSession,
+  requireStaffCalendarWrite,
   setStaffSessionCookie,
   verifyAdminCredentials,
   verifySharedStaffPassword,
@@ -148,7 +148,7 @@ export async function addStaffNotificationEmail(
   _prevState: StaffSettingsState,
   formData: FormData,
 ): Promise<StaffSettingsState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -203,7 +203,7 @@ export async function addStaffNotificationEmail(
 }
 
 export async function updateStaffNotificationCalendarAccess(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const emailId = getValue(formData, "email-id");
   const calendarAccessRaw = getValue(formData, "calendar-access");
@@ -227,7 +227,7 @@ export async function updateStaffNotificationCalendarAccess(formData: FormData) 
 }
 
 export async function removeStaffNotificationEmail(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const emailId = getValue(formData, "email-id");
   if (!emailId || !hasStaffSupabaseConfig()) {
@@ -245,7 +245,7 @@ export async function addRoomPromotion(
   _prevState: StaffPromotionState,
   formData: FormData,
 ): Promise<StaffPromotionState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -354,7 +354,7 @@ export async function addRoomPromotion(
 }
 
 export async function removeRoomPromotion(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const promotionId = getValue(formData, "promotion-id");
   if (!promotionId || !hasStaffSupabaseConfig()) {
@@ -375,7 +375,7 @@ export async function updatePropertySettings(
   _prevState: StaffSettingsState,
   formData: FormData,
 ): Promise<StaffSettingsState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -436,7 +436,7 @@ export async function removeHeroImage(
   _prevState: StaffSettingsState,
   _formData: FormData,
 ): Promise<StaffSettingsState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -474,7 +474,7 @@ export async function updateRoomDetails(
   _prevState: StaffRoomState,
   formData: FormData,
 ): Promise<StaffRoomState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -559,7 +559,7 @@ export async function addRoom(
   _prevState: StaffRoomState,
   formData: FormData,
 ): Promise<StaffRoomState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -622,7 +622,7 @@ export async function addRoom(
 }
 
 export async function removeRoom(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const roomId = getValue(formData, "room-id");
   if (!roomId || !hasStaffSupabaseConfig()) {
@@ -654,7 +654,7 @@ export async function removePropertyGalleryPhoto(
   _prevState: StaffGalleryState,
   formData: FormData,
 ): Promise<StaffGalleryState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -700,7 +700,7 @@ export async function movePropertyGalleryPhoto(
   _prevState: StaffGalleryState,
   formData: FormData,
 ): Promise<StaffGalleryState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -769,7 +769,7 @@ export async function addTour(
   _prevState: StaffTourState,
   formData: FormData,
 ): Promise<StaffTourState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -817,7 +817,7 @@ export async function updateTour(
   _prevState: StaffTourState,
   formData: FormData,
 ): Promise<StaffTourState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -899,7 +899,7 @@ export async function updateTour(
 }
 
 export async function removeTour(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const tourId = getValue(formData, "tour-id");
   if (!tourId || !hasStaffSupabaseConfig()) {
@@ -929,13 +929,14 @@ export async function addRoomIcalFeed(
   _prevState: StaffRoomState,
   formData: FormData,
 ): Promise<StaffRoomState> {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
   }
 
   const roomId = getValue(formData, "room-id");
+  const roomUnitId = getValue(formData, "room-unit-id") || null;
   const label = getValue(formData, "label");
   const importUrl = getValue(formData, "import-url");
 
@@ -948,10 +949,32 @@ export async function addRoomIcalFeed(
   }
 
   const supabase = createStaffSupabaseClient();
+
+  if (roomUnitId) {
+    const { data: unit } = await supabase
+      .from("room_units")
+      .select("id")
+      .eq("id", roomUnitId)
+      .maybeSingle();
+    if (!unit) {
+      return { error: "That room number was not found. Refresh and try again." };
+    }
+
+    const { data: existingUnitFeed } = await supabase
+      .from("room_ical_feeds")
+      .select("id")
+      .eq("room_unit_id", roomUnitId)
+      .maybeSingle();
+    if (existingUnitFeed) {
+      return { error: "This room number already has an Airbnb calendar connected." };
+    }
+  }
+
   const { data, error } = await supabase
     .from("room_ical_feeds")
     .insert({
       room_id: roomId,
+      room_unit_id: roomUnitId,
       label,
       import_url: importUrl,
     })
@@ -962,6 +985,12 @@ export async function addRoomIcalFeed(
     if (error?.code === "42P01") {
       return {
         error: "Run supabase/migrate-room-ical.sql in Supabase before adding calendar feeds.",
+      };
+    }
+
+    if (error?.message?.includes("room_unit_id") || error?.code === "42703") {
+      return {
+        error: "Run supabase/migrate-room-unit-ical.sql in Supabase for per-room Airbnb feeds.",
       };
     }
 
@@ -985,7 +1014,7 @@ export async function addRoomIcalFeed(
 }
 
 export async function removeRoomIcalFeed(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const feedId = getValue(formData, "feed-id");
   const roomId = getValue(formData, "room-id");
@@ -1005,7 +1034,7 @@ export async function removeRoomIcalFeed(formData: FormData) {
 }
 
 export async function syncRoomIcalFeedsAction(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const roomId = getValue(formData, "room-id");
 

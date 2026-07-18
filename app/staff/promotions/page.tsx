@@ -6,7 +6,7 @@ import { getTodayIso } from "@/lib/calendar";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
-import { requireStaffSession } from "@/lib/staff-auth";
+import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +43,7 @@ export default async function StaffPromotionsPage({
 }: {
   searchParams: Promise<{ edit?: string; updated?: string }>;
 }) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const { edit: editId, updated } = await searchParams;
   const [promotions, rooms, settings, supabaseReady] = await Promise.all([

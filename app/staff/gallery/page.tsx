@@ -4,13 +4,13 @@ import { StaffSidebar } from "@/components/staff-sidebar";
 import { collectRoomGalleryPhotos } from "@/lib/gallery-sections";
 import { getStaffPropertyGalleryPhotos } from "@/lib/property-gallery";
 import { getStaffRooms } from "@/lib/rooms";
-import { requireStaffSession } from "@/lib/staff-auth";
+import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 export default async function StaffGalleryPage() {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const [photos, rooms, supabaseReady] = await Promise.all([
     getStaffPropertyGalleryPhotos(),

@@ -3,7 +3,10 @@
 import { useActionState } from "react";
 import { removeRoom, updateRoomDetails, type StaffRoomState } from "@/app/staff/auth-actions";
 import { StaffRoomPhotoFields } from "@/components/staff-room-photo-fields";
-import { StaffRoomIcalFields } from "@/components/staff-room-ical-fields";
+import {
+  StaffRoomIcalFields,
+  type StaffRoomIcalUnit,
+} from "@/components/staff-room-ical-fields";
 import type { Room } from "@/lib/content";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
 import type { RoomIcalFeed } from "@/lib/room-ical";
@@ -16,14 +19,17 @@ export function StaffRoomEditForm({
   currency,
   disabled,
   icalFeeds,
+  icalUnits,
 }: {
   room: Room;
   currency: PropertyCurrency;
   disabled: boolean;
   icalFeeds: RoomIcalFeed[];
+  icalUnits: StaffRoomIcalUnit[];
 }) {
   const [state, formAction, pending] = useActionState(updateRoomDetails, initialState);
   const coverPreview = room.imageUrl;
+  const typeFeeds = icalFeeds.filter((feed) => !feed.roomUnitId);
 
   return (
     <article className="staff-room-row">
@@ -168,9 +174,10 @@ export function StaffRoomEditForm({
 
       <StaffRoomIcalFields
         disabled={disabled}
-        exportUrl={room.icalExportToken ? getRoomIcalExportUrl(room.icalExportToken) : null}
-        feeds={icalFeeds}
         roomId={room.id}
+        typeExportUrl={room.icalExportToken ? getRoomIcalExportUrl(room.icalExportToken) : null}
+        typeFeeds={typeFeeds}
+        units={icalUnits}
       />
     </article>
   );

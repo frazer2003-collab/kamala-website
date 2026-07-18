@@ -3401,6 +3401,26 @@ p {
   box-shadow: 0 0 0 3px oklch(46% 0.11 155 / 0.2);
 }
 
+.booking-payment-shell__trust {
+  margin: var(--space-2) 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.booking-payment-shell__legal {
+  margin: var(--space-2) 0 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.booking-payment-shell__legal a {
+  color: var(--color-maroon-deep);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .quote-amount {
     animation: none;
@@ -8211,12 +8231,79 @@ textarea:focus {
   margin-top: var(--space-2);
 }
 
+.staff-room-ical__units {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-room-ical__unit {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.staff-room-ical__unit > strong {
+  font-size: 0.95rem;
+}
+
+.staff-room-ical__unit-label {
+  color: var(--color-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.staff-room-ical__unit-feed {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.staff-room-ical__unit-feed span {
+  display: block;
+  color: var(--color-soft);
+  font-size: 0.8rem;
+}
+
+.staff-room-ical__unit-add {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.staff-room-ical__unit-add input[type="url"] {
+  width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 0.84rem;
+}
+
+.staff-room-ical__unit-add .form-message {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 640px) {
   .staff-tour-form__grid {
     grid-template-columns: 1fr;
   }
 
   .tours-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-room-ical__unit-add {
     grid-template-columns: 1fr;
   }
 }

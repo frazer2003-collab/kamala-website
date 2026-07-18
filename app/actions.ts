@@ -527,7 +527,7 @@ async function getBookingForStaff(bookingId: string) {
 }
 
 export async function confirmBookingRequest(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const bookingId = getValue(formData, "booking-id");
   const message =
@@ -891,7 +891,7 @@ export async function assignStayRoomUnit(formData: FormData) {
 }
 
 export async function declineBookingRequest(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const bookingId = getValue(formData, "booking-id");
   const message =

@@ -5,14 +5,23 @@ import { PUBLIC_CACHE_TAGS, revalidatePublicCache } from "@/lib/public-cache";
 import { MAX_TOUR_GALLERY_PHOTOS } from "@/lib/tour-catalog";
 import { deleteTourPhotoStorageObject, uploadTourPhoto } from "@/lib/tour-photo-upload";
 import { createStaffSupabaseClient } from "@/lib/supabase";
-import { STAFF_SESSION_COOKIE_NAME, verifyStaffSessionToken } from "@/lib/staff-auth";
+import {
+  STAFF_SESSION_COOKIE_NAME,
+  readStaffSessionFromToken,
+  staffCanWriteCalendar,
+} from "@/lib/staff-auth";
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get(STAFF_SESSION_COOKIE_NAME)?.value;
+  const session = readStaffSessionFromToken(token);
 
-  if (!verifyStaffSessionToken(token)) {
+  if (!session) {
     return NextResponse.json({ error: "Staff login required." }, { status: 401 });
+  }
+
+  if (!staffCanWriteCalendar(session)) {
+    return NextResponse.json({ error: "Calendar write access required." }, { status: 403 });
   }
 
   const formData = await request.formData();

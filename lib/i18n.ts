@@ -39,6 +39,10 @@ const messages = {
     continueToPayment: "Continue to payment",
     stripeSecureCheckout:
       "Pay the full stay by card or Thai QR (PromptPay). Nothing more is due later. Payment is processed securely by Stripe.",
+    paymentSecureBadge: "Processed securely by Stripe",
+    paymentTrustPolicies: "Card details never touch our servers. Read our Privacy Policy and Terms before you pay.",
+    paymentPrivacyLink: "Privacy Policy",
+    paymentTermsLink: "Terms",
     paymentDetails: "Secure payment",
     editBookingDetails: "Edit booking details",
     processingPayment: "Processing payment...",
@@ -110,6 +114,11 @@ const messages = {
     continueToPayment: "ดำเนินการชำระเงิน",
     stripeSecureCheckout:
       "ชำระค่าที่พักเต็มจำนวนด้วยบัตรหรือพร้อมเพย์ (QR) ไม่มียอดค้างชำระภายหลัง การชำระเงินดำเนินการอย่างปลอดภัยผ่าน Stripe",
+    paymentSecureBadge: "ชำระเงินอย่างปลอดภัยผ่าน Stripe",
+    paymentTrustPolicies:
+      "ข้อมูลบัตรไม่ถูกเก็บบนเซิร์ฟเวอร์ของเรา อ่านนโยบายความเป็นส่วนตัวและข้อกำหนดก่อนชำระเงิน",
+    paymentPrivacyLink: "นโยบายความเป็นส่วนตัว",
+    paymentTermsLink: "ข้อกำหนด",
     paymentDetails: "ชำระเงินอย่างปลอดภัย",
     editBookingDetails: "แก้ไขรายละเอียดการจอง",
     processingPayment: "กำลังดำเนินการชำระเงิน...",

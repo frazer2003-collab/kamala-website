@@ -27,3 +27,8 @@ export function getSiteUrl() {
 export function getRoomIcalExportUrl(exportToken: string) {
   return `${getSiteUrl()}/api/ical/${encodeURIComponent(exportToken)}`;
 }
+
+/** Per room-number export for Airbnb listings. */
+export function getRoomUnitIcalExportUrl(exportToken: string) {
+  return `${getSiteUrl()}/api/ical/unit/${encodeURIComponent(exportToken)}`;
+}

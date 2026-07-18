@@ -9,6 +9,8 @@ export type RoomUnit = {
   sortOrder: number;
   /** Room type ids that can use this physical unit. */
   roomIds: string[];
+  /** Per-listing Airbnb export token (null until migrate-room-unit-ical.sql). */
+  icalExportToken: string | null;
 };
 
 /** Door number → room type ids (used to repair missing room_unit_types rows). */
@@ -30,6 +32,7 @@ export const SAMPLE_ROOM_UNITS: RoomUnit[] = Object.entries(DEFAULT_UNIT_ROOM_ID
     number,
     sortOrder: (index + 1) * 10,
     roomIds,
+    icalExportToken: null,
   }),
 );
 
@@ -244,14 +247,44 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
   }
 
   const supabase = createStaffSupabaseClient();
-  const { data: unitRows, error: unitsError } = await supabase
+  let unitRows: Array<{
+    id: string;
+    number: string;
+    sort_order: number;
+    ical_export_token?: string | null;
+  }> | null = null;
+
+  const withToken = await supabase
     .from("room_units")
-    .select("id, number, sort_order")
+    .select("id, number, sort_order, ical_export_token")
     .order("sort_order", { ascending: true });
 
-  if (unitsError) {
-    // Do not offer fake sample IDs against a live DB — saves would fail FK checks.
-    if (/relation .*room_units.* does not exist|Could not find the table/i.test(unitsError.message)) {
+  if (
+    withToken.error &&
+    /ical_export_token|column .* does not exist/i.test(withToken.error.message)
+  ) {
+    const withoutToken = await supabase
+      .from("room_units")
+      .select("id, number, sort_order")
+      .order("sort_order", { ascending: true });
+    unitRows = withoutToken.data;
+    if (withoutToken.error) {
+      if (
+        /relation .*room_units.* does not exist|Could not find the table/i.test(
+          withoutToken.error.message,
+        )
+      ) {
+        return {
+          units: [],
+          source: "sample",
+          error: "Run supabase/migrate-room-units.sql to enable room numbers.",
+        };
+      }
+
+      return { units: [], source: "sample", error: withoutToken.error.message };
+    }
+  } else if (withToken.error) {
+    if (/relation .*room_units.* does not exist|Could not find the table/i.test(withToken.error.message)) {
       return {
         units: [],
         source: "sample",
@@ -259,7 +292,9 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
       };
     }
 
-    return { units: [], source: "sample", error: unitsError.message };
+    return { units: [], source: "sample", error: withToken.error.message };
+  } else {
+    unitRows = withToken.data;
   }
 
   if (!unitRows?.length) {
@@ -282,6 +317,7 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
         number: row.number,
         sortOrder: row.sort_order,
         roomIds: [] as string[],
+        icalExportToken: row.ical_export_token ?? null,
       })),
     );
     return {
@@ -304,6 +340,7 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
       number: row.number,
       sortOrder: row.sort_order,
       roomIds: roomIdsByUnit.get(row.id) ?? [],
+      icalExportToken: row.ical_export_token ?? null,
     })),
   );
 

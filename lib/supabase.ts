@@ -53,6 +53,7 @@ export type RoomUnitRow = {
   id: string;
   number: string;
   sort_order: number;
+  ical_export_token: string | null;
   created_at: string;
 };
 
@@ -90,6 +91,7 @@ export type RoomBlockRow = {
 export type RoomIcalFeedRow = {
   id: string;
   room_id: string;
+  room_unit_id: string | null;
   label: string;
   import_url: string;
   last_synced_at: string | null;
@@ -227,9 +229,10 @@ export type Database = {
       };
       room_units: {
         Row: RoomUnitRow;
-        Insert: Omit<RoomUnitRow, "id" | "created_at"> & {
+        Insert: Omit<RoomUnitRow, "id" | "created_at" | "ical_export_token"> & {
           id?: string;
           created_at?: string;
+          ical_export_token?: string | null;
         };
         Update: Partial<Omit<RoomUnitRow, "id" | "created_at">>;
         Relationships: [];
@@ -279,12 +282,13 @@ export type Database = {
         Row: RoomIcalFeedRow;
         Insert: Omit<
           RoomIcalFeedRow,
-          "id" | "created_at" | "last_synced_at" | "last_sync_error"
+          "id" | "created_at" | "last_synced_at" | "last_sync_error" | "room_unit_id"
         > & {
           id?: string;
           created_at?: string;
           last_synced_at?: string | null;
           last_sync_error?: string | null;
+          room_unit_id?: string | null;
         };
         Update: Partial<Omit<RoomIcalFeedRow, "id" | "created_at">>;
         Relationships: [];

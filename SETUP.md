@@ -57,6 +57,17 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 13. `supabase/migrate-room-photo-storage.sql`
 14. `supabase/migrate-property-gallery.sql`
 15. `supabase/migrate-hero-image.sql`
+16. `supabase/migrate-room-ical.sql` (OTA calendar sync, if used)
+17. `supabase/migrate-hide-ical-export-token.sql` (hide calendar export tokens from public API)
+18. `supabase/migrate-room-unit-ical.sql` (Airbnb per room-number export/import)
+
+After `migrate-hide-ical-export-token.sql`, optionally rotate type-level tokens if an old export URL may have leaked:
+
+```sql
+update public.rooms set ical_export_token = gen_random_uuid();
+```
+
+For Airbnb: use **per room number** export/import URLs under Staff → Rooms (not the room-type export). Paste each listing’s export URL into that room number’s import field, and paste Kamala’s room-number export into Airbnb.
 
 ## 3. Configure the property
 

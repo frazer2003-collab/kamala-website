@@ -144,7 +144,23 @@ create index if not exists booking_messages_booking_created_idx
   created_at timestamptz not null default now()
 );
 
-grant select on public.rooms to anon, authenticated;
+-- Public clients may read room catalog fields, but not ical_export_token.
+grant select (
+  id,
+  name,
+  short_name,
+  rate,
+  sleeps,
+  outlook,
+  available_count,
+  summary,
+  amenities,
+  tone,
+  image_url,
+  gallery_urls,
+  sort_order,
+  updated_at
+) on public.rooms to anon, authenticated;
 grant all on public.rooms to service_role;
 grant insert on public.booking_requests to anon, authenticated;
 grant all on public.booking_requests to service_role;

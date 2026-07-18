@@ -25,7 +25,6 @@ export default async function BookingConfirmedPage({
   const {
     booking_id: bookingId,
     payment_intent: paymentIntentId,
-    redirect_status: redirectStatus,
     session_id: sessionId,
     locale: localeParam,
   } = await searchParams;
@@ -65,29 +64,35 @@ export default async function BookingConfirmedPage({
           roomName = booking.room_name;
         }
 
-        const paymentSucceeded =
-          redirectStatus === "succeeded" ||
-          (resolvedPaymentIntentId
-            ? (await getStripe().paymentIntents.retrieve(resolvedPaymentIntentId)).status ===
-              "succeeded"
-            : false);
-
-        if (paymentSucceeded && !booking?.deposit_paid_at) {
+        // Never trust redirect_status alone — only Stripe-verified PaymentIntents.
+        if (!booking?.deposit_paid_at && (resolvedPaymentIntentId || sessionId)) {
           const result = await fulfillBookingDeposit({
             bookingId: resolvedBookingId,
             paymentIntentId: resolvedPaymentIntentId,
+            checkoutSessionId: sessionId ?? null,
           });
 
-          if (result.ok && booking?.conversation_token) {
-            chatUrl = getGuestChatUrl(booking.conversation_token);
-          } else if (!result.ok) {
+          if (result.ok) {
+            const { data: paidBooking } = await supabase
+              .from("booking_requests")
+              .select("conversation_token")
+              .eq("id", resolvedBookingId)
+              .maybeSingle();
+            if (paidBooking?.conversation_token) {
+              chatUrl = getGuestChatUrl(paidBooking.conversation_token);
+            } else if (booking?.conversation_token) {
+              chatUrl = getGuestChatUrl(booking.conversation_token);
+            }
+          } else {
             paymentPending = true;
           }
         } else if (booking?.deposit_paid_at && booking.conversation_token) {
           chatUrl = getGuestChatUrl(booking.conversation_token);
-        } else if (!paymentSucceeded) {
+        } else if (!booking?.deposit_paid_at) {
           paymentPending = true;
         }
+      } else {
+        paymentPending = true;
       }
     } catch {
       paymentPending = true;

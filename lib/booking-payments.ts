@@ -6,7 +6,76 @@ import {
 } from "@/lib/booking-chat";
 import { hasCapacityForStay } from "@/lib/booking-capacity";
 import { getRoomForBooking } from "@/lib/rooms";
+import { getStripe, hasStripeServerConfig } from "@/lib/stripe";
 import { createStaffSupabaseClient } from "@/lib/supabase";
+
+async function verifyStripePaymentForBooking({
+  bookingId,
+  storedPaymentIntentId,
+  checkoutSessionId,
+  paymentIntentId,
+}: {
+  bookingId: string;
+  storedPaymentIntentId: string | null;
+  checkoutSessionId: string | null;
+  paymentIntentId: string | null;
+}) {
+  if (!hasStripeServerConfig()) {
+    return { ok: false as const, reason: "stripe-not-configured" as const };
+  }
+
+  let verifiedPaymentIntentId = paymentIntentId;
+  let verifiedCheckoutSessionId = checkoutSessionId;
+
+  if (checkoutSessionId) {
+    const session = await getStripe().checkout.sessions.retrieve(checkoutSessionId);
+    if (session.payment_status !== "paid") {
+      return { ok: false as const, reason: "payment-not-verified" as const };
+    }
+
+    const sessionBookingId = session.metadata?.booking_id;
+    if (sessionBookingId && sessionBookingId !== bookingId) {
+      return { ok: false as const, reason: "payment-mismatch" as const };
+    }
+
+    if (typeof session.payment_intent === "string") {
+      verifiedPaymentIntentId = session.payment_intent;
+    }
+
+    verifiedCheckoutSessionId = session.id;
+  }
+
+  if (!verifiedPaymentIntentId) {
+    return { ok: false as const, reason: "payment-not-verified" as const };
+  }
+
+  const paymentIntent = await getStripe().paymentIntents.retrieve(verifiedPaymentIntentId);
+  if (paymentIntent.status !== "succeeded") {
+    return { ok: false as const, reason: "payment-not-verified" as const };
+  }
+
+  const piBookingId = paymentIntent.metadata?.booking_id ?? null;
+  const matchesMetadata = piBookingId === bookingId;
+  const matchesStored =
+    Boolean(storedPaymentIntentId) && storedPaymentIntentId === verifiedPaymentIntentId;
+
+  if (!matchesMetadata && !matchesStored) {
+    return { ok: false as const, reason: "payment-mismatch" as const };
+  }
+
+  if (
+    storedPaymentIntentId &&
+    storedPaymentIntentId !== verifiedPaymentIntentId
+  ) {
+    return { ok: false as const, reason: "payment-mismatch" as const };
+  }
+
+  return {
+    ok: true as const,
+    paymentIntentId: verifiedPaymentIntentId,
+    checkoutSessionId: verifiedCheckoutSessionId,
+  };
+}
 
 export async function fulfillBookingDeposit({
   bookingId,
@@ -36,6 +105,22 @@ export async function fulfillBookingDeposit({
     return { ok: false as const, reason: "invalid-status" as const };
   }
 
+  let verified;
+  try {
+    verified = await verifyStripePaymentForBooking({
+      bookingId,
+      storedPaymentIntentId: booking.stripe_payment_intent_id,
+      checkoutSessionId,
+      paymentIntentId,
+    });
+  } catch {
+    return { ok: false as const, reason: "payment-not-verified" as const };
+  }
+
+  if (!verified.ok) {
+    return { ok: false as const, reason: verified.reason };
+  }
+
   const room = await getRoomForBooking(booking.room_id);
   if (room) {
     const hasCapacity = await hasCapacityForStay(
@@ -56,8 +141,10 @@ export async function fulfillBookingDeposit({
     .update({
       status: "awaiting",
       deposit_paid_at: new Date().toISOString(),
-      ...(checkoutSessionId ? { stripe_checkout_session_id: checkoutSessionId } : {}),
-      stripe_payment_intent_id: paymentIntentId,
+      ...(verified.checkoutSessionId
+        ? { stripe_checkout_session_id: verified.checkoutSessionId }
+        : {}),
+      stripe_payment_intent_id: verified.paymentIntentId,
     })
     .eq("id", bookingId);
 
@@ -84,15 +171,15 @@ export async function fulfillBookingDeposit({
   if (booking.guest_email !== "walk-in@kamala.local") {
     const token = await ensureConversationToken(bookingId);
     if (token) {
-    await sendGuestChatNotificationEmail({
-      to: booking.guest_email,
-      guestName: booking.guest_name,
-      roomName: booking.room_name,
-      message:
-        "Thank you — we received payment for your stay and your room is reserved. Staff will review your request and message you here with arrival details.",
-      chatUrl: getGuestChatUrl(token),
-      kind: "welcome",
-    });
+      await sendGuestChatNotificationEmail({
+        to: booking.guest_email,
+        guestName: booking.guest_name,
+        roomName: booking.room_name,
+        message:
+          "Thank you — we received payment for your stay and your room is reserved. Staff will review your request and message you here with arrival details.",
+        chatUrl: getGuestChatUrl(token),
+        kind: "welcome",
+      });
     }
   }
 

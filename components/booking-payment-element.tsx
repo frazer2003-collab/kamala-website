@@ -7,6 +7,7 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe, type StripeElementsOptions } from "@stripe/stripe-js";
+import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { setPendingBookingPaymentMethods } from "@/app/actions";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
@@ -430,7 +431,14 @@ export function BookingPaymentElement({
   return (
     <div className="booking-payment-shell">
       <p className="booking-payment-shell__title">{t(locale, "paymentDetails")}</p>
-      <p className="booking-payment-shell__secure">{t(locale, "stripeSecureCheckout")}</p>
+      <p className="booking-payment-shell__secure">{t(locale, "paymentSecureBadge")}</p>
+      <p className="booking-payment-shell__trust">{t(locale, "stripeSecureCheckout")}</p>
+      <p className="booking-payment-shell__legal">
+        {t(locale, "paymentTrustPolicies")}{" "}
+        <Link href="/privacy">{t(locale, "paymentPrivacyLink")}</Link>
+        {" · "}
+        <Link href="/terms">{t(locale, "paymentTermsLink")}</Link>
+      </p>
 
       {supportsPromptPay ? (
         <div
