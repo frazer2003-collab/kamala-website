@@ -11,6 +11,7 @@ import type { PropertyCurrency } from "@/lib/currency";
 import type { Locale } from "@/lib/i18n";
 import type { RoomPromotionRate } from "@/lib/pricing";
 import type { Room } from "@/lib/content";
+import type { BankTransferDetails } from "@/lib/bank-transfer";
 import { buildBookingPaymentNote } from "@/lib/property-brand";
 import { buildBookingSectionHeading } from "@/lib/home-hero-copy";
 import { t } from "@/lib/i18n";
@@ -50,6 +51,7 @@ type HomeBookingSectionProps = {
   allowPayOnArrival: boolean;
   addressLine?: string | null;
   availabilityByRoomId: Record<string, number>;
+  bankTransfer: BankTransferDetails;
   currency: PropertyCurrency;
   initialArrival?: string;
   initialDeparture?: string;
@@ -77,6 +79,7 @@ function readStoredSelection(): SelectRoomDetail | null {
 export function HomeBookingSection({
   allowPayOnArrival,
   addressLine = null,
+  bankTransfer,
   initialRoomId,
   initialArrival,
   initialDeparture,
@@ -139,6 +142,7 @@ export function HomeBookingSection({
   return (
     <BookingRequest
       {...bookingProps}
+      bankTransfer={bankTransfer}
       initialArrival={selectedArrival ?? initialArrival}
       initialDeparture={selectedDeparture ?? initialDeparture}
       initialRoomId={selectedRoomId}

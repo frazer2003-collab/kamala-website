@@ -23,6 +23,7 @@ import { isLocale, t, type Locale } from "@/lib/i18n";
 import { calculateStayQuote, type RoomPromotionRate } from "@/lib/pricing";
 import { getRoomAvailabilityLabel, isRoomBookable } from "@/lib/room-availability";
 import { getBookingPaymentReturnUrl } from "@/lib/booking-payment-url";
+import type { BankTransferDetails } from "@/lib/bank-transfer";
 
 function persistGuestLocale(nextLocale: Locale) {
   try {
@@ -165,6 +166,7 @@ function hasValidStayDates(arrival: string, departure: string) {
 export function BookingRequest({
   rooms,
   promotions,
+  bankTransfer,
   initialRoomId,
   initialArrival,
   initialDeparture,
@@ -175,6 +177,7 @@ export function BookingRequest({
 }: {
   rooms: Room[];
   promotions: RoomPromotionRate[];
+  bankTransfer: BankTransferDetails;
   initialRoomId?: string;
   initialArrival?: string;
   initialDeparture?: string;
@@ -663,15 +666,15 @@ export function BookingRequest({
 
       {paymentStep ? (
         <BookingPaymentElement
+          bankTransfer={bankTransfer}
           bookingId={paymentStep.bookingId}
           clientSecret={paymentStep.clientSecret}
           currency={currency}
-          deposit={deposit}
-          guestEmail={fields.guestEmail}
           locale={locale}
           onCancel={handleCancelPayment}
           publishableKey={stripePublishableKey}
           returnUrl={paymentReturnUrl}
+          stayTotal={deposit}
         />
       ) : null}
       </div>

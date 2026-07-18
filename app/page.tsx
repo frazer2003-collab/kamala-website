@@ -107,6 +107,12 @@ export default async function Home({
           addressLine={settings.addressLine}
           allowPayOnArrival={settings.allowPayOnArrival}
           availabilityByRoomId={availabilityByRoomId}
+          bankTransfer={{
+            promptPayId: settings.promptPayId,
+            bankName: settings.bankName,
+            accountName: settings.accountName,
+            accountNumber: settings.accountNumber,
+          }}
           currency={settings.currency}
           initialArrival={stayDates?.arrival}
           initialDeparture={stayDates?.departure}
