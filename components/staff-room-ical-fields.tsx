@@ -93,8 +93,8 @@ export function StaffRoomIcalFields({
           ) : null}
         </div>
         <p className="staff-room-ical__hint">
-          Add the export URL from each OTA. Reservations sync in as blocked nights and
-          reduce rooms left automatically.
+          Add the export URL from each OTA. Sync now refreshes guest reservations only
+          (not Airbnb “Not available” blocks).
         </p>
 
         {feeds.length > 0 ? (

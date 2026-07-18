@@ -8,6 +8,30 @@ export type IcalEvent = {
   endDate: string;
 };
 
+/**
+ * Airbnb (and similar OTAs) put both guest stays and host/imported blocks in
+ * the same export. Only import real reservations — skip "Not available" style
+ * blocks that are grey diagonals in Airbnb, not teal guest bookings.
+ */
+export function isOtaReservationEvent(event: Pick<IcalEvent, "summary">) {
+  const summary = event.summary.trim().toLowerCase();
+  if (!summary) {
+    return true;
+  }
+
+  if (
+    summary.includes("not available") ||
+    summary.includes("unavailable") ||
+    summary === "blocked" ||
+    summary.startsWith("blocked ") ||
+    summary.startsWith("closed")
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function unfoldIcsLines(text: string) {
   const raw = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const lines: string[] = [];

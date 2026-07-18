@@ -1,4 +1,9 @@
-import { buildIcsCalendar, parseIcsEvents, type IcalEvent } from "@/lib/ical";
+import {
+  buildIcsCalendar,
+  isOtaReservationEvent,
+  parseIcsEvents,
+  type IcalEvent,
+} from "@/lib/ical";
 import { createStaffSupabaseClient, hasStaffSupabaseConfig, type RoomIcalFeedRow } from "@/lib/supabase";
 
 export type RoomIcalFeed = {
@@ -161,6 +166,19 @@ async function fetchIcalFeedText(importUrl: string) {
   }
 }
 
+type PreservedChannelFields = {
+  room_unit_id: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  staff_note: string | null;
+};
+
+/**
+ * Full refresh for one feed: fetch ICS, then replace every imported stay for
+ * that feed. Staff room # / guest details are kept when the same UID returns.
+ * On fetch/parse failure, existing stays are left untouched.
+ */
 export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResult> {
   if (!hasStaffSupabaseConfig()) {
     return {
@@ -191,60 +209,62 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
 
   try {
     const icsText = await fetchIcalFeedText(feed.import_url);
-    const events = parseIcsEvents(icsText);
-    const seenUids = new Set<string>();
+    const events = parseIcsEvents(icsText).filter(isOtaReservationEvent);
 
-    for (const event of events) {
-      seenUids.add(event.uid);
-
-      const { data: existing } = await supabase
-        .from("room_blocks")
-        .select("id")
-        .eq("ical_feed_id", feed.id)
-        .eq("ical_uid", event.uid)
-        .maybeSingle();
-
-      const syncFields = {
-        room_id: feed.room_id,
-        start_date: event.startDate,
-        end_date: event.endDate,
-        reason: event.summary || feed.label,
-        ical_feed_id: feed.id,
-        ical_uid: event.uid,
-      };
-
-      if (existing) {
-        const { error: updateError } = await supabase
-          .from("room_blocks")
-          .update(syncFields)
-          .eq("id", existing.id);
-
-        if (updateError) {
-          throw new Error(updateError.message);
-        }
-      } else {
-        const { error: insertError } = await supabase.from("room_blocks").insert({
-          ...syncFields,
-          staff_note: `Imported from ${feed.label}`,
-        });
-
-        if (insertError) {
-          throw new Error(insertError.message);
-        }
-      }
-    }
-
-    const { data: existingBlocks } = await supabase
+    const { data: previousBlocks, error: previousError } = await supabase
       .from("room_blocks")
-      .select("id, ical_uid")
+      .select("ical_uid, room_unit_id, guest_name, guest_email, guest_phone, staff_note")
       .eq("ical_feed_id", feed.id);
 
-    const staleIds = (existingBlocks ?? [])
-      .filter((block) => block.ical_uid && !seenUids.has(block.ical_uid))
-      .map((block) => block.id);
+    if (previousError) {
+      throw new Error(previousError.message);
+    }
 
-    if (staleIds.length > 0) {
-      await supabase.from("room_blocks").delete().in("id", staleIds);
+    const preservedByUid = new Map<string, PreservedChannelFields>();
+    for (const block of previousBlocks ?? []) {
+      if (!block.ical_uid) {
+        continue;
+      }
+      preservedByUid.set(block.ical_uid, {
+        room_unit_id: block.room_unit_id ?? null,
+        guest_name: block.guest_name ?? null,
+        guest_email: block.guest_email ?? null,
+        guest_phone: block.guest_phone ?? null,
+        staff_note: block.staff_note ?? null,
+      });
+    }
+
+    const { error: deleteError } = await supabase
+      .from("room_blocks")
+      .delete()
+      .eq("ical_feed_id", feed.id);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+
+    if (events.length > 0) {
+      const rows = events.map((event) => {
+        const preserved = preservedByUid.get(event.uid);
+        return {
+          room_id: feed.room_id,
+          start_date: event.startDate,
+          end_date: event.endDate,
+          reason: event.summary || feed.label,
+          ical_feed_id: feed.id,
+          ical_uid: event.uid,
+          room_unit_id: preserved?.room_unit_id ?? null,
+          guest_name: preserved?.guest_name ?? null,
+          guest_email: preserved?.guest_email ?? null,
+          guest_phone: preserved?.guest_phone ?? null,
+          staff_note: preserved?.staff_note ?? `Imported from ${feed.label}`,
+        };
+      });
+
+      const { error: insertError } = await supabase.from("room_blocks").insert(rows);
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
     }
 
     await supabase
@@ -382,6 +402,7 @@ export async function syncAllRoomIcalFeeds() {
   return results;
 }
 
+/** Full refresh of every OTA feed on a room type, then drop orphans from removed calendars. */
 export async function syncRoomIcalFeedsForRoom(roomId: string): Promise<RoomIcalRoomSyncResult> {
   const feeds = (await getStaffRoomIcalFeeds()).filter((feed) => feed.roomId === roomId);
   const results: RoomIcalSyncResult[] = [];
@@ -390,6 +411,8 @@ export async function syncRoomIcalFeedsForRoom(roomId: string): Promise<RoomIcal
     results.push(await syncRoomIcalFeed(feed.id));
   }
 
+  // Keep stays for every still-connected feed (including failed fetches).
+  // Only blocks from calendars removed from this room type are cleared.
   const removedOrphans = await removeOrphanedChannelBlocksForRoom(
     roomId,
     feeds.map((feed) => feed.id),

@@ -88,8 +88,8 @@ export default async function StaffSettingsRoomsPage({
         ) : null}
         {icalSynced !== undefined ? (
           <p className="form-message form-message--success" role="status">
-            Calendar feeds synced. {icalSynced} reservation
-            {icalSynced === "1" ? "" : "s"} imported
+            OTA calendars refreshed. {icalSynced} reservation
+            {icalSynced === "1" ? "" : "s"} reimported
             {icalRemoved && icalRemoved !== "0"
               ? `, ${icalRemoved} from removed calendars cleared`
               : ""}
