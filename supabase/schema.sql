@@ -113,6 +113,7 @@ create table if not exists public.booking_requests (
   deposit_paid_at timestamptz,
   stripe_checkout_session_id text,
   stripe_payment_intent_id text,
+  bank_transfer_claimed_at timestamptz,
   conversation_token text unique,
   room_unit_id uuid,
   created_at timestamptz not null default now(),
@@ -290,6 +291,10 @@ create table if not exists public.property_settings (
   terms_summary text not null default 'A 50% deposit reserves your room. The remaining balance is due before check-in unless staff confirm another arrangement.',
   line_url text,
   whatsapp_url text,
+  promptpay_id text,
+  bank_name text,
+  account_name text,
+  account_number text,
   calendar_color_available text not null default '#bbf7d0',
   calendar_color_closed text not null default '#fecaca',
   calendar_color_booking text not null default '#fef08a',
@@ -373,6 +378,8 @@ execute function public.set_updated_at();
 -- Run once for physical room numbers + assignment:
 -- See supabase/migrate-room-units.sql
 -- See supabase/migrate-room-block-units.sql (OTA / channel stays)
+-- Run once for bank transfer payment fields:
+-- See supabase/migrate-bank-transfer-payment.sql
 
 drop trigger if exists rooms_set_updated_at on public.rooms;
 create trigger rooms_set_updated_at
