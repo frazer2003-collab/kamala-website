@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import {
   addRoomIcalFeed,
   syncRoomIcalFeedsAction,
@@ -32,46 +32,16 @@ function formatSyncedAt(value: string | null) {
 export type StaffRoomIcalUnit = {
   id: string;
   number: string;
-  exportUrl: string | null;
   feed: RoomIcalFeed | null;
 };
 
-function CopyField({
-  value,
-  disabled,
-  label,
-}: {
-  value: string;
-  disabled: boolean;
-  label: string;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <div className="staff-room-ical__export">
-      <input aria-label={label} readOnly type="text" value={value} />
-      <button className="button button--quiet" disabled={disabled} onClick={copy} type="button">
-        {copied ? "Copied" : "Copy"}
-      </button>
-    </div>
-  );
-}
-
 export function StaffRoomIcalFields({
   roomId,
-  typeExportUrl,
   units,
   typeFeeds,
   disabled,
 }: {
   roomId: string;
-  typeExportUrl: string | null;
   units: StaffRoomIcalUnit[];
   typeFeeds: RoomIcalFeed[];
   disabled: boolean;
@@ -84,9 +54,14 @@ export function StaffRoomIcalFields({
 
   return (
     <div className="staff-room-ical field-pair--wide">
+      <p className="staff-room-ical__hint">
+        Kamala only <strong>reads</strong> OTA calendars. It does not publish a calendar back to
+        Airbnb or other channels — manage availability on each OTA separately.
+      </p>
+
       <div className="staff-room-ical__section">
         <div className="staff-room-ical__header">
-          <span className="staff-room-ical__heading">Airbnb — by room number</span>
+          <span className="staff-room-ical__heading">Airbnb — import by room number</span>
           {allFeeds.length > 0 ? (
             <form action={syncRoomIcalFeedsAction}>
               <input name="room-id" type="hidden" value={roomId} />
@@ -97,9 +72,8 @@ export function StaffRoomIcalFields({
           ) : null}
         </div>
         <p className="staff-room-ical__hint">
-          Each Airbnb listing gets its own export and import. Export only includes website
-          bookings assigned to that room number — unassigned stays stay off Airbnb.
-          Do not paste the room-type export below into Airbnb.
+          Paste each listing’s Airbnb <em>export</em> calendar URL here so guest reservations
+          appear on the staff calendar. One feed per room number.
         </p>
 
         {units.length === 0 ? (
@@ -111,19 +85,6 @@ export function StaffRoomIcalFields({
             {units.map((unit) => (
               <li className="staff-room-ical__unit" key={unit.id}>
                 <strong>Room {unit.number}</strong>
-                <span className="staff-room-ical__unit-label">Export to Airbnb</span>
-                {unit.exportUrl ? (
-                  <CopyField
-                    disabled={disabled}
-                    label={`Export calendar for room ${unit.number}`}
-                    value={unit.exportUrl}
-                  />
-                ) : (
-                  <p className="staff-room-ical__hint">
-                    Run supabase/migrate-room-unit-ical.sql for per-room export links.
-                  </p>
-                )}
-
                 <span className="staff-room-ical__unit-label">Import from Airbnb</span>
                 {unit.feed ? (
                   <div className="staff-room-ical__unit-feed">
@@ -142,7 +103,12 @@ export function StaffRoomIcalFields({
                     </form>
                   </div>
                 ) : (
-                  <UnitFeedAddForm disabled={disabled} roomId={roomId} unitId={unit.id} unitNumber={unit.number} />
+                  <UnitFeedAddForm
+                    disabled={disabled}
+                    roomId={roomId}
+                    unitId={unit.id}
+                    unitNumber={unit.number}
+                  />
                 )}
               </li>
             ))}
@@ -151,18 +117,11 @@ export function StaffRoomIcalFields({
       </div>
 
       <div className="staff-room-ical__section">
-        <span className="staff-room-ical__heading">Room-type calendar (not Airbnb)</span>
+        <span className="staff-room-ical__heading">Other OTAs — import by room type</span>
         <p className="staff-room-ical__hint">
-          For Booking.com, Expedia, or other OTAs that sell by room type. Includes all
-          confirmed stays and manual closures for this type.
+          For Booking.com, Expedia, or similar. Paste their calendar export URL to pull
+          reservations into this room type. Import only — nothing is sent back.
         </p>
-        {typeExportUrl ? (
-          <CopyField disabled={disabled} label="Room-type export calendar URL" value={typeExportUrl} />
-        ) : (
-          <p className="staff-room-ical__hint">
-            Run supabase/migrate-room-ical.sql to generate a type export link.
-          </p>
-        )}
 
         {typeFeeds.length > 0 ? (
           <ul className="staff-room-ical__feeds">
@@ -228,7 +187,7 @@ export function StaffRoomIcalFields({
             disabled={disabled || typeAddPending}
             type="submit"
           >
-            {typeAddPending ? "Connecting..." : "Add room-type feed"}
+            {typeAddPending ? "Connecting..." : "Add import feed"}
           </button>
         </form>
       </div>

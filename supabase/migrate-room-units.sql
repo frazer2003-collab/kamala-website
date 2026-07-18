@@ -51,21 +51,20 @@ insert into public.room_units (number, sort_order)
 values
   ('113', 10),
   ('115', 20),
-  ('116', 30),
-  ('118', 40),
-  ('120', 50),
-  ('112', 60),
-  ('114', 70),
-  ('117', 80),
-  ('119', 90)
+  ('118', 30),
+  ('120', 40),
+  ('112', 50),
+  ('114', 60),
+  ('117', 70),
+  ('119', 80)
 on conflict (number) do update
 set sort_order = excluded.sort_order;
 
--- Superior only
+-- Superior only: 113, 115, 118, 120
 insert into public.room_unit_types (room_unit_id, room_id)
 select u.id, 'courtyard'
 from public.room_units u
-where u.number in ('113', '115', '116', '118', '120')
+where u.number in ('113', '115', '118', '120')
 on conflict do nothing;
 
 -- Deluxe + Triple shared pool
@@ -84,7 +83,7 @@ where u.number = '114'
 on conflict do nothing;
 
 -- Align default sellable counts with physical units for each type.
-update public.rooms set available_count = 5 where id = 'courtyard';
+update public.rooms set available_count = 4 where id = 'courtyard';
 update public.rooms set available_count = 4 where id = 'garden';
 update public.rooms set available_count = 4 where id = 'veranda';
 update public.rooms set available_count = 1 where id = 'loft';

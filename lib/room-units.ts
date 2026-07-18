@@ -17,7 +17,6 @@ export type RoomUnit = {
 const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "113": ["courtyard"],
   "115": ["courtyard"],
-  "116": ["courtyard"],
   "118": ["courtyard"],
   "120": ["courtyard"],
   "112": ["garden", "veranda"],

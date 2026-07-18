@@ -9,7 +9,6 @@ import { getStaffRooms } from "@/lib/rooms";
 import { getStaffRoomIcalFeeds } from "@/lib/room-ical";
 import { getStaffRoomUnits, getUnitsForRoomType } from "@/lib/room-units";
 import { requireStaffCalendarWrite } from "@/lib/staff-auth";
-import { getRoomUnitIcalExportUrl } from "@/lib/site-url";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -120,9 +119,6 @@ export default async function StaffSettingsRoomsPage({
             const icalUnits = getUnitsForRoomType(unitsResult.units, room.id).map((unit) => ({
               id: unit.id,
               number: unit.number,
-              exportUrl: unit.icalExportToken
-                ? getRoomUnitIcalExportUrl(unit.icalExportToken)
-                : null,
               feed: feedByUnitId.get(unit.id) ?? null,
             }));
 

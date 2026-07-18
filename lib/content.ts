@@ -69,7 +69,7 @@ export const rooms: Room[] = [
     rate: 700,
     sleeps: "Sleeps 2",
     outlook: "33 sqm - king or twin - city view - non-smoking",
-    availableCount: 5,
+    availableCount: 4,
     summary:
       "A comfortable room a minute from Tha Phae Gate, with blackout curtains, work desk, safe, and a private bathroom with shower and bidet. Flexible king or twin setup for couples or friends.",
     amenities: [

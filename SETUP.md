@@ -60,14 +60,9 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 16. `supabase/migrate-room-ical.sql` (OTA calendar sync, if used)
 17. `supabase/migrate-hide-ical-export-token.sql` (hide calendar export tokens from public API)
 18. `supabase/migrate-room-unit-ical.sql` (Airbnb per room-number export/import)
+19. `supabase/migrate-superior-four-units.sql` (Superior rooms: 113, 115, 118, 120 only)
 
-After `migrate-hide-ical-export-token.sql`, optionally rotate type-level tokens if an old export URL may have leaked:
-
-```sql
-update public.rooms set ical_export_token = gen_random_uuid();
-```
-
-For Airbnb: use **per room number** export/import URLs under Staff → Rooms (not the room-type export). Paste each listing’s export URL into that room number’s import field, and paste Kamala’s room-number export into Airbnb.
+Kamala **imports only** from OTAs (does not publish a calendar back). Under Staff → Rooms, paste each Airbnb listing’s export URL into that room number’s import field. For Booking.com-style OTAs, add a room-type import feed. In Airbnb, disconnect any old Kamala export URLs so listings are not waiting on a feed that returns 410.
 
 ## 3. Configure the property
 

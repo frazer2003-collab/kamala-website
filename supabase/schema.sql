@@ -37,7 +37,7 @@ values
     700,
     'Sleeps 2',
     '33 m² · king or twin · city view · non-smoking',
-    5,
+    4,
     'A comfortable room a minute from Tha Phae Gate, with blackout curtains, work desk, safe, and a private bathroom with shower and bidet. Flexible king or twin setup for couples or friends.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'King or twin beds', 'Cable TV', 'Safe', 'Desk', 'Breakfast included'],
     'courtyard'

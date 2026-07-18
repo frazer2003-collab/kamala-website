@@ -10,7 +10,6 @@ import {
 import type { Room } from "@/lib/content";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
 import type { RoomIcalFeed } from "@/lib/room-ical";
-import { getRoomIcalExportUrl } from "@/lib/site-url";
 
 const initialState: StaffRoomState = {};
 
@@ -175,7 +174,6 @@ export function StaffRoomEditForm({
       <StaffRoomIcalFields
         disabled={disabled}
         roomId={room.id}
-        typeExportUrl={room.icalExportToken ? getRoomIcalExportUrl(room.icalExportToken) : null}
         typeFeeds={typeFeeds}
         units={icalUnits}
       />
