@@ -49,7 +49,7 @@ export function buildPromptPayPayload(promptPayId: string, amountBaht: number): 
   const merchantInfo =
     tlv("00", PROMPTPAY_AID) + tlv("01", target);
 
-  let payload =
+  const payload =
     tlv(PAYLOAD_FORMAT, EMV_PAYLOAD_FORMAT) +
     tlv(POI_METHOD, POI_DYNAMIC) +
     tlv(MERCHANT_ACCOUNT, merchantInfo) +
