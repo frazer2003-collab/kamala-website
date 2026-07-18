@@ -73,19 +73,24 @@ export function BookingBankTransferPanel({
     setIsClaiming(true);
     setClaimError(null);
 
-    const result = await claimBankTransferPayment(bookingId);
-    if (!result.ok) {
-      setClaimError(result.message);
-      setIsClaiming(false);
-      return;
-    }
+    try {
+      const result = await claimBankTransferPayment(bookingId);
+      if (!result.ok) {
+        setClaimError(t(locale, result.errorCode));
+        setIsClaiming(false);
+        return;
+      }
 
-    const params = new URLSearchParams({
-      booking: bookingId,
-      lang: locale,
-      payment: "bank-transfer",
-    });
-    window.location.assign(`/booking/requested?${params.toString()}`);
+      const params = new URLSearchParams({
+        booking: bookingId,
+        lang: locale,
+        payment: "bank-transfer",
+      });
+      window.location.assign(`/booking/requested?${params.toString()}`);
+    } catch {
+      setClaimError(t(locale, "bankTransferClaimFailed"));
+      setIsClaiming(false);
+    }
   }
 
   return (
@@ -110,7 +115,12 @@ export function BookingBankTransferPanel({
             />
           ) : qrError ? (
             <p className="form-message form-message--error" role="alert">
-              {t(locale, "bankTransferQrUnavailable")}
+              {t(
+                locale,
+                showBankAccount
+                  ? "bankTransferQrUnavailable"
+                  : "bankTransferQrUnavailableNoAccount",
+              )}
             </p>
           ) : (
             <p className="booking-summary__hint" aria-live="polite">

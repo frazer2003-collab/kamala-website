@@ -201,6 +201,8 @@ export function BookingRequest({
   const [paymentStep, setPaymentStep] = useState<{
     bookingId: string;
     clientSecret: string | null;
+    stayTotal: number;
+    cardTotalDue: number;
   } | null>(null);
   const [isCancelingPayment, startCancelPayment] = useTransition();
 
@@ -668,13 +670,14 @@ export function BookingRequest({
         <BookingPaymentElement
           bankTransfer={bankTransfer}
           bookingId={paymentStep.bookingId}
+          cardTotalDue={paymentStep.cardTotalDue}
           clientSecret={paymentStep.clientSecret}
           currency={currency}
           locale={locale}
           onCancel={handleCancelPayment}
           publishableKey={stripePublishableKey}
           returnUrl={paymentReturnUrl}
-          stayTotal={deposit}
+          stayTotal={paymentStep.stayTotal ?? deposit}
         />
       ) : null}
       </div>

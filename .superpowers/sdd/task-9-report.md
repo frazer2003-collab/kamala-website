@@ -25,3 +25,12 @@ Implemented the guest-facing payment rewrite:
 
 - Mobile and desktop visual checks remain to be performed manually.
 - The repository still has unrelated pre-existing changes in `app/globals.css`, `app/page.tsx`, `components/home-sticky-dates.tsx`, generated build info, and earlier task artifacts; only Task 9 hunks/files should be included in this commit.
+
+## Review fixes
+
+- Payment-ready state now returns the persisted booking stay total and card total due; checkout displays derive from that server-owned amount.
+- Bank claim and card startup failures now use localized English/Thai copy and recover from rejected actions without leaving controls busy.
+- PromptPay QR failure copy no longer refers to missing bank details, and requested-page navigation uses existing translations.
+- Added regression tests for persisted payment totals and localized checkout failures.
+- `npx tsc --noEmit`: passed (direct TypeScript CLI invocation).
+- `npm test`: passed, 23 tests (direct tsx invocation).

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { calculateStripeChargeAmount, STRIPE_BANK_CHARGE_RATE } from "./payment-pricing";
+import {
+  calculateStripeChargeAmount,
+  resolveBookingStayTotal,
+  STRIPE_BANK_CHARGE_RATE,
+} from "./payment-pricing";
 
 describe("calculateStripeChargeAmount", () => {
   it("adds 3% bank charge and keeps integers", () => {
@@ -17,5 +21,21 @@ describe("calculateStripeChargeAmount", () => {
 
   it("never returns total below 1", () => {
     assert.equal(calculateStripeChargeAmount(0).totalDue, 1);
+  });
+});
+
+describe("resolveBookingStayTotal", () => {
+  it("uses the persisted deposit amount instead of a client quote", () => {
+    assert.equal(
+      resolveBookingStayTotal({ depositAmount: 4200, estimatedTotal: 3900 }),
+      4200,
+    );
+  });
+
+  it("falls back to the persisted estimate for older bookings", () => {
+    assert.equal(
+      resolveBookingStayTotal({ depositAmount: null, estimatedTotal: 3900 }),
+      3900,
+    );
   });
 });

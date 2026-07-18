@@ -77,6 +77,12 @@ const messages = {
     bankTransferQrLoading: "Preparing PromptPay QR...",
     bankTransferQrUnavailable:
       "The PromptPay QR could not be prepared. Use the bank account details below or choose card.",
+    bankTransferQrUnavailableNoAccount:
+      "The PromptPay QR could not be prepared. Choose card or contact staff for help.",
+    bankTransferClaimFailed:
+      "We could not record your bank transfer. Please try again or contact staff.",
+    cardPaymentStartFailed:
+      "We could not start card payment. Please try again in a moment.",
     bankChargeLabel: "Bank charge (3%)",
     promptPayQrAlt: "PromptPay QR code for your stay",
     bankTransferWaitingTitle: "We’re checking your transfer.",
@@ -168,6 +174,12 @@ const messages = {
     bankTransferQrLoading: "กำลังสร้างพร้อมเพย์ QR...",
     bankTransferQrUnavailable:
       "ไม่สามารถสร้างพร้อมเพย์ QR ได้ กรุณาใช้ข้อมูลบัญชีธนาคารด้านล่างหรือเลือกชำระด้วยบัตร",
+    bankTransferQrUnavailableNoAccount:
+      "ไม่สามารถสร้างพร้อมเพย์ QR ได้ กรุณาเลือกชำระด้วยบัตรหรือติดต่อเจ้าหน้าที่",
+    bankTransferClaimFailed:
+      "ไม่สามารถบันทึกการโอนเงินของคุณได้ กรุณาลองอีกครั้งหรือติดต่อเจ้าหน้าที่",
+    cardPaymentStartFailed:
+      "ไม่สามารถเริ่มการชำระด้วยบัตรได้ กรุณาลองอีกครั้งในอีกสักครู่",
     bankChargeLabel: "ค่าธรรมเนียมธนาคาร (3%)",
     promptPayQrAlt: "คิวอาร์โค้ดพร้อมเพย์สำหรับค่าที่พัก",
     bankTransferWaitingTitle: "เรากำลังตรวจสอบการโอนเงินของคุณ",

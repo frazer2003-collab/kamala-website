@@ -17,7 +17,6 @@ import {
 } from "@/lib/bank-transfer";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
 import { t, type Locale } from "@/lib/i18n";
-import { calculateStripeChargeAmount } from "@/lib/payment-pricing";
 
 let stripePromise: ReturnType<typeof loadStripe> | null = null;
 
@@ -33,6 +32,7 @@ type PayMethod = "bank" | "card";
 
 function CardPaymentForm({
   bookingId,
+  cardTotalDue,
   currency,
   locale,
   onCancel,
@@ -40,6 +40,7 @@ function CardPaymentForm({
   stayTotal,
 }: {
   bookingId: string;
+  cardTotalDue: number;
   currency: PropertyCurrency;
   locale: Locale;
   onCancel: () => void;
@@ -50,7 +51,11 @@ function CardPaymentForm({
   const elements = useElements();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
-  const charge = calculateStripeChargeAmount(stayTotal);
+  const charge = {
+    stayTotal,
+    surcharge: Math.max(0, cardTotalDue - stayTotal),
+    totalDue: cardTotalDue,
+  };
 
   async function handlePay(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,15 +68,20 @@ function CardPaymentForm({
     setIsPaying(true);
     setErrorMessage(null);
 
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: returnUrl,
-      },
-    });
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: returnUrl,
+        },
+      });
 
-    if (error) {
-      setErrorMessage(error.message ?? t(locale, "paymentFailed"));
+      if (error) {
+        setErrorMessage(t(locale, "paymentFailed"));
+        setIsPaying(false);
+      }
+    } catch {
+      setErrorMessage(t(locale, "paymentFailed"));
       setIsPaying(false);
     }
   }
@@ -141,6 +151,7 @@ function CardPaymentForm({
 export function BookingPaymentElement({
   bankTransfer,
   bookingId,
+  cardTotalDue,
   clientSecret,
   currency,
   locale,
@@ -151,6 +162,7 @@ export function BookingPaymentElement({
 }: {
   bankTransfer: BankTransferDetails;
   bookingId: string;
+  cardTotalDue: number;
   clientSecret: string | null;
   currency: PropertyCurrency;
   locale: Locale;
@@ -162,6 +174,8 @@ export function BookingPaymentElement({
   const bankAvailable = currency === "thb" && isBankTransferConfigured(bankTransfer);
   const [method, setMethod] = useState<PayMethod>(bankAvailable ? "bank" : "card");
   const [cardClientSecret, setCardClientSecret] = useState(clientSecret);
+  const [serverStayTotal, setServerStayTotal] = useState(stayTotal);
+  const [serverCardTotalDue, setServerCardTotalDue] = useState(cardTotalDue);
   const [cardError, setCardError] = useState<string | null>(null);
   const [isStartingCard, setIsStartingCard] = useState(
     !bankAvailable && !clientSecret,
@@ -178,25 +192,35 @@ export function BookingPaymentElement({
 
     let cancelled = false;
 
-    void startCardPaymentForBooking(bookingId).then((result) => {
-      if (cancelled) {
-        return;
-      }
+    void (async () => {
+      try {
+        const result = await startCardPaymentForBooking(bookingId);
+        if (cancelled) {
+          return;
+        }
 
-      if (!result.ok) {
-        setCardError(result.message);
+        if (!result.ok) {
+          setCardError(t(locale, result.errorCode));
+          setIsStartingCard(false);
+          return;
+        }
+
+        setServerStayTotal(result.stayTotal);
+        setServerCardTotalDue(result.cardTotalDue);
+        setCardClientSecret(result.clientSecret);
         setIsStartingCard(false);
-        return;
+      } catch {
+        if (!cancelled) {
+          setCardError(t(locale, "cardPaymentStartFailed"));
+          setIsStartingCard(false);
+        }
       }
-
-      setCardClientSecret(result.clientSecret);
-      setIsStartingCard(false);
-    });
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [bookingId, cardClientSecret, cardError, method]);
+  }, [bookingId, cardClientSecret, cardError, locale, method]);
 
   const options = useMemo<StripeElementsOptions | null>(
     () =>
@@ -304,7 +328,7 @@ export function BookingPaymentElement({
             setIsStartingCard(!cardClientSecret);
             setMethod("card");
           }}
-          stayTotal={stayTotal}
+          stayTotal={serverStayTotal}
         />
       ) : cardError ? (
         <p className="form-message form-message--error" role="alert">
@@ -322,11 +346,12 @@ export function BookingPaymentElement({
         <Elements key={`card-${cardClientSecret}`} options={options} stripe={stripe}>
           <CardPaymentForm
             bookingId={bookingId}
+            cardTotalDue={serverCardTotalDue}
             currency={currency}
             locale={locale}
             onCancel={onCancel}
             returnUrl={returnUrl}
-            stayTotal={stayTotal}
+            stayTotal={serverStayTotal}
           />
         </Elements>
       )}

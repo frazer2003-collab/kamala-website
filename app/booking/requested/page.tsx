@@ -53,12 +53,12 @@ export default async function BookingRequestedPage({
         {chatUrl ? (
           <p>
             <Link className="button button--primary" href={chatUrl}>
-              Open booking conversation
+              {t(locale, "openBookingConversation")}
             </Link>
           </p>
         ) : null}
         <Link className="button button--secondary" href="/">
-          Back to home
+          {t(locale, "backToHome")}
         </Link>
       </section>
       <SiteFooter settings={settings} />

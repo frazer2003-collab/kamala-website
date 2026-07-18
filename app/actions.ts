@@ -25,7 +25,10 @@ import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 import { isRoomBookable } from "@/lib/room-availability";
 import { isStayStatus } from "@/lib/stay-status";
 import { getConfirmedBookings } from "@/lib/booking-requests";
-import { calculateStripeChargeAmount } from "@/lib/payment-pricing";
+import {
+  calculateStripeChargeAmount,
+  resolveBookingStayTotal,
+} from "@/lib/payment-pricing";
 import { isBankTransferConfigured } from "@/lib/bank-transfer";
 import {
   findUnitAssignmentConflict,
@@ -62,6 +65,8 @@ export type BookingActionState = {
   payment?: {
     clientSecret: string | null;
     bookingId: string;
+    stayTotal: number;
+    cardTotalDue: number;
   };
 };
 
@@ -382,7 +387,7 @@ export async function createBookingRequest(
         status: "pending_payment",
         conversation_token: randomUUID(),
       })
-      .select("id")
+      .select("*")
       .single();
 
     if (error || !booking) {
@@ -390,15 +395,13 @@ export async function createBookingRequest(
       return bookingErrorState(getBookingInsertErrorMessage(error ?? {}), formData);
     }
 
-    const { data: createdBooking } = await supabase
-      .from("booking_requests")
-      .select("*")
-      .eq("id", booking.id)
-      .single();
+    await seedGuestNoteMessage(booking);
 
-    if (createdBooking) {
-      await seedGuestNoteMessage(createdBooking);
-    }
+    const stayTotal = resolveBookingStayTotal({
+      depositAmount: booking.deposit_amount,
+      estimatedTotal: booking.estimated_total,
+    });
+    const persistedStripeCharge = calculateStripeChargeAmount(stayTotal);
 
     if (bankTransferConfigured) {
       return {
@@ -408,6 +411,8 @@ export async function createBookingRequest(
         payment: {
           clientSecret: null,
           bookingId: booking.id,
+          stayTotal,
+          cardTotalDue: persistedStripeCharge.totalDue,
         },
       };
     }
@@ -418,9 +423,9 @@ export async function createBookingRequest(
       roomName: selectedRoom.name,
       arrival,
       departure,
-      depositAmount: stripeCharge.totalDue,
-      stayTotal: stripeCharge.stayTotal,
-      surcharge: stripeCharge.surcharge,
+      depositAmount: persistedStripeCharge.totalDue,
+      stayTotal: persistedStripeCharge.stayTotal,
+      surcharge: persistedStripeCharge.surcharge,
       currency: propertySettings.currency,
       propertyName: propertySettings.propertyName,
       hasPromotion: quote.hasPromotion,
@@ -451,6 +456,8 @@ export async function createBookingRequest(
       payment: {
         clientSecret: paymentIntent.client_secret,
         bookingId: booking.id,
+        stayTotal,
+        cardTotalDue: persistedStripeCharge.totalDue,
       },
     };
   } catch {
@@ -506,13 +513,16 @@ async function cancelPaymentIntentBestEffort(paymentIntentId: string) {
 
 export async function startCardPaymentForBooking(
   bookingId: string,
-): Promise<{ ok: true; clientSecret: string } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; clientSecret: string; stayTotal: number; cardTotalDue: number }
+  | { ok: false; errorCode: "cardPaymentStartFailed" }
+> {
   if (!bookingId) {
-    return { ok: false, message: "This payment session expired. Edit details and try again." };
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
   }
 
   if (!hasStripeConfig()) {
-    return { ok: false, message: "Card payments are not configured yet." };
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
   }
 
   const supabase = createStaffSupabaseClient();
@@ -523,7 +533,7 @@ export async function startCardPaymentForBooking(
     .maybeSingle();
 
   if (!booking || booking.status !== "pending_payment") {
-    return { ok: false, message: "This payment session expired. Edit details and try again." };
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
   }
 
   const propertySettings = await getPropertySettings();
@@ -533,10 +543,7 @@ export async function startCardPaymentForBooking(
   const minimumCharge = getStripeMinimumChargeAmount(propertySettings.currency);
 
   if (stripeCharge.totalDue < minimumCharge) {
-    return {
-      ok: false,
-      message: `Stripe needs at least ${formatMoneySuffix(minimumCharge, propertySettings.currency)} to take this payment.`,
-    };
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
   }
 
   try {
@@ -572,7 +579,7 @@ export async function startCardPaymentForBooking(
       if (createdNewPaymentIntent) {
         await cancelPaymentIntentBestEffort(paymentIntent.id);
       }
-      return { ok: false, message: "We could not start card payment. Try again in a moment." };
+      return { ok: false, errorCode: "cardPaymentStartFailed" };
     }
 
     const attachQuery = supabase
@@ -592,25 +599,30 @@ export async function startCardPaymentForBooking(
       if (createdNewPaymentIntent) {
         await cancelPaymentIntentBestEffort(paymentIntent.id);
       }
-      return { ok: false, message: "We could not save the card payment session." };
+      return { ok: false, errorCode: "cardPaymentStartFailed" };
     }
 
-    return { ok: true, clientSecret: paymentIntent.client_secret };
+    return {
+      ok: true,
+      clientSecret: paymentIntent.client_secret,
+      stayTotal: stripeCharge.stayTotal,
+      cardTotalDue: stripeCharge.totalDue,
+    };
   } catch {
-    return { ok: false, message: "Could not start card payment. Try again in a moment." };
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
   }
 }
 
 export async function claimBankTransferPayment(
   bookingId: string,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true } | { ok: false; errorCode: "bankTransferClaimFailed" }> {
   if (!bookingId) {
-    return { ok: false, message: "This booking request could not be found." };
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
   const propertySettings = await getPropertySettings();
   if (!isBankTransferConfigured(propertySettings)) {
-    return { ok: false, message: "Bank transfer is not configured for this property." };
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
   const supabase = createStaffSupabaseClient();
@@ -621,12 +633,12 @@ export async function claimBankTransferPayment(
     .maybeSingle();
 
   if (!booking || booking.status !== "pending_payment") {
-    return { ok: false, message: "This booking request is no longer awaiting payment." };
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
   if (booking.stripe_payment_intent_id) {
     if (!hasStripeServerConfig()) {
-      return { ok: false, message: "The existing card payment could not be canceled." };
+      return { ok: false, errorCode: "bankTransferClaimFailed" };
     }
 
     try {
@@ -636,11 +648,11 @@ export async function claimBankTransferPayment(
       if (paymentIntent.status === "succeeded" || paymentIntent.status === "processing") {
         return {
           ok: false,
-          message: "A card payment is already processing for this booking.",
+          errorCode: "bankTransferClaimFailed",
         };
       }
     } catch {
-      return { ok: false, message: "The existing card payment could not be canceled." };
+      return { ok: false, errorCode: "bankTransferClaimFailed" };
     }
   }
 
@@ -659,7 +671,7 @@ export async function claimBankTransferPayment(
     .maybeSingle();
 
   if (error || !claimedBooking) {
-    return { ok: false, message: "We could not record the bank transfer claim." };
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
   if (stripePaymentIntentId) {
