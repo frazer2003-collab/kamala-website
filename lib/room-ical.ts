@@ -18,6 +18,11 @@ export type RoomIcalSyncResult = {
   error?: string;
 };
 
+export type RoomIcalRoomSyncResult = {
+  results: RoomIcalSyncResult[];
+  removedOrphans: number;
+};
+
 function mapRoomIcalFeed(row: RoomIcalFeedRow): RoomIcalFeed {
   return {
     id: row.id,
@@ -275,6 +280,95 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
   }
 }
 
+/** Deletes channel stays imported from a specific feed (manual closures untouched). */
+export async function removeChannelBlocksForFeed(feedId: string): Promise<number> {
+  if (!feedId || !hasStaffSupabaseConfig()) {
+    return 0;
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: blocks } = await supabase
+    .from("room_blocks")
+    .select("id")
+    .eq("ical_feed_id", feedId);
+
+  const ids = (blocks ?? []).map((block) => block.id);
+  if (ids.length === 0) {
+    return 0;
+  }
+
+  const { error } = await supabase.from("room_blocks").delete().in("id", ids);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ids.length;
+}
+
+/**
+ * Removes channel stays for a room type whose feed is gone (removed calendar / broken cascade).
+ * Active feed IDs are kept even if their latest sync failed.
+ */
+export async function removeOrphanedChannelBlocksForRoom(
+  roomId: string,
+  activeFeedIds: string[],
+): Promise<number> {
+  if (!roomId || !hasStaffSupabaseConfig()) {
+    return 0;
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: blocks } = await supabase
+    .from("room_blocks")
+    .select("id, ical_feed_id")
+    .eq("room_id", roomId)
+    .not("ical_feed_id", "is", null);
+
+  const active = new Set(activeFeedIds);
+  const orphanIds = (blocks ?? [])
+    .filter((block) => block.ical_feed_id && !active.has(block.ical_feed_id))
+    .map((block) => block.id);
+
+  if (orphanIds.length === 0) {
+    return 0;
+  }
+
+  const { error } = await supabase.from("room_blocks").delete().in("id", orphanIds);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return orphanIds.length;
+}
+
+async function sweepOrphanedChannelBlocks(feeds: RoomIcalFeed[]) {
+  if (!hasStaffSupabaseConfig()) {
+    return;
+  }
+
+  const activeByRoom = new Map<string, string[]>();
+  for (const feed of feeds) {
+    const current = activeByRoom.get(feed.roomId) ?? [];
+    current.push(feed.id);
+    activeByRoom.set(feed.roomId, current);
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: channelRooms } = await supabase
+    .from("room_blocks")
+    .select("room_id")
+    .not("ical_feed_id", "is", null);
+
+  const roomIds = new Set<string>([
+    ...activeByRoom.keys(),
+    ...(channelRooms ?? []).map((row) => row.room_id),
+  ]);
+
+  for (const roomId of roomIds) {
+    await removeOrphanedChannelBlocksForRoom(roomId, activeByRoom.get(roomId) ?? []);
+  }
+}
+
 export async function syncAllRoomIcalFeeds() {
   const feeds = await getStaffRoomIcalFeeds();
   const results: RoomIcalSyncResult[] = [];
@@ -283,10 +377,12 @@ export async function syncAllRoomIcalFeeds() {
     results.push(await syncRoomIcalFeed(feed.id));
   }
 
+  await sweepOrphanedChannelBlocks(feeds);
+
   return results;
 }
 
-export async function syncRoomIcalFeedsForRoom(roomId: string) {
+export async function syncRoomIcalFeedsForRoom(roomId: string): Promise<RoomIcalRoomSyncResult> {
   const feeds = (await getStaffRoomIcalFeeds()).filter((feed) => feed.roomId === roomId);
   const results: RoomIcalSyncResult[] = [];
 
@@ -294,5 +390,10 @@ export async function syncRoomIcalFeedsForRoom(roomId: string) {
     results.push(await syncRoomIcalFeed(feed.id));
   }
 
-  return results;
+  const removedOrphans = await removeOrphanedChannelBlocksForRoom(
+    roomId,
+    feeds.map((feed) => feed.id),
+  );
+
+  return { results, removedOrphans };
 }

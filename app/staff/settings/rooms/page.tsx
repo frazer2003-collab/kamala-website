@@ -20,13 +20,19 @@ export default async function StaffSettingsRoomsPage({
     removed?: string;
     room?: string;
     "ical-synced"?: string;
+    "ical-removed"?: string;
     "ical-error"?: string;
   }>;
 }) {
   await requireStaffSession();
 
-  const { error, removed, "ical-synced": icalSynced, "ical-error": icalError } =
-    await searchParams;
+  const {
+    error,
+    removed,
+    "ical-synced": icalSynced,
+    "ical-removed": icalRemoved,
+    "ical-error": icalError,
+  } = await searchParams;
   const [rooms, settings, supabaseReady, icalFeeds] = await Promise.all([
     getStaffRooms(),
     getPropertySettings(),
@@ -83,12 +89,19 @@ export default async function StaffSettingsRoomsPage({
         {icalSynced !== undefined ? (
           <p className="form-message form-message--success" role="status">
             Calendar feeds synced. {icalSynced} reservation
-            {icalSynced === "1" ? "" : "s"} imported.
+            {icalSynced === "1" ? "" : "s"} imported
+            {icalRemoved && icalRemoved !== "0"
+              ? `, ${icalRemoved} from removed calendars cleared`
+              : ""}
+            .
           </p>
         ) : null}
         {icalError ? (
           <p className="form-message form-message--error" role="status">
             Calendar sync failed: {decodeURIComponent(icalError)}
+            {icalRemoved && icalRemoved !== "0"
+              ? ` Cleared ${icalRemoved} reservation${icalRemoved === "1" ? "" : "s"} from removed calendars.`
+              : ""}
           </p>
         ) : null}
 

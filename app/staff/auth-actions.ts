@@ -35,6 +35,7 @@ import { getNextTourSortOrder, getTourCount } from "@/lib/tours";
 import { resolveRoomPhotosFromForm } from "@/lib/room-photo-upload";
 import {
   isValidIcalImportUrl,
+  removeChannelBlocksForFeed,
   syncRoomIcalFeed,
   syncRoomIcalFeedsForRoom,
 } from "@/lib/room-ical";
@@ -994,9 +995,11 @@ export async function removeRoomIcalFeed(formData: FormData) {
   }
 
   const supabase = createStaffSupabaseClient();
+  await removeChannelBlocksForFeed(feedId);
   await supabase.from("room_ical_feeds").delete().eq("id", feedId);
 
   revalidatePath("/staff/calendar");
+  revalidatePath("/");
   revalidatePath("/staff/settings/rooms");
   redirect(roomId ? `/staff/settings/rooms?room=${encodeURIComponent(roomId)}` : "/staff/settings/rooms");
 }
@@ -1010,7 +1013,7 @@ export async function syncRoomIcalFeedsAction(formData: FormData) {
     redirect("/staff/settings/rooms");
   }
 
-  const results = await syncRoomIcalFeedsForRoom(roomId);
+  const { results, removedOrphans } = await syncRoomIcalFeedsForRoom(roomId);
   const failed = results.find((result) => !result.ok);
 
   revalidatePath("/staff/calendar");
@@ -1018,13 +1021,17 @@ export async function syncRoomIcalFeedsAction(formData: FormData) {
   revalidatePath("/staff/settings/rooms");
 
   if (failed) {
+    const orphanQuery =
+      removedOrphans > 0 ? `&ical-removed=${encodeURIComponent(String(removedOrphans))}` : "";
     redirect(
-      `/staff/settings/rooms?room=${encodeURIComponent(roomId)}&ical-error=${encodeURIComponent(failed.error ?? "sync-failed")}`,
+      `/staff/settings/rooms?room=${encodeURIComponent(roomId)}&ical-error=${encodeURIComponent(failed.error ?? "sync-failed")}${orphanQuery}`,
     );
   }
 
   const imported = results.reduce((total, result) => total + result.imported, 0);
+  const removedQuery =
+    removedOrphans > 0 ? `&ical-removed=${encodeURIComponent(String(removedOrphans))}` : "";
   redirect(
-    `/staff/settings/rooms?room=${encodeURIComponent(roomId)}&ical-synced=${imported}`,
+    `/staff/settings/rooms?room=${encodeURIComponent(roomId)}&ical-synced=${imported}${removedQuery}`,
   );
 }
