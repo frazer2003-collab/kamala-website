@@ -1,5 +1,6 @@
 import { createStaffSupabaseClient } from "@/lib/supabase";
 import { bookingOccupiesDay } from "@/lib/calendar";
+import { bookingReservesRoom } from "@/lib/booking-reservation";
 import {
   buildInventoryLookup,
   getRoomDayInventoryForRange,
@@ -28,16 +29,6 @@ type BatchOverlapOptions = {
   excludeBlockId?: string;
 };
 
-function bookingReservesRoom(booking: {
-  status: string;
-  deposit_paid_at: string | null;
-}) {
-  return (
-    booking.status === "confirmed" ||
-    (booking.deposit_paid_at !== null && booking.status !== "declined")
-  );
-}
-
 export async function countOverlappingReservationsForRooms(
   roomIds: string[],
   arrival: string,
@@ -55,7 +46,9 @@ export async function countOverlappingReservationsForRooms(
     const [{ data: bookings }, blocksResult] = await Promise.all([
       supabase
         .from("booking_requests")
-        .select("id, room_id, arrival_date, departure_date, status, deposit_paid_at")
+        .select(
+          "id, room_id, arrival_date, departure_date, status, deposit_paid_at, bank_transfer_claimed_at",
+        )
         .in("room_id", roomIds)
         .lt("arrival_date", departure)
         .gt("departure_date", arrival),
@@ -136,7 +129,9 @@ export async function getUnavailableStayDays(
     const [{ data: bookings }, blocksResult, inventoryEntries] = await Promise.all([
       supabase
         .from("booking_requests")
-        .select("id, room_id, arrival_date, departure_date, status, deposit_paid_at")
+        .select(
+          "id, room_id, arrival_date, departure_date, status, deposit_paid_at, bank_transfer_claimed_at",
+        )
         .eq("room_id", roomId)
         .lt("arrival_date", departure)
         .gt("departure_date", arrival),
@@ -321,7 +316,9 @@ export async function hasCapacityForStay(
     const [{ data: bookings }, blocksResult, inventoryEntries] = await Promise.all([
       supabase
         .from("booking_requests")
-        .select("id, room_id, arrival_date, departure_date, status, deposit_paid_at")
+        .select(
+          "id, room_id, arrival_date, departure_date, status, deposit_paid_at, bank_transfer_claimed_at",
+        )
         .eq("room_id", roomId)
         .lt("arrival_date", departure)
         .gt("departure_date", arrival),
