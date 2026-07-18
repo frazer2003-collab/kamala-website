@@ -13,6 +13,9 @@ export type RoomUnit = {
   icalExportToken: string | null;
 };
 
+/** Superior (courtyard) door numbers — Airbnb import slots and assignment. */
+export const COURTYARD_UNIT_NUMBERS = ["113", "115", "118", "120"] as const;
+
 /** Door number → room type ids (used to repair missing room_unit_types rows). */
 const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "113": ["courtyard"],
@@ -50,7 +53,16 @@ function staysOverlap(
 
 export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
   return units
-    .filter((unit) => unit.roomIds.includes(roomId))
+    .filter((unit) => {
+      if (!unit.roomIds.includes(roomId)) {
+        return false;
+      }
+      // Superior is only 113 / 115 / 118 / 120 (ignore stale DB links like 116).
+      if (roomId === "courtyard") {
+        return (COURTYARD_UNIT_NUMBERS as readonly string[]).includes(unit.number);
+      }
+      return true;
+    })
     .sort((left, right) => left.sortOrder - right.sortOrder || left.number.localeCompare(right.number));
 }
 
@@ -229,13 +241,20 @@ export function attachRoomNumbers<T extends { roomUnitId: string | null; roomNum
 
 function withDefaultRoomIds(units: RoomUnit[]): RoomUnit[] {
   return units.map((unit) => {
-    if (unit.roomIds.length > 0) {
+    let roomIds = unit.roomIds.length > 0 ? unit.roomIds : (DEFAULT_UNIT_ROOM_IDS[unit.number] ?? []);
+
+    // Never treat 116 (or any non-allowlisted door) as Superior.
+    if (unit.number === "116" || !(COURTYARD_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
+      roomIds = roomIds.filter((id) => id !== "courtyard");
+    }
+
+    if (unit.roomIds.length > 0 && roomIds === unit.roomIds) {
       return unit;
     }
 
     return {
       ...unit,
-      roomIds: DEFAULT_UNIT_ROOM_IDS[unit.number] ?? [],
+      roomIds,
     };
   });
 }
