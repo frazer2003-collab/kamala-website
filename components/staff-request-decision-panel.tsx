@@ -24,6 +24,7 @@ type StaffRequestDecisionPanelProps = {
   guestName: string;
   guestEmail: string;
   depositPaid: boolean;
+  bankTransferClaimed: boolean;
   depositAmount: number;
   currency?: PropertyCurrency;
   canManage: boolean;
@@ -36,6 +37,7 @@ export function StaffRequestDecisionPanel({
   guestName,
   guestEmail,
   depositPaid,
+  bankTransferClaimed,
   depositAmount,
   currency = "thb",
   canManage,
@@ -106,6 +108,8 @@ export function StaffRequestDecisionPanel({
           then move this stay to the calendar.
           {depositPaid
             ? ` They already paid ${depositLabel} in full for the stay.`
+            : bankTransferClaimed
+              ? " The guest reported a bank transfer; verify it before sending confirmation."
             : " No payment is on record yet."}
         </p>
         <form
@@ -214,6 +218,12 @@ export function StaffRequestDecisionPanel({
         <p className="staff-decide__practice-banner" role="status">
           Practice mode — walk through confirm or decline without contacting the
           guest.
+        </p>
+      ) : null}
+      {bankTransferClaimed && !depositPaid ? (
+        <p className="staff-decide__summary" role="status">
+          Guest reported a bank transfer — verify in your bank app, then confirm
+          or decline.
         </p>
       ) : null}
       <p className="detail-help">

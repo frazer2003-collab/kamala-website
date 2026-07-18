@@ -32,11 +32,23 @@ type InboxFilter = "all" | "new" | "awaiting" | "needs-reply";
 const statusCopy: Record<BookingStatus, string> = {
   new: "New request",
   pending_payment: "Awaiting payment",
-  awaiting: "Paid in full",
+  awaiting: "Payment received",
   "needs-reply": "Needs staff reply",
   confirmed: "Confirmed",
   declined: "Closed",
 };
+
+function getBookingStatusCopy(booking: StaffBooking) {
+  if (
+    booking.status === "awaiting" &&
+    booking.bankTransferClaimed &&
+    !booking.depositPaid
+  ) {
+    return "Transfer to verify";
+  }
+
+  return statusCopy[booking.status];
+}
 
 const STATUS_SORT: Partial<Record<BookingStatus, number>> = {
   "needs-reply": 0,
@@ -154,7 +166,7 @@ export default async function StaffBookingsPage({
     { id: "all", label: "All", count: staffBookings.bookings.length },
     { id: "needs-reply", label: "Need reply", count: needsReplyCount },
     { id: "new", label: "New", count: newRequestCount },
-    { id: "awaiting", label: "Paid", count: awaitingCount },
+    { id: "awaiting", label: "Payment", count: awaitingCount },
   ];
 
   return (
@@ -198,6 +210,19 @@ export default async function StaffBookingsPage({
                         })}
                       >
                         {needsReplyCount} need reply
+                      </Link>
+                    </>
+                  ) : null}
+                  {awaitingCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "awaiting",
+                          view: "inbox",
+                        })}
+                      >
+                        {awaitingCount} payment review
                       </Link>
                     </>
                   ) : null}
@@ -301,7 +326,7 @@ export default async function StaffBookingsPage({
                           className={`staff-status staff-status--${booking.status}`}
                         >
                           <span aria-hidden="true" />
-                          {statusCopy[booking.status]}
+                          {getBookingStatusCopy(booking)}
                         </div>
                       </Link>
                     </article>
@@ -392,7 +417,7 @@ export default async function StaffBookingsPage({
                 <span>{selected.id}</span>
                 <div className={`staff-status staff-status--${selected.status}`}>
                   <span aria-hidden="true" />
-                  {statusCopy[selected.status] ?? selected.status}
+                  {getBookingStatusCopy(selected)}
                 </div>
               </div>
               <h2 id="detail-title">{selected.guest}</h2>
@@ -454,6 +479,8 @@ export default async function StaffBookingsPage({
                     <dd>
                       {selected.depositPaid
                         ? `${formatMoneySuffix(selected.depositAmount, settings.currency)} paid`
+                        : selected.bankTransferClaimed
+                          ? "Bank transfer reported — verify in bank app"
                         : "Not received yet"}
                     </dd>
                   </div>
@@ -482,6 +509,7 @@ export default async function StaffBookingsPage({
                   currency={settings.currency}
                   depositAmount={selected.depositAmount}
                   depositPaid={selected.depositPaid}
+                  bankTransferClaimed={selected.bankTransferClaimed}
                   guestEmail={selected.contact}
                   guestName={selected.guest}
                   practiceMode={isPracticeMode}
