@@ -5979,6 +5979,14 @@ textarea:focus {
   text-decoration: underline;
 }
 
+.staff-calendar-toolbar__sync {
+  margin-left: 0.15rem;
+}
+
+.staff-calendar-toolbar__sync .button {
+  min-height: 2.75rem;
+}
+
 .staff-calendar-toolbar__density {
   display: inline-flex;
   align-items: center;

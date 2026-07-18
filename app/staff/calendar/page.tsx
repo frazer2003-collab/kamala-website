@@ -86,6 +86,9 @@ export default async function StaffCalendarPage({
     detail?: string;
     assignGuest?: string;
     assignUnit?: string;
+    "ical-synced"?: string;
+    "ical-feeds"?: string;
+    "ical-error"?: string;
   }>;
 }) {
   const staffSession = await requireStaffSessionDetails();
@@ -104,6 +107,9 @@ export default async function StaffCalendarPage({
     detail: errorDetail,
     assignGuest,
     assignUnit,
+    "ical-synced": icalSynced,
+    "ical-feeds": icalFeeds,
+    "ical-error": icalError,
   } = await searchParams;
   const { year, month } = parseCalendarMonth(monthParam);
   const monthKey = formatCalendarMonth(year, month);
@@ -402,10 +408,29 @@ export default async function StaffCalendarPage({
             </Link>
           </p>
         ) : null}
+        {icalSynced !== undefined ? (
+          <p className="form-message form-message--success" role="status">
+            OTA calendars refreshed
+            {icalFeeds ? ` (${icalFeeds} feed${icalFeeds === "1" ? "" : "s"})` : ""}.{" "}
+            {icalSynced} reservation{icalSynced === "1" ? "" : "s"} imported.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {icalError ? (
+          <p className="form-message form-message--error" role="alert">
+            OTA sync failed: {decodeURIComponent(icalError)}{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
 
         <div className="calendar-board calendar-board--timeline">
           <StaffCalendarToolbar
             calendarColors={settings.calendarColors}
+            canSyncOta={canManage}
             monthKey={monthKey}
             selectedBlockKey={selectedBlockKey || undefined}
             selectedBookingKey={selectedKey || undefined}

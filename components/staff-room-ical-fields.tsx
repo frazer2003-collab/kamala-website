@@ -3,7 +3,6 @@
 import { useActionState } from "react";
 import {
   addRoomIcalFeed,
-  syncRoomIcalFeedsAction,
   removeRoomIcalFeed,
   type StaffRoomState,
 } from "@/app/staff/auth-actions";
@@ -50,27 +49,16 @@ export function StaffRoomIcalFields({
     addRoomIcalFeed,
     initialState,
   );
-  const allFeeds = [...typeFeeds, ...units.map((unit) => unit.feed).filter(Boolean)] as RoomIcalFeed[];
-
   return (
     <div className="staff-room-ical field-pair--wide">
       <p className="staff-room-ical__hint">
         Kamala only <strong>reads</strong> OTA calendars. It does not publish a calendar back to
-        Airbnb or other channels — manage availability on each OTA separately.
+        Airbnb or other channels — manage availability on each OTA separately. Use{" "}
+        <strong>Sync OTA bookings</strong> on the staff calendar to refresh all connected feeds.
       </p>
 
       <div className="staff-room-ical__section">
-        <div className="staff-room-ical__header">
-          <span className="staff-room-ical__heading">Airbnb — import by room number</span>
-          {allFeeds.length > 0 ? (
-            <form action={syncRoomIcalFeedsAction}>
-              <input name="room-id" type="hidden" value={roomId} />
-              <button className="button button--quiet" disabled={disabled} type="submit">
-                Sync now
-              </button>
-            </form>
-          ) : null}
-        </div>
+        <span className="staff-room-ical__heading">Airbnb — import by room number</span>
         <p className="staff-room-ical__hint">
           Paste each listing’s Airbnb <em>export</em> calendar URL here so guest reservations
           appear on the staff calendar. One feed per room number.

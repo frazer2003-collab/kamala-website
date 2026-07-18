@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { syncAllRoomIcalFeedsAction } from "@/app/staff/auth-actions";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { formatCalendarMonth } from "@/lib/calendar";
 import type { CalendarMonthStats } from "@/lib/calendar-timeline";
@@ -9,6 +10,7 @@ type StaffCalendarToolbarProps = {
   stats: CalendarMonthStats;
   unassignedCount: number;
   calendarColors: CalendarColors;
+  canSyncOta?: boolean;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
 };
@@ -34,6 +36,7 @@ export function StaffCalendarToolbar({
   stats,
   unassignedCount,
   calendarColors,
+  canSyncOta = false,
   selectedBookingKey,
   selectedBlockKey,
 }: StaffCalendarToolbarProps) {
@@ -56,6 +59,14 @@ export function StaffCalendarToolbar({
         >
           Jump to today
         </Link>
+        {canSyncOta ? (
+          <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
+            <input name="month" type="hidden" value={monthKey} />
+            <button className="button button--quiet" type="submit">
+              Sync OTA bookings
+            </button>
+          </form>
+        ) : null}
       </div>
 
       <div className="staff-calendar-toolbar__meta" aria-label="Month summary">

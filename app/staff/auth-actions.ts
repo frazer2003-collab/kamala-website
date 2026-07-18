@@ -36,8 +36,8 @@ import { resolveRoomPhotosFromForm } from "@/lib/room-photo-upload";
 import {
   isValidIcalImportUrl,
   removeChannelBlocksForFeed,
+  syncAllRoomIcalFeeds,
   syncRoomIcalFeed,
-  syncRoomIcalFeedsForRoom,
 } from "@/lib/room-ical";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -1033,16 +1033,18 @@ export async function removeRoomIcalFeed(formData: FormData) {
   redirect(roomId ? `/staff/settings/rooms?room=${encodeURIComponent(roomId)}` : "/staff/settings/rooms");
 }
 
-export async function syncRoomIcalFeedsAction(formData: FormData) {
+/** Resync every connected OTA feed (all room types / Airbnb room numbers). */
+export async function syncAllRoomIcalFeedsAction(formData: FormData) {
   await requireStaffCalendarWrite();
 
-  const roomId = getValue(formData, "room-id");
+  const month = getValue(formData, "month");
+  const monthQuery = month && /^\d{4}-\d{2}$/.test(month) ? `month=${month}&` : "";
 
-  if (!roomId || !hasStaffSupabaseConfig()) {
-    redirect("/staff/settings/rooms");
+  if (!hasStaffSupabaseConfig()) {
+    redirect(`/staff/calendar?${monthQuery}ical-error=${encodeURIComponent("Supabase is not configured.")}`);
   }
 
-  const { results, removedOrphans } = await syncRoomIcalFeedsForRoom(roomId);
+  const results = await syncAllRoomIcalFeeds();
   const failed = results.find((result) => !result.ok);
 
   revalidatePath("/staff/calendar");
@@ -1050,17 +1052,15 @@ export async function syncRoomIcalFeedsAction(formData: FormData) {
   revalidatePath("/staff/settings/rooms");
 
   if (failed) {
-    const orphanQuery =
-      removedOrphans > 0 ? `&ical-removed=${encodeURIComponent(String(removedOrphans))}` : "";
     redirect(
-      `/staff/settings/rooms?room=${encodeURIComponent(roomId)}&ical-error=${encodeURIComponent(failed.error ?? "sync-failed")}${orphanQuery}`,
+      `/staff/calendar?${monthQuery}ical-error=${encodeURIComponent(failed.error ?? "sync-failed")}`,
     );
   }
 
   const imported = results.reduce((total, result) => total + result.imported, 0);
-  const removedQuery =
-    removedOrphans > 0 ? `&ical-removed=${encodeURIComponent(String(removedOrphans))}` : "";
+  const feedCount = results.length;
   redirect(
-    `/staff/settings/rooms?room=${encodeURIComponent(roomId)}&ical-synced=${imported}${removedQuery}`,
+    `/staff/calendar?${monthQuery}ical-synced=${imported}&ical-feeds=${feedCount}`,
   );
 }
+
