@@ -68,6 +68,60 @@ export function StaffPropertySettingsForm({
           type="tel"
         />
       </div>
+      <div className="field-pair field-pair--wide staff-settings-calendar-colors">
+        <h3 className="staff-settings-subheading">Bank transfer / PromptPay</h3>
+        <p className="staff-settings-calendar-colors__hint">
+          Guests see these when paying by bank transfer. Card payments still use Stripe (+3% bank
+          charge).
+        </p>
+        <div className="staff-settings-calendar-colors__grid">
+          <div className="field-pair">
+            <label htmlFor="promptpay-id">PromptPay ID</label>
+            <input
+              aria-describedby="promptpay-id-hint"
+              defaultValue={settings.promptPayId ?? ""}
+              disabled={disabled}
+              id="promptpay-id"
+              name="promptpay-id"
+              type="text"
+            />
+            <span className="staff-settings-calendar-colors__hint" id="promptpay-id-hint">
+              Phone, National ID, or tax ID
+            </span>
+          </div>
+          <div className="field-pair">
+            <label htmlFor="bank-name">Bank name</label>
+            <input
+              defaultValue={settings.bankName ?? ""}
+              disabled={disabled}
+              id="bank-name"
+              name="bank-name"
+              type="text"
+            />
+          </div>
+          <div className="field-pair">
+            <label htmlFor="account-name">Account name</label>
+            <input
+              defaultValue={settings.accountName ?? ""}
+              disabled={disabled}
+              id="account-name"
+              name="account-name"
+              type="text"
+            />
+          </div>
+          <div className="field-pair">
+            <label htmlFor="account-number">Account number</label>
+            <input
+              defaultValue={settings.accountNumber ?? ""}
+              disabled={disabled}
+              id="account-number"
+              inputMode="numeric"
+              name="account-number"
+              type="text"
+            />
+          </div>
+        </div>
+      </div>
       <div className="field-pair">
         <label htmlFor="check-in-from">Check-in from</label>
         <input

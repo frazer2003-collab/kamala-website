@@ -399,6 +399,10 @@ export async function updatePropertySettings(
     termsSummary: getValue(formData, "terms-summary"),
     lineUrl: getValue(formData, "line-url") || null,
     whatsappUrl: getValue(formData, "whatsapp-url") || null,
+    promptPayId: getValue(formData, "promptpay-id") || null,
+    bankName: getValue(formData, "bank-name") || null,
+    accountName: getValue(formData, "account-name") || null,
+    accountNumber: getValue(formData, "account-number") || null,
     calendarColors: normalizeCalendarColors({
       available: getValue(formData, "calendar-color-available"),
       closed: getValue(formData, "calendar-color-closed"),
