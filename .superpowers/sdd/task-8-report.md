@@ -20,3 +20,15 @@ Added actions to lazily create or update a card-only PaymentIntent, claim a bank
 
 - `npx tsc --noEmit` — pass (exit 0)
 - Existing unit tests — 17 passed, 0 failed
+
+## Review fixes
+
+- Bank transfer claims now transition the booking from `pending_payment` to `awaiting` before canceling an unused Stripe PaymentIntent. Cancellation is best-effort after the guarded database update.
+- Stripe cancellation and expiry webhooks preserve bookings whose status has left `pending_payment` or whose `bank_transfer_claimed_at` is set; the delete repeats both guards atomically.
+- Lazy card PaymentIntent attachment now verifies that the guarded booking update matched a row and cancels a newly created orphan intent when it did not.
+- The payment shell now renders for a payment step with a null client secret, ready for the bank-transfer UI.
+
+## Review verification
+
+- `npm test` — pass (exit 0): 19 tests passed, 0 failed.
+- `npx tsc --noEmit` — pass (exit 0).

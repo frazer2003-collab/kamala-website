@@ -492,6 +492,18 @@ export async function cancelPendingBooking(bookingId: string) {
     .eq("status", "pending_payment");
 }
 
+async function cancelPaymentIntentBestEffort(paymentIntentId: string) {
+  if (!hasStripeServerConfig()) {
+    return;
+  }
+
+  try {
+    await getStripe().paymentIntents.cancel(paymentIntentId);
+  } catch {
+    // Intent may already be canceled or completed.
+  }
+}
+
 export async function startCardPaymentForBooking(
   bookingId: string,
 ): Promise<{ ok: true; clientSecret: string } | { ok: false; message: string }> {
@@ -528,6 +540,7 @@ export async function startCardPaymentForBooking(
   }
 
   try {
+    const createdNewPaymentIntent = !booking.stripe_payment_intent_id;
     const paymentIntent = booking.stripe_payment_intent_id
       ? await getStripe().paymentIntents.update(booking.stripe_payment_intent_id, {
           amount: stripeCharge.totalDue * 100,
@@ -556,16 +569,24 @@ export async function startCardPaymentForBooking(
         });
 
     if (!paymentIntent.client_secret) {
+      if (createdNewPaymentIntent) {
+        await cancelPaymentIntentBestEffort(paymentIntent.id);
+      }
       return { ok: false, message: "We could not start card payment. Try again in a moment." };
     }
 
-    const { error } = await supabase
+    const { data: updatedBooking, error } = await supabase
       .from("booking_requests")
       .update({ stripe_payment_intent_id: paymentIntent.id })
       .eq("id", booking.id)
-      .eq("status", "pending_payment");
+      .eq("status", "pending_payment")
+      .select("id")
+      .maybeSingle();
 
-    if (error) {
+    if (error || !updatedBooking) {
+      if (createdNewPaymentIntent) {
+        await cancelPaymentIntentBestEffort(paymentIntent.id);
+      }
       return { ok: false, message: "We could not save the card payment session." };
     }
 
@@ -604,8 +625,7 @@ export async function claimBankTransferPayment(
     }
 
     try {
-      const stripe = getStripe();
-      const paymentIntent = await stripe.paymentIntents.retrieve(
+      const paymentIntent = await getStripe().paymentIntents.retrieve(
         booking.stripe_payment_intent_id,
       );
       if (paymentIntent.status === "succeeded" || paymentIntent.status === "processing") {
@@ -614,15 +634,13 @@ export async function claimBankTransferPayment(
           message: "A card payment is already processing for this booking.",
         };
       }
-      if (paymentIntent.status !== "canceled") {
-        await stripe.paymentIntents.cancel(paymentIntent.id);
-      }
     } catch {
       return { ok: false, message: "The existing card payment could not be canceled." };
     }
   }
 
   const claimedAt = new Date().toISOString();
+  const stripePaymentIntentId = booking.stripe_payment_intent_id;
   const { data: claimedBooking, error } = await supabase
     .from("booking_requests")
     .update({
@@ -637,6 +655,10 @@ export async function claimBankTransferPayment(
 
   if (error || !claimedBooking) {
     return { ok: false, message: "We could not record the bank transfer claim." };
+  }
+
+  if (stripePaymentIntentId) {
+    await cancelPaymentIntentBestEffort(stripePaymentIntentId);
   }
 
   await sendStaffBookingEmail({

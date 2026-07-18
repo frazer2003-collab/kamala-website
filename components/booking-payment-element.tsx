@@ -339,13 +339,13 @@ export function BookingPaymentElement({
   returnUrl,
 }: {
   bookingId: string;
-  clientSecret: string;
+  clientSecret: string | null;
   currency: PropertyCurrency;
   deposit: number;
   guestEmail: string;
   locale: Locale;
   onCancel: () => void;
-  publishableKey: string;
+  publishableKey: string | null;
   returnUrl: string;
 }) {
   const supportsPromptPay = false;
@@ -355,7 +355,10 @@ export function BookingPaymentElement({
   const [methodsReady, setMethodsReady] = useState(!supportsPromptPay);
   const [methodError, setMethodError] = useState<string | null>(null);
   const [isUpdatingMethods, startUpdatingMethods] = useTransition();
-  const stripe = useMemo(() => getStripePromise(publishableKey), [publishableKey]);
+  const stripe = useMemo(
+    () => (publishableKey ? getStripePromise(publishableKey) : null),
+    [publishableKey],
+  );
 
   useEffect(() => {
     if (!supportsPromptPay) {
@@ -388,40 +391,43 @@ export function BookingPaymentElement({
     };
   }, [bookingId, method, supportsPromptPay]);
 
-  const options = useMemo<StripeElementsOptions>(
-    () => ({
-      clientSecret,
-      appearance: {
-        theme: "stripe",
-        variables: {
-          colorPrimary: "#7a2430",
-          colorBackground: "#ffffff",
-          colorText: "#24191b",
-          colorDanger: "#9b2c2c",
-          fontFamily:
-            '"Plus Jakarta Sans", "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-          borderRadius: "0.75rem",
-          spacingUnit: "4px",
-        },
-        rules: {
-          ".Input": {
-            border: "1px solid #e2d7d9",
-            boxShadow: "none",
-          },
-          ".Input:focus": {
-            border: "1px solid #7a2430",
-            boxShadow: "0 0 0 3px rgba(122, 36, 48, 0.12)",
-          },
-          ".Tab": {
-            border: "1px solid #e2d7d9",
-          },
-          ".Tab--selected": {
-            border: "1px solid rgba(122, 36, 48, 0.35)",
-            backgroundColor: "#faf5f6",
-          },
-        },
-      },
-    }),
+  const options = useMemo<StripeElementsOptions | null>(
+    () =>
+      clientSecret
+        ? {
+            clientSecret,
+            appearance: {
+              theme: "stripe",
+              variables: {
+                colorPrimary: "#7a2430",
+                colorBackground: "#ffffff",
+                colorText: "#24191b",
+                colorDanger: "#9b2c2c",
+                fontFamily:
+                  '"Plus Jakarta Sans", "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                borderRadius: "0.75rem",
+                spacingUnit: "4px",
+              },
+              rules: {
+                ".Input": {
+                  border: "1px solid #e2d7d9",
+                  boxShadow: "none",
+                },
+                ".Input:focus": {
+                  border: "1px solid #7a2430",
+                  boxShadow: "0 0 0 3px rgba(122, 36, 48, 0.12)",
+                },
+                ".Tab": {
+                  border: "1px solid #e2d7d9",
+                },
+                ".Tab--selected": {
+                  border: "1px solid rgba(122, 36, 48, 0.35)",
+                  backgroundColor: "#faf5f6",
+                },
+              },
+            },
+          }
+        : null,
     [clientSecret],
   );
 
@@ -474,7 +480,11 @@ export function BookingPaymentElement({
         </p>
       ) : null}
 
-      {!methodsReady || isUpdatingMethods ? (
+      {!clientSecret ? null : !publishableKey || !stripe || !options ? (
+        <p className="form-message form-message--error" role="alert">
+          {t(locale, "paymentsNotConfigured")}
+        </p>
+      ) : !methodsReady || isUpdatingMethods ? (
         <p className="booking-summary__hint" aria-live="polite">
           {t(locale, "startingCheckout")}
         </p>

@@ -661,7 +661,7 @@ export function BookingRequest({
         ) : null}
       </form>
 
-      {paymentStep?.clientSecret && stripePublishableKey ? (
+      {paymentStep ? (
         <BookingPaymentElement
           bookingId={paymentStep.bookingId}
           clientSecret={paymentStep.clientSecret}
@@ -673,12 +673,6 @@ export function BookingRequest({
           publishableKey={stripePublishableKey}
           returnUrl={paymentReturnUrl}
         />
-      ) : null}
-
-      {paymentStep?.clientSecret && !stripePublishableKey ? (
-        <p className="form-message form-message--error" role="alert">
-          {t(locale, "paymentsNotConfigured")}
-        </p>
       ) : null}
       </div>
     </section>
