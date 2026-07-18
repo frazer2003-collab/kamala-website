@@ -197,7 +197,7 @@ export function BookingRequest({
   const [state, formAction] = useActionState(createBookingRequest, initialState);
   const [paymentStep, setPaymentStep] = useState<{
     bookingId: string;
-    clientSecret: string;
+    clientSecret: string | null;
   } | null>(null);
   const [isCancelingPayment, startCancelPayment] = useTransition();
 
@@ -661,7 +661,7 @@ export function BookingRequest({
         ) : null}
       </form>
 
-      {paymentStep && stripePublishableKey ? (
+      {paymentStep?.clientSecret && stripePublishableKey ? (
         <BookingPaymentElement
           bookingId={paymentStep.bookingId}
           clientSecret={paymentStep.clientSecret}
@@ -675,7 +675,7 @@ export function BookingRequest({
         />
       ) : null}
 
-      {paymentStep && !stripePublishableKey ? (
+      {paymentStep?.clientSecret && !stripePublishableKey ? (
         <p className="form-message form-message--error" role="alert">
           {t(locale, "paymentsNotConfigured")}
         </p>

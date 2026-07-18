@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient } from "@/lib/supabase";
-import { sendGuestBookingEmail } from "@/lib/email";
+import { sendGuestBookingEmail, sendStaffBookingEmail } from "@/lib/email";
 import {
   getGuestChatUrl,
   recordStaffChatMessage,
@@ -26,6 +26,7 @@ import { isRoomBookable } from "@/lib/room-availability";
 import { isStayStatus } from "@/lib/stay-status";
 import { getConfirmedBookings } from "@/lib/booking-requests";
 import { calculateStripeChargeAmount } from "@/lib/payment-pricing";
+import { isBankTransferConfigured } from "@/lib/bank-transfer";
 import {
   findUnitAssignmentConflict,
   getRoomUnitById,
@@ -59,7 +60,7 @@ export type BookingActionState = {
   fieldErrors?: Record<string, string>;
   values?: BookingFormValues;
   payment?: {
-    clientSecret: string;
+    clientSecret: string | null;
     bookingId: string;
   };
 };
@@ -258,6 +259,7 @@ export async function createBookingRequest(
   const departure = getValue(formData, "departure");
   const note = getValue(formData, "guest-note");
   const propertySettings = await getPropertySettings();
+  const bankTransferConfigured = isBankTransferConfigured(propertySettings);
   const selectedRoom = await getRoomForBooking(roomId);
   const arrivalDate = parseDate(arrival);
   const departureDate = parseDate(departure);
@@ -319,7 +321,7 @@ export async function createBookingRequest(
     );
   }
 
-  if (!hasStripeConfig()) {
+  if (!bankTransferConfigured && !hasStripeConfig()) {
     return bookingErrorState(
       "Payments are not configured yet. Add STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY before accepting bookings.",
       formData,
@@ -336,12 +338,12 @@ export async function createBookingRequest(
   });
   const estimatedTotal = quote.total;
   const stripeCharge = calculateStripeChargeAmount(estimatedTotal);
-  const depositAmount = stripeCharge.totalDue;
+  const depositAmount = estimatedTotal;
   const minimumCharge = getStripeMinimumChargeAmount(propertySettings.currency);
 
-  if (depositAmount < minimumCharge) {
+  if (!bankTransferConfigured && stripeCharge.totalDue < minimumCharge) {
     return bookingErrorState(
-      `Stripe needs at least ${formatMoneySuffix(minimumCharge, propertySettings.currency)} to take a payment. This stay totals ${formatMoneySuffix(depositAmount, propertySettings.currency)} — raise the room rate in staff settings, then try again.`,
+      `Stripe needs at least ${formatMoneySuffix(minimumCharge, propertySettings.currency)} to take a payment. This stay totals ${formatMoneySuffix(stripeCharge.totalDue, propertySettings.currency)} — raise the room rate in staff settings, then try again.`,
       formData,
     );
   }
@@ -398,13 +400,25 @@ export async function createBookingRequest(
       await seedGuestNoteMessage(createdBooking);
     }
 
+    if (bankTransferConfigured) {
+      return {
+        status: "payment_ready",
+        message: "",
+        values: getBookingFormValues(formData),
+        payment: {
+          clientSecret: null,
+          bookingId: booking.id,
+        },
+      };
+    }
+
     const paymentIntent = await createDepositPaymentIntent({
       bookingId: booking.id,
       guestEmail,
       roomName: selectedRoom.name,
       arrival,
       departure,
-      depositAmount,
+      depositAmount: stripeCharge.totalDue,
       stayTotal: stripeCharge.stayTotal,
       surcharge: stripeCharge.surcharge,
       currency: propertySettings.currency,
@@ -478,11 +492,179 @@ export async function cancelPendingBooking(bookingId: string) {
     .eq("status", "pending_payment");
 }
 
+export async function startCardPaymentForBooking(
+  bookingId: string,
+): Promise<{ ok: true; clientSecret: string } | { ok: false; message: string }> {
+  if (!bookingId) {
+    return { ok: false, message: "This payment session expired. Edit details and try again." };
+  }
+
+  if (!hasStripeConfig()) {
+    return { ok: false, message: "Card payments are not configured yet." };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: booking } = await supabase
+    .from("booking_requests")
+    .select("*")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking || booking.status !== "pending_payment") {
+    return { ok: false, message: "This payment session expired. Edit details and try again." };
+  }
+
+  const propertySettings = await getPropertySettings();
+  const stripeCharge = calculateStripeChargeAmount(
+    booking.deposit_amount ?? booking.estimated_total,
+  );
+  const minimumCharge = getStripeMinimumChargeAmount(propertySettings.currency);
+
+  if (stripeCharge.totalDue < minimumCharge) {
+    return {
+      ok: false,
+      message: `Stripe needs at least ${formatMoneySuffix(minimumCharge, propertySettings.currency)} to take this payment.`,
+    };
+  }
+
+  try {
+    const paymentIntent = booking.stripe_payment_intent_id
+      ? await getStripe().paymentIntents.update(booking.stripe_payment_intent_id, {
+          amount: stripeCharge.totalDue * 100,
+          receipt_email: booking.guest_email,
+          payment_method_types: ["card"],
+          metadata: {
+            booking_id: booking.id,
+            room_name: booking.room_name,
+            stay_total: String(stripeCharge.stayTotal),
+            bank_charge: String(stripeCharge.surcharge),
+            payment_methods: "card",
+          },
+        })
+      : await createDepositPaymentIntent({
+          bookingId: booking.id,
+          guestEmail: booking.guest_email,
+          roomName: booking.room_name,
+          arrival: booking.arrival_date,
+          departure: booking.departure_date,
+          depositAmount: stripeCharge.totalDue,
+          stayTotal: stripeCharge.stayTotal,
+          surcharge: stripeCharge.surcharge,
+          currency: propertySettings.currency,
+          propertyName: propertySettings.propertyName,
+          hasPromotion: false,
+        });
+
+    if (!paymentIntent.client_secret) {
+      return { ok: false, message: "We could not start card payment. Try again in a moment." };
+    }
+
+    const { error } = await supabase
+      .from("booking_requests")
+      .update({ stripe_payment_intent_id: paymentIntent.id })
+      .eq("id", booking.id)
+      .eq("status", "pending_payment");
+
+    if (error) {
+      return { ok: false, message: "We could not save the card payment session." };
+    }
+
+    return { ok: true, clientSecret: paymentIntent.client_secret };
+  } catch {
+    return { ok: false, message: "Could not start card payment. Try again in a moment." };
+  }
+}
+
+export async function claimBankTransferPayment(
+  bookingId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!bookingId) {
+    return { ok: false, message: "This booking request could not be found." };
+  }
+
+  const propertySettings = await getPropertySettings();
+  if (!isBankTransferConfigured(propertySettings)) {
+    return { ok: false, message: "Bank transfer is not configured for this property." };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: booking } = await supabase
+    .from("booking_requests")
+    .select("*")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking || booking.status !== "pending_payment") {
+    return { ok: false, message: "This booking request is no longer awaiting payment." };
+  }
+
+  if (booking.stripe_payment_intent_id) {
+    if (!hasStripeServerConfig()) {
+      return { ok: false, message: "The existing card payment could not be canceled." };
+    }
+
+    try {
+      const stripe = getStripe();
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        booking.stripe_payment_intent_id,
+      );
+      if (paymentIntent.status === "succeeded" || paymentIntent.status === "processing") {
+        return {
+          ok: false,
+          message: "A card payment is already processing for this booking.",
+        };
+      }
+      if (paymentIntent.status !== "canceled") {
+        await stripe.paymentIntents.cancel(paymentIntent.id);
+      }
+    } catch {
+      return { ok: false, message: "The existing card payment could not be canceled." };
+    }
+  }
+
+  const claimedAt = new Date().toISOString();
+  const { data: claimedBooking, error } = await supabase
+    .from("booking_requests")
+    .update({
+      status: "awaiting",
+      bank_transfer_claimed_at: claimedAt,
+      stripe_payment_intent_id: null,
+    })
+    .eq("id", booking.id)
+    .eq("status", "pending_payment")
+    .select("id")
+    .maybeSingle();
+
+  if (error || !claimedBooking) {
+    return { ok: false, message: "We could not record the bank transfer claim." };
+  }
+
+  await sendStaffBookingEmail({
+    guestName: booking.guest_name,
+    guestEmail: booking.guest_email,
+    guestPhone: booking.guest_phone,
+    roomName: booking.room_name,
+    arrivalDate: booking.arrival_date,
+    departureDate: booking.departure_date,
+    nights: booking.nights,
+    estimatedTotal: booking.estimated_total,
+    note: [
+      "Bank transfer claimed by guest — verify the transfer before confirming.",
+      booking.note ?? "",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  });
+
+  revalidatePath("/staff");
+  revalidatePath("/staff/calendar");
+  return { ok: true };
+}
+
 export async function setPendingBookingPaymentMethods(
   bookingId: string,
-  methods: Array<"card" | "promptpay">,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (!bookingId || methods.length === 0) {
+  if (!bookingId) {
     return { ok: false, message: "Payment method update failed. Try again." };
   }
 
@@ -503,7 +685,7 @@ export async function setPendingBookingPaymentMethods(
 
   try {
     await getStripe().paymentIntents.update(booking.stripe_payment_intent_id, {
-      payment_method_types: methods,
+      payment_method_types: ["card"],
     });
     return { ok: true };
   } catch {
@@ -543,9 +725,16 @@ export async function confirmBookingRequest(formData: FormData) {
   }
 
   const supabase = createStaffSupabaseClient();
+  const confirmedAt =
+    booking.bank_transfer_claimed_at && !booking.deposit_paid_at
+      ? booking.bank_transfer_claimed_at
+      : booking.deposit_paid_at;
   await supabase
     .from("booking_requests")
-    .update({ status: "confirmed" })
+    .update({
+      status: "confirmed",
+      ...(confirmedAt ? { deposit_paid_at: confirmedAt } : {}),
+    })
     .eq("id", bookingId);
 
   await recordStaffChatMessage({

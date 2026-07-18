@@ -348,7 +348,7 @@ export function BookingPaymentElement({
   publishableKey: string;
   returnUrl: string;
 }) {
-  const supportsPromptPay = currency === "thb";
+  const supportsPromptPay = false;
   const [method, setMethod] = useState<PayMethod>(
     supportsPromptPay ? "promptpay" : "card",
   );
@@ -368,10 +368,7 @@ export function BookingPaymentElement({
     setMethodError(null);
 
     startUpdatingMethods(() => {
-      void setPendingBookingPaymentMethods(
-        bookingId,
-        method === "promptpay" ? ["promptpay"] : ["card"],
-      ).then((result) => {
+      void setPendingBookingPaymentMethods(bookingId).then((result) => {
         if (cancelled) {
           return;
         }
