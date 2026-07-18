@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import type { PropertyCurrency } from "@/lib/currency";
 import { getStripeCurrencyCode } from "@/lib/currency";
+import { STRIPE_BANK_CHARGE_RATE } from "@/lib/payment-pricing";
 import { getSiteUrl } from "@/lib/site-url";
 
 let stripeClient: Stripe | null = null;
@@ -67,6 +68,8 @@ type CreateDepositPaymentIntentInput = {
   arrival: string;
   departure: string;
   depositAmount: number;
+  stayTotal: number;
+  surcharge: number;
   currency: PropertyCurrency;
   propertyName: string;
   hasPromotion: boolean;
@@ -79,6 +82,8 @@ export async function createDepositPaymentIntent({
   arrival,
   departure,
   depositAmount,
+  stayTotal,
+  surcharge,
   currency,
   propertyName,
   hasPromotion,
@@ -90,11 +95,6 @@ export async function createDepositPaymentIntent({
 
   const stripeCurrency = getStripeCurrencyCode(currency);
 
-  // THB: card + PromptPay (Thai QR). USD: card only.
-  // PromptPay must be enabled in the Stripe Dashboard for the account.
-  const paymentMethodTypes =
-    stripeCurrency === "thb" ? (["card", "promptpay"] as const) : (["card"] as const);
-
   return stripe.paymentIntents.create({
     amount: depositAmount * 100,
     currency: stripeCurrency,
@@ -104,9 +104,12 @@ export async function createDepositPaymentIntent({
       booking_id: bookingId,
       room_name: roomName,
       stay_description: description,
-      payment_methods: paymentMethodTypes.join(","),
+      stay_total: String(stayTotal),
+      bank_charge: String(surcharge),
+      bank_charge_rate: String(STRIPE_BANK_CHARGE_RATE),
+      payment_methods: "card",
     },
-    payment_method_types: [...paymentMethodTypes],
+    payment_method_types: ["card"],
   });
 }
 

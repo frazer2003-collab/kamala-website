@@ -25,6 +25,7 @@ import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 import { isRoomBookable } from "@/lib/room-availability";
 import { isStayStatus } from "@/lib/stay-status";
 import { getConfirmedBookings } from "@/lib/booking-requests";
+import { calculateStripeChargeAmount } from "@/lib/payment-pricing";
 import {
   findUnitAssignmentConflict,
   getRoomUnitById,
@@ -35,7 +36,6 @@ import {
 } from "@/lib/room-units";
 import { getChannelReservations } from "@/lib/room-blocks";
 import {
-  calculateDepositAmount,
   createDepositPaymentIntent,
   getStripe,
   getStripeMinimumChargeAmount,
@@ -335,7 +335,8 @@ export async function createBookingRequest(
     promotions,
   });
   const estimatedTotal = quote.total;
-  const depositAmount = calculateDepositAmount(estimatedTotal);
+  const stripeCharge = calculateStripeChargeAmount(estimatedTotal);
+  const depositAmount = stripeCharge.totalDue;
   const minimumCharge = getStripeMinimumChargeAmount(propertySettings.currency);
 
   if (depositAmount < minimumCharge) {
@@ -404,6 +405,8 @@ export async function createBookingRequest(
       arrival,
       departure,
       depositAmount,
+      stayTotal: stripeCharge.stayTotal,
+      surcharge: stripeCharge.surcharge,
       currency: propertySettings.currency,
       propertyName: propertySettings.propertyName,
       hasPromotion: quote.hasPromotion,
