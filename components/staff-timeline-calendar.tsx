@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, type ReactNode } from "react";
+import { memo, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { CalendarJumpToToday } from "@/components/calendar-jump-to-today";
 import {
@@ -414,14 +414,6 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       const closedColumn = saleStatus === "closed";
       const soldOutColumn = saleStatus === "sold-out";
       const blockForDay = getRoomBlockForDay(room.id, day.iso, manualClosures);
-      const firstBooking = roomBookings.find(
-        (booking) =>
-          booking.arrivalDate <= day.iso && booking.departureDate > day.iso,
-      );
-      const firstChannel = channelReservations.find(
-        (reservation) =>
-          reservation.startDate <= day.iso && reservation.endDate > day.iso,
-      );
       const isSelected =
         (selectedRoomId === room.id && selectedDate === day.iso) ||
         Boolean(
@@ -431,6 +423,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       const weekday = day.date.getDay();
       const percentOff = getBestPercentOffForNight(room.id, day.iso, promotions);
       const rate = getPromoRateForNight(room.id, day.iso, room.rate, promotions);
+      const dayHref = getTimelineDayHref(room.id, day.iso, monthKey);
 
       return {
         iso: day.iso,
@@ -449,34 +442,15 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         statusHref: isPast
           ? undefined
           : saleStatus === "sold-out"
-            ? getTimelineDayHref(room.id, day.iso, monthKey)
+            ? dayHref
             : getStatusCellHref(room.id, day.iso, monthKey, manualClosures),
-        bookedHref: isPast
-          ? undefined
-          : netBooked > 1
-            ? `${getTimelineDayHref(room.id, day.iso, monthKey)}&mode=stays`
-            : firstBooking
-              ? getTimelineBarHref(
-                  {
-                    kind: "booking",
-                    itemKey: firstBooking.databaseId ?? firstBooking.id,
-                  },
-                  monthKey,
-                )
-              : firstChannel
-                ? getTimelineBarHref(
-                    {
-                      kind: "channel",
-                      itemKey: firstChannel.databaseId ?? firstChannel.id,
-                    },
-                    monthKey,
-                  )
-                : getTimelineDayHref(room.id, day.iso, monthKey),
+        // Day actions panel only — never deep-link into a booking/block detail.
+        bookedHref: isPast ? undefined : dayHref,
         allotmentHref: isPast
           ? undefined
           : canManage
             ? getTimelineAllotmentHref(room.id, day.iso, monthKey)
-            : getTimelineDayHref(room.id, day.iso, monthKey),
+            : dayHref,
         isSelected,
         rate,
         baseRate: room.rate,
@@ -501,6 +475,8 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
 
   const firstFutureDay = dayMetrics.find((day) => !day.isPast && day.inCurrentMonth)?.iso
     ?? dayMetrics.find((day) => !day.isPast)?.iso;
+  const [showInventory, setShowInventory] = useState(false);
+  const needsAssignment = unassignedCount > 0;
 
   return (
     <section aria-label={room.name} className="extranet-room">
@@ -509,10 +485,34 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         style={{ ["--timeline-days" as string]: dayCount }}
       >
         <div className="extranet-room__title">
-          <h2>{room.name}</h2>
-          <p>{room.sleeps}</p>
+          <h2>{room.shortName}</h2>
+          <p>
+            <span className="extranet-room__fullname">{room.name}</span>
+            <span className="extranet-room__sleeps">{room.sleeps}</span>
+          </p>
         </div>
         <div className="extranet-room__actions">
+          <button
+            aria-controls={`extranet-inventory-${room.id}`}
+            aria-expanded={showInventory}
+            className={[
+              "extranet-room__inventory-toggle",
+              needsAssignment ? "extranet-room__inventory-toggle--attention" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => setShowInventory((open) => !open)}
+            type="button"
+          >
+            <span className="extranet-room__inventory-toggle-label">
+              {showInventory ? "Hide availability" : "Availability"}
+            </span>
+            {needsAssignment ? (
+              <span className="extranet-room__inventory-toggle-badge">
+                {unassignedCount} need room #
+              </span>
+            ) : null}
+          </button>
           <Link className="extranet-room__rates" href="/staff/promotions">
             Edit rates
           </Link>
@@ -527,8 +527,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         </div>
       </div>
 
+      {showInventory ? (
       <div
-        className="extranet-room__grid"
+        className="extranet-room__grid extranet-room__grid--inventory"
+        id={`extranet-inventory-${room.id}`}
         style={{ ["--timeline-days" as string]: dayCount }}
       >
         <MetricRowLabel hint="Click a day to open, close, or mark sold out">
@@ -719,35 +721,17 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           </>
         ) : null}
 
-        {typeUnits.length > 0 ? (
-          <>
-            <div className="extranet-units-heading" style={{ gridColumn: "1 / -1" }}>
-              Room numbers
-            </div>
-            {typeUnits.map((unit) => (
-              <UnitReservationRow
-                bookings={roomBookings}
-                calendarDays={calendarDays}
-                channelReservations={channelReservations}
-                currentRoomId={room.id}
-                dayMetrics={dayMetrics}
-                key={unit.id}
-                monthKey={monthKey}
-                roomShortNameById={roomShortNameById}
-                selectedBlockKey={selectedBlockKey}
-                selectedBookingKey={selectedBookingKey}
-                unit={unit}
-              />
-            ))}
-          </>
-        ) : null}
-
         <MetricRowLabel className="extranet-row--inventory">Net booked</MetricRowLabel>
         {dayMetrics.map((day) => (
           <DayCell
-            ariaLabel={`${day.netBooked} booked on ${day.iso}`}
+            ariaLabel={
+              day.netBooked > 0
+                ? `${day.netBooked} booked on ${day.iso}. Open day actions for stays or walk-in.`
+                : `No bookings on ${day.iso}. Open day actions.`
+            }
             className={[
               "extranet-cell--metric",
+              "extranet-cell--clickable",
               "extranet-row--inventory",
               day.isPast ? "extranet-cell--past" : "",
               !day.inCurrentMonth ? "extranet-cell--muted" : "",
@@ -813,6 +797,35 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           </DayCell>
         ))}
       </div>
+      ) : null}
+
+      {typeUnits.length > 0 ? (
+        <div
+          className="extranet-room__grid extranet-room__grid--units"
+          style={{ ["--timeline-days" as string]: dayCount }}
+        >
+          <div className="extranet-units-heading" style={{ gridColumn: "1 / -1" }}>
+            Room numbers
+          </div>
+          {typeUnits.map((unit) => (
+            <UnitReservationRow
+              bookings={roomBookings}
+              calendarDays={calendarDays}
+              channelReservations={channelReservations}
+              currentRoomId={room.id}
+              dayMetrics={dayMetrics}
+              key={unit.id}
+              monthKey={monthKey}
+              roomShortNameById={roomShortNameById}
+              selectedBlockKey={selectedBlockKey}
+              selectedBookingKey={selectedBookingKey}
+              unit={unit}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="extranet-room__no-units">No room numbers set up for this type yet.</p>
+      )}
     </section>
   );
 });
@@ -835,8 +848,6 @@ type StaffTimelineCalendarProps = {
   currency: PropertyCurrency;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
-  /** desk = status + assign + doors; full = also rates / net booked */
-  densityMode?: "desk" | "full";
 };
 
 export function StaffTimelineCalendar({
@@ -857,17 +868,13 @@ export function StaffTimelineCalendar({
   currency,
   roomUnits,
   occupancies,
-  densityMode = "desk",
 }: StaffTimelineCalendarProps) {
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
 
   return (
     <div
-      className={[
-        "staff-extranet",
-        densityMode === "desk" ? "staff-extranet--desk" : "staff-extranet--full",
-      ].join(" ")}
+      className="staff-extranet staff-extranet--full"
       style={getCalendarColorStyleProps(calendarColors)}
     >
       <CalendarJumpToToday />

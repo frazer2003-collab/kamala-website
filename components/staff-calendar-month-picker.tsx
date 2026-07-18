@@ -7,14 +7,12 @@ type StaffCalendarMonthPickerProps = {
   monthKey: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
-  densityMode?: "desk" | "full";
 };
 
 function buildMonthHref(
   monthKey: string,
   selectedBookingKey?: string,
   selectedBlockKey?: string,
-  densityMode: "desk" | "full" = "desk",
 ) {
   const params = new URLSearchParams({ month: monthKey });
 
@@ -24,10 +22,6 @@ function buildMonthHref(
     params.set("block", selectedBlockKey);
   }
 
-  if (densityMode === "full") {
-    params.set("view", "full");
-  }
-
   return `/staff/calendar?${params.toString()}`;
 }
 
@@ -35,7 +29,6 @@ export function StaffCalendarMonthPicker({
   monthKey,
   selectedBookingKey,
   selectedBlockKey,
-  densityMode = "desk",
 }: StaffCalendarMonthPickerProps) {
   const router = useRouter();
   const { year, month } = parseCalendarMonth(monthKey);
@@ -54,9 +47,7 @@ export function StaffCalendarMonthPicker({
           if (!next || !/^\d{4}-\d{2}$/.test(next)) {
             return;
           }
-          router.push(
-            buildMonthHref(next, selectedBookingKey, selectedBlockKey, densityMode),
-          );
+          router.push(buildMonthHref(next, selectedBookingKey, selectedBlockKey));
         }}
         type="month"
         value={monthKey}

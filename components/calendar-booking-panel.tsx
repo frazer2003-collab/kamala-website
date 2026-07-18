@@ -13,6 +13,8 @@ type CalendarBookingPanelProps = {
   databaseId: string;
   monthKey: string;
   canManage: boolean;
+  /** Confirmed stays only — awaiting reservations are declined from the inbox. */
+  canCancelStay?: boolean;
   guestName: string;
   guestEmail: string;
   guestPhone: string;
@@ -44,6 +46,7 @@ export function CalendarBookingPanel({
   databaseId,
   monthKey,
   canManage,
+  canCancelStay = true,
   guestName,
   guestEmail,
   guestPhone,
@@ -275,47 +278,49 @@ export function CalendarBookingPanel({
         </button>
       </form>
 
-      {confirmCancel ? (
-        <div className="calendar-cancel-confirm">
-          <p className="calendar-cancel-confirm__summary">
-            Cancel <strong>{fields.guestName || guestName}</strong> for{" "}
-            <strong>
-              {formatStayDates(
-                fields.arrivalDate || arrivalDate,
-                fields.departureDate || departureDate,
-              )}
-            </strong>
-            ? This removes the stay from the calendar
-            {depositPaid ? " and releases inventory held by the payment" : ""}.
-          </p>
-          <div className="calendar-cancel-confirm__actions">
-            <form action={cancelAction}>
-              <button className="button button--danger" disabled={!canManage} type="submit">
-                Yes, cancel stay
+      {canCancelStay ? (
+        confirmCancel ? (
+          <div className="calendar-cancel-confirm">
+            <p className="calendar-cancel-confirm__summary">
+              Cancel <strong>{fields.guestName || guestName}</strong> for{" "}
+              <strong>
+                {formatStayDates(
+                  fields.arrivalDate || arrivalDate,
+                  fields.departureDate || departureDate,
+                )}
+              </strong>
+              ? This removes the stay from the calendar
+              {depositPaid ? " and releases inventory held by the payment" : ""}.
+            </p>
+            <div className="calendar-cancel-confirm__actions">
+              <form action={cancelAction}>
+                <button className="button button--danger" disabled={!canManage} type="submit">
+                  Yes, cancel stay
+                </button>
+              </form>
+              <button
+                className="button button--secondary"
+                disabled={!canManage}
+                onClick={() => setConfirmCancel(false)}
+                type="button"
+              >
+                Keep stay
               </button>
-            </form>
+            </div>
+          </div>
+        ) : (
+          <div className="detail-actions">
             <button
               className="button button--secondary"
               disabled={!canManage}
-              onClick={() => setConfirmCancel(false)}
+              onClick={() => setConfirmCancel(true)}
               type="button"
             >
-              Keep stay
+              Cancel stay
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="detail-actions">
-          <button
-            className="button button--secondary"
-            disabled={!canManage}
-            onClick={() => setConfirmCancel(true)}
-            type="button"
-          >
-            Cancel stay
-          </button>
-        </div>
-      )}
+        )
+      ) : null}
     </>
   );
 }

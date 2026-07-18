@@ -111,6 +111,12 @@ export function CalendarDayPanel({
             ))}
           </div>
         )}
+        <div className="calendar-day-panel__choices">
+          <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
+            <strong>Walk-in booking</strong>
+            <span>Add another confirmed stay on this room type for tonight.</span>
+          </Link>
+        </div>
         <p className="detail-help">
           <Link href={dayHref}>Back to day actions</Link>
         </p>
@@ -395,7 +401,28 @@ export function CalendarDayPanel({
       <p className="calendar-day-panel__intro">
         {formatDisplayDate(date)} · <strong>{room.name}</strong>
       </p>
+      {dayStays.length > 0 ? (
+        <>
+          <p className="detail-help">
+            {dayStays.length === 1
+              ? "1 stay already on this night."
+              : `${dayStays.length} stays already on this night.`}
+          </p>
+          <div className="calendar-day-panel__choices">
+            {dayStays.map((stay) => (
+              <Link className="calendar-day-choice" href={stay.href} key={stay.key}>
+                <strong>{stay.label}</strong>
+                <span>{stay.sublabel}</span>
+              </Link>
+            ))}
+          </div>
+        </>
+      ) : null}
       <div className="calendar-day-panel__choices">
+        <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
+          <strong>Walk-in booking</strong>
+          <span>Add a confirmed stay directly from the front desk.</span>
+        </Link>
         <Link className="calendar-day-choice" href={`${dayHref}&mode=allotment`}>
           <strong>Change allotment</strong>
           <span>
@@ -410,10 +437,6 @@ export function CalendarDayPanel({
             Not for sale — mark nights closed in the status row (not as a
             reservation).
           </span>
-        </Link>
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-          <strong>Walk-in booking</strong>
-          <span>Add a confirmed stay directly from the front desk.</span>
         </Link>
       </div>
       <p className="detail-help">

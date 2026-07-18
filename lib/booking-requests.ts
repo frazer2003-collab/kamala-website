@@ -1,4 +1,4 @@
-import { bookings, type Booking, type BookingStatus } from "@/lib/content";
+import { type Booking, type BookingStatus } from "@/lib/content";
 import { getCalendarMonthBounds, monthOverlapsBooking } from "@/lib/calendar";
 import {
   createStaffSupabaseClient,
@@ -91,13 +91,6 @@ function mapBookingRequest(
     staffNote: row.staff_note ?? "",
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
     roomNumber: null,
-  };
-}
-
-function mapFallbackBooking(booking: Booking): StaffBooking {
-  return {
-    ...booking,
-    databaseId: null,
   };
 }
 

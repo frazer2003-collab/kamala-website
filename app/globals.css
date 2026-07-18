@@ -4152,6 +4152,72 @@ textarea:focus {
   color: var(--color-muted);
 }
 
+.staff-email-list__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.staff-email-access select {
+  min-height: 2.4rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.staff-settings-access {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.staff-settings-access legend {
+  margin-bottom: 0.15rem;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.staff-settings-access__option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.staff-settings-access__option strong {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.staff-settings-access__option span span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.staff-settings-access__option:has(input:checked) {
+  border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
+  background: var(--color-maroon-wash);
+}
+
 .staff-empty-state--compact {
   padding: var(--space-5);
 }
@@ -6417,6 +6483,10 @@ textarea:focus {
 }
 
 .staff-extranet__scroll {
+  --extranet-dates-sticky-offset: 3.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
   overflow: auto;
   max-height: min(82vh, 58rem);
   overscroll-behavior: contain;
@@ -6516,10 +6586,15 @@ textarea:focus {
 }
 
 .extranet-room {
-  border-top: 1px solid var(--color-border);
+  --extranet-room-band: color-mix(in srgb, var(--calendar-color-available) 34%, white);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .extranet-room__header {
+  position: sticky;
+  top: var(--extranet-dates-sticky-offset, 3.15rem);
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -6527,9 +6602,9 @@ textarea:focus {
   min-width: calc(
     var(--extranet-label-width, 10.5rem) + var(--timeline-days) * var(--extranet-day-width, 3.35rem)
   );
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-muted);
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-success) 22%, var(--color-border));
+  background: var(--extranet-room-band);
 }
 
 .extranet-room__title {
@@ -6539,24 +6614,37 @@ textarea:focus {
   flex: 0 1 auto;
   min-width: 0;
   padding: 0.15rem 0.5rem 0.15rem 0;
-  background: var(--color-surface-muted);
-  box-shadow: 0.75rem 0 0.5rem -0.25rem var(--color-surface-muted);
+  background: var(--extranet-room-band);
+  box-shadow: 0.75rem 0 0.5rem -0.25rem var(--extranet-room-band);
 }
 
 .extranet-room__title h2,
 .extranet-room__title h3 {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 
 .extranet-room__title p {
-  margin: 0.1rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  margin: 0.15rem 0 0;
   color: var(--color-muted);
   font-size: 0.72rem;
   font-weight: 650;
+  line-height: 1.3;
+}
+
+.extranet-room__fullname {
+  min-width: 0;
+}
+
+.extranet-room__sleeps {
+  color: var(--color-soft);
 }
 
 .extranet-room__actions {
@@ -6569,8 +6657,83 @@ textarea:focus {
   gap: var(--space-2);
   margin-left: auto;
   padding-left: var(--space-2);
-  background: var(--color-surface-muted);
-  box-shadow: -0.75rem 0 0.5rem -0.25rem var(--color-surface-muted);
+  background: var(--extranet-room-band);
+  box-shadow: -0.75rem 0 0.5rem -0.25rem var(--extranet-room-band);
+}
+
+.extranet-room__inventory-toggle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.extranet-room__inventory-toggle::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: 0.15rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-0.1rem);
+}
+
+.extranet-room__inventory-toggle[aria-expanded="true"]::after {
+  transform: rotate(-135deg) translateY(-0.05rem);
+}
+
+.extranet-room__inventory-toggle:hover {
+  background: var(--color-maroon-wash);
+  color: var(--color-maroon-deep);
+}
+
+.extranet-room__inventory-toggle:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+.extranet-room__inventory-toggle--attention {
+  border-color: color-mix(in srgb, var(--color-warning) 55%, var(--color-border));
+  background: var(--color-warning-wash);
+  color: var(--color-warning-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+.extranet-room__inventory-toggle--attention:hover {
+  background: color-mix(in srgb, var(--color-warning-wash) 70%, white);
+  color: var(--color-warning-ink);
+}
+
+.extranet-room__inventory-toggle-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-warning) 22%, white);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.extranet-room__grid--inventory {
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-muted) 55%, white);
+}
+
+.extranet-room__no-units {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  color: var(--color-muted);
+  font-size: 0.82rem;
 }
 
 .extranet-room__rates {
@@ -6683,6 +6846,11 @@ textarea:focus {
   background: var(--color-surface);
   text-decoration: none;
   color: inherit;
+}
+
+.extranet-cell--clickable {
+  position: relative;
+  z-index: 2;
 }
 
 .extranet-cell--weekend {
@@ -6898,6 +7066,8 @@ textarea:focus {
   align-items: stretch;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
+  /* Keep reservation bars from overlapping metric rows below (net booked, rates). */
+  overflow: hidden;
 }
 
 .extranet-reservations--assign {
@@ -7237,13 +7407,13 @@ textarea:focus {
     display: none;
   }
 
-  .extranet-room__title p {
+  .extranet-room__fullname {
     display: none;
   }
-}
 
-.staff-extranet--desk .extranet-row--inventory {
-  display: none;
+  .staff-extranet__scroll {
+    gap: 0.7rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

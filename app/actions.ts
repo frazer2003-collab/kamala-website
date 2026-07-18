@@ -3,10 +3,14 @@
 import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 import { sendGuestBookingEmail } from "@/lib/email";
-import { recordStaffChatMessage, seedGuestNoteMessage } from "@/lib/booking-chat";
+import {
+  getGuestChatUrl,
+  recordStaffChatMessage,
+  seedGuestNoteMessage,
+} from "@/lib/booking-chat";
 import { formatMoneySuffix, getStripeCurrencyCode } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
-import { requireStaffSession } from "@/lib/staff-auth";
+import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
 import { hasCapacityForStay, getUnavailableStayDays } from "@/lib/booking-capacity";
 import { appendOverlapErrorToHref } from "@/lib/stay-overlap";
 import { releaseBookingReservation } from "@/lib/booking-payments";
@@ -544,6 +548,7 @@ export async function confirmBookingRequest(formData: FormData) {
   await recordStaffChatMessage({
     booking: { ...booking, status: "confirmed" },
     body: message,
+    emailKind: "confirmation",
   });
 
   revalidatePath("/");
@@ -558,7 +563,7 @@ export async function updateConfirmedBooking(
   bookingId: string,
   formData: FormData,
 ) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const month = getValue(formData, "month");
   const arrival = getValue(formData, "arrival");
@@ -573,7 +578,11 @@ export async function updateConfirmedBooking(
   const roomUnitId = roomUnitIdRaw || null;
   const booking = await getBookingForStaff(bookingId);
 
-  if (!bookingId || !booking || booking.status !== "confirmed" || booking.id !== bookingId) {
+  const isAssignableCalendarStay =
+    booking?.status === "confirmed" ||
+    (booking?.status === "awaiting" && Boolean(booking.deposit_paid_at));
+
+  if (!bookingId || !booking || !isAssignableCalendarStay || booking.id !== bookingId) {
     redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
   }
 
@@ -607,8 +616,14 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-dates`);
   }
 
+  // Keep capacity checks when dates change. When only assigning a room (or
+  // editing notes on an existing stay — including past stays), skip so staff
+  // can still assign a door number after the fact.
+  const datesUnchanged =
+    arrival === booking.arrival_date && departure === booking.departure_date;
+
   const room = await getRoomForBooking(booking.room_id);
-  if (room) {
+  if (room && !datesUnchanged) {
     await redirectIfStayOverlaps(
       bookingHref,
       booking.room_id,
@@ -722,7 +737,7 @@ export async function updateConfirmedBooking(
 
 /** Quick door-number assign from the Needs room # timeline row. */
 export async function assignStayRoomUnit(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const kind = getValue(formData, "kind");
   const stayId = getValue(formData, "stay-id");
@@ -921,7 +936,7 @@ export async function cancelConfirmedBooking(
   month: string,
   _formData: FormData,
 ) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const booking = await getBookingForStaff(bookingId);
 
@@ -933,14 +948,6 @@ export async function cancelConfirmedBooking(
 
   if (booking.deposit_paid_at) {
     await releaseBookingReservation(bookingId);
-  } else {
-    const room = await getRoomForBooking(booking.room_id);
-    if (room) {
-      await supabase
-        .from("rooms")
-        .update({ available_count: room.availableCount + 1 })
-        .eq("id", booking.room_id);
-    }
   }
 
   await supabase
@@ -972,7 +979,7 @@ function formatBookingEmailDate(iso: string) {
 }
 
 export async function createWalkInBooking(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const month = getValue(formData, "month");
   const roomId = getValue(formData, "room-id");
@@ -1055,7 +1062,7 @@ export async function createWalkInBooking(formData: FormData) {
       stay_status: "checked-in",
       conversation_token: randomUUID(),
     })
-    .select("id")
+    .select("id, conversation_token")
     .single();
 
   if (error || !data) {
@@ -1064,16 +1071,14 @@ export async function createWalkInBooking(formData: FormData) {
     );
   }
 
-  await supabase
-    .from("rooms")
-    .update({ available_count: Math.max(0, room.availableCount - 1) })
-    .eq("id", room.id);
-
   if (guestEmail !== walkInEmailFallback) {
     const settings = await getPropertySettings();
     const propertyName = settings.propertyName || "Kamala";
     const arrivalLabel = formatBookingEmailDate(arrival);
     const departureLabel = formatBookingEmailDate(departure);
+    const chatUrl = data.conversation_token
+      ? getGuestChatUrl(data.conversation_token)
+      : null;
     const body = [
       `Hello ${guestName},`,
       "",
@@ -1085,7 +1090,7 @@ export async function createWalkInBooking(formData: FormData) {
       `Nights: ${nights}`,
       settings.checkInFrom ? `Check-in time: from ${settings.checkInFrom}` : "",
       "",
-      "If any of these details look wrong, just reply to this email and we will help.",
+      "If any of these details look wrong, message us with the conversation link below.",
     ]
       .filter(Boolean)
       .join("\n");
@@ -1094,6 +1099,7 @@ export async function createWalkInBooking(formData: FormData) {
       to: guestEmail,
       subject: `Your booking at ${propertyName} is confirmed`,
       body,
+      chatUrl,
     });
   }
 
@@ -1106,7 +1112,7 @@ export async function createWalkInBooking(formData: FormData) {
 }
 
 export async function createRoomBlock(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const month = getValue(formData, "month");
   const roomId = getValue(formData, "room-id");
@@ -1158,7 +1164,7 @@ export async function updateChannelReservation(
   month: string,
   formData: FormData,
 ) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const monthKey = month || "";
   const fallbackHref = monthKey
@@ -1172,7 +1178,7 @@ export async function updateChannelReservation(
   const supabase = createStaffSupabaseClient();
   const { data: block } = await supabase
     .from("room_blocks")
-    .select("id, ical_feed_id, room_id")
+    .select("id, ical_feed_id, room_id, start_date, end_date")
     .eq("id", blockId)
     .maybeSingle();
 
@@ -1219,7 +1225,10 @@ export async function updateChannelReservation(
     redirect(`${blockHref}&error=invalid-dates`);
   }
 
-  if (room) {
+  const datesUnchanged =
+    arrival === block.start_date && departure === block.end_date;
+
+  if (room && !datesUnchanged) {
     await redirectIfStayOverlaps(
       blockHref,
       block.room_id,
@@ -1333,7 +1342,7 @@ export async function updateChannelReservation(
 }
 
 export async function removeRoomBlock(blockId: string, month: string, _formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   if (!blockId) {
     redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
@@ -1347,7 +1356,7 @@ export async function removeRoomBlock(blockId: string, month: string, _formData:
 }
 
 export async function bulkUpdateRoomAvailability(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const month = getValue(formData, "month");
   const roomId = getValue(formData, "room-id");
@@ -1461,7 +1470,7 @@ export async function bulkUpdateRoomAvailability(formData: FormData) {
 }
 
 export async function updateRoomDayAllotment(formData: FormData) {
-  await requireStaffSession();
+  await requireStaffCalendarWrite();
 
   const month = getValue(formData, "month");
   const roomId = getValue(formData, "room-id");

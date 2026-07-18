@@ -6,8 +6,13 @@ import {
   requireStaffSession,
   setStaffSessionCookie,
   verifyAdminCredentials,
+  verifySharedStaffPassword,
 } from "@/lib/staff-auth";
-import { isValidStaffNotificationEmail } from "@/lib/staff-notification-emails";
+import {
+  getStaffNotificationEmailByAddress,
+  isStaffCalendarAccess,
+  isValidStaffNotificationEmail,
+} from "@/lib/staff-notification-emails";
 import {
   toPropertySettingsRow,
   type PropertySettingsInput,
@@ -110,15 +115,27 @@ export async function loginStaff(
   const password = getValue(formData, "password");
 
   if (!username || !password) {
-    return { error: "Enter your username and password." };
+    return { error: "Enter your username or staff email and password." };
   }
 
-  if (!verifyAdminCredentials(username, password)) {
-    return { error: "That username or password did not match." };
+  if (verifyAdminCredentials(username, password)) {
+    await setStaffSessionCookie({
+      calendarAccess: "read_write",
+      subject: "admin",
+    });
+    redirect(safeStaffPath(getValue(formData, "next")));
   }
 
-  await setStaffSessionCookie();
-  redirect(safeStaffPath(getValue(formData, "next")));
+  const staffEmail = await getStaffNotificationEmailByAddress(username);
+  if (staffEmail && verifySharedStaffPassword(password)) {
+    await setStaffSessionCookie({
+      calendarAccess: staffEmail.calendarAccess,
+      subject: staffEmail.email,
+    });
+    redirect(safeStaffPath(getValue(formData, "next")));
+  }
+
+  return { error: "That username or password did not match." };
 }
 
 export async function logoutStaff() {
@@ -138,6 +155,10 @@ export async function addStaffNotificationEmail(
 
   const email = getValue(formData, "email").toLowerCase();
   const label = getValue(formData, "label") || null;
+  const calendarAccessRaw = getValue(formData, "calendar-access");
+  const calendarAccess = isStaffCalendarAccess(calendarAccessRaw)
+    ? calendarAccessRaw
+    : "read_write";
 
   if (!isValidStaffNotificationEmail(email)) {
     return { error: "Enter a valid email address." };
@@ -147,6 +168,7 @@ export async function addStaffNotificationEmail(
   const { error } = await supabase.from("staff_notification_emails").insert({
     email,
     label,
+    calendar_access: calendarAccess,
   });
 
   if (error) {
@@ -160,11 +182,47 @@ export async function addStaffNotificationEmail(
       };
     }
 
+    if (error.message?.includes("calendar_access") || error.code === "42703") {
+      return {
+        error:
+          "Run supabase/migrate-staff-calendar-access.sql in Supabase before setting calendar permissions.",
+      };
+    }
+
     return { error: "Could not save that email. Try again." };
   }
 
   revalidatePath("/staff/settings");
-  return { success: `${email} will receive booking notifications.` };
+  return {
+    success:
+      calendarAccess === "read"
+        ? `${email} can view the calendar (read only). They will not get booking alerts.`
+        : `${email} will get booking alerts and can edit the calendar.`,
+  };
+}
+
+export async function updateStaffNotificationCalendarAccess(formData: FormData) {
+  await requireStaffSession();
+
+  const emailId = getValue(formData, "email-id");
+  const calendarAccessRaw = getValue(formData, "calendar-access");
+
+  if (!emailId || !hasStaffSupabaseConfig() || !isStaffCalendarAccess(calendarAccessRaw)) {
+    redirect("/staff/settings");
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { error } = await supabase
+    .from("staff_notification_emails")
+    .update({ calendar_access: calendarAccessRaw })
+    .eq("id", emailId);
+
+  if (error) {
+    redirect("/staff/settings?error=calendar-access");
+  }
+
+  revalidatePath("/staff/settings");
+  redirect("/staff/settings?saved=calendar-access");
 }
 
 export async function removeStaffNotificationEmail(formData: FormData) {

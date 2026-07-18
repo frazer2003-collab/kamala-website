@@ -31,15 +31,20 @@ export function StaffLoginForm({ nextPath, configured }: StaffLoginFormProps) {
       ) : null}
 
       <div className="field-pair">
-        <label htmlFor="staff-username">Username</label>
+        <label htmlFor="staff-username">Username or staff email</label>
         <input
           autoComplete="username"
           disabled={!configured}
           id="staff-username"
           name="username"
+          placeholder="admin or staff@example.com"
           required
           type="text"
         />
+        <span className="field-help">
+          Staff emails use the shared staff password. Calendar access is set under
+          Settings.
+        </span>
       </div>
 
       <div className="field-pair">

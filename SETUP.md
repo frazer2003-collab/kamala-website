@@ -47,6 +47,7 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 4. `supabase/migrate-room-blocks.sql`
 5. `supabase/migrate-stripe-deposit.sql`
 6. `supabase/migrate-staff-emails.sql`
+6b. `supabase/migrate-staff-calendar-access.sql` (calendar read vs read & write on staff emails)
 7. `supabase/migrate-room-promotions.sql`
 8. `supabase/migrate-booking-chat.sql`
 9. `supabase/migrate-property-settings.sql`

@@ -437,9 +437,13 @@ export function getCalendarMonthStats({
   let bookedNights = 0;
   let availableNights = 0;
 
+  const channelStays = blocks.filter(isChannelReservation);
+
   for (const day of monthDays) {
     arrivals += bookings.filter((booking) => booking.arrivalDate === day.iso).length;
+    arrivals += channelStays.filter((stay) => stay.startDate === day.iso).length;
     departures += bookings.filter((booking) => booking.departureDate === day.iso).length;
+    departures += channelStays.filter((stay) => stay.endDate === day.iso).length;
 
     for (const room of rooms) {
       availableNights += room.availableCount;
@@ -448,9 +452,7 @@ export function getCalendarMonthStats({
         bookingOccupiesDay(booking, day.iso),
       ).length;
 
-      const roomChannelBlocks = blocks.filter(
-        (block) => block.roomId === room.id && isChannelReservation(block),
-      );
+      const roomChannelBlocks = channelStays.filter((block) => block.roomId === room.id);
       bookedNights += roomChannelBlocks.filter((block) =>
         bookingOccupiesDay(
           { arrivalDate: block.startDate, departureDate: block.endDate },

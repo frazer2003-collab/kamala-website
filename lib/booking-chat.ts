@@ -361,11 +361,13 @@ export async function recordStaffChatMessage({
   body,
   senderEmail,
   skipNotify = false,
+  emailKind = "new-message",
 }: {
   booking: BookingRequestRow;
   body: string;
   senderEmail?: string;
   skipNotify?: boolean;
+  emailKind?: "welcome" | "new-message" | "confirmation";
 }) {
   const trimmed = body.trim();
   if (!trimmed) {
@@ -403,6 +405,7 @@ export async function recordStaffChatMessage({
       roomName: booking.room_name,
       message: trimmed,
       chatUrl,
+      kind: emailKind,
     });
     emailSent = notify.ok;
   }

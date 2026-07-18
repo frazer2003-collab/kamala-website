@@ -65,12 +65,8 @@ export async function fulfillBookingDeposit({
     return { ok: false as const, reason: "update-failed" as const };
   }
 
-  if (room) {
-    await supabase
-      .from("rooms")
-      .update({ available_count: Math.max(0, room.availableCount - 1) })
-      .eq("id", booking.room_id);
-  }
+  // Capacity is computed from overlapping paid/confirmed stays against
+  // rooms.available_count (inventory size). Do not mutate available_count here.
 
   await sendStaffBookingEmail({
     guestName: booking.guest_name,
@@ -119,13 +115,8 @@ export async function releaseBookingReservation(bookingId: string) {
     return { released: false as const };
   }
 
-  const room = await getRoomForBooking(booking.room_id);
-  if (room) {
-    await supabase
-      .from("rooms")
-      .update({ available_count: room.availableCount + 1 })
-      .eq("id", booking.room_id);
-  }
+  // Inventory is not mutated on pay/decline. Once the booking is declined or
+  // deleted by the caller, overlapping capacity checks free the unit again.
 
   revalidatePath("/");
   revalidatePath("/staff");

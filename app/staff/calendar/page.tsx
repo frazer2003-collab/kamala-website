@@ -45,7 +45,10 @@ import {
   occupancyFromBooking,
   occupancyFromChannelBlock,
 } from "@/lib/room-units";
-import { requireStaffSession } from "@/lib/staff-auth";
+import {
+  requireStaffSessionDetails,
+  staffCanWriteCalendar,
+} from "@/lib/staff-auth";
 import { STAY_STATUS_LABELS } from "@/lib/stay-status";
 import {
   formatOverlapErrorMessage,
@@ -81,12 +84,11 @@ export default async function StaffCalendarPage({
     error?: string;
     overlap?: string;
     detail?: string;
-    view?: string;
     assignGuest?: string;
     assignUnit?: string;
   }>;
 }) {
-  await requireStaffSession();
+  const staffSession = await requireStaffSessionDetails();
 
   const {
     month: monthParam,
@@ -100,17 +102,15 @@ export default async function StaffCalendarPage({
     error,
     overlap,
     detail: errorDetail,
-    view: viewParam,
     assignGuest,
     assignUnit,
   } = await searchParams;
   const { year, month } = parseCalendarMonth(monthParam);
   const monthKey = formatCalendarMonth(year, month);
-  const densityMode = viewParam === "full" ? "full" : "desk";
   const calendarDays = buildCalendarDays(year, month);
   const [confirmedBookings, calendarBlockData, dayInventory, rooms, settings, promotions, roomUnitsResult] =
     await Promise.all([
-      getConfirmedBookings(),
+      getConfirmedBookings({ year, month }),
       getStaffCalendarBlocks({ year, month }),
       getRoomDayInventoryForMonth({ year, month }),
       getStaffRooms(),
@@ -130,8 +130,6 @@ export default async function StaffCalendarPage({
     ...allAssignmentChannels.map(occupancyFromChannelBlock),
   ];
   const inventoryLookup = buildInventoryLookup(dayInventory.entries);
-  const channelCount = calendarBlocks.filter(isChannelReservation).length;
-  const manualClosureCount = calendarBlocks.length - channelCount;
   const unassignedCount =
     calendarBookings.filter((booking) => !booking.roomUnitId).length +
     calendarBlocks.filter(
@@ -162,12 +160,14 @@ export default async function StaffCalendarPage({
   const selectedRoom = selectedRoomId
     ? rooms.find((room) => room.id === selectedRoomId)
     : undefined;
+  const canWriteCalendar = staffCanWriteCalendar(staffSession);
   const canManage =
+    canWriteCalendar &&
     confirmedBookings.source === "supabase" &&
     calendarBlockData.source === "supabase" &&
     dayInventory.source === "supabase";
-  const canManageSelected = Boolean(selected?.databaseId);
-  const canManageBlock = Boolean(selectedBlock?.databaseId);
+  const canManageSelected = canManage && Boolean(selected?.databaseId);
+  const canManageBlock = canManage && Boolean(selectedBlock?.databaseId);
   const selectedKey = selected ? getStaffBookingKey(selected) : "";
   const selectedBlockKey = selectedBlock?.databaseId ?? "";
   const flashParams = new URLSearchParams({ month: monthKey });
@@ -186,9 +186,6 @@ export default async function StaffCalendarPage({
   if (created) {
     flashParams.set("created", created);
   }
-  if (densityMode === "full") {
-    flashParams.set("view", "full");
-  }
   if (assignGuest) {
     flashParams.set("assignGuest", assignGuest);
   }
@@ -197,39 +194,38 @@ export default async function StaffCalendarPage({
   }
   // Keep flash messages when closing the dialog; drop booking/block/room/date so the panel closes.
   const closeHref = `/staff/calendar?${flashParams.toString()}`;
-  const dismissFlashHref =
-    densityMode === "full"
-      ? `/staff/calendar?month=${monthKey}&view=full`
-      : `/staff/calendar?month=${monthKey}`;
+  const dismissFlashHref = `/staff/calendar?month=${monthKey}`;
   const overlapMessage =
     error === "overlap"
       ? formatOverlapErrorMessage(parseOverlapDays(overlap))
       : null;
   const formErrorMessage = (() => {
     const base =
-      error === "invalid-allotment"
-        ? "Enter how many rooms to sell (0 or more)."
-        : error === "invalid-name"
-          ? "Enter the guest name before saving."
-          : error === "invalid-phone"
-            ? "Enter a valid phone number with at least 7 digits."
-            : error === "invalid-email"
-              ? "Enter a valid email address, or leave it blank."
-              : error === "invalid-dates"
-                ? "Choose a stay between 1 and 21 nights."
-                : error === "invalid-room-number"
-                  ? "That room number cannot be used for this room type."
-                  : error === "room-number-taken"
-                    ? "That room number is already assigned for overlapping dates."
-                    : error === "room-unit-cache"
-                      ? "Room assignment isn’t available right now. Ask whoever set up the site to refresh the connection."
-                      : error === "room-unit-rpc"
-                        ? "Room assignment isn’t set up yet. Ask whoever set up the site to finish the room-number setup."
-                        : error === "room-unit-setup"
-                          ? "Room numbers aren’t ready on this site yet. Ask whoever set up the site to finish setup."
-                          : error === "save-failed"
-                            ? "Could not save this reservation."
-                            : overlapMessage;
+      error === "calendar-read-only"
+        ? "Your account can view the calendar but not make changes."
+        : error === "invalid-allotment"
+          ? "Enter how many rooms to sell (0 or more)."
+          : error === "invalid-name"
+            ? "Enter the guest name before saving."
+            : error === "invalid-phone"
+              ? "Enter a valid phone number with at least 7 digits."
+              : error === "invalid-email"
+                ? "Enter a valid email address, or leave it blank."
+                : error === "invalid-dates"
+                  ? "Choose a stay between 1 and 21 nights."
+                  : error === "invalid-room-number"
+                    ? "That room number cannot be used for this room type."
+                    : error === "room-number-taken"
+                      ? "That room number is already assigned for overlapping dates."
+                      : error === "room-unit-cache"
+                        ? "Room assignment isn’t available right now. Ask whoever set up the site to refresh the connection."
+                        : error === "room-unit-rpc"
+                          ? "Room assignment isn’t set up yet. Ask whoever set up the site to finish the room-number setup."
+                          : error === "room-unit-setup"
+                            ? "Room numbers aren’t ready on this site yet. Ask whoever set up the site to finish setup."
+                            : error === "save-failed"
+                              ? "Could not save this reservation."
+                              : overlapMessage;
 
     if (!base) {
       return null;
@@ -310,6 +306,11 @@ export default async function StaffCalendarPage({
           </Link>
         </div>
 
+        {!canWriteCalendar ? (
+          <p className="form-message form-message--setup" role="status">
+            Viewing only — your staff email has read-only calendar access.
+          </p>
+        ) : null}
         {confirmedBookings.error ? (
           <p className="form-message form-message--error" role="alert">
             {confirmedBookings.error}
@@ -405,15 +406,10 @@ export default async function StaffCalendarPage({
         <div className="calendar-board calendar-board--timeline">
           <StaffCalendarToolbar
             calendarColors={settings.calendarColors}
-            channelCount={channelCount}
-            closureCount={manualClosureCount}
-            densityMode={densityMode}
             monthKey={monthKey}
-            roomCount={rooms.length}
             selectedBlockKey={selectedBlockKey || undefined}
             selectedBookingKey={selectedKey || undefined}
             stats={monthStats}
-            stayCount={calendarBookings.length}
             unassignedCount={unassignedCount}
           />
 
@@ -426,7 +422,6 @@ export default async function StaffCalendarPage({
             calendarDays={calendarDays}
             canManage={canManage}
             currency={settings.currency}
-            densityMode={densityMode}
             inventoryLookup={inventoryLookup}
             monthKey={monthKey}
             monthLabel={formatCalendarMonthLabel(year, month)}
@@ -488,7 +483,12 @@ export default async function StaffCalendarPage({
                 key={selectedKey}
                 arrivalDate={selected.arrivalDate}
                 bookingKey={selectedKey}
-                canManage={canManageSelected && selected.status === "confirmed"}
+                canCancelStay={selected.status === "confirmed"}
+                canManage={
+                  canManageSelected &&
+                  (selected.status === "confirmed" ||
+                    (selected.status === "awaiting" && selected.depositPaid))
+                }
                 databaseId={selected.databaseId ?? ""}
                 departureDate={selected.departureDate}
                 guestEmail={selected.contact}
@@ -509,14 +509,16 @@ export default async function StaffCalendarPage({
               <p className="detail-help">
                 {selected.status === "awaiting" ? (
                   <>
-                    This stay is reserved by the guest payment. Confirm it from
-                    the requests page to finalize staff review.
+                    This stay is reserved by payment. You can still assign a room
+                    number here (including for past dates). Confirm the request
+                    from the inbox when ready.
                   </>
                 ) : (
                   <>
                     Assign a room number so the stay appears on the room-number
-                    rows. Saving updates dates, total, and assignment. To remove
-                    the stay, use Cancel stay — you will be asked to confirm.
+                    rows — this still works after the stay dates have passed.
+                    Saving updates dates, total, and assignment. To remove the
+                    stay, use Cancel stay — you will be asked to confirm.
                   </>
                 )}
               </p>

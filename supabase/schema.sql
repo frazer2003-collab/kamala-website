@@ -211,6 +211,8 @@ create table if not exists public.staff_notification_emails (
   id uuid primary key default gen_random_uuid(),
   email text not null unique,
   label text,
+  calendar_access text not null default 'read_write'
+    check (calendar_access in ('read', 'read_write')),
   created_at timestamptz not null default now(),
   constraint staff_notification_emails_email_format
     check (email ~* '^[^@]+@[^@]+\.[^@]+$')

@@ -105,10 +105,13 @@ export type RoomDayInventoryRow = {
   created_at: string;
 };
 
+export type StaffCalendarAccess = "read" | "read_write";
+
 export type StaffNotificationEmailRow = {
   id: string;
   email: string;
   label: string | null;
+  calendar_access: StaffCalendarAccess;
   created_at: string;
 };
 

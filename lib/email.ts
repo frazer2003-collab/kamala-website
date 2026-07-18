@@ -106,10 +106,12 @@ export async function sendGuestBookingEmail({
   to,
   subject,
   body,
+  chatUrl,
 }: {
   to: string;
   subject: string;
   body: string;
+  chatUrl?: string | null;
 }): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.BOOKING_EMAIL_FROM;
@@ -117,6 +119,24 @@ export async function sendGuestBookingEmail({
   if (!apiKey || !from) {
     return { ok: false, reason: "missing-config" };
   }
+
+  const text = chatUrl
+    ? [
+        body,
+        "",
+        "Message us about your stay here (save this link):",
+        chatUrl,
+      ].join("\n")
+    : body;
+
+  const chatHtml = chatUrl
+    ? `
+      <p style="margin-top: 24px;">
+        <a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: #5c2f35; color: #fff; text-decoration: none; border-radius: 8px;">Open your conversation</a>
+      </p>
+      <p style="color: #6b5559; font-size: 14px;">Use this private link to message us about your booking — we can talk back and forth there.</p>
+    `
+    : "";
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -128,10 +148,11 @@ export async function sendGuestBookingEmail({
       from,
       to,
       subject,
-      text: body,
+      text,
       html: `
         <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
           <p>${escapeHtml(body).replaceAll("\n", "<br />")}</p>
+          ${chatHtml}
         </div>
       `,
     }),
@@ -227,7 +248,7 @@ export async function sendGuestChatNotificationEmail({
   roomName: string;
   message: string;
   chatUrl: string;
-  kind?: "welcome" | "new-message";
+  kind?: "welcome" | "new-message" | "confirmation";
 }): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.BOOKING_EMAIL_FROM;
@@ -239,7 +260,9 @@ export async function sendGuestChatNotificationEmail({
   const subject =
     kind === "welcome"
       ? `Your Kamala conversation link · ${roomName}`
-      : `You have a new message about your stay · ${roomName}`;
+      : kind === "confirmation"
+        ? `Your stay is confirmed · ${roomName}`
+        : `You have a new message about your stay · ${roomName}`;
 
   const text =
     kind === "welcome"
@@ -253,18 +276,31 @@ export async function sendGuestChatNotificationEmail({
           "",
           "Please save this link. It is the only way to message us about this booking.",
         ].join("\n")
-      : [
-          `Hello ${guestName},`,
-          "",
-          "You have a new message from Kamala about your booking:",
-          "",
-          message,
-          "",
-          "Open your private conversation link to read and reply:",
-          chatUrl,
-          "",
-          "Please use this link to respond — we cannot accept replies by email.",
-        ].join("\n");
+      : kind === "confirmation"
+        ? [
+            `Hello ${guestName},`,
+            "",
+            "Your booking is confirmed.",
+            "",
+            message,
+            "",
+            "Message us any time about your stay here (save this link):",
+            chatUrl,
+            "",
+            "We can talk back and forth in this private conversation. Please use the link rather than replying to this email.",
+          ].join("\n")
+        : [
+            `Hello ${guestName},`,
+            "",
+            "You have a new message from Kamala about your booking:",
+            "",
+            message,
+            "",
+            "Open your private conversation link to read and reply:",
+            chatUrl,
+            "",
+            "Please use this link to respond — we cannot accept replies by email.",
+          ].join("\n");
 
   const html =
     kind === "welcome"
@@ -276,7 +312,17 @@ export async function sendGuestChatNotificationEmail({
       <p style="color: #6b5559; font-size: 14px;">Please save this link. It is the only way to message us about this booking.</p>
     </div>
   `
-      : `
+      : kind === "confirmation"
+        ? `
+    <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
+      <h1 style="font-size: 20px;">Your stay is confirmed</h1>
+      <p>Hello ${escapeHtml(guestName)}, your <strong>${escapeHtml(roomName)}</strong> booking is confirmed.</p>
+      <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid #d9c5c8; background: #f8f3f4; white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
+      <p><a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: #5c2f35; color: #fff; text-decoration: none; border-radius: 8px;">Open conversation and reply</a></p>
+      <p style="color: #6b5559; font-size: 14px;">Save this private link — we can talk back and forth there about your stay. Please use it instead of replying to this email.</p>
+    </div>
+  `
+        : `
     <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
       <h1 style="font-size: 20px;">You have a new message</h1>
       <p>Hello ${escapeHtml(guestName)}, Kamala sent you a message about your ${escapeHtml(roomName)} stay.</p>
