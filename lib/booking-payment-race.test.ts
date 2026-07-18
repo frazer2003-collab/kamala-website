@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { canCleanupPendingBooking } from "./booking-payment-race";
+import {
+  canCleanupPendingBooking,
+  getBankClaimCardError,
+} from "./booking-payment-race";
 
 describe("canCleanupPendingBooking", () => {
   it("allows cleanup only for unclaimed pending-payment bookings", () => {
@@ -28,5 +31,18 @@ describe("canCleanupPendingBooking", () => {
       }),
       false,
     );
+  });
+});
+
+describe("getBankClaimCardError", () => {
+  it("prevents a bank claim when card payment has won or is processing", () => {
+    assert.equal(getBankClaimCardError("succeeded"), "card_already_paid");
+    assert.equal(getBankClaimCardError("processing"), "card_processing");
+  });
+
+  it("allows a bank claim for cancelable or failed card intents", () => {
+    assert.equal(getBankClaimCardError("requires_payment_method"), null);
+    assert.equal(getBankClaimCardError("requires_confirmation"), null);
+    assert.equal(getBankClaimCardError("canceled"), null);
   });
 });

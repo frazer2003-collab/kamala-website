@@ -38,6 +38,10 @@ function formatPromptPayTarget(digits: string): string {
   return digits;
 }
 
+function getPromptPayTargetTag(digits: string): string {
+  return digits.length === 13 ? "02" : "01";
+}
+
 export function normalizePromptPayId(id: string): string {
   return id.replace(/\D/g, "");
 }
@@ -47,7 +51,7 @@ export function buildPromptPayPayload(promptPayId: string, amountBaht: number): 
   const target = formatPromptPayTarget(digits);
 
   const merchantInfo =
-    tlv("00", PROMPTPAY_AID) + tlv("01", target);
+    tlv("00", PROMPTPAY_AID) + tlv(getPromptPayTargetTag(digits), target);
 
   const payload =
     tlv(PAYLOAD_FORMAT, EMV_PAYLOAD_FORMAT) +

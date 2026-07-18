@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { startCardPaymentForBooking } from "@/app/actions";
 import { BookingBankTransferPanel } from "@/components/booking-bank-transfer-panel";
 import {
-  isBankTransferConfigured,
+  isBankTransferAvailable,
   type BankTransferDetails,
 } from "@/lib/bank-transfer";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
@@ -171,7 +171,7 @@ export function BookingPaymentElement({
   returnUrl: string;
   stayTotal: number;
 }) {
-  const bankAvailable = currency === "thb" && isBankTransferConfigured(bankTransfer);
+  const bankAvailable = isBankTransferAvailable(bankTransfer, currency);
   const [method, setMethod] = useState<PayMethod>(bankAvailable ? "bank" : "card");
   const [cardClientSecret, setCardClientSecret] = useState(clientSecret);
   const [serverStayTotal, setServerStayTotal] = useState(stayTotal);

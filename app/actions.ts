@@ -13,7 +13,11 @@ import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
 import { hasCapacityForStay, getUnavailableStayDays } from "@/lib/booking-capacity";
 import { appendOverlapErrorToHref } from "@/lib/stay-overlap";
-import { releaseBookingReservation } from "@/lib/booking-payments";
+import {
+  fulfillBookingDeposit,
+  releaseBookingReservation,
+} from "@/lib/booking-payments";
+import { getBankClaimCardError } from "@/lib/booking-payment-race";
 import { PUBLIC_CACHE_TAGS, revalidatePublicCache } from "@/lib/public-cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -28,8 +32,9 @@ import { getConfirmedBookings } from "@/lib/booking-requests";
 import {
   calculateStripeChargeAmount,
   resolveBookingStayTotal,
+  STRIPE_BANK_CHARGE_RATE,
 } from "@/lib/payment-pricing";
-import { isBankTransferConfigured } from "@/lib/bank-transfer";
+import { isBankTransferAvailable } from "@/lib/bank-transfer";
 import {
   findUnitAssignmentConflict,
   getRoomUnitById,
@@ -264,7 +269,10 @@ export async function createBookingRequest(
   const departure = getValue(formData, "departure");
   const note = getValue(formData, "guest-note");
   const propertySettings = await getPropertySettings();
-  const bankTransferConfigured = isBankTransferConfigured(propertySettings);
+  const bankTransferConfigured = isBankTransferAvailable(
+    propertySettings,
+    propertySettings.currency,
+  );
   const selectedRoom = await getRoomForBooking(roomId);
   const arrivalDate = parseDate(arrival);
   const departureDate = parseDate(departure);
@@ -558,6 +566,7 @@ export async function startCardPaymentForBooking(
             room_name: booking.room_name,
             stay_total: String(stripeCharge.stayTotal),
             bank_charge: String(stripeCharge.surcharge),
+            bank_charge_rate: String(STRIPE_BANK_CHARGE_RATE),
             payment_methods: "card",
           },
         })
@@ -615,13 +624,22 @@ export async function startCardPaymentForBooking(
 
 export async function claimBankTransferPayment(
   bookingId: string,
-): Promise<{ ok: true } | { ok: false; errorCode: "bankTransferClaimFailed" }> {
+): Promise<
+  | { ok: true }
+  | {
+      ok: false;
+      errorCode:
+        | "bankTransferClaimFailed"
+        | "card_already_paid"
+        | "card_processing";
+    }
+> {
   if (!bookingId) {
     return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
   const propertySettings = await getPropertySettings();
-  if (!isBankTransferConfigured(propertySettings)) {
+  if (!isBankTransferAvailable(propertySettings, propertySettings.currency)) {
     return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
@@ -636,6 +654,22 @@ export async function claimBankTransferPayment(
     return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
+  const room = await getRoomForBooking(booking.room_id);
+  if (!room) {
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
+  }
+
+  const hasCapacity = await hasCapacityForStay(
+    booking.room_id,
+    booking.arrival_date,
+    booking.departure_date,
+    room.availableCount,
+    { excludeBookingId: booking.id },
+  );
+  if (!hasCapacity) {
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
+  }
+
   if (booking.stripe_payment_intent_id) {
     if (!hasStripeServerConfig()) {
       return { ok: false, errorCode: "bankTransferClaimFailed" };
@@ -645,10 +679,11 @@ export async function claimBankTransferPayment(
       const paymentIntent = await getStripe().paymentIntents.retrieve(
         booking.stripe_payment_intent_id,
       );
-      if (paymentIntent.status === "succeeded" || paymentIntent.status === "processing") {
+      const cardError = getBankClaimCardError(paymentIntent.status);
+      if (cardError) {
         return {
           ok: false,
-          errorCode: "bankTransferClaimFailed",
+          errorCode: cardError,
         };
       }
     } catch {
@@ -658,7 +693,7 @@ export async function claimBankTransferPayment(
 
   const claimedAt = new Date().toISOString();
   const stripePaymentIntentId = booking.stripe_payment_intent_id;
-  const { data: claimedBooking, error } = await supabase
+  const claimQuery = supabase
     .from("booking_requests")
     .update({
       status: "awaiting",
@@ -666,7 +701,10 @@ export async function claimBankTransferPayment(
       stripe_payment_intent_id: null,
     })
     .eq("id", booking.id)
-    .eq("status", "pending_payment")
+    .eq("status", "pending_payment");
+  const { data: claimedBooking, error } = await (stripePaymentIntentId
+    ? claimQuery.eq("stripe_payment_intent_id", stripePaymentIntentId)
+    : claimQuery.is("stripe_payment_intent_id", null))
     .select("id")
     .maybeSingle();
 
@@ -675,7 +713,54 @@ export async function claimBankTransferPayment(
   }
 
   if (stripePaymentIntentId) {
-    await cancelPaymentIntentBestEffort(stripePaymentIntentId);
+    try {
+      await getStripe().paymentIntents.cancel(stripePaymentIntentId);
+    } catch {
+      let cardError: ReturnType<typeof getBankClaimCardError> = null;
+      let shouldRestoreCardPath = true;
+
+      try {
+        const paymentIntent =
+          await getStripe().paymentIntents.retrieve(stripePaymentIntentId);
+        cardError = getBankClaimCardError(paymentIntent.status);
+        shouldRestoreCardPath = paymentIntent.status !== "canceled";
+      } catch {
+        // Unknown Stripe state is unsafe for a bank claim; preserve the card path.
+      }
+
+      if (shouldRestoreCardPath) {
+        const { data: restoredBooking } = await supabase
+          .from("booking_requests")
+          .update({
+            status: "pending_payment",
+            bank_transfer_claimed_at: null,
+            stripe_payment_intent_id: stripePaymentIntentId,
+          })
+          .eq("id", booking.id)
+          .eq("status", "awaiting")
+          .eq("bank_transfer_claimed_at", claimedAt)
+          .is("deposit_paid_at", null)
+          .is("stripe_payment_intent_id", null)
+          .select("id")
+          .maybeSingle();
+
+        if (!restoredBooking) {
+          return { ok: false, errorCode: "bankTransferClaimFailed" };
+        }
+
+        if (cardError === "card_already_paid") {
+          await fulfillBookingDeposit({
+            bookingId: booking.id,
+            paymentIntentId: stripePaymentIntentId,
+          });
+        }
+
+        return {
+          ok: false,
+          errorCode: cardError ?? "bankTransferClaimFailed",
+        };
+      }
+    }
   }
 
   await sendStaffBookingEmail({

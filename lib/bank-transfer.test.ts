@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   hasBankAccountDetails,
   hasPromptPayId,
+  isBankTransferAvailable,
   isBankTransferConfigured,
 } from "./bank-transfer";
 
@@ -94,5 +95,15 @@ describe("isBankTransferConfigured", () => {
       }),
       false,
     );
+  });
+});
+
+describe("isBankTransferAvailable", () => {
+  const configuredDetails = { ...emptyDetails, promptPayId: "0812345678" };
+
+  it("is available only for THB bookings with configured details", () => {
+    assert.equal(isBankTransferAvailable(configuredDetails, "thb"), true);
+    assert.equal(isBankTransferAvailable(configuredDetails, "usd"), false);
+    assert.equal(isBankTransferAvailable(emptyDetails, "thb"), false);
   });
 });

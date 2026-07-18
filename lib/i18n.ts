@@ -81,6 +81,10 @@ const messages = {
       "The PromptPay QR could not be prepared. Choose card or contact staff for help.",
     bankTransferClaimFailed:
       "We could not record your bank transfer. Please try again or contact staff.",
+    card_already_paid:
+      "Your card payment already succeeded. Continue with the card confirmation instead.",
+    card_processing:
+      "Your card payment is still processing. Wait for card confirmation before choosing bank transfer.",
     cardPaymentStartFailed:
       "We could not start card payment. Please try again in a moment.",
     bankChargeLabel: "Bank charge (3%)",
@@ -178,6 +182,10 @@ const messages = {
       "ไม่สามารถสร้างพร้อมเพย์ QR ได้ กรุณาเลือกชำระด้วยบัตรหรือติดต่อเจ้าหน้าที่",
     bankTransferClaimFailed:
       "ไม่สามารถบันทึกการโอนเงินของคุณได้ กรุณาลองอีกครั้งหรือติดต่อเจ้าหน้าที่",
+    card_already_paid:
+      "การชำระด้วยบัตรสำเร็จแล้ว กรุณาดำเนินการต่อด้วยการยืนยันการชำระด้วยบัตร",
+    card_processing:
+      "การชำระด้วยบัตรกำลังดำเนินการ กรุณารอการยืนยันก่อนเลือกโอนเงินผ่านธนาคาร",
     cardPaymentStartFailed:
       "ไม่สามารถเริ่มการชำระด้วยบัตรได้ กรุณาลองอีกครั้งในอีกสักครู่",
     bankChargeLabel: "ค่าธรรมเนียมธนาคาร (3%)",

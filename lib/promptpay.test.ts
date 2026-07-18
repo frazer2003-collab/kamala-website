@@ -16,7 +16,7 @@ describe("promptpay", () => {
   it("embeds 13-digit national ID as-is", () => {
     const nationalId = "1234567890123";
     const payload = buildPromptPayPayload(nationalId, 500);
-    assert.ok(payload.includes(nationalId));
+    assert.ok(payload.includes(`0213${nationalId}`));
     assert.ok(!payload.includes(`0066${nationalId.slice(1)}`));
   });
 });

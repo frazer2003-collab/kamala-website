@@ -1,3 +1,5 @@
+import type { PropertyCurrency } from "@/lib/currency";
+
 export type BankTransferDetails = {
   promptPayId: string | null;
   bankName: string | null;
@@ -23,4 +25,11 @@ export function hasBankAccountDetails(details: BankTransferDetails): boolean {
 
 export function isBankTransferConfigured(details: BankTransferDetails): boolean {
   return hasPromptPayId(details) || hasBankAccountDetails(details);
+}
+
+export function isBankTransferAvailable(
+  details: BankTransferDetails,
+  currency: PropertyCurrency,
+): boolean {
+  return currency === "thb" && isBankTransferConfigured(details);
 }
