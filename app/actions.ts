@@ -21,9 +21,14 @@ import { getBankClaimCardError } from "@/lib/booking-payment-race";
 import { PUBLIC_CACHE_TAGS, revalidatePublicCache } from "@/lib/public-cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getRoomForBooking } from "@/lib/rooms";
+import { getRoomForBooking, getStaffRooms } from "@/lib/rooms";
+import { resolveRoomTypeChange } from "@/lib/room-type-change";
 import { isPastCalendarDate } from "@/lib/calendar";
 import { addIsoDays, eachIsoDayInclusive } from "@/lib/room-day-inventory";
+import {
+  buildRateLookup,
+  getRoomDayRatesForRange,
+} from "@/lib/room-day-rates";
 import { calculateStayQuote, type StayQuote } from "@/lib/pricing";
 import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 import { isRoomBookable } from "@/lib/room-availability";
@@ -236,13 +241,18 @@ export async function getBookingQuote(
     };
   }
 
-  const promotions = await getRoomPromotionsForStay(roomId, arrival, departure);
+  const [promotions, dayRates] = await Promise.all([
+    getRoomPromotionsForStay(roomId, arrival, departure),
+    getRoomDayRatesForRange(roomId, arrival, departure),
+  ]);
+  const rateOverrides = buildRateLookup(dayRates);
   const quote = calculateStayQuote({
     roomId,
     baseRate: room.rate,
     arrival,
     departure,
     promotions,
+    rateOverrides,
   });
 
   return {
@@ -255,6 +265,26 @@ export async function getBookingQuote(
         `${Math.round(((quote.baseTotal - quote.total) / quote.baseTotal) * 100)}% off`
       : null,
   };
+}
+
+async function quoteRoomStay(
+  roomId: string,
+  baseRate: number,
+  arrival: string,
+  departure: string,
+) {
+  const [promotions, dayRates] = await Promise.all([
+    getRoomPromotionsForStay(roomId, arrival, departure),
+    getRoomDayRatesForRange(roomId, arrival, departure),
+  ]);
+  return calculateStayQuote({
+    roomId,
+    baseRate,
+    arrival,
+    departure,
+    promotions,
+    rateOverrides: buildRateLookup(dayRates),
+  });
 }
 
 export async function createBookingRequest(
@@ -288,9 +318,7 @@ export async function createBookingRequest(
     fieldErrors["guest-email"] = "Enter a valid email address.";
   }
 
-  if (!guestPhone) {
-    fieldErrors["guest-phone"] = "Enter a phone number staff can reach you on.";
-  } else if (!isValidPhone(guestPhone)) {
+  if (guestPhone && !isValidPhone(guestPhone)) {
     fieldErrors["guest-phone"] = "Enter a valid phone number with at least 7 digits.";
   }
 
@@ -341,14 +369,12 @@ export async function createBookingRequest(
     );
   }
 
-  const promotions = await getRoomPromotionsForStay(selectedRoom.id, arrival, departure);
-  const quote = calculateStayQuote({
-    roomId: selectedRoom.id,
-    baseRate: selectedRoom.rate,
+  const quote = await quoteRoomStay(
+    selectedRoom.id,
+    selectedRoom.rate,
     arrival,
     departure,
-    promotions,
-  });
+  );
   const estimatedTotal = quote.total;
   const stripeCharge = calculateStripeChargeAmount(estimatedTotal);
   const depositAmount = estimatedTotal;
@@ -904,6 +930,25 @@ export async function updateConfirmedBooking(
 
   const bookingMonth = month || booking.arrival_date.slice(0, 7);
   const bookingHref = `/staff/calendar?month=${bookingMonth}&booking=${encodeURIComponent(bookingId)}`;
+  const requestedRoomId = getValue(formData, "room-id");
+  const staffRooms = await getStaffRooms();
+  const typeChange = resolveRoomTypeChange({
+    currentRoomId: booking.room_id,
+    requestedRoomId,
+    rooms: staffRooms.map((room) => ({ id: room.id, name: room.name })),
+    formRoomUnitId: roomUnitId,
+  });
+
+  if (!typeChange.ok) {
+    redirect(`${bookingHref}&error=invalid-room-type`);
+  }
+
+  const nextRoom = await getRoomForBooking(typeChange.roomId);
+  if (!nextRoom) {
+    redirect(`${bookingHref}&error=invalid-room-type`);
+  }
+
+  const effectiveRoomUnitId = typeChange.roomUnitId;
 
   if (!isStayStatus(stayStatus)) {
     redirect(bookingHref);
@@ -913,7 +958,7 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-name`);
   }
 
-  if (!isValidPhone(guestPhone)) {
+  if (guestPhone && !isValidPhone(guestPhone)) {
     redirect(`${bookingHref}&error=invalid-phone`);
   }
 
@@ -932,32 +977,37 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-dates`);
   }
 
-  // Keep capacity checks when dates change. When only assigning a room (or
-  // editing notes on an existing stay — including past stays), skip so staff
-  // can still assign a door number after the fact.
   const datesUnchanged =
     arrival === booking.arrival_date && departure === booking.departure_date;
 
-  const room = await getRoomForBooking(booking.room_id);
-  if (room && !datesUnchanged) {
+  if (typeChange.roomIdChanged) {
+    // Spec: like a normal booking — no excludeBookingId.
+    await redirectIfStayOverlaps(
+      bookingHref,
+      typeChange.roomId,
+      arrival,
+      departure,
+      nextRoom.availableCount,
+    );
+  } else if (!datesUnchanged) {
     await redirectIfStayOverlaps(
       bookingHref,
       booking.room_id,
       arrival,
       departure,
-      room.availableCount,
+      nextRoom.availableCount,
       { excludeBookingId: bookingId },
     );
   }
 
-  if (roomUnitId) {
+  if (effectiveRoomUnitId) {
     const [{ units }, confirmed, channels] = await Promise.all([
       getStaffRoomUnits(),
       getConfirmedBookings(),
       getChannelReservations(),
     ]);
-    const unit = getRoomUnitById(units, roomUnitId);
-    if (!unit || !isUnitEligibleForRoom(unit, booking.room_id)) {
+    const unit = getRoomUnitById(units, effectiveRoomUnitId);
+    if (!unit || !isUnitEligibleForRoom(unit, typeChange.roomId)) {
       redirect(`${bookingHref}&error=invalid-room-number`);
     }
 
@@ -967,7 +1017,7 @@ export async function updateConfirmedBooking(
     ];
     const conflict = findUnitAssignmentConflict({
       units,
-      unitId: roomUnitId,
+      unitId: effectiveRoomUnitId,
       arrivalDate: arrival,
       departureDate: departure,
       excludeId: bookingId,
@@ -978,16 +1028,16 @@ export async function updateConfirmedBooking(
     }
   }
 
-  const promotions = await getRoomPromotionsForStay(booking.room_id, arrival, departure);
-  const quote = calculateStayQuote({
-    roomId: booking.room_id,
-    baseRate:
-      room?.rate ?? Math.max(1, Math.round(booking.estimated_total / Math.max(booking.nights, 1))),
-    arrival,
-    departure,
-    promotions,
-  });
-  const estimatedTotal = quote.total;
+  const estimatedTotal = typeChange.roomIdChanged
+    ? booking.estimated_total
+    : (
+        await quoteRoomStay(
+          typeChange.roomId,
+          nextRoom.rate,
+          arrival,
+          departure,
+        )
+      ).total;
   const supabase = createStaffSupabaseClient();
 
   // Update core fields without room_unit_id first (avoids stale-column failures).
@@ -1003,6 +1053,12 @@ export async function updateConfirmedBooking(
       estimated_total: estimatedTotal,
       staff_note: staffNote || null,
       stay_status: stayStatus,
+      ...(typeChange.roomIdChanged
+        ? {
+            room_id: typeChange.roomId,
+            room_name: typeChange.roomName,
+          }
+        : {}),
     })
     .eq("id", bookingId);
 
@@ -1012,14 +1068,14 @@ export async function updateConfirmedBooking(
 
   const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
     p_booking_id: bookingId,
-    p_room_unit_id: roomUnitId,
+    p_room_unit_id: effectiveRoomUnitId,
   });
 
   if (unitError) {
     if (/Could not find the function|schema cache|PGRST202/i.test(unitError.message)) {
       const { error: fallbackError } = await supabase
         .from("booking_requests")
-        .update({ room_unit_id: roomUnitId })
+        .update({ room_unit_id: effectiveRoomUnitId })
         .eq("id", bookingId);
 
       if (fallbackError) {
@@ -1049,6 +1105,68 @@ export async function updateConfirmedBooking(
 
   revalidatePath("/staff/calendar");
   redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
+}
+
+export async function updateInboxBookingRoomType(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const bookingId = getValue(formData, "booking-id");
+  const requestedRoomId = getValue(formData, "room-id");
+  const booking = await getBookingForStaff(bookingId);
+  const inboxHref = bookingId
+    ? `/staff?booking=${encodeURIComponent(bookingId)}`
+    : "/staff";
+
+  if (!booking || booking.status === "declined") {
+    redirect("/staff");
+  }
+
+  const staffRooms = await getStaffRooms();
+  const typeChange = resolveRoomTypeChange({
+    currentRoomId: booking.room_id,
+    requestedRoomId,
+    rooms: staffRooms.map((room) => ({ id: room.id, name: room.name })),
+    formRoomUnitId: booking.room_unit_id,
+  });
+
+  if (!typeChange.ok) {
+    redirect(`${inboxHref}&error=invalid-room-type`);
+  }
+
+  if (!typeChange.roomIdChanged) {
+    redirect(inboxHref);
+  }
+
+  const nextRoom = await getRoomForBooking(typeChange.roomId);
+  if (!nextRoom) {
+    redirect(`${inboxHref}&error=invalid-room-type`);
+  }
+
+  await redirectIfStayOverlaps(
+    inboxHref,
+    typeChange.roomId,
+    booking.arrival_date,
+    booking.departure_date,
+    nextRoom.availableCount,
+  );
+
+  const supabase = createStaffSupabaseClient();
+  const { error } = await supabase
+    .from("booking_requests")
+    .update({
+      room_id: typeChange.roomId,
+      room_name: typeChange.roomName,
+      room_unit_id: null,
+    })
+    .eq("id", bookingId);
+
+  if (error) {
+    redirect(`${inboxHref}&error=save-failed`);
+  }
+
+  revalidatePath("/staff");
+  revalidatePath("/staff/calendar");
+  redirect(`${inboxHref}&saved=1`);
 }
 
 /** Quick door-number assign from the Needs room # timeline row. */
@@ -1325,7 +1443,13 @@ export async function createWalkInBooking(formData: FormData) {
     );
   }
 
-  if (!isValidPhone(guestPhone)) {
+  if (!guestEmail || guestEmail === walkInEmailFallback || !emailPattern.test(guestEmail)) {
+    redirect(
+      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-email`,
+    );
+  }
+
+  if (guestPhone && !isValidPhone(guestPhone)) {
     redirect(
       `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-phone`,
     );
@@ -1350,14 +1474,7 @@ export async function createWalkInBooking(formData: FormData) {
     room.availableCount,
   );
 
-  const promotions = await getRoomPromotionsForStay(room.id, arrival, departure);
-  const quote = calculateStayQuote({
-    roomId: room.id,
-    baseRate: room.rate,
-    arrival,
-    departure,
-    promotions,
-  });
+  const quote = await quoteRoomStay(room.id, room.rate, arrival, departure);
 
   const supabase = createStaffSupabaseClient();
   const { data, error } = await supabase
@@ -1503,7 +1620,6 @@ export async function updateChannelReservation(
   }
 
   const blockHref = `/staff/calendar?month=${monthKey}&block=${encodeURIComponent(blockId)}`;
-  const room = await getRoomForBooking(block.room_id);
 
   const guestName = getValue(formData, "guest-name");
   const guestPhone = getValue(formData, "guest-phone");
@@ -1513,6 +1629,22 @@ export async function updateChannelReservation(
   const staffNote = getValue(formData, "staff-note");
   const roomUnitIdRaw = getValue(formData, "room-unit-id");
   const roomUnitId = roomUnitIdRaw || null;
+  const requestedRoomId = getValue(formData, "room-id");
+  const staffRooms = await getStaffRooms();
+  const typeChange = resolveRoomTypeChange({
+    currentRoomId: block.room_id,
+    requestedRoomId,
+    rooms: staffRooms.map((room) => ({ id: room.id, name: room.name })),
+    formRoomUnitId: roomUnitId,
+  });
+  if (!typeChange.ok) {
+    redirect(`${blockHref}&error=invalid-room-type`);
+  }
+  const nextRoom = await getRoomForBooking(typeChange.roomId);
+  if (!nextRoom) {
+    redirect(`${blockHref}&error=invalid-room-type`);
+  }
+  const effectiveRoomUnitId = typeChange.roomUnitId;
 
   if (guestName && guestName.length < 2) {
     redirect(`${blockHref}&error=invalid-name`);
@@ -1544,32 +1676,40 @@ export async function updateChannelReservation(
   const datesUnchanged =
     arrival === block.start_date && departure === block.end_date;
 
-  if (room && !datesUnchanged) {
+  if (typeChange.roomIdChanged) {
+    await redirectIfStayOverlaps(
+      blockHref,
+      typeChange.roomId,
+      arrival,
+      departure,
+      nextRoom.availableCount,
+    );
+  } else if (!datesUnchanged) {
     await redirectIfStayOverlaps(
       blockHref,
       block.room_id,
       arrival,
       departure,
-      room.availableCount,
+      nextRoom.availableCount,
       { excludeBlockId: blockId },
     );
   }
 
-  if (roomUnitId) {
+  if (effectiveRoomUnitId) {
     const [{ units }, confirmed, channels] = await Promise.all([
       getStaffRoomUnits(),
       getConfirmedBookings(),
       getChannelReservations(),
     ]);
-    const unit = getRoomUnitById(units, roomUnitId);
-    if (!unit || !isUnitEligibleForRoom(unit, block.room_id)) {
+    const unit = getRoomUnitById(units, effectiveRoomUnitId);
+    if (!unit || !isUnitEligibleForRoom(unit, typeChange.roomId)) {
       redirect(
         appendCalendarError(
           blockHref,
           "invalid-room-number",
           units.length === 0
             ? "No room numbers loaded from the database."
-            : `Door id ${roomUnitId.slice(0, 8)}… is not linked to this room type.`,
+            : `Door id ${effectiveRoomUnitId.slice(0, 8)}… is not linked to this room type.`,
         ),
       );
     }
@@ -1580,7 +1720,7 @@ export async function updateChannelReservation(
     ];
     const conflict = findUnitAssignmentConflict({
       units,
-      unitId: roomUnitId,
+      unitId: effectiveRoomUnitId,
       arrivalDate: arrival,
       departureDate: departure,
       excludeId: blockId,
@@ -1600,10 +1740,24 @@ export async function updateChannelReservation(
     p_start_date: arrival,
     p_end_date: departure,
     p_staff_note: staffNote || null,
-    p_room_unit_id: roomUnitId,
+    p_room_unit_id: effectiveRoomUnitId,
   });
 
   if (!rpcError) {
+    if (typeChange.roomIdChanged) {
+      const { error: roomTypeError } = await supabase
+        .from("room_blocks")
+        .update({
+          room_id: typeChange.roomId,
+          room_unit_id: null,
+        })
+        .eq("id", blockId);
+
+      if (roomTypeError) {
+        redirect(appendCalendarError(blockHref, "save-failed", roomTypeError.message));
+      }
+    }
+
     revalidatePath("/staff/calendar");
     redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
   }
@@ -1619,7 +1773,8 @@ export async function updateChannelReservation(
         start_date: arrival,
         end_date: departure,
         staff_note: staffNote || null,
-        room_unit_id: roomUnitId,
+        room_id: typeChange.roomId,
+        room_unit_id: effectiveRoomUnitId,
       })
       .eq("id", blockId);
 
@@ -1858,4 +2013,78 @@ export async function updateRoomDayAllotment(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/staff/calendar");
   redirect(`/staff/calendar?month=${month}&saved=allotment`);
+}
+
+export async function updateRoomDayRate(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const month = getValue(formData, "month");
+  const roomId = getValue(formData, "room-id");
+  const startDate = getValue(formData, "start-date");
+  const endDateInclusive = getValue(formData, "end-date");
+  const action = getValue(formData, "rate-action");
+  const nightlyRateRaw = Number.parseInt(getValue(formData, "nightly-rate"), 10);
+  const room = await getRoomForBooking(roomId);
+  const start = parseDate(startDate);
+  const endInclusive = parseDate(endDateInclusive);
+
+  const rateHref = month
+    ? `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(startDate || "")}&mode=rate`
+    : "/staff/calendar";
+
+  if (!room || !start || !endInclusive || endInclusive < start) {
+    redirect(`${rateHref}&error=invalid-dates`);
+  }
+
+  if (isPastCalendarDate(startDate)) {
+    redirect(`${rateHref}&error=past-date`);
+  }
+
+  if (action !== "set" && action !== "reset") {
+    redirect(`${rateHref}&error=invalid-dates`);
+  }
+
+  const days = eachIsoDayInclusive(startDate, endDateInclusive);
+  const supabase = createStaffSupabaseClient();
+
+  if (action === "reset") {
+    const { error } = await supabase
+      .from("room_day_rates")
+      .delete()
+      .eq("room_id", room.id)
+      .gte("date", startDate)
+      .lte("date", endDateInclusive);
+
+    if (error) {
+      redirect(`${rateHref}&error=save-failed`);
+    }
+
+    revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+    revalidatePath("/");
+    revalidatePath("/staff/calendar");
+    redirect(`/staff/calendar?month=${month}&saved=rate-reset`);
+  }
+
+  if (!Number.isFinite(nightlyRateRaw) || nightlyRateRaw < 0) {
+    redirect(`${rateHref}&error=invalid-rate`);
+  }
+
+  const rows = days.map((date) => ({
+    room_id: room.id,
+    date,
+    nightly_rate: nightlyRateRaw,
+  }));
+
+  const { error } = await supabase.from("room_day_rates").upsert(rows, {
+    onConflict: "room_id,date",
+  });
+
+  if (error) {
+    redirect(`${rateHref}&error=save-failed`);
+  }
+
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+  revalidatePath("/");
+  revalidatePath("/staff/calendar");
+  redirect(`/staff/calendar?month=${month}&saved=rate`);
 }

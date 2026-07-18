@@ -24,6 +24,7 @@ type CalendarBookingPanelProps = {
   note: string;
   staffNote: string;
   roomId: string;
+  rooms: Array<{ id: string; name: string }>;
   roomUnitId: string | null;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
@@ -56,6 +57,7 @@ export function CalendarBookingPanel({
   note,
   staffNote,
   roomId,
+  rooms,
   roomUnitId,
   roomUnits,
   occupancies,
@@ -72,6 +74,7 @@ export function CalendarBookingPanel({
     departureDate,
     stayStatus,
     staffNote,
+    roomId,
     roomUnitId: roomUnitId ?? "",
   });
 
@@ -85,6 +88,7 @@ export function CalendarBookingPanel({
       departureDate,
       stayStatus,
       staffNote,
+      roomId,
       roomUnitId: roomUnitId ?? "",
     });
   }, [
@@ -96,6 +100,7 @@ export function CalendarBookingPanel({
     departureDate,
     stayStatus,
     staffNote,
+    roomId,
     roomUnitId,
   ]);
 
@@ -112,7 +117,7 @@ export function CalendarBookingPanel({
   const assignableUnits = useMemo(() => {
     const free = getAssignableUnitsForStay({
       units: roomUnits,
-      roomId,
+      roomId: fields.roomId,
       arrivalDate: fields.arrivalDate,
       departureDate: fields.departureDate,
       excludeId: databaseId || undefined,
@@ -127,9 +132,9 @@ export function CalendarBookingPanel({
     databaseId,
     fields.arrivalDate,
     fields.departureDate,
+    fields.roomId,
     fields.roomUnitId,
     occupancies,
-    roomId,
     roomUnits,
   ]);
 
@@ -160,6 +165,31 @@ export function CalendarBookingPanel({
             <option value="checked-in">Checked in</option>
             <option value="checked-out">Checked out</option>
           </select>
+        </div>
+        <div className="field-pair">
+          <label htmlFor={`calendar-room-type-${bookingKey}`}>Room type</label>
+          <select
+            disabled={!canManage}
+            id={`calendar-room-type-${bookingKey}`}
+            name="room-id"
+            onChange={(event) =>
+              setFields((current) => ({
+                ...current,
+                roomId: event.target.value,
+                roomUnitId: "",
+              }))
+            }
+            value={fields.roomId}
+          >
+            {rooms.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name}
+              </option>
+            ))}
+          </select>
+          <p className="detail-help">
+            Changing room type keeps the booked price. Room number is cleared.
+          </p>
         </div>
         <div className="field-pair">
           <label htmlFor={`calendar-room-unit-${bookingKey}`}>Room number</label>
@@ -225,7 +255,7 @@ export function CalendarBookingPanel({
           />
         </div>
         <div className="field-pair">
-          <label htmlFor={`calendar-guest-phone-${bookingKey}`}>Phone number</label>
+          <label htmlFor={`calendar-guest-phone-${bookingKey}`}>Phone number (optional)</label>
           <input
             autoComplete="tel"
             disabled={!canManage}
@@ -235,7 +265,6 @@ export function CalendarBookingPanel({
             onChange={(event) =>
               setFields((current) => ({ ...current, guestPhone: event.target.value }))
             }
-            required
             type="tel"
             value={fields.guestPhone}
           />

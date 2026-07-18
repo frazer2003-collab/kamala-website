@@ -12,6 +12,7 @@ type CalendarBlockPanelProps = {
   room: Room | undefined;
   monthKey: string;
   canManage: boolean;
+  rooms: Array<{ id: string; name: string }>;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
   formError?: string | null;
@@ -33,6 +34,7 @@ export function CalendarBlockPanel({
   room,
   monthKey,
   canManage,
+  rooms,
   roomUnits,
   occupancies,
   formError,
@@ -51,6 +53,7 @@ export function CalendarBlockPanel({
   const [fields, setFields] = useState({
     arrivalDate: block.startDate,
     departureDate: block.endDate,
+    roomId: block.roomId || room?.id || "",
     roomUnitId: block.roomUnitId ?? "",
   });
 
@@ -59,18 +62,26 @@ export function CalendarBlockPanel({
     setFields({
       arrivalDate: block.startDate,
       departureDate: block.endDate,
+      roomId: block.roomId || room?.id || "",
       roomUnitId: block.roomUnitId ?? "",
     });
-  }, [block.databaseId, block.startDate, block.endDate, block.roomUnitId]);
+  }, [
+    block.databaseId,
+    block.startDate,
+    block.endDate,
+    block.roomId,
+    block.roomUnitId,
+    room?.id,
+  ]);
 
   const unitOptions = useMemo(() => {
-    if (!room) {
+    if (!fields.roomId) {
       return [];
     }
 
     return getUnitOptionsForStay({
       units: roomUnits,
-      roomId: room.id,
+      roomId: fields.roomId,
       arrivalDate: fields.arrivalDate,
       departureDate: fields.departureDate,
       excludeId: block.databaseId || undefined,
@@ -80,12 +91,13 @@ export function CalendarBlockPanel({
     block.databaseId,
     fields.arrivalDate,
     fields.departureDate,
+    fields.roomId,
     occupancies,
-    room,
     roomUnits,
   ]);
 
   const currentUnit = getRoomUnitById(roomUnits, fields.roomUnitId);
+  const selectedRoom = rooms.find((option) => option.id === fields.roomId);
 
   return (
     <>
@@ -99,17 +111,12 @@ export function CalendarBlockPanel({
         </div>
       </div>
       <dl className="detail-list">
-        <div>
-          <dt>Room</dt>
-          <dd>
-            {room?.name ?? block.roomId}
-            {isChannel
-              ? block.roomNumber
-                ? ` · #${block.roomNumber}`
-                : " · Unassigned"
-              : null}
-          </dd>
-        </div>
+        {!isChannel ? (
+          <div>
+            <dt>Room</dt>
+            <dd>{room?.name ?? block.roomId}</dd>
+          </div>
+        ) : null}
         {isChannel ? (
           <div>
             <dt>Channel</dt>
@@ -211,6 +218,32 @@ export function CalendarBlockPanel({
               />
             </div>
             <div className="field-pair">
+              <label htmlFor={`channel-room-type-${fieldPrefix}`}>Room type</label>
+              <select
+                disabled={!canManage}
+                id={`channel-room-type-${fieldPrefix}`}
+                name="room-id"
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    roomId: event.target.value,
+                    roomUnitId: "",
+                  }))
+                }
+                value={fields.roomId}
+              >
+                {rooms.map((roomOption) => (
+                  <option key={roomOption.id} value={roomOption.id}>
+                    {roomOption.name}
+                  </option>
+                ))}
+              </select>
+              <p className="detail-help">
+                Changing room type keeps the booked price. Room number is
+                cleared.
+              </p>
+            </div>
+            <div className="field-pair">
               <label htmlFor={`channel-room-unit-${fieldPrefix}`}>Room number</label>
               <select
                 disabled={!canManage || (unitOptions.length === 0 && !currentUnit)}
@@ -246,11 +279,11 @@ export function CalendarBlockPanel({
               </select>
               {unitOptions.length === 0 ? (
                 <p className="field-hint">
-                  {!room
+                  {!selectedRoom
                     ? "This channel stay is not linked to a room type, so a door number cannot be assigned."
                     : roomUnits.length === 0
                       ? "Room numbers aren’t set up yet. Ask whoever set up the site to finish room-number setup."
-                      : `No door numbers are linked to ${room.name}. Ask whoever set up the site to link doors to this room type.`}
+                      : `No door numbers are linked to ${selectedRoom.name}. Ask whoever set up the site to link doors to this room type.`}
                 </p>
               ) : null}
             </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
+import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form";
 import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import {
@@ -11,7 +12,12 @@ import {
 } from "@/lib/booking-requests";
 import { formatMoneySuffix } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
+import { getStaffRooms } from "@/lib/rooms";
 import { requireStaffSession } from "@/lib/staff-auth";
+import {
+  formatOverlapErrorMessage,
+  parseOverlapDays,
+} from "@/lib/stay-overlap";
 import type { BookingStatus } from "@/lib/content";
 
 const BookingChat = nextDynamic(
@@ -98,7 +104,14 @@ function sortInboxBookings(bookings: StaffBooking[]) {
 export default async function StaffBookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking?: string; filter?: string; view?: string }>;
+  searchParams: Promise<{
+    booking?: string;
+    filter?: string;
+    view?: string;
+    error?: string;
+    detail?: string;
+    overlap?: string;
+  }>;
 }) {
   await requireStaffSession();
 
@@ -106,14 +119,18 @@ export default async function StaffBookingsPage({
     booking: selectedBookingId,
     filter: filterParam,
     view: viewParam,
+    error,
+    detail: errorDetail,
+    overlap,
   } = await searchParams;
   const inboxFilter = parseInboxFilter(filterParam);
   const preferInboxView = viewParam === "inbox";
 
-  const [staffBookings, declinedBookings, settings] = await Promise.all([
+  const [staffBookings, declinedBookings, settings, rooms] = await Promise.all([
     getStaffBookingRequests(),
     getDeclinedBookings(),
     getPropertySettings(),
+    getStaffRooms(),
   ]);
 
   const sortedOpen = sortInboxBookings(staffBookings.bookings);
@@ -161,6 +178,14 @@ export default async function StaffBookingsPage({
   ).length;
   const focusDetailOnMobile = Boolean(selected) && !preferInboxView;
   const selectedKey = selected ? getStaffBookingKey(selected) : null;
+  const inboxRoomTypeError =
+    error === "invalid-room-type"
+      ? "That room type is not available."
+      : error === "overlap"
+        ? formatOverlapErrorMessage(parseOverlapDays(overlap))
+        : error === "save-failed"
+          ? `Could not update the room type.${errorDetail ? ` ${errorDetail}` : ""}`
+          : null;
 
   const filterTabs: { id: InboxFilter; label: string; count: number }[] = [
     { id: "all", label: "All", count: staffBookings.bookings.length },
@@ -454,11 +479,22 @@ export default async function StaffBookingsPage({
               ) : null}
 
               <div className="reservation-detail__groups">
+                {selected.databaseId && !isClosedConversation ? (
+                  <StaffInboxRoomTypeForm
+                    bookingId={selected.databaseId}
+                    canManage={canManageSelected}
+                    formError={inboxRoomTypeError}
+                    roomId={selected.roomId}
+                    rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                  />
+                ) : null}
                 <dl className="detail-list detail-list--group" aria-label="Stay">
-                  <div>
-                    <dt>Room</dt>
-                    <dd>{selected.room}</dd>
-                  </div>
+                  {!selected.databaseId || isClosedConversation ? (
+                    <div>
+                      <dt>Room</dt>
+                      <dd>{selected.room}</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>Dates</dt>
                     <dd>
