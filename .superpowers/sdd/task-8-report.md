@@ -32,3 +32,9 @@ Added actions to lazily create or update a card-only PaymentIntent, claim a bank
 
 - `npm test` — pass (exit 0): 19 tests passed, 0 failed.
 - `npx tsc --noEmit` — pass (exit 0).
+
+## Race guard (lazy card PI attach)
+
+- New PaymentIntent attach now requires `stripe_payment_intent_id IS NULL` in the guarded update; if 0 rows match, the orphan PI is canceled and the action returns `ok: false`.
+- Existing PI amount/method updates keep the status-only guarded update.
+- Commit: `Guard lazy card PaymentIntent attach against races.`

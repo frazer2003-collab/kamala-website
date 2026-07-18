@@ -575,11 +575,16 @@ export async function startCardPaymentForBooking(
       return { ok: false, message: "We could not start card payment. Try again in a moment." };
     }
 
-    const { data: updatedBooking, error } = await supabase
+    const attachQuery = supabase
       .from("booking_requests")
       .update({ stripe_payment_intent_id: paymentIntent.id })
       .eq("id", booking.id)
-      .eq("status", "pending_payment")
+      .eq("status", "pending_payment");
+
+    const { data: updatedBooking, error } = await (createdNewPaymentIntent
+      ? attachQuery.is("stripe_payment_intent_id", null)
+      : attachQuery
+    )
       .select("id")
       .maybeSingle();
 
