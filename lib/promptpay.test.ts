@@ -12,4 +12,11 @@ describe("promptpay", () => {
     assert.match(payload, /6304[0-9A-F]{4}$/);
     assert.ok(payload.includes("0016A000000677010112") || payload.includes("A000000677010111"));
   });
+
+  it("embeds 13-digit national ID as-is", () => {
+    const nationalId = "1234567890123";
+    const payload = buildPromptPayPayload(nationalId, 500);
+    assert.ok(payload.includes(nationalId));
+    assert.ok(!payload.includes(`0066${nationalId.slice(1)}`));
+  });
 });

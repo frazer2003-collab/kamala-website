@@ -29,10 +29,13 @@ function crc16Ccitt(data: string): string {
 }
 
 function formatPromptPayTarget(digits: string): string {
-  if (digits.length >= 15) {
+  if (digits.length === 13 || digits.length >= 15) {
     return digits;
   }
-  return `0066${digits.slice(1)}`;
+  if (digits.length === 10 && digits.startsWith("0")) {
+    return `0066${digits.slice(1)}`;
+  }
+  return digits;
 }
 
 export function normalizePromptPayId(id: string): string {
