@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -59,6 +60,7 @@ export function StaffPromotionListItem({
             aria-label={`Confirm remove ${promotion.percentOff}% off ${roomName}`}
             className="staff-promotions-list__confirm"
           >
+      <StaffFormBusyBridge />
             <input name="promotion-id" type="hidden" value={promotion.id} />
             <p className="staff-promotions-list__confirm-copy">
               Remove {promotion.percentOff}% off {roomName} ({dateLabel})? Guests will see the

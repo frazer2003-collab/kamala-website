@@ -1,6 +1,6 @@
 # Staff busy veil (Kamala)
 
-Status: proposed  
+Status: approved  
 Date: 2026-07-20
 
 ## Goal

@@ -1,5 +1,6 @@
 import {
   bookingOccupiesDay,
+  getTodayIso,
   type CalendarDay,
 } from "@/lib/calendar";
 import type { StaffBooking } from "@/lib/booking-requests";
@@ -426,8 +427,8 @@ export function getRoomsLeftForDay(
 }
 
 export type CalendarMonthStats = {
-  arrivals: number;
-  departures: number;
+  arriving: number;
+  departed: number;
   occupancyPercent: number;
   bookedNights: number;
   availableNights: number;
@@ -438,26 +439,47 @@ export function getCalendarMonthStats({
   blocks = [],
   calendarDays,
   rooms,
+  todayIso = getTodayIso(),
 }: {
   bookings: StaffBooking[];
   blocks?: StaffRoomBlock[];
   calendarDays: CalendarDay[];
   rooms: Room[];
+  /** Injected for tests; defaults to property-local today. */
+  todayIso?: string;
 }): CalendarMonthStats {
   const monthDays = calendarDays.filter((day) => day.inCurrentMonth);
-  let arrivals = 0;
-  let departures = 0;
+  const monthStart = monthDays[0]?.iso;
+  const monthEnd = monthDays[monthDays.length - 1]?.iso;
   let bookedNights = 0;
   let availableNights = 0;
 
   const channelStays = blocks.filter(isChannelReservation);
 
-  for (const day of monthDays) {
-    arrivals += bookings.filter((booking) => booking.arrivalDate === day.iso).length;
-    arrivals += channelStays.filter((stay) => stay.startDate === day.iso).length;
-    departures += bookings.filter((booking) => booking.departureDate === day.iso).length;
-    departures += channelStays.filter((stay) => stay.endDate === day.iso).length;
+  const dateInViewedMonth = (iso: string) =>
+    Boolean(monthStart && monthEnd && iso >= monthStart && iso <= monthEnd);
 
+  // Departed: checkout day is in the viewed month and the stay has already ended.
+  const departed =
+    bookings.filter(
+      (booking) =>
+        dateInViewedMonth(booking.departureDate) && booking.departureDate <= todayIso,
+    ).length +
+    channelStays.filter(
+      (stay) => dateInViewedMonth(stay.endDate) && stay.endDate <= todayIso,
+    ).length;
+
+  // Arriving: check-in day is in the viewed month and still in the future.
+  const arriving =
+    bookings.filter(
+      (booking) =>
+        dateInViewedMonth(booking.arrivalDate) && booking.arrivalDate > todayIso,
+    ).length +
+    channelStays.filter(
+      (stay) => dateInViewedMonth(stay.startDate) && stay.startDate > todayIso,
+    ).length;
+
+  for (const day of monthDays) {
     for (const room of rooms) {
       availableNights += room.availableCount;
       const roomBookings = bookings.filter((booking) => booking.roomId === room.id);
@@ -479,8 +501,8 @@ export function getCalendarMonthStats({
     availableNights > 0 ? Math.round((bookedNights / availableNights) * 100) : 0;
 
   return {
-    arrivals,
-    departures,
+    arriving,
+    departed,
     occupancyPercent,
     bookedNights,
     availableNights,

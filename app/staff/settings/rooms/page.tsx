@@ -2,7 +2,7 @@ import Link from "next/link";
 import { StaffRoomAddForm } from "@/components/staff-room-add-form";
 import { StaffRoomEditForm } from "@/components/staff-room-edit-form";
 import { StaffSettingsNav } from "@/components/staff-settings-nav";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { StaffShell } from "@/components/staff-shell";
 import { MAX_ROOM_TYPES } from "@/lib/room-catalog";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRooms } from "@/lib/rooms";
@@ -30,9 +30,7 @@ export default async function StaffSettingsRoomsPage({
   ]);
 
   return (
-    <main className="staff-shell">
-      <StaffSidebar current="settings" />
-
+    <StaffShell current="settings">
       <section className="staff-main staff-main--rooms" aria-labelledby="staff-rooms-title">
         <div className="staff-header">
           <div>
@@ -84,6 +82,6 @@ export default async function StaffSettingsRoomsPage({
           <StaffRoomAddForm disabled={!supabaseReady} roomCount={rooms.length} />
         </section>
       </section>
-    </main>
+    </StaffShell>
   );
 }

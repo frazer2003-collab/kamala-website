@@ -1,4 +1,5 @@
 "use client";
+import { StaffBusyEffect, StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -127,6 +128,7 @@ export function StaffPropertyGalleryManager({
 
   return (
     <div className="staff-gallery-manager">
+      <StaffBusyEffect active={isUploading || removing || moving} />
       <div className="staff-gallery-manager__toolbar">
         <div>
           <p className="staff-gallery-manager__count">
@@ -216,6 +218,7 @@ export function StaffPropertyGalleryManager({
                   </span>
                   <div className="staff-gallery-manager__item-actions">
                     <form action={moveAction}>
+      <StaffFormBusyBridge />
                       <input name="photo-id" type="hidden" value={photo.id} />
                       <input name="direction" type="hidden" value="up" />
                       <button
@@ -228,6 +231,7 @@ export function StaffPropertyGalleryManager({
                       </button>
                     </form>
                     <form action={moveAction}>
+      <StaffFormBusyBridge />
                       <input name="photo-id" type="hidden" value={photo.id} />
                       <input name="direction" type="hidden" value="down" />
                       <button
@@ -245,6 +249,7 @@ export function StaffPropertyGalleryManager({
                         aria-label={`Confirm remove ${alt}`}
                         className="staff-gallery-manager__confirm"
                       >
+      <StaffFormBusyBridge />
                         <input name="photo-id" type="hidden" value={photo.id} />
                         <p className="staff-gallery-manager__confirm-copy">
                           Remove this photo? Guests will no longer see it on the gallery page.

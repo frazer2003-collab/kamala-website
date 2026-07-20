@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState } from "react";
 import { updatePropertySettings, type StaffSettingsState } from "@/app/staff/auth-actions";
@@ -17,6 +18,7 @@ export function StaffPropertySettingsForm({
 
   return (
     <form action={formAction} className="staff-settings-form">
+      <StaffFormBusyBridge />
       <div className="field-pair">
         <label htmlFor="property-name">Property name</label>
         <input

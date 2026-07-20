@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState } from "react";
 import {
@@ -17,6 +18,7 @@ export function StaffSettingsAddForm({ disabled = false }: StaffSettingsAddFormP
 
   return (
     <form action={formAction} className="booking-form staff-settings-form">
+      <StaffFormBusyBridge />
       {state.error ? (
         <p className="form-message form-message--error" role="alert">
           {state.error}

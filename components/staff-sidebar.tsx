@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { logoutStaff } from "@/app/staff/auth-actions";
+import { StaffLogoutForm } from "@/components/staff-logout-form";
 
 type StaffSidebarProps = {
   current: "requests" | "calendar" | "promotions" | "gallery" | "settings";
@@ -43,11 +43,7 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
           Settings
         </Link>
       </nav>
-      <form action={logoutStaff} className="staff-sidebar__logout">
-        <button className="button button--quiet" type="submit">
-          Sign out
-        </button>
-      </form>
+      <StaffLogoutForm />
     </aside>
   );
 }

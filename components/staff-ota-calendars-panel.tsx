@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState, type ReactNode } from "react";
 import {
@@ -233,6 +234,7 @@ function FeedSlot({
           ) : null}
         </div>
         <form action={removeRoomIcalFeed}>
+      <StaffFormBusyBridge />
           <input name="feed-id" type="hidden" value={feed.id} />
           <input name="room-id" type="hidden" value={roomId} />
           <button className="button button--quiet" disabled={!canManage} type="submit">
@@ -280,6 +282,7 @@ function FeedAddForm({
 
   return (
     <form action={formAction} className="staff-room-ical__add">
+      <StaffFormBusyBridge />
       <input name="room-id" type="hidden" value={roomId} />
       {roomUnitId ? <input name="room-unit-id" type="hidden" value={roomUnitId} /> : null}
       <input name="channel" type="hidden" value={channel} />

@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { updateStaffNotificationCalendarAccess } from "@/app/staff/auth-actions";
 import type { StaffCalendarAccess } from "@/lib/staff-notification-emails";
@@ -16,6 +17,7 @@ export function StaffEmailAccessForm({
 }: StaffEmailAccessFormProps) {
   return (
     <form action={updateStaffNotificationCalendarAccess} className="staff-email-access">
+      <StaffFormBusyBridge />
       <input name="email-id" type="hidden" value={emailId} />
       <label className="sr-only" htmlFor={`calendar-access-${emailId}`}>
         Calendar access

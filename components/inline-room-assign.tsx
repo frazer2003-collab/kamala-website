@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useFormStatus } from "react-dom";
 import { assignStayRoomUnit } from "@/app/actions";
@@ -92,6 +93,7 @@ export function InlineRoomAssign({
 
   return (
     <form action={assignStayRoomUnit} className="extranet-bar__assign">
+      <StaffFormBusyBridge />
       <input name="kind" type="hidden" value={kind} />
       <input name="stay-id" type="hidden" value={stayId} />
       <input name="month" type="hidden" value={monthKey} />

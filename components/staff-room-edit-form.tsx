@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState } from "react";
 import Link from "next/link";
@@ -34,6 +35,7 @@ export function StaffRoomEditForm({
       </div>
 
       <form action={formAction} className="staff-room-form staff-room-form--compact">
+      <StaffFormBusyBridge />
         <input name="room-id" type="hidden" value={room.id} />
         <div className="staff-room-form__header">
           <h2>{room.shortName}</h2>

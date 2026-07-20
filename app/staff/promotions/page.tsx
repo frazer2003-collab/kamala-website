@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { StaffPromotionAddForm } from "@/components/staff-promotion-add-form";
 import { StaffPromotionListItem } from "@/components/staff-promotion-list-item";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { StaffShell } from "@/components/staff-shell";
 import { getTodayIso } from "@/lib/calendar";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
@@ -64,9 +64,7 @@ export default async function StaffPromotionsPage({
   const showUpdated = updated === "1" && !editing;
 
   return (
-    <main className="staff-shell">
-      <StaffSidebar current="promotions" />
-
+    <StaffShell current="promotions">
       <section className="staff-main" aria-labelledby="staff-promotions-title">
         <div className="staff-header staff-header--compact">
           <div>
@@ -165,6 +163,6 @@ export default async function StaffPromotionsPage({
           </section>
         </div>
       </section>
-    </main>
+    </StaffShell>
   );
 }

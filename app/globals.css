@@ -6091,51 +6091,42 @@ textarea:focus {
   min-height: 2.75rem;
 }
 
-.staff-ota-sync-overlay {
+.staff-busy-overlay {
   position: fixed;
   inset: 0;
   z-index: 80;
   display: grid;
   place-items: center;
-  padding: var(--space-4);
-  background: color-mix(in oklab, var(--color-ink) 28%, transparent);
-}
-
-.staff-ota-sync-popup {
-  display: grid;
-  justify-items: center;
+  place-content: center;
   gap: var(--space-3);
-  min-width: min(18rem, 100%);
-  padding: var(--space-5) var(--space-6);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-panel);
-  text-align: center;
+  padding: var(--space-4);
+  background: color-mix(in oklab, var(--color-ink) 22%, transparent);
+  pointer-events: all;
 }
 
-.staff-ota-sync-popup p {
+.staff-busy-overlay__label {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--color-surface);
   font-size: 0.95rem;
   font-weight: 700;
+  text-shadow: 0 1px 2px color-mix(in oklab, var(--color-ink) 45%, transparent);
 }
 
-.staff-ota-sync-popup__spinner {
+.staff-busy-overlay__spinner {
   width: 1.35rem;
   height: 1.35rem;
-  border: 2px solid var(--color-border);
+  border: 2px solid color-mix(in oklab, var(--color-surface) 45%, transparent);
   border-top-color: var(--color-maroon);
   border-radius: 50%;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .staff-ota-sync-popup__spinner {
-    animation: staff-ota-sync-spin 0.7s linear infinite;
+  .staff-busy-overlay__spinner {
+    animation: staff-busy-spin 0.7s linear infinite;
   }
 }
 
-@keyframes staff-ota-sync-spin {
+@keyframes staff-busy-spin {
   to {
     transform: rotate(360deg);
   }

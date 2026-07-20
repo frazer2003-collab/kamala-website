@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StaffPropertyGalleryManager } from "@/components/staff-property-gallery-manager";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { StaffShell } from "@/components/staff-shell";
 import { collectRoomGalleryPhotos } from "@/lib/gallery-sections";
 import { getStaffPropertyGalleryPhotos } from "@/lib/property-gallery";
 import { getStaffRooms } from "@/lib/rooms";
@@ -20,9 +20,7 @@ export default async function StaffGalleryPage() {
   const roomPhotos = collectRoomGalleryPhotos(rooms);
 
   return (
-    <main className="staff-shell">
-      <StaffSidebar current="gallery" />
-
+    <StaffShell current="gallery">
       <section className="staff-main staff-main--gallery" aria-labelledby="staff-gallery-title">
         <div className="staff-header staff-header--compact">
           <div>
@@ -82,6 +80,6 @@ export default async function StaffGalleryPage() {
           <StaffPropertyGalleryManager disabled={!supabaseReady} initialPhotos={photos} />
         </section>
       </section>
-    </main>
+    </StaffShell>
   );
 }

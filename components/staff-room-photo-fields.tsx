@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { StaffBusyEffect } from "@/components/staff-busy";
 import type { Room } from "@/lib/content";
 import { prepareRoomPhotoFile } from "@/lib/prepare-room-photo";
 import { MAX_GALLERY_PHOTOS } from "@/lib/room-photo-shared";
@@ -100,6 +101,7 @@ export function StaffRoomPhotoFields({ room, disabled }: StaffRoomPhotoFieldsPro
 
   return (
     <div className="staff-room-photos field-pair--wide">
+      <StaffBusyEffect active={isUploading} />
       <div className="staff-room-photos__section">
         <label htmlFor={`${room.id}-cover-photo`}>Cover photo</label>
         <p className="staff-room-photos__hint">

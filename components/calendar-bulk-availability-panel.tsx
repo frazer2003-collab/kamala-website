@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -59,6 +60,7 @@ export function CalendarBulkAvailabilityPanel({
         </p>
       ) : null}
       <form action={bulkUpdateRoomAvailability} className="calendar-manage-form">
+      <StaffFormBusyBridge />
         <input name="month" type="hidden" value={monthKey} />
         <input name="room-id" type="hidden" value={room.id} />
         <input name="availability-action" type="hidden" value={action} />

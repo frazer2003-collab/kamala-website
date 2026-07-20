@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState } from "react";
 import { addTour, type StaffTourState } from "@/app/staff/auth-actions";
@@ -39,6 +40,7 @@ export function StaffTourAddForm({
       ) : null}
 
       <form action={formAction} className="staff-tour-form staff-tour-form--add">
+      <StaffFormBusyBridge />
         <div className="staff-tour-form__grid">
           <div className="field-pair field-pair--wide">
             <label htmlFor="new-tour-title">Tour title</label>

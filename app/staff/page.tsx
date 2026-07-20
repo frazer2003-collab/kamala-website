@@ -2,7 +2,7 @@ import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form";
 import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { StaffShell } from "@/components/staff-shell";
 import {
   getStaffBookingKey,
   getDeclinedBookings,
@@ -195,9 +195,7 @@ export default async function StaffBookingsPage({
   ];
 
   return (
-    <main className="staff-shell">
-      <StaffSidebar current="requests" />
-
+    <StaffShell current="requests">
       <section className="staff-main" aria-labelledby="staff-title">
         <div className="staff-header staff-header--compact">
           <div>
@@ -573,6 +571,6 @@ export default async function StaffBookingsPage({
           )}
         </div>
       </section>
-    </main>
+    </StaffShell>
   );
 }

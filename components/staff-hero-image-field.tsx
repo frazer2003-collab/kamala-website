@@ -1,4 +1,5 @@
 "use client";
+import { StaffBusyEffect, StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -74,6 +75,7 @@ export function StaffHeroImageField({ heroImageUrl, disabled }: StaffHeroImageFi
 
   return (
     <div className="staff-hero-image">
+      <StaffBusyEffect active={isUploading || removing} />
       <div className="staff-hero-image__preview-shell">
         {previewUrl ? (
           <div
@@ -116,6 +118,7 @@ export function StaffHeroImageField({ heroImageUrl, disabled }: StaffHeroImageFi
         </label>
         {previewUrl ? (
           <form action={removeAction}>
+      <StaffFormBusyBridge />
             <button
               className="button button--quiet"
               disabled={disabled || isUploading || removing}

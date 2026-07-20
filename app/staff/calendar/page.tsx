@@ -10,7 +10,7 @@ import {
 } from "@/components/staff-lazy";
 import { CalendarGridGuide } from "@/components/calendar-grid-guide";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { StaffShell } from "@/components/staff-shell";
 import {
   buildCalendarDays,
   formatCalendarMonth,
@@ -321,9 +321,7 @@ export default async function StaffCalendarPage({
   const panelFormError = dialogOpen ? formErrorMessage : null;
 
   return (
-    <main className="staff-shell">
-      <StaffSidebar current="calendar" />
-
+    <StaffShell current="calendar">
       <section className="staff-main staff-main--calendar" aria-labelledby="calendar-title">
         <div className="staff-header staff-header--calendar">
           <div>
@@ -707,6 +705,6 @@ export default async function StaffCalendarPage({
           </CalendarBookingDialog>
         ) : null}
       </section>
-    </main>
+    </StaffShell>
   );
 }

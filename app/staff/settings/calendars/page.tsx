@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { StaffOtaCalendarsPanel } from "@/components/staff-ota-calendars-panel";
 import { StaffSettingsNav } from "@/components/staff-settings-nav";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { StaffShell } from "@/components/staff-shell";
 import { feedMatchesOtaChannel, getStaffRoomIcalFeeds } from "@/lib/room-ical";
 import { getStaffRooms } from "@/lib/rooms";
 import {
@@ -98,9 +98,7 @@ export default async function StaffSettingsCalendarsPage() {
   }));
 
   return (
-    <main className="staff-shell">
-      <StaffSidebar current="settings" />
-
+    <StaffShell current="settings">
       <section className="staff-main staff-main--rooms" aria-labelledby="staff-calendars-title">
         <div className="staff-header">
           <div>
@@ -131,6 +129,6 @@ export default async function StaffSettingsCalendarsPage() {
           />
         )}
       </section>
-    </main>
+    </StaffShell>
   );
 }

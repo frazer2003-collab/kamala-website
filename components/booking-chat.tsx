@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import {
   useActionState,
@@ -410,6 +411,7 @@ export function BookingChat(props: BookingChatProps) {
           id={formId}
           onSubmit={handleFormSubmit}
         >
+      <StaffFormBusyBridge />
           {props.variant === "staff" ? (
             <input name="booking-id" type="hidden" value={props.bookingId} />
           ) : (

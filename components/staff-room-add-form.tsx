@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState } from "react";
 import { addRoom, type StaffRoomState } from "@/app/staff/auth-actions";
@@ -27,6 +28,7 @@ export function StaffRoomAddForm({
 
   return (
     <form action={formAction} className="staff-room-add">
+      <StaffFormBusyBridge />
       <h2>Add room type</h2>
       <p className="staff-room-add__hint">
         New rooms appear at the bottom of the list ({roomCount}/{MAX_ROOM_TYPES}).

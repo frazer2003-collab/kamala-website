@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useState } from "react";
 import { updateInboxBookingRoomType } from "@/app/actions";
@@ -23,6 +24,7 @@ export function StaffInboxRoomTypeForm({
 
   return (
     <form action={updateInboxBookingRoomType} className="calendar-manage-form">
+      <StaffFormBusyBridge />
       <input name="booking-id" type="hidden" value={bookingId} />
       {formError ? (
         <p className="form-message form-message--error" role="alert">

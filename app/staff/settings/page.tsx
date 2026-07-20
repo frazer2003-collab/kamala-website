@@ -1,3 +1,4 @@
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 import Link from "next/link";
 import { removeStaffNotificationEmail } from "@/app/staff/auth-actions";
 import { StaffEmailAccessForm } from "@/components/staff-email-access-form";
@@ -5,7 +6,7 @@ import { StaffHeroImageField } from "@/components/staff-hero-image-field";
 import { StaffPropertySettingsForm } from "@/components/staff-property-settings-form";
 import { StaffSettingsAddForm } from "@/components/staff-settings-add-form";
 import { StaffSettingsNav } from "@/components/staff-settings-nav";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { StaffShell } from "@/components/staff-shell";
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { getStaffNotificationEmails } from "@/lib/staff-notification-emails";
@@ -37,9 +38,7 @@ export default async function StaffSettingsPage({
   const fallbackEmail = process.env.STAFF_NOTIFICATION_EMAIL?.trim();
 
   return (
-    <main className="staff-shell">
-      <StaffSidebar current="settings" />
-
+    <StaffShell current="settings">
       <section className="staff-main" aria-labelledby="staff-settings-title">
         <div className="staff-header">
           <div>
@@ -122,6 +121,7 @@ export default async function StaffSettingsPage({
                         emailId={entry.id}
                       />
                       <form action={removeStaffNotificationEmail}>
+      <StaffFormBusyBridge />
                         <input name="email-id" type="hidden" value={entry.id} />
                         <button className="button button--quiet" type="submit">
                           Remove
@@ -144,6 +144,6 @@ export default async function StaffSettingsPage({
           </section>
         </div>
       </section>
-    </main>
+    </StaffShell>
   );
 }

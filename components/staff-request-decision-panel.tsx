@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useState, type FormEvent } from "react";
 import {
@@ -121,6 +122,7 @@ export function StaffRequestDecisionPanel({
               : undefined
           }
         >
+          <StaffFormBusyBridge />
           {!practiceMode ? (
             <input name="booking-id" type="hidden" value={bookingId} />
           ) : null}
@@ -176,6 +178,7 @@ export function StaffRequestDecisionPanel({
               : undefined
           }
         >
+          <StaffFormBusyBridge />
           {!practiceMode ? (
             <input name="booking-id" type="hidden" value={bookingId} />
           ) : null}

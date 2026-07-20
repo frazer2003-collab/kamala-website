@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useEffect, useMemo, useState } from "react";
 import { cancelConfirmedBooking, updateConfirmedBooking } from "@/app/actions";
@@ -146,6 +147,7 @@ export function CalendarBookingPanel({
         </p>
       ) : null}
       <form action={saveAction} className="calendar-manage-form">
+      <StaffFormBusyBridge />
         <input name="month" type="hidden" value={monthKey} />
         <div className="field-pair">
           <label htmlFor={`calendar-stay-status-${bookingKey}`}>Check-in status</label>
@@ -323,6 +325,7 @@ export function CalendarBookingPanel({
             </p>
             <div className="calendar-cancel-confirm__actions">
               <form action={cancelAction}>
+      <StaffFormBusyBridge />
                 <button className="button button--danger" disabled={!canManage} type="submit">
                   Yes, cancel stay
                 </button>

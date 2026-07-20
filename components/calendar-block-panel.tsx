@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useEffect, useMemo, useState } from "react";
 import { removeRoomBlock, updateChannelReservation } from "@/app/actions";
@@ -150,6 +151,7 @@ export function CalendarBlockPanel({
             </p>
           ) : null}
           <form action={saveChannelAction} className="calendar-manage-form">
+      <StaffFormBusyBridge />
             <div className="field-pair field-pair--wide">
               <label htmlFor={`channel-guest-name-${fieldPrefix}`}>Guest name</label>
               <input
@@ -319,6 +321,7 @@ export function CalendarBlockPanel({
               </p>
               <div className="calendar-cancel-confirm__actions">
                 <form action={removeAction}>
+      <StaffFormBusyBridge />
                   <button
                     className="button button--primary"
                     disabled={!canManage}

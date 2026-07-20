@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import Link from "next/link";
 import { useMemo } from "react";
@@ -154,6 +155,7 @@ export function CalendarDayPanel({
           </p>
         ) : null}
         <form action={updateRoomDayAllotment} className="calendar-manage-form">
+      <StaffFormBusyBridge />
           <input name="month" type="hidden" value={monthKey} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
@@ -250,6 +252,7 @@ export function CalendarDayPanel({
           </p>
         ) : null}
         <form action={updateRoomDayRate} className="calendar-manage-form">
+      <StaffFormBusyBridge />
           <input name="month" type="hidden" value={monthKey} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
@@ -344,6 +347,7 @@ export function CalendarDayPanel({
           </p>
         ) : null}
         <form action={createWalkInBooking} className="calendar-manage-form">
+      <StaffFormBusyBridge />
           <input name="month" type="hidden" value={monthKey} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
@@ -443,6 +447,7 @@ export function CalendarDayPanel({
           </p>
         ) : null}
         <form action={createRoomBlock} className="calendar-manage-form">
+      <StaffFormBusyBridge />
           <input name="month" type="hidden" value={monthKey} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">

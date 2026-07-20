@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState } from "react";
 import { removeTour, updateTour, type StaffTourState } from "@/app/staff/auth-actions";
@@ -19,6 +20,7 @@ export function StaffTourEditForm({
   return (
     <article className="staff-tour-row">
       <form action={formAction} className="staff-tour-form">
+      <StaffFormBusyBridge />
         <input name="tour-id" type="hidden" value={tour.id} />
         <div className="staff-tour-form__header">
           <h2>{tour.title}</h2>

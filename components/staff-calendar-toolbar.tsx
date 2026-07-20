@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { syncAllRoomIcalFeedsAction } from "@/app/staff/auth-actions";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffOtaSyncControls } from "@/components/staff-ota-sync-controls";
 import { formatCalendarMonth } from "@/lib/calendar";
@@ -62,6 +63,7 @@ export function StaffCalendarToolbar({
         </Link>
         {canSyncOta ? (
           <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
+            <StaffFormBusyBridge />
             <input name="month" type="hidden" value={monthKey} />
             <StaffOtaSyncControls />
           </form>
@@ -70,10 +72,10 @@ export function StaffCalendarToolbar({
 
       <div className="staff-calendar-toolbar__meta" aria-label="Month summary">
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
-          <strong>{stats.arrivals}</strong> arrivals
+          <strong>{stats.departed}</strong> departed
         </span>
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
-          <strong>{stats.departures}</strong> departures
+          <strong>{stats.arriving}</strong> arriving
         </span>
         <span
           className={`staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary${

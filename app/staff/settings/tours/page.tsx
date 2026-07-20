@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StaffSettingsNav } from "@/components/staff-settings-nav";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { StaffShell } from "@/components/staff-shell";
 import { StaffTourAddForm } from "@/components/staff-tour-add-form";
 import { StaffTourEditForm } from "@/components/staff-tour-edit-form";
 import { requireStaffCalendarWrite } from "@/lib/staff-auth";
@@ -23,9 +23,7 @@ export default async function StaffSettingsToursPage({
   ]);
 
   return (
-    <main className="staff-shell">
-      <StaffSidebar current="settings" />
-
+    <StaffShell current="settings">
       <section className="staff-main staff-main--tours" aria-labelledby="staff-tours-title">
         <div className="staff-header">
           <div>
@@ -64,6 +62,6 @@ export default async function StaffSettingsToursPage({
           <StaffTourAddForm disabled={!supabaseReady} tourCount={tours.length} />
         </section>
       </section>
-    </main>
+    </StaffShell>
   );
 }

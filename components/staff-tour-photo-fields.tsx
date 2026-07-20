@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { StaffBusyEffect } from "@/components/staff-busy";
 import { prepareRoomPhotoFile } from "@/lib/prepare-room-photo";
 import { MAX_TOUR_GALLERY_PHOTOS } from "@/lib/tour-catalog";
 import type { StaffTour } from "@/lib/tours";
@@ -113,6 +114,7 @@ export function StaffTourPhotoFields({ tour, disabled }: StaffTourPhotoFieldsPro
 
   return (
     <div className="staff-tour-photos field-pair--wide">
+      <StaffBusyEffect active={isUploading} />
       <div className="staff-tour-photos__section">
         <label>Cover photo</label>
         <p className="staff-tour-photos__hint">

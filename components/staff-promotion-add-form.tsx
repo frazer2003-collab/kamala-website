@@ -1,4 +1,5 @@
 "use client";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useActionState, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -122,6 +123,7 @@ export function StaffPromotionAddForm({
       id="staff-promotion-form"
       ref={formRef}
     >
+      <StaffFormBusyBridge />
       {editing ? <input name="promotion-id" type="hidden" value={editing.id} /> : null}
 
       {state.error ? (
