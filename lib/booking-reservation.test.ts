@@ -17,6 +17,17 @@ describe("bookingReservesRoom", () => {
     );
   });
 
+  it("reserves inventory while card payment is pending", () => {
+    assert.equal(
+      bookingReservesRoom({
+        status: "pending_payment",
+        deposit_paid_at: null,
+        bank_transfer_claimed_at: null,
+      }),
+      true,
+    );
+  });
+
   it("does not reserve inventory for a declined booking", () => {
     assert.equal(
       bookingReservesRoom({

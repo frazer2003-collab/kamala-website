@@ -4,6 +4,8 @@ export function bookingReservesRoom(booking: {
   bank_transfer_claimed_at?: string | null;
 }): boolean {
   if (booking.status === "declined") return false;
+  // Hold inventory while card/PromptPay checkout is in flight.
+  if (booking.status === "pending_payment") return true;
   if (booking.status === "confirmed") return true;
   if (booking.deposit_paid_at) return true;
   if (booking.bank_transfer_claimed_at) return true;

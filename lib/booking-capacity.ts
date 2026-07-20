@@ -7,6 +7,14 @@ import {
 } from "@/lib/room-day-inventory";
 import type { UnavailableStayDay } from "@/lib/stay-overlap";
 
+/** Thrown when capacity queries cannot be trusted (fail closed for guest sales). */
+export class CapacityDataError extends Error {
+  constructor(message = "Could not verify room availability.") {
+    super(message);
+    this.name = "CapacityDataError";
+  }
+}
+
 export function dateRangesOverlap(
   arrivalA: string,
   departureA: string,
@@ -41,61 +49,65 @@ export async function countOverlappingReservationsForRooms(
     return counts;
   }
 
-  try {
-    const supabase = createStaffSupabaseClient();
-    const [{ data: bookings }, blocksResult] = await Promise.all([
-      supabase
-        .from("booking_requests")
-        .select(
-          "id, room_id, arrival_date, departure_date, status, deposit_paid_at, bank_transfer_claimed_at",
-        )
-        .in("room_id", roomIds)
-        .lt("arrival_date", departure)
-        .gt("departure_date", arrival),
-      supabase
-        .from("room_blocks")
-        .select("id, room_id, start_date, end_date, ical_feed_id")
-        .in("room_id", roomIds)
-        .lt("start_date", departure)
-        .gt("end_date", arrival),
-    ]);
-    const blocks = blocksResult.error ? [] : (blocksResult.data ?? []);
+  const supabase = createStaffSupabaseClient();
+  const [bookingsResult, blocksResult] = await Promise.all([
+    supabase
+      .from("booking_requests")
+      .select(
+        "id, room_id, arrival_date, departure_date, status, deposit_paid_at, bank_transfer_claimed_at",
+      )
+      .in("room_id", roomIds)
+      .lt("arrival_date", departure)
+      .gt("departure_date", arrival),
+    supabase
+      .from("room_blocks")
+      .select("id, room_id, start_date, end_date, ical_feed_id")
+      .in("room_id", roomIds)
+      .lt("start_date", departure)
+      .gt("end_date", arrival),
+  ]);
 
-    for (const booking of bookings ?? []) {
-      if (options?.excludeBookingId && booking.id === options.excludeBookingId) {
-        continue;
-      }
-
-      if (!bookingReservesRoom(booking)) {
-        continue;
-      }
-
-      if (
-        dateRangesOverlap(arrival, departure, booking.arrival_date, booking.departure_date)
-      ) {
-        counts.set(booking.room_id, (counts.get(booking.room_id) ?? 0) + 1);
-      }
-    }
-
-    for (const block of blocks) {
-      if (options?.excludeBlockId && block.id === options.excludeBlockId) {
-        continue;
-      }
-
-      // Manual closures shut the room; channel blocks count as one booked unit.
-      if (!block.ical_feed_id) {
-        continue;
-      }
-
-      if (dateRangesOverlap(arrival, departure, block.start_date, block.end_date)) {
-        counts.set(block.room_id, (counts.get(block.room_id) ?? 0) + 1);
-      }
-    }
-
-    return counts;
-  } catch {
-    return counts;
+  if (bookingsResult.error) {
+    throw new CapacityDataError(bookingsResult.error.message);
   }
+  if (blocksResult.error) {
+    throw new CapacityDataError(blocksResult.error.message);
+  }
+
+  const blocks = blocksResult.data ?? [];
+
+  for (const booking of bookingsResult.data ?? []) {
+    if (options?.excludeBookingId && booking.id === options.excludeBookingId) {
+      continue;
+    }
+
+    if (!bookingReservesRoom(booking)) {
+      continue;
+    }
+
+    if (
+      dateRangesOverlap(arrival, departure, booking.arrival_date, booking.departure_date)
+    ) {
+      counts.set(booking.room_id, (counts.get(booking.room_id) ?? 0) + 1);
+    }
+  }
+
+  for (const block of blocks) {
+    if (options?.excludeBlockId && block.id === options.excludeBlockId) {
+      continue;
+    }
+
+    // Manual closures shut the room; channel blocks count as one booked unit.
+    if (!block.ical_feed_id) {
+      continue;
+    }
+
+    if (dateRangesOverlap(arrival, departure, block.start_date, block.end_date)) {
+      counts.set(block.room_id, (counts.get(block.room_id) ?? 0) + 1);
+    }
+  }
+
+  return counts;
 }
 
 export async function countOverlappingReservations({
@@ -126,7 +138,7 @@ export async function getUnavailableStayDays(
 
   try {
     const supabase = createStaffSupabaseClient();
-    const [{ data: bookings }, blocksResult, inventoryEntries] = await Promise.all([
+    const [bookingsResult, blocksResult, inventoryEntries] = await Promise.all([
       supabase
         .from("booking_requests")
         .select(
@@ -143,7 +155,15 @@ export async function getUnavailableStayDays(
         .gt("end_date", arrival),
       getRoomDayInventoryForRange(roomId, arrival, departure),
     ]);
-    const blocks = blocksResult.error ? [] : (blocksResult.data ?? []);
+
+    if (bookingsResult.error || blocksResult.error) {
+      throw new CapacityDataError(
+        bookingsResult.error?.message ?? blocksResult.error?.message,
+      );
+    }
+
+    const bookings = bookingsResult.data ?? [];
+    const blocks = blocksResult.data ?? [];
     const inventoryLookup = buildInventoryLookup(inventoryEntries);
 
     const cursor = new Date(`${arrival}T00:00:00`);
@@ -182,7 +202,7 @@ export async function getUnavailableStayDays(
         continue;
       }
 
-      for (const booking of bookings ?? []) {
+      for (const booking of bookings) {
         if (options?.excludeBookingId && booking.id === options.excludeBookingId) {
           continue;
         }
@@ -215,92 +235,17 @@ export async function getUnavailableStayDays(
 
     return unavailable;
   } catch {
-    if (
-      await stayOverlapsManualClosure(
-        roomId,
-        arrival,
-        departure,
-        options?.excludeBlockId,
-      )
-    ) {
-      const cursor = new Date(`${arrival}T00:00:00`);
-      const end = new Date(`${departure}T00:00:00`);
-
-      while (cursor < end) {
-        const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
-        unavailable.push({ iso, reason: "closed" });
-        cursor.setDate(cursor.getDate() + 1);
-      }
-
-      return unavailable;
-    }
-
-    const overlapping = await countOverlappingReservations({
-      roomId,
-      arrival,
-      departure,
-      excludeBookingId: options?.excludeBookingId,
-      excludeBlockId: options?.excludeBlockId,
-    });
-
-    if (overlapping + 1 > availableCount) {
-      const cursor = new Date(`${arrival}T00:00:00`);
-      const end = new Date(`${departure}T00:00:00`);
-
-      while (cursor < end) {
-        const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
-        unavailable.push({ iso, reason: "sold-out" });
-        cursor.setDate(cursor.getDate() + 1);
-      }
-    }
-
-    return unavailable;
-  }
-}
-
-async function stayOverlapsManualClosure(
-  roomId: string,
-  arrival: string,
-  departure: string,
-  excludeBlockId?: string,
-) {
-  try {
-    const supabase = createStaffSupabaseClient();
-    const { data: blocks } = await supabase
-      .from("room_blocks")
-      .select("id, start_date, end_date")
-      .eq("room_id", roomId)
-      .is("ical_feed_id", null)
-      .lt("start_date", departure)
-      .gt("end_date", arrival);
-
+    // Fail closed: never treat nights as free when availability cannot be trusted.
     const cursor = new Date(`${arrival}T00:00:00`);
     const end = new Date(`${departure}T00:00:00`);
 
     while (cursor < end) {
       const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
-
-      for (const block of blocks ?? []) {
-        if (excludeBlockId && block.id === excludeBlockId) {
-          continue;
-        }
-
-        if (
-          bookingOccupiesDay(
-            { arrivalDate: block.start_date, departureDate: block.end_date },
-            iso,
-          )
-        ) {
-          return true;
-        }
-      }
-
+      unavailable.push({ iso, reason: "sold-out" });
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    return false;
-  } catch {
-    return false;
+    return unavailable;
   }
 }
 
@@ -313,7 +258,7 @@ export async function hasCapacityForStay(
 ) {
   try {
     const supabase = createStaffSupabaseClient();
-    const [{ data: bookings }, blocksResult, inventoryEntries] = await Promise.all([
+    const [bookingsResult, blocksResult, inventoryEntries] = await Promise.all([
       supabase
         .from("booking_requests")
         .select(
@@ -330,7 +275,13 @@ export async function hasCapacityForStay(
         .gt("end_date", arrival),
       getRoomDayInventoryForRange(roomId, arrival, departure),
     ]);
-    const blocks = blocksResult.error ? [] : (blocksResult.data ?? []);
+
+    if (bookingsResult.error || blocksResult.error) {
+      return false;
+    }
+
+    const bookings = bookingsResult.data ?? [];
+    const blocks = blocksResult.data ?? [];
     const inventoryLookup = buildInventoryLookup(inventoryEntries);
 
     const cursor = new Date(`${arrival}T00:00:00`);
@@ -363,7 +314,7 @@ export async function hasCapacityForStay(
         }
       }
 
-      for (const booking of bookings ?? []) {
+      for (const booking of bookings) {
         if (options?.excludeBookingId && booking.id === options.excludeBookingId) {
           continue;
         }
@@ -396,25 +347,7 @@ export async function hasCapacityForStay(
 
     return true;
   } catch {
-    if (
-      await stayOverlapsManualClosure(
-        roomId,
-        arrival,
-        departure,
-        options?.excludeBlockId,
-      )
-    ) {
-      return false;
-    }
-
-    const overlapping = await countOverlappingReservations({
-      roomId,
-      arrival,
-      departure,
-      excludeBookingId: options?.excludeBookingId,
-      excludeBlockId: options?.excludeBlockId,
-    });
-
-    return overlapping < availableCount;
+    // Fail closed: never sell when availability data cannot be trusted.
+    return false;
   }
 }

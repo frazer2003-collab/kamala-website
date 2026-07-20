@@ -49,10 +49,47 @@ function mapRoomIcalFeed(row: RoomIcalFeedRow): RoomIcalFeed {
   };
 }
 
+const OTA_ICAL_HOST_ALLOWLIST = [
+  /(^|\.)airbnb\.(com|co\.[a-z]{2})$/i,
+  /(^|\.)booking\.com$/i,
+  /(^|\.)expedia\.[a-z.]+$/i,
+  /(^|\.)ical\.booking\.com$/i,
+];
+
+function isPrivateOrLocalHostname(hostname: string) {
+  const host = hostname.trim().toLowerCase();
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal")
+  ) {
+    return true;
+  }
+
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+  }
+
+  return false;
+}
+
+/** HTTPS OTA calendar URLs only (Airbnb / Booking.com / Expedia hosts). */
 export function isValidIcalImportUrl(value: string) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
+    if (url.protocol !== "https:") {
+      return false;
+    }
+    if (isPrivateOrLocalHostname(url.hostname)) {
+      return false;
+    }
+    return OTA_ICAL_HOST_ALLOWLIST.some((pattern) => pattern.test(url.hostname));
   } catch {
     return false;
   }
@@ -310,7 +347,7 @@ export async function getRoomIcalExportEvents(roomId: string): Promise<IcalEvent
 
     events.push({
       uid: `kamala-booking-${booking.id}`,
-      summary: booking.guest_name || "Reserved",
+      summary: "Reserved",
       startDate: booking.arrival_date,
       endDate: booking.departure_date,
     });
@@ -319,7 +356,7 @@ export async function getRoomIcalExportEvents(roomId: string): Promise<IcalEvent
   for (const block of blocks ?? []) {
     events.push({
       uid: `kamala-block-${block.id}`,
-      summary: block.reason?.trim() || "Closed",
+      summary: "Closed",
       startDate: block.start_date,
       endDate: block.end_date,
     });
@@ -367,7 +404,7 @@ export async function getRoomUnitIcalExportEvents(unitId: string): Promise<IcalE
 
     events.push({
       uid: `kamala-booking-${booking.id}`,
-      summary: booking.guest_name || "Reserved",
+      summary: "Reserved",
       startDate: booking.arrival_date,
       endDate: booking.departure_date,
     });
@@ -382,7 +419,7 @@ export async function getRoomUnitIcalExportEvents(unitId: string): Promise<IcalE
   for (const block of blocks ?? []) {
     events.push({
       uid: `kamala-block-${block.id}`,
-      summary: block.reason?.trim() || "Closed",
+      summary: "Closed",
       startDate: block.start_date,
       endDate: block.end_date,
     });
@@ -631,12 +668,17 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
       imported: events.length,
     };
   } catch (error) {
-    if (didDelete && previousSnapshot.length > 0) {
-      await supabase.from("room_blocks").insert(previousSnapshot);
-    }
-
-    const message =
+    let message =
       error instanceof Error ? error.message : "Could not sync this calendar feed.";
+
+    if (didDelete && previousSnapshot.length > 0) {
+      const { error: restoreError } = await supabase
+        .from("room_blocks")
+        .insert(previousSnapshot);
+      if (restoreError) {
+        message = `${message} Restore also failed: ${restoreError.message}`;
+      }
+    }
 
     await supabase
       .from("room_ical_feeds")

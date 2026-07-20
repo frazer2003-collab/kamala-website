@@ -202,11 +202,13 @@ function StatusPill({ status }: { status: DaySaleStatus }) {
           ? "extranet-pill--closed"
           : status === "sold-out"
             ? "extranet-pill--sold-out"
-            : "extranet-pill--bookable",
+            : status === "overbooked"
+              ? "extranet-pill--overbooked"
+              : "extranet-pill--bookable",
       ].join(" ")}
-      title={label}
+      title={status === "overbooked" ? "Overbooked — needs attention" : label}
     >
-      {label}
+      {status === "overbooked" ? "Overbooked" : label}
     </span>
   );
 }
@@ -414,9 +416,15 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       ).length;
       const netBooked = directBooked + channelBooked;
       const roomsLeft = Math.max(0, capacity - netBooked);
-      const saleStatus = getDaySaleStatus(room.id, day.iso, manualClosures, roomsLeft);
+      const saleStatus = getDaySaleStatus(
+        room.id,
+        day.iso,
+        manualClosures,
+        capacity,
+        netBooked,
+      );
       const closedColumn = saleStatus === "closed";
-      const soldOutColumn = saleStatus === "sold-out";
+      const soldOutColumn = saleStatus === "sold-out" || saleStatus === "overbooked";
       const blockForDay = getRoomBlockForDay(room.id, day.iso, manualClosures);
       const isSelected =
         (selectedRoomId === room.id && selectedDate === day.iso) ||
@@ -526,6 +534,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             {needsAssignment ? (
               <span className="extranet-room__inventory-toggle-badge">
                 {unassignedCount} need room #
+              </span>
+            ) : null}
+            {dayMetrics.some((day) => day.saleStatus === "overbooked") ? (
+              <span
+                className="extranet-room__inventory-toggle-badge extranet-room__inventory-toggle-badge--urgent"
+                title="More stays than rooms to sell — needs attention"
+              >
+                Overbooked
               </span>
             ) : null}
           </button>
