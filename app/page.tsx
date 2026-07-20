@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getBookingQuote } from "@/app/actions";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { HomeBookingSection } from "@/components/home-booking-section";
 import { HomeHeroShell } from "@/components/home-hero-shell";
@@ -44,12 +45,24 @@ export default async function Home({
   const stayAvailability = stayDates
     ? await getRoomsStayAvailability(rooms, stayDates.arrival, stayDates.departure)
     : null;
+  const availabilityVerifyFailed = stayAvailability?.status === "verify-failed";
   const availabilityByRoomId = Object.fromEntries(
-    (stayAvailability ?? rooms.map((room) => ({
-      roomId: room.id,
-      availableCount: room.availableCount,
-    }))).map((entry) => [entry.roomId, entry.availableCount]),
+    (stayAvailability?.rooms ??
+      rooms.map((room) => ({
+        roomId: room.id,
+        availableCount: room.availableCount,
+      }))).map((entry) => [entry.roomId, entry.availableCount]),
   );
+  const quotesByRoomId = stayDates
+    ? Object.fromEntries(
+        await Promise.all(
+          rooms.map(async (room) => [
+            room.id,
+            await getBookingQuote(room.id, stayDates.arrival, stayDates.departure),
+          ]),
+        ),
+      )
+    : {};
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? null;
   const lodgingJsonLd = buildHomePageJsonLd(
     settings,
@@ -84,12 +97,21 @@ export default async function Home({
       />
 
       <div className="site-shell home-body">
+        {availabilityVerifyFailed ? (
+          <p className="home-availability-notice" role="status">
+            We couldn’t confirm live availability just now. Rooms below may not be
+            open — try again shortly, or message us to check your dates.
+          </p>
+        ) : null}
+
         <HomeRoomCatalog
           addressLine={settings.addressLine}
           availabilityByRoomId={availabilityByRoomId}
+          availabilityVerifyFailed={availabilityVerifyFailed}
           currency={settings.currency}
           hasStayDates={Boolean(stayDates)}
           promotions={promotions}
+          quotesByRoomId={quotesByRoomId}
           rooms={rooms}
           stayDates={stayDates ?? undefined}
         />

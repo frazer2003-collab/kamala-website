@@ -402,6 +402,29 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      create_guest_booking_if_capacity: {
+        Args: {
+          p_guest_name: string;
+          p_guest_email: string;
+          p_guest_phone: string;
+          p_room_id: string;
+          p_room_name: string;
+          p_arrival_date: string;
+          p_departure_date: string;
+          p_nights: number;
+          p_estimated_total: number;
+          p_deposit_amount: number;
+          p_note: string | null;
+          p_conversation_token: string;
+          p_available_count: number;
+        };
+        Returns: {
+          ok: boolean;
+          reason?: string;
+          message?: string;
+          booking?: BookingRequestRow;
+        };
+      };
       staff_set_booking_room_unit: {
         Args: {
           p_booking_id: string;

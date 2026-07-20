@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import {
   cancelPendingBooking,
   createBookingRequest,
+  getBookingQuote,
   type BookingActionState,
   type BookingFormValues,
   type BookingQuoteResult,
@@ -282,6 +283,33 @@ export function BookingRequest({
     [availabilityByRoomId, rooms],
   );
 
+  const [serverQuote, setServerQuote] = useState<BookingQuoteResult | null>(null);
+  const [quotePending, setQuotePending] = useState(false);
+
+  useEffect(() => {
+    if (!hasValidStayDates(fields.arrival, fields.departure)) {
+      setServerQuote(null);
+      setQuotePending(false);
+      return;
+    }
+
+    let cancelled = false;
+    setQuotePending(true);
+
+    void getBookingQuote(selectedRoom.id, fields.arrival, fields.departure).then(
+      (quote) => {
+        if (!cancelled) {
+          setServerQuote(quote);
+          setQuotePending(false);
+        }
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fields.arrival, fields.departure, selectedRoom.id]);
+
   const clientQuote = useMemo(() => {
     if (!hasValidStayDates(fields.arrival, fields.departure)) {
       return emptyDisplayQuote(selectedRoom.rate);
@@ -310,9 +338,12 @@ export function BookingRequest({
     };
   }, [fields.arrival, fields.departure, promotions, selectedRoom.id, selectedRoom.rate]);
 
-  const displayQuote = hasValidStayDates(fields.arrival, fields.departure)
-    ? clientQuote
-    : emptyDisplayQuote(selectedRoom.rate);
+  const displayQuote =
+    hasValidStayDates(fields.arrival, fields.departure) && serverQuote && serverQuote.nights > 0
+      ? serverQuote
+      : hasValidStayDates(fields.arrival, fields.departure)
+        ? clientQuote
+        : emptyDisplayQuote(selectedRoom.rate);
   const nights = displayQuote.nights > 0 ? displayQuote.nights : 1;
   const estimate = displayQuote.nights > 0 ? displayQuote.total : selectedRoom.rate;
   const deposit = Math.max(1, Math.round(estimate));
@@ -350,7 +381,7 @@ export function BookingRequest({
     >
       <div className="booking-panel__intro">
         <div className="booking-panel__intro-top">
-          <p className="section-note">{t(locale, "requestStay")}</p>
+          <BookingProgress locale={locale} step={progressStep} />
           <label className="language-toggle" htmlFor="booking-locale">
             <span className="sr-only">{t(locale, "language")}</span>
             <select
@@ -367,7 +398,6 @@ export function BookingRequest({
             </select>
           </label>
         </div>
-        <BookingProgress locale={locale} step={progressStep} />
         <h2 id="booking-title">
           {paymentStep
             ? t(locale, "completeReservation")
@@ -564,6 +594,9 @@ export function BookingRequest({
         </div>
 
         <div className="booking-summary booking-summary--receipt" aria-live="polite">
+          {quotePending && hasDates ? (
+            <p className="booking-summary__quote-status">Confirming stay total…</p>
+          ) : null}
           {hasDates ? (
             <>
               <div className="booking-receipt__lines">

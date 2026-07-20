@@ -1,15 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { BookingQuoteResult } from "@/app/actions";
 import { BookRoomLink } from "@/components/book-room-link";
 import { OptimizedImage } from "@/components/optimized-image";
 import { RoomDetailDialog } from "@/components/room-detail-dialog";
 import type { Room } from "@/lib/content";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
-import { getTodayIso } from "@/lib/calendar";
+import { getPropertyTodayIso } from "@/lib/calendar";
 import {
   applyPercentOff,
-  calculateStayQuote,
   getActivePromotionForRoom,
   type RoomPromotionRate,
 } from "@/lib/pricing";
@@ -26,7 +26,9 @@ type HomeRoomCatalogProps = {
   rooms: Room[];
   currency: PropertyCurrency;
   availabilityByRoomId: Record<string, number>;
+  availabilityVerifyFailed?: boolean;
   promotions: RoomPromotionRate[];
+  quotesByRoomId?: Record<string, BookingQuoteResult>;
   stayDates?: { arrival: string; departure: string };
   hasStayDates: boolean;
   addressLine?: string | null;
@@ -37,50 +39,40 @@ type RoomPriceDisplay = {
   rate: number;
   percentOff: number;
   hasPromotion: boolean;
+  stayTotal: number | null;
 };
 
 function getRoomPriceDisplay(
   room: Room,
   promotions: RoomPromotionRate[],
   stayDates?: { arrival: string; departure: string },
+  quote?: BookingQuoteResult,
 ): RoomPriceDisplay {
-  if (stayDates) {
-    const quote = calculateStayQuote({
-      roomId: room.id,
-      baseRate: room.rate,
-      arrival: stayDates.arrival,
-      departure: stayDates.departure,
-      promotions,
-    });
-
-    if (quote.nights > 0 && quote.hasPromotion) {
-      const nightly = Math.round(quote.total / quote.nights);
-      const percentOff = Math.round(
-        ((quote.baseTotal - quote.total) / quote.baseTotal) * 100,
-      );
-      return {
-        baseRate: room.rate,
-        rate: nightly,
-        percentOff,
-        hasPromotion: true,
-      };
-    }
+  if (stayDates && quote && quote.nights > 0) {
+    const nightly =
+      quote.effectiveNightlyRate ?? Math.round(quote.total / quote.nights);
+    const percentOff =
+      quote.hasPromotion && quote.baseTotal > 0
+        ? Math.round(((quote.baseTotal - quote.total) / quote.baseTotal) * 100)
+        : 0;
 
     return {
       baseRate: room.rate,
-      rate: room.rate,
-      percentOff: 0,
-      hasPromotion: false,
+      rate: nightly,
+      percentOff,
+      hasPromotion: quote.hasPromotion && percentOff > 0,
+      stayTotal: quote.total,
     };
   }
 
-  const promo = getActivePromotionForRoom(room.id, promotions, getTodayIso());
+  const promo = getActivePromotionForRoom(room.id, promotions, getPropertyTodayIso());
   if (promo) {
     return {
       baseRate: room.rate,
       rate: applyPercentOff(room.rate, promo.percentOff),
       percentOff: promo.percentOff,
       hasPromotion: true,
+      stayTotal: null,
     };
   }
 
@@ -89,6 +81,7 @@ function getRoomPriceDisplay(
     rate: room.rate,
     percentOff: 0,
     hasPromotion: false,
+    stayTotal: null,
   };
 }
 
@@ -133,7 +126,11 @@ function RoomListingCard({
       ) : (
         <strong>{formatMoneySuffix(price.rate, currency)}</strong>
       )}
-      <span>per night</span>
+      <span>
+        {price.stayTotal != null
+          ? `${formatMoneySuffix(price.stayTotal, currency)} for the stay`
+          : "per night"}
+      </span>
     </div>
   );
 
@@ -251,7 +248,9 @@ export function HomeRoomCatalog({
   rooms,
   currency,
   availabilityByRoomId,
+  availabilityVerifyFailed = false,
   promotions,
+  quotesByRoomId = {},
   stayDates,
   hasStayDates,
   addressLine = null,
@@ -262,9 +261,12 @@ export function HomeRoomCatalog({
 
   const pricesByRoomId = useMemo(() => {
     return Object.fromEntries(
-      rooms.map((room) => [room.id, getRoomPriceDisplay(room, promotions, stayDates)]),
+      rooms.map((room) => [
+        room.id,
+        getRoomPriceDisplay(room, promotions, stayDates, quotesByRoomId[room.id]),
+      ]),
     );
-  }, [promotions, rooms, stayDates]);
+  }, [promotions, quotesByRoomId, rooms, stayDates]);
 
   const featuredRoom =
     rooms.find((room) =>
@@ -294,7 +296,11 @@ export function HomeRoomCatalog({
               </a>
             ) : null}
           </div>
-          <p className="section__subhead">{buildRoomsSectionSubhead(rooms.length, addressLine)}</p>
+          <p className="section__subhead">
+            {availabilityVerifyFailed
+              ? "Availability could not be verified — treat open rooms as provisional until you reserve."
+              : buildRoomsSectionSubhead(rooms.length, addressLine)}
+          </p>
         </div>
 
         <div className="listing-showcase">
@@ -350,6 +356,7 @@ export function HomeRoomCatalog({
         promotions={promotions}
         room={selectedRoom}
         rooms={rooms}
+        stayQuote={selectedRoom ? quotesByRoomId[selectedRoom.id] : undefined}
         stayDates={stayDates}
       />
     </>

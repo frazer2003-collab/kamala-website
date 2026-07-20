@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef } from "react";
+import type { BookingQuoteResult } from "@/app/actions";
+import { BookRoomLink } from "@/components/book-room-link";
+import { PhotoCarousel } from "@/components/photo-carousel";
+import { RoomAmenitiesList } from "@/components/room-amenities-list";
 import type { Room } from "@/lib/content";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
-import { getTodayIso } from "@/lib/calendar";
+import { getPropertyTodayIso } from "@/lib/calendar";
 import {
   applyPercentOff,
-  calculateStayQuote,
   getActivePromotionForRoom,
   type RoomPromotionRate,
 } from "@/lib/pricing";
@@ -20,9 +23,6 @@ import {
   formatRoomEssentials,
   formatRoomOutlookDetails,
 } from "@/lib/room-essentials";
-import { BookRoomLink } from "@/components/book-room-link";
-import { PhotoCarousel } from "@/components/photo-carousel";
-import { RoomAmenitiesList } from "@/components/room-amenities-list";
 
 type RoomDetailDialogProps = {
   room: Room | null;
@@ -30,6 +30,7 @@ type RoomDetailDialogProps = {
   currency: PropertyCurrency;
   availableCount: number;
   promotions?: RoomPromotionRate[];
+  stayQuote?: BookingQuoteResult;
   stayDates?: { arrival: string; departure: string };
   onClose: () => void;
   onSelectRoom?: (roomId: string) => void;
@@ -60,6 +61,7 @@ export function RoomDetailDialog({
   currency,
   availableCount,
   promotions = [],
+  stayQuote,
   stayDates,
   onClose,
   onSelectRoom,
@@ -74,39 +76,27 @@ export function RoomDetailDialog({
       return null;
     }
 
-    const stayQuote = stayDates
-      ? calculateStayQuote({
-          roomId: room.id,
-          baseRate: room.rate,
-          arrival: stayDates.arrival,
-          departure: stayDates.departure,
-          promotions,
-        })
-      : null;
-
-    if (stayDates && stayQuote && stayQuote.nights > 0 && stayQuote.hasPromotion) {
-      return {
-        baseRate: room.rate,
-        rate: Math.round(stayQuote.total / stayQuote.nights),
-        percentOff: Math.round(
-          ((stayQuote.baseTotal - stayQuote.total) / stayQuote.baseTotal) * 100,
-        ),
-        hasPromotion: true,
-        stayQuote,
-      };
-    }
-
     if (stayDates && stayQuote && stayQuote.nights > 0) {
+      const nightly =
+        stayQuote.effectiveNightlyRate ??
+        Math.round(stayQuote.total / stayQuote.nights);
+      const percentOff =
+        stayQuote.hasPromotion && stayQuote.baseTotal > 0
+          ? Math.round(
+              ((stayQuote.baseTotal - stayQuote.total) / stayQuote.baseTotal) * 100,
+            )
+          : 0;
+
       return {
         baseRate: room.rate,
-        rate: room.rate,
-        percentOff: 0,
-        hasPromotion: false,
+        rate: nightly,
+        percentOff,
+        hasPromotion: stayQuote.hasPromotion && percentOff > 0,
         stayQuote,
       };
     }
 
-    const promo = getActivePromotionForRoom(room.id, promotions, getTodayIso());
+    const promo = getActivePromotionForRoom(room.id, promotions, getPropertyTodayIso());
     if (promo) {
       return {
         baseRate: room.rate,
@@ -124,7 +114,7 @@ export function RoomDetailDialog({
       hasPromotion: false,
       stayQuote: null,
     };
-  }, [promotions, room, stayDates]);
+  }, [promotions, room, stayDates, stayQuote]);
 
   const roomIndex = room ? rooms.findIndex((entry) => entry.id === room.id) : -1;
   const previousRoom = roomIndex > 0 ? rooms[roomIndex - 1] : null;

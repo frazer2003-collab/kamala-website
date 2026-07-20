@@ -100,13 +100,13 @@ export async function getRoomDayInventoryForMonth(month: { year: number; month: 
   }
 }
 
-export async function getRoomDayInventoryForRange(
+export async function loadRoomDayInventoryForRange(
   roomId: string,
   arrival: string,
   departure: string,
-) {
+): Promise<{ ok: true; entries: RoomDayInventory[] } | { ok: false; error: string }> {
   if (!hasStaffSupabaseConfig()) {
-    return [] as RoomDayInventory[];
+    return { ok: true, entries: [] };
   }
 
   try {
@@ -120,12 +120,25 @@ export async function getRoomDayInventoryForRange(
       .lte("date", lastNight)
       .order("date", { ascending: true });
 
-    if (error || !data) {
-      return [];
+    if (error) {
+      return { ok: false, error: error.message };
     }
 
-    return data.map(mapInventoryRow);
-  } catch {
-    return [];
+    return { ok: true, entries: (data ?? []).map(mapInventoryRow) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not load day inventory.",
+    };
   }
+}
+
+/** Soft loader for export/sync paths — empty on error (no inventory overrides). */
+export async function getRoomDayInventoryForRange(
+  roomId: string,
+  arrival: string,
+  departure: string,
+) {
+  const result = await loadRoomDayInventoryForRange(roomId, arrival, departure);
+  return result.ok ? result.entries : [];
 }

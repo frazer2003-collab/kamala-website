@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { createStaffSupabaseClient } from "@/lib/supabase";
+import { createStaffSupabaseClient, type BookingRequestRow } from "@/lib/supabase";
 import { sendGuestBookingEmail, sendStaffBookingEmail } from "@/lib/email";
 import {
   getGuestChatUrl,
@@ -11,7 +11,7 @@ import {
 import { formatMoneySuffix, getStripeCurrencyCode } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
-import { checkStayCapacity, hasCapacityForStay } from "@/lib/booking-capacity";
+import { checkStayCapacity, hasCapacityForStay, isStayOverCapacity } from "@/lib/booking-capacity";
 import {
   fulfillBookingDeposit,
   releaseBookingReservation,
@@ -186,20 +186,25 @@ function getBookingInsertErrorMessage(error: { message?: string; code?: string }
   if (
     message.includes("deposit_amount") ||
     message.includes("pending_payment") ||
-    message.includes("booking_requests_status_check")
+    message.includes("booking_requests_status_check") ||
+    message.includes("guest_phone") ||
+    error.code === "42501" ||
+    message.toLowerCase().includes("row-level security")
   ) {
-    return "Database needs the Stripe deposit migration. Run supabase/migrate-stripe-deposit.sql in Supabase, then try again.";
-  }
-
-  if (message.includes("guest_phone")) {
-    return "Database needs the guest phone migration. Run supabase/migrate-guest-phone.sql in Supabase, then try again.";
-  }
-
-  if (error.code === "42501" || message.toLowerCase().includes("row-level security")) {
-    return "Database permissions blocked the booking. Run the latest files in supabase/ on your Supabase project, then try again.";
+    return "We couldn’t save this booking just now. Please try again in a moment, or message us if it keeps happening.";
   }
 
   return "We could not save the request. Check the booking details or try again in a moment.";
+}
+
+function isMissingAtomicBookingRpc(error: { message?: string; code?: string } | null) {
+  const message = (error?.message ?? "").toLowerCase();
+  return (
+    message.includes("create_guest_booking_if_capacity") ||
+    message.includes("could not find the function") ||
+    message.includes("schema cache") ||
+    error?.code === "PGRST202"
+  );
 }
 
 export async function getBookingQuote(
@@ -296,7 +301,9 @@ export async function createBookingRequest(
     fieldErrors["guest-email"] = "Enter a valid email address.";
   }
 
-  if (guestPhone && !isValidPhone(guestPhone)) {
+  if (!guestPhone) {
+    fieldErrors["guest-phone"] = "Enter a phone number we can reach you on.";
+  } else if (!isValidPhone(guestPhone)) {
     fieldErrors["guest-phone"] = "Enter a valid phone number with at least 7 digits.";
   }
 
@@ -392,29 +399,119 @@ export async function createBookingRequest(
 
   try {
     const supabase = createStaffSupabaseClient();
-    const { data: booking, error } = await supabase
-      .from("booking_requests")
-      .insert({
-        guest_name: guestName,
-        guest_email: guestEmail,
-        guest_phone: guestPhone,
-        room_id: selectedRoom.id,
-        room_name: selectedRoom.name,
-        arrival_date: arrival,
-        departure_date: departure,
-        nights,
-        estimated_total: estimatedTotal,
-        deposit_amount: depositAmount,
-        note: note || null,
-        status: "pending_payment",
-        conversation_token: randomUUID(),
-      })
-      .select("*")
-      .single();
+    const conversationToken = randomUUID();
+    let booking: BookingRequestRow | null = null;
 
-    if (error || !booking) {
-      console.error("createBookingRequest insert failed:", error);
-      return bookingErrorState(getBookingInsertErrorMessage(error ?? {}), formData);
+    const { data: atomicData, error: atomicError } = await supabase.rpc(
+      "create_guest_booking_if_capacity",
+      {
+        p_guest_name: guestName,
+        p_guest_email: guestEmail,
+        p_guest_phone: guestPhone,
+        p_room_id: selectedRoom.id,
+        p_room_name: selectedRoom.name,
+        p_arrival_date: arrival,
+        p_departure_date: departure,
+        p_nights: nights,
+        p_estimated_total: estimatedTotal,
+        p_deposit_amount: depositAmount,
+        p_note: note || null,
+        p_conversation_token: conversationToken,
+        p_available_count: selectedRoom.availableCount,
+      },
+    );
+
+    if (!atomicError && atomicData && typeof atomicData === "object") {
+      const payload = atomicData as {
+        ok?: boolean;
+        reason?: string;
+        booking?: BookingRequestRow;
+      };
+
+      if (payload.ok === false) {
+        if (payload.reason === "verify-failed") {
+          return bookingErrorState(
+            "We couldn’t confirm availability just now. Please try again in a moment, or message us if it keeps happening.",
+            formData,
+            {
+              room: "We couldn’t confirm availability for these dates. Please try again.",
+            },
+          );
+        }
+
+        return bookingErrorState(
+          "These dates are no longer available for this room.",
+          formData,
+          { room: "These dates are no longer available for this room." },
+        );
+      }
+
+      if (payload.ok && payload.booking?.id) {
+        booking = payload.booking;
+      }
+    } else if (atomicError && !isMissingAtomicBookingRpc(atomicError)) {
+      console.error("create_guest_booking_if_capacity failed:", atomicError);
+      return bookingErrorState(getBookingInsertErrorMessage(atomicError), formData);
+    }
+
+    if (!booking) {
+      const { data: inserted, error } = await supabase
+        .from("booking_requests")
+        .insert({
+          guest_name: guestName,
+          guest_email: guestEmail,
+          guest_phone: guestPhone,
+          room_id: selectedRoom.id,
+          room_name: selectedRoom.name,
+          arrival_date: arrival,
+          departure_date: departure,
+          nights,
+          estimated_total: estimatedTotal,
+          deposit_amount: depositAmount,
+          note: note || null,
+          status: "pending_payment",
+          conversation_token: conversationToken,
+        })
+        .select("*")
+        .single();
+
+      if (error || !inserted) {
+        console.error("createBookingRequest insert failed:", error);
+        return bookingErrorState(getBookingInsertErrorMessage(error ?? {}), formData);
+      }
+
+      const overCapacity = await isStayOverCapacity(
+        selectedRoom.id,
+        arrival,
+        departure,
+        selectedRoom.availableCount,
+      );
+
+      if (!overCapacity.ok) {
+        await supabase
+          .from("booking_requests")
+          .delete()
+          .eq("id", inserted.id)
+          .eq("status", "pending_payment");
+
+        if (overCapacity.reason === "verify-failed") {
+          return bookingErrorState(
+            "We couldn’t confirm availability just now. Please try again in a moment, or message us if it keeps happening.",
+            formData,
+            {
+              room: "We couldn’t confirm availability for these dates. Please try again.",
+            },
+          );
+        }
+
+        return bookingErrorState(
+          "These dates are no longer available for this room.",
+          formData,
+          { room: "These dates are no longer available for this room." },
+        );
+      }
+
+      booking = inserted;
     }
 
     await seedGuestNoteMessage(booking);
@@ -484,7 +581,7 @@ export async function createBookingRequest(
     };
   } catch {
     return bookingErrorState(
-      "Supabase or Stripe is not configured yet. Add your environment variables before sending real requests.",
+      "We couldn’t start checkout just now. Please try again in a moment.",
       formData,
     );
   }

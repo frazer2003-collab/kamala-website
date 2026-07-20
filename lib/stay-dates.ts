@@ -1,3 +1,5 @@
+import { getPropertyTodayIso } from "@/lib/calendar";
+
 export type StayDates = {
   arrival: string;
   departure: string;
@@ -28,9 +30,8 @@ export function parseStayDates(arrival?: string, departure?: string): StayDates 
     return null;
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (arrivalDate < today) {
+  // Property desk clock (Asia/Bangkok), not the server's local timezone.
+  if (arrival < getPropertyTodayIso()) {
     return null;
   }
 

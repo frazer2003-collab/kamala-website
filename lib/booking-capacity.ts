@@ -3,7 +3,7 @@ import { bookingOccupiesDay } from "@/lib/calendar";
 import { bookingReservesRoom } from "@/lib/booking-reservation";
 import {
   buildInventoryLookup,
-  getRoomDayInventoryForRange,
+  loadRoomDayInventoryForRange,
 } from "@/lib/room-day-inventory";
 import type { UnavailableStayDay } from "@/lib/stay-overlap";
 
@@ -13,6 +13,18 @@ export class CapacityDataError extends Error {
     super(message);
     this.name = "CapacityDataError";
   }
+}
+
+async function loadTrustedInventory(
+  roomId: string,
+  arrival: string,
+  departure: string,
+) {
+  const result = await loadRoomDayInventoryForRange(roomId, arrival, departure);
+  if (!result.ok) {
+    throw new CapacityDataError(result.error);
+  }
+  return result.entries;
 }
 
 export function dateRangesOverlap(
@@ -153,7 +165,7 @@ export async function getUnavailableStayDays(
         .eq("room_id", roomId)
         .lt("start_date", departure)
         .gt("end_date", arrival),
-      getRoomDayInventoryForRange(roomId, arrival, departure),
+      loadTrustedInventory(roomId, arrival, departure),
     ]);
 
     if (bookingsResult.error || blocksResult.error) {
@@ -253,12 +265,13 @@ export type StayCapacityResult =
   | { ok: true }
   | { ok: false; reason: "unavailable" | "verify-failed" };
 
-export async function checkStayCapacity(
+async function evaluateStayCapacity(
   roomId: string,
   arrival: string,
   departure: string,
   availableCount: number,
-  options?: { excludeBookingId?: string; excludeBlockId?: string },
+  options: { excludeBookingId?: string; excludeBlockId?: string } | undefined,
+  mode: "can-add-one" | "within-limit",
 ): Promise<StayCapacityResult> {
   try {
     const supabase = createStaffSupabaseClient();
@@ -277,7 +290,7 @@ export async function checkStayCapacity(
         .eq("room_id", roomId)
         .lt("start_date", departure)
         .gt("end_date", arrival),
-      getRoomDayInventoryForRange(roomId, arrival, departure),
+      loadTrustedInventory(roomId, arrival, departure),
     ]);
 
     if (bookingsResult.error || blocksResult.error) {
@@ -341,8 +354,10 @@ export async function checkStayCapacity(
       }
 
       const roomsToSell = inventoryLookup.get(`${roomId}:${iso}`) ?? availableCount;
+      const over =
+        mode === "can-add-one" ? netBooked >= roomsToSell : netBooked > roomsToSell;
 
-      if (netBooked >= roomsToSell) {
+      if (over) {
         return { ok: false, reason: "unavailable" };
       }
 
@@ -353,6 +368,41 @@ export async function checkStayCapacity(
   } catch {
     return { ok: false, reason: "verify-failed" };
   }
+}
+
+export async function checkStayCapacity(
+  roomId: string,
+  arrival: string,
+  departure: string,
+  availableCount: number,
+  options?: { excludeBookingId?: string; excludeBlockId?: string },
+): Promise<StayCapacityResult> {
+  return evaluateStayCapacity(
+    roomId,
+    arrival,
+    departure,
+    availableCount,
+    options,
+    "can-add-one",
+  );
+}
+
+/** After insert: fails when this stay already exceeds sellable units (overbook). */
+export async function isStayOverCapacity(
+  roomId: string,
+  arrival: string,
+  departure: string,
+  availableCount: number,
+  options?: { excludeBookingId?: string; excludeBlockId?: string },
+): Promise<StayCapacityResult> {
+  return evaluateStayCapacity(
+    roomId,
+    arrival,
+    departure,
+    availableCount,
+    options,
+    "within-limit",
+  );
 }
 
 export async function hasCapacityForStay(

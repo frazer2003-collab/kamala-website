@@ -724,18 +724,18 @@ p {
 }
 
 .home-hero--atmosphere .search-bar--atmosphere {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-search);
+  border: 1px solid oklch(89% 0.01 12 / 0.7);
+  background: oklch(100% 0 0 / 0.92);
+  box-shadow: 0 4px 18px oklch(20% 0.02 12 / 0.06);
 }
 
 .home-hero--atmosphere .search-bar--atmosphere .search-bar__segment:hover,
 .home-hero--atmosphere .search-bar--atmosphere .search-bar__segment:focus-within {
-  background: var(--color-maroon-wash);
+  background: var(--color-surface-muted);
 }
 
 .home-hero--atmosphere .search-bar--atmosphere .search-bar__label {
-  color: var(--color-maroon);
+  color: var(--color-muted);
 }
 
 .home-hero--atmosphere .search-bar--atmosphere .search-bar__value {
@@ -750,6 +750,22 @@ p {
 
 .home-hero--atmosphere .search-bar--atmosphere .search-bar__divider {
   background: var(--color-border);
+}
+
+.home-hero--atmosphere .search-bar--atmosphere .search-bar__submit {
+  box-shadow: none;
+}
+
+.home-availability-notice {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-wash);
+  color: var(--color-warning-ink);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  max-width: 70ch;
 }
 
 .button--gold {
@@ -3190,6 +3206,19 @@ p {
   list-style: none;
 }
 
+.booking-progress--quiet {
+  display: block;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--color-muted);
+  letter-spacing: 0.01em;
+}
+
+.booking-progress--quiet .booking-progress__current {
+  color: var(--color-muted);
+}
+
 .booking-progress--placeholder {
   pointer-events: none;
 }
@@ -3683,6 +3712,12 @@ textarea:focus {
   color: var(--color-muted);
   font-size: 0.9rem;
   line-height: 1.45;
+}
+
+.booking-summary__quote-status {
+  margin: 0 0 var(--space-3);
+  color: var(--color-muted);
+  font-size: 0.82rem;
 }
 
 .booking-summary__stripe {
