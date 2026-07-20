@@ -8,8 +8,13 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe, type StripeElementsOptions } from "@stripe/stripe-js";
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { setPendingBookingPaymentMethods } from "@/app/actions";
+import { useEffect, useMemo, useState } from "react";
+import { startCardPaymentForBooking } from "@/app/actions";
+import { BookingBankTransferPanel } from "@/components/booking-bank-transfer-panel";
+import {
+  isBankTransferAvailable,
+  type BankTransferDetails,
+} from "@/lib/bank-transfer";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
 import { t, type Locale } from "@/lib/i18n";
 
@@ -23,27 +28,34 @@ function getStripePromise(publishableKey: string) {
   return stripePromise;
 }
 
-type PayMethod = "promptpay" | "card";
+type PayMethod = "bank" | "card";
 
 function CardPaymentForm({
   bookingId,
+  cardTotalDue,
   currency,
-  deposit,
   locale,
   onCancel,
   returnUrl,
+  stayTotal,
 }: {
   bookingId: string;
+  cardTotalDue: number;
   currency: PropertyCurrency;
-  deposit: number;
   locale: Locale;
   onCancel: () => void;
   returnUrl: string;
+  stayTotal: number;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const charge = {
+    stayTotal,
+    surcharge: Math.max(0, cardTotalDue - stayTotal),
+    totalDue: cardTotalDue,
+  };
 
   async function handlePay(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,21 +68,41 @@ function CardPaymentForm({
     setIsPaying(true);
     setErrorMessage(null);
 
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: returnUrl,
-      },
-    });
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: returnUrl,
+        },
+      });
 
-    if (error) {
-      setErrorMessage(error.message ?? t(locale, "paymentFailed"));
+      if (error) {
+        setErrorMessage(t(locale, "paymentFailed"));
+        setIsPaying(false);
+      }
+    } catch {
+      setErrorMessage(t(locale, "paymentFailed"));
       setIsPaying(false);
     }
   }
 
   return (
     <form className="booking-payment" onSubmit={handlePay}>
+      <div className="booking-payment__charge-lines">
+        <div>
+          <span>{t(locale, "estimatedTotal")}</span>
+          <span>{formatMoney(charge.stayTotal, currency)}</span>
+        </div>
+        <div>
+          <span>{t(locale, "bankChargeLabel")}</span>
+          <span>{formatMoney(charge.surcharge, currency)}</span>
+        </div>
+        <div className="booking-payment__charge-total">
+          <strong>{t(locale, "depositDue")}</strong>
+          <strong>{formatMoney(charge.totalDue, currency)}</strong>
+        </div>
+      </div>
+
       <div className="booking-payment__element">
         <PaymentElement
           id="booking-payment-element"
@@ -99,7 +131,7 @@ function CardPaymentForm({
         >
           {isPaying
             ? t(locale, "processingPayment")
-            : `${t(locale, "payDeposit")} (${formatMoney(deposit, currency)})`}
+            : `${t(locale, "payDeposit")} (${formatMoney(charge.totalDue, currency)})`}
         </button>
         <button
           className="button button--secondary"
@@ -116,354 +148,150 @@ function CardPaymentForm({
   );
 }
 
-function PromptPayQrPanel({
-  clientSecret,
-  currency,
-  deposit,
-  guestEmail,
-  locale,
-  onCancel,
-  onSwitchToCard,
-  publishableKey,
-  returnUrl,
-}: {
-  clientSecret: string;
-  currency: PropertyCurrency;
-  deposit: number;
-  guestEmail: string;
-  locale: Locale;
-  onCancel: () => void;
-  onSwitchToCard: () => void;
-  publishableKey: string;
-  returnUrl: string;
-}) {
-  const stripe = useMemo(() => getStripePromise(publishableKey), [publishableKey]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isStarting, setIsStarting] = useState(false);
-  const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [statusLabel, setStatusLabel] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!qrUrl || !stripe) {
-      return;
-    }
-
-    let cancelled = false;
-    const interval = window.setInterval(() => {
-      void (async () => {
-        const stripeJs = await stripe;
-        if (!stripeJs || cancelled) {
-          return;
-        }
-
-        const { paymentIntent } = await stripeJs.retrievePaymentIntent(clientSecret);
-        if (!paymentIntent || cancelled) {
-          return;
-        }
-
-        if (paymentIntent.status === "succeeded") {
-          window.clearInterval(interval);
-          window.location.assign(returnUrl);
-          return;
-        }
-
-        if (
-          paymentIntent.status === "canceled" ||
-          paymentIntent.status === "requires_payment_method"
-        ) {
-          window.clearInterval(interval);
-          setErrorMessage(t(locale, "paymentFailed"));
-          setQrUrl(null);
-          setStatusLabel(null);
-        }
-      })();
-    }, 2500);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [clientSecret, locale, qrUrl, returnUrl, stripe]);
-
-  async function handleShowQr() {
-    setIsStarting(true);
-    setErrorMessage(null);
-    setStatusLabel(null);
-
-    const stripeJs = await stripe;
-    if (!stripeJs) {
-      setErrorMessage(t(locale, "paymentFailed"));
-      setIsStarting(false);
-      return;
-    }
-
-    const email = guestEmail.trim();
-    if (!email) {
-      setErrorMessage(t(locale, "paymentFailed"));
-      setIsStarting(false);
-      return;
-    }
-
-    const { error, paymentIntent } = await stripeJs.confirmPromptPayPayment(
-      clientSecret,
-      {
-        payment_method: {
-          billing_details: {
-            email,
-          },
-        },
-      },
-      {
-        handleActions: false,
-      },
-    );
-
-    if (error) {
-      setErrorMessage(error.message ?? t(locale, "paymentFailed"));
-      setIsStarting(false);
-      return;
-    }
-
-    if (paymentIntent?.status === "succeeded") {
-      window.location.assign(returnUrl);
-      return;
-    }
-
-    const nextAction = paymentIntent?.next_action as
-      | {
-          type?: string;
-          promptpay_display_qr_code?: {
-            image_url_png?: string | null;
-            image_url_svg?: string | null;
-          };
-        }
-      | null
-      | undefined;
-    const qr = nextAction?.promptpay_display_qr_code;
-
-    if (qr?.image_url_png || qr?.image_url_svg) {
-      setQrUrl(qr.image_url_png ?? qr.image_url_svg ?? null);
-      setStatusLabel(t(locale, "promptPayWaiting"));
-      setIsStarting(false);
-      return;
-    }
-
-    setErrorMessage(t(locale, "paymentFailed"));
-    setIsStarting(false);
-  }
-
-  return (
-    <div className="booking-payment booking-payment--promptpay">
-      {!qrUrl ? (
-        <>
-          <p className="booking-payment__promptpay-intro">{t(locale, "promptPayIntro")}</p>
-          <div className="booking-payment__actions">
-            <button
-              className="button button--primary"
-              disabled={isStarting}
-              onClick={() => void handleShowQr()}
-              type="button"
-            >
-              {isStarting
-                ? t(locale, "processingPayment")
-                : `${t(locale, "showPromptPayQr")} (${formatMoney(deposit, currency)})`}
-            </button>
-            <button
-              className="button button--secondary"
-              disabled={isStarting}
-              onClick={onSwitchToCard}
-              type="button"
-            >
-              {t(locale, "payWithCardInstead")}
-            </button>
-            <button
-              className="button button--quiet"
-              disabled={isStarting}
-              onClick={onCancel}
-              type="button"
-            >
-              {t(locale, "editBookingDetails")}
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="booking-payment__qr">
-            <img
-              alt={t(locale, "promptPayQrAlt")}
-              className="booking-payment__qr-image"
-              height={280}
-              src={qrUrl}
-              width={280}
-            />
-            <p className="booking-payment__qr-amount">
-              {formatMoney(deposit, currency)}
-            </p>
-            <p className="booking-payment__qr-hint" role="status">
-              {statusLabel}
-            </p>
-          </div>
-          <div className="booking-payment__actions">
-            <button
-              className="button button--secondary"
-              onClick={onSwitchToCard}
-              type="button"
-            >
-              {t(locale, "payWithCardInstead")}
-            </button>
-            <button className="button button--quiet" onClick={onCancel} type="button">
-              {t(locale, "editBookingDetails")}
-            </button>
-          </div>
-        </>
-      )}
-
-      {errorMessage ? (
-        <p className="form-message form-message--error" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
 export function BookingPaymentElement({
+  bankTransfer,
   bookingId,
+  cardTotalDue,
   clientSecret,
   currency,
-  deposit,
-  guestEmail,
   locale,
   onCancel,
   publishableKey,
   returnUrl,
+  stayTotal,
 }: {
+  bankTransfer: BankTransferDetails;
   bookingId: string;
-  clientSecret: string;
+  cardTotalDue: number;
+  clientSecret: string | null;
   currency: PropertyCurrency;
-  deposit: number;
-  guestEmail: string;
   locale: Locale;
   onCancel: () => void;
-  publishableKey: string;
+  publishableKey: string | null;
   returnUrl: string;
+  stayTotal: number;
 }) {
-  const supportsPromptPay = currency === "thb";
-  const [method, setMethod] = useState<PayMethod>(
-    supportsPromptPay ? "promptpay" : "card",
+  const bankAvailable = isBankTransferAvailable(bankTransfer, currency);
+  const [method, setMethod] = useState<PayMethod>(bankAvailable ? "bank" : "card");
+  const [cardClientSecret, setCardClientSecret] = useState(clientSecret);
+  const [serverStayTotal, setServerStayTotal] = useState(stayTotal);
+  const [serverCardTotalDue, setServerCardTotalDue] = useState(cardTotalDue);
+  const [cardError, setCardError] = useState<string | null>(null);
+  const [isStartingCard, setIsStartingCard] = useState(
+    !bankAvailable && !clientSecret,
   );
-  const [methodsReady, setMethodsReady] = useState(!supportsPromptPay);
-  const [methodError, setMethodError] = useState<string | null>(null);
-  const [isUpdatingMethods, startUpdatingMethods] = useTransition();
-  const stripe = useMemo(() => getStripePromise(publishableKey), [publishableKey]);
+  const stripe = useMemo(
+    () => (publishableKey ? getStripePromise(publishableKey) : null),
+    [publishableKey],
+  );
 
   useEffect(() => {
-    if (!supportsPromptPay) {
-      setMethodsReady(true);
+    if (method !== "card" || cardClientSecret || cardError) {
       return;
     }
 
     let cancelled = false;
-    setMethodsReady(false);
-    setMethodError(null);
 
-    startUpdatingMethods(() => {
-      void setPendingBookingPaymentMethods(
-        bookingId,
-        method === "promptpay" ? ["promptpay"] : ["card"],
-      ).then((result) => {
+    void (async () => {
+      try {
+        const result = await startCardPaymentForBooking(bookingId);
         if (cancelled) {
           return;
         }
 
         if (!result.ok) {
-          setMethodError(result.message);
-          setMethodsReady(false);
+          setCardError(t(locale, result.errorCode));
+          setIsStartingCard(false);
           return;
         }
 
-        setMethodsReady(true);
-      });
-    });
+        setServerStayTotal(result.stayTotal);
+        setServerCardTotalDue(result.cardTotalDue);
+        setCardClientSecret(result.clientSecret);
+        setIsStartingCard(false);
+      } catch {
+        if (!cancelled) {
+          setCardError(t(locale, "cardPaymentStartFailed"));
+          setIsStartingCard(false);
+        }
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [bookingId, method, supportsPromptPay]);
+  }, [bookingId, cardClientSecret, cardError, locale, method]);
 
-  const options = useMemo<StripeElementsOptions>(
-    () => ({
-      clientSecret,
-      appearance: {
-        theme: "stripe",
-        variables: {
-          colorPrimary: "#7a2430",
-          colorBackground: "#ffffff",
-          colorText: "#24191b",
-          colorDanger: "#9b2c2c",
-          fontFamily:
-            '"Plus Jakarta Sans", "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-          borderRadius: "0.75rem",
-          spacingUnit: "4px",
-        },
-        rules: {
-          ".Input": {
-            border: "1px solid #e2d7d9",
-            boxShadow: "none",
-          },
-          ".Input:focus": {
-            border: "1px solid #7a2430",
-            boxShadow: "0 0 0 3px rgba(122, 36, 48, 0.12)",
-          },
-          ".Tab": {
-            border: "1px solid #e2d7d9",
-          },
-          ".Tab--selected": {
-            border: "1px solid rgba(122, 36, 48, 0.35)",
-            backgroundColor: "#faf5f6",
-          },
-        },
-      },
-    }),
-    [clientSecret],
+  const options = useMemo<StripeElementsOptions | null>(
+    () =>
+      cardClientSecret
+        ? {
+            clientSecret: cardClientSecret,
+            appearance: {
+              theme: "stripe",
+              variables: {
+                colorPrimary: "#7a2430",
+                colorBackground: "#ffffff",
+                colorText: "#24191b",
+                colorDanger: "#9b2c2c",
+                fontFamily:
+                  '"Plus Jakarta Sans", "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                borderRadius: "0.75rem",
+                spacingUnit: "4px",
+              },
+              rules: {
+                ".Input": {
+                  border: "1px solid #e2d7d9",
+                  boxShadow: "none",
+                },
+                ".Input:focus": {
+                  border: "1px solid #7a2430",
+                  boxShadow: "0 0 0 3px rgba(122, 36, 48, 0.12)",
+                },
+                ".Tab": {
+                  border: "1px solid #e2d7d9",
+                },
+                ".Tab--selected": {
+                  border: "1px solid rgba(122, 36, 48, 0.35)",
+                  backgroundColor: "#faf5f6",
+                },
+              },
+            },
+          }
+        : null,
+    [cardClientSecret],
   );
 
   return (
     <div className="booking-payment-shell">
       <p className="booking-payment-shell__title">{t(locale, "paymentDetails")}</p>
-      <p className="booking-payment-shell__secure">{t(locale, "paymentSecureBadge")}</p>
-      <p className="booking-payment-shell__trust">{t(locale, "stripeSecureCheckout")}</p>
-      <p className="booking-payment-shell__legal">
-        {t(locale, "paymentTrustPolicies")}{" "}
-        <Link href="/privacy">{t(locale, "paymentPrivacyLink")}</Link>
-        {" · "}
-        <Link href="/terms">{t(locale, "paymentTermsLink")}</Link>
-      </p>
 
-      {supportsPromptPay ? (
+      {bankAvailable ? (
         <div
-          aria-label={t(locale, "paymentDetails")}
+          aria-label={t(locale, "paymentMethodLabel")}
           className="booking-payment__method-toggle"
           role="group"
         >
           <button
-            aria-pressed={method === "promptpay"}
+            aria-pressed={method === "bank"}
             className={`booking-payment__method-btn${
-              method === "promptpay" ? " booking-payment__method-btn--active" : ""
+              method === "bank" ? " booking-payment__method-btn--active" : ""
             }`}
-            disabled={isUpdatingMethods}
-            onClick={() => setMethod("promptpay")}
+            onClick={() => setMethod("bank")}
             type="button"
           >
-            {t(locale, "payWithPromptPay")}
+            {t(locale, "payWithBankTransfer")}
           </button>
           <button
             aria-pressed={method === "card"}
             className={`booking-payment__method-btn${
               method === "card" ? " booking-payment__method-btn--active" : ""
             }`}
-            disabled={isUpdatingMethods}
-            onClick={() => setMethod("card")}
+            onClick={() => {
+              setCardError(null);
+              setIsStartingCard(!cardClientSecret);
+              setMethod("card");
+            }}
             type="button"
           >
             {t(locale, "payWithCard")}
@@ -471,37 +299,59 @@ export function BookingPaymentElement({
         </div>
       ) : null}
 
-      {methodError ? (
-        <p className="form-message form-message--error" role="alert">
-          {methodError}
-        </p>
-      ) : null}
+      <p className="booking-payment-shell__secure">
+        {method === "bank"
+          ? t(locale, "bankTransferSecureBadge")
+          : t(locale, "paymentSecureBadge")}
+      </p>
+      <p className="booking-payment-shell__trust">
+        {method === "bank"
+          ? t(locale, "bankTransferTrust")
+          : t(locale, "stripeSecureCheckout")}
+      </p>
+      <p className="booking-payment-shell__legal">
+        {t(locale, "paymentTrustPolicies")}{" "}
+        <Link href="/privacy">{t(locale, "paymentPrivacyLink")}</Link>
+        {" · "}
+        <Link href="/terms">{t(locale, "paymentTermsLink")}</Link>
+      </p>
 
-      {!methodsReady || isUpdatingMethods ? (
+      {method === "bank" && bankAvailable ? (
+        <BookingBankTransferPanel
+          bankTransfer={bankTransfer}
+          bookingId={bookingId}
+          currency={currency}
+          locale={locale}
+          onCancel={onCancel}
+          onSwitchToCard={() => {
+            setCardError(null);
+            setIsStartingCard(!cardClientSecret);
+            setMethod("card");
+          }}
+          stayTotal={serverStayTotal}
+        />
+      ) : cardError ? (
+        <p className="form-message form-message--error" role="alert">
+          {cardError}
+        </p>
+      ) : isStartingCard || !cardClientSecret ? (
         <p className="booking-summary__hint" aria-live="polite">
           {t(locale, "startingCheckout")}
         </p>
-      ) : method === "promptpay" && supportsPromptPay ? (
-        <PromptPayQrPanel
-          clientSecret={clientSecret}
-          currency={currency}
-          deposit={deposit}
-          guestEmail={guestEmail}
-          locale={locale}
-          onCancel={onCancel}
-          onSwitchToCard={() => setMethod("card")}
-          publishableKey={publishableKey}
-          returnUrl={returnUrl}
-        />
+      ) : !publishableKey || !stripe || !options ? (
+        <p className="form-message form-message--error" role="alert">
+          {t(locale, "paymentsNotConfigured")}
+        </p>
       ) : (
-        <Elements key={`card-${clientSecret}`} options={options} stripe={stripe}>
+        <Elements key={`card-${cardClientSecret}`} options={options} stripe={stripe}>
           <CardPaymentForm
             bookingId={bookingId}
+            cardTotalDue={serverCardTotalDue}
             currency={currency}
-            deposit={deposit}
             locale={locale}
             onCancel={onCancel}
             returnUrl={returnUrl}
+            stayTotal={serverStayTotal}
           />
         </Elements>
       )}

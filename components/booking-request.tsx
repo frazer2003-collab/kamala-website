@@ -23,6 +23,7 @@ import { isLocale, t, type Locale } from "@/lib/i18n";
 import { calculateStayQuote, type RoomPromotionRate } from "@/lib/pricing";
 import { getRoomAvailabilityLabel, isRoomBookable } from "@/lib/room-availability";
 import { getBookingPaymentReturnUrl } from "@/lib/booking-payment-url";
+import type { BankTransferDetails } from "@/lib/bank-transfer";
 
 function persistGuestLocale(nextLocale: Locale) {
   try {
@@ -165,6 +166,7 @@ function hasValidStayDates(arrival: string, departure: string) {
 export function BookingRequest({
   rooms,
   promotions,
+  bankTransfer,
   initialRoomId,
   initialArrival,
   initialDeparture,
@@ -175,6 +177,7 @@ export function BookingRequest({
 }: {
   rooms: Room[];
   promotions: RoomPromotionRate[];
+  bankTransfer: BankTransferDetails;
   initialRoomId?: string;
   initialArrival?: string;
   initialDeparture?: string;
@@ -197,7 +200,9 @@ export function BookingRequest({
   const [state, formAction] = useActionState(createBookingRequest, initialState);
   const [paymentStep, setPaymentStep] = useState<{
     bookingId: string;
-    clientSecret: string;
+    clientSecret: string | null;
+    stayTotal: number;
+    cardTotalDue: number;
   } | null>(null);
   const [isCancelingPayment, startCancelPayment] = useTransition();
 
@@ -661,24 +666,19 @@ export function BookingRequest({
         ) : null}
       </form>
 
-      {paymentStep && stripePublishableKey ? (
+      {paymentStep ? (
         <BookingPaymentElement
+          bankTransfer={bankTransfer}
           bookingId={paymentStep.bookingId}
+          cardTotalDue={paymentStep.cardTotalDue}
           clientSecret={paymentStep.clientSecret}
           currency={currency}
-          deposit={deposit}
-          guestEmail={fields.guestEmail}
           locale={locale}
           onCancel={handleCancelPayment}
           publishableKey={stripePublishableKey}
           returnUrl={paymentReturnUrl}
+          stayTotal={paymentStep.stayTotal ?? deposit}
         />
-      ) : null}
-
-      {paymentStep && !stripePublishableKey ? (
-        <p className="form-message form-message--error" role="alert">
-          {t(locale, "paymentsNotConfigured")}
-        </p>
       ) : null}
       </div>
     </section>

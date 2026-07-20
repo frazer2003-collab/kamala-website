@@ -13,6 +13,7 @@ export const CALENDAR_BOOKING_FILTER =
 
 export type StaffBooking = Booking & {
   databaseId: string | null;
+  bankTransferClaimed: boolean;
 };
 
 export function getStaffBookingKey(booking: StaffBooking) {
@@ -65,7 +66,7 @@ function mapStatus(status: BookingRequestRow["status"]): BookingStatus {
   return status;
 }
 
-function mapBookingRequest(
+export function mapBookingRequest(
   row: BookingRequestRow,
   roomUnitIdOverride?: string | null,
 ): StaffBooking {
@@ -87,6 +88,7 @@ function mapBookingRequest(
     estimatedTotal: row.estimated_total,
     depositAmount: row.deposit_amount ?? row.estimated_total,
     depositPaid: Boolean(row.deposit_paid_at),
+    bankTransferClaimed: Boolean(row.bank_transfer_claimed_at),
     stayStatus: row.stay_status ?? "expected",
     staffNote: row.staff_note ?? "",
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
@@ -112,9 +114,9 @@ async function getBookingRoomUnitMap(
   return map;
 }
 
-function isPendingBooking(booking: Booking) {
+export function isPendingBooking(booking: StaffBooking) {
   if (booking.status === "awaiting") {
-    return booking.depositPaid;
+    return booking.depositPaid || booking.bankTransferClaimed;
   }
 
   return PENDING_BOOKING_STATUSES.includes(

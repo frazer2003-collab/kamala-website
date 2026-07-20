@@ -43,6 +43,7 @@ export type BookingRequestRow = {
   deposit_paid_at: string | null;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
+  bank_transfer_claimed_at: string | null;
   conversation_token: string | null;
   room_unit_id: string | null;
   created_at: string;
@@ -107,6 +108,14 @@ export type RoomDayInventoryRow = {
   created_at: string;
 };
 
+export type RoomDayRateRow = {
+  id: string;
+  room_id: string;
+  date: string;
+  nightly_rate: number;
+  created_at: string;
+};
+
 export type StaffCalendarAccess = "read" | "read_write";
 
 export type StaffNotificationEmailRow = {
@@ -145,6 +154,10 @@ export type PropertySettingsRow = {
   terms_summary: string;
   line_url: string | null;
   whatsapp_url: string | null;
+  promptpay_id: string | null;
+  bank_name: string | null;
+  account_name: string | null;
+  account_number: string | null;
   calendar_color_available: string;
   calendar_color_closed: string;
   calendar_color_booking: string;
@@ -210,6 +223,7 @@ export type Database = {
           | "deposit_paid_at"
           | "stripe_checkout_session_id"
           | "stripe_payment_intent_id"
+          | "bank_transfer_claimed_at"
           | "room_unit_id"
         > & {
           id?: string;
@@ -221,6 +235,7 @@ export type Database = {
           deposit_paid_at?: string | null;
           stripe_checkout_session_id?: string | null;
           stripe_payment_intent_id?: string | null;
+          bank_transfer_claimed_at?: string | null;
           conversation_token?: string | null;
           room_unit_id?: string | null;
         };
@@ -302,6 +317,15 @@ export type Database = {
         Update: Partial<Omit<RoomDayInventoryRow, "id" | "created_at">>;
         Relationships: [];
       };
+      room_day_rates: {
+        Row: RoomDayRateRow;
+        Insert: Omit<RoomDayRateRow, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<RoomDayRateRow, "id" | "created_at">>;
+        Relationships: [];
+      };
       staff_notification_emails: {
         Row: StaffNotificationEmailRow;
         Insert: Omit<StaffNotificationEmailRow, "id" | "created_at"> & {
@@ -324,11 +348,21 @@ export type Database = {
         Row: PropertySettingsRow;
         Insert: Omit<
           PropertySettingsRow,
-          "updated_at" | "hero_image_url" | "hero_image_storage_path"
+          | "updated_at"
+          | "hero_image_url"
+          | "hero_image_storage_path"
+          | "promptpay_id"
+          | "bank_name"
+          | "account_name"
+          | "account_number"
         > & {
           updated_at?: string;
           hero_image_url?: string | null;
           hero_image_storage_path?: string | null;
+          promptpay_id?: string | null;
+          bank_name?: string | null;
+          account_name?: string | null;
+          account_number?: string | null;
         };
         Update: Partial<Omit<PropertySettingsRow, "id">>;
         Relationships: [];

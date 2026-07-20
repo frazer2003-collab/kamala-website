@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient } from "@/lib/supabase";
-import { sendGuestBookingEmail } from "@/lib/email";
+import { sendGuestBookingEmail, sendStaffBookingEmail } from "@/lib/email";
 import {
   getGuestChatUrl,
   recordStaffChatMessage,
@@ -13,18 +13,33 @@ import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
 import { hasCapacityForStay, getUnavailableStayDays } from "@/lib/booking-capacity";
 import { appendOverlapErrorToHref } from "@/lib/stay-overlap";
-import { releaseBookingReservation } from "@/lib/booking-payments";
+import {
+  fulfillBookingDeposit,
+  releaseBookingReservation,
+} from "@/lib/booking-payments";
+import { getBankClaimCardError } from "@/lib/booking-payment-race";
 import { PUBLIC_CACHE_TAGS, revalidatePublicCache } from "@/lib/public-cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getRoomForBooking } from "@/lib/rooms";
+import { getRoomForBooking, getStaffRooms } from "@/lib/rooms";
+import { resolveRoomTypeChange } from "@/lib/room-type-change";
 import { isPastCalendarDate } from "@/lib/calendar";
 import { addIsoDays, eachIsoDayInclusive } from "@/lib/room-day-inventory";
+import {
+  buildRateLookup,
+  getRoomDayRatesForRange,
+} from "@/lib/room-day-rates";
 import { calculateStayQuote, type StayQuote } from "@/lib/pricing";
 import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 import { isRoomBookable } from "@/lib/room-availability";
 import { isStayStatus } from "@/lib/stay-status";
 import { getConfirmedBookings } from "@/lib/booking-requests";
+import {
+  calculateStripeChargeAmount,
+  resolveBookingStayTotal,
+  STRIPE_BANK_CHARGE_RATE,
+} from "@/lib/payment-pricing";
+import { isBankTransferAvailable } from "@/lib/bank-transfer";
 import {
   findUnitAssignmentConflict,
   getRoomUnitById,
@@ -35,7 +50,6 @@ import {
 } from "@/lib/room-units";
 import { getChannelReservations } from "@/lib/room-blocks";
 import {
-  calculateDepositAmount,
   createDepositPaymentIntent,
   getStripe,
   getStripeMinimumChargeAmount,
@@ -59,8 +73,10 @@ export type BookingActionState = {
   fieldErrors?: Record<string, string>;
   values?: BookingFormValues;
   payment?: {
-    clientSecret: string;
+    clientSecret: string | null;
     bookingId: string;
+    stayTotal: number;
+    cardTotalDue: number;
   };
 };
 
@@ -225,13 +241,18 @@ export async function getBookingQuote(
     };
   }
 
-  const promotions = await getRoomPromotionsForStay(roomId, arrival, departure);
+  const [promotions, dayRates] = await Promise.all([
+    getRoomPromotionsForStay(roomId, arrival, departure),
+    getRoomDayRatesForRange(roomId, arrival, departure),
+  ]);
+  const rateOverrides = buildRateLookup(dayRates);
   const quote = calculateStayQuote({
     roomId,
     baseRate: room.rate,
     arrival,
     departure,
     promotions,
+    rateOverrides,
   });
 
   return {
@@ -246,6 +267,26 @@ export async function getBookingQuote(
   };
 }
 
+async function quoteRoomStay(
+  roomId: string,
+  baseRate: number,
+  arrival: string,
+  departure: string,
+) {
+  const [promotions, dayRates] = await Promise.all([
+    getRoomPromotionsForStay(roomId, arrival, departure),
+    getRoomDayRatesForRange(roomId, arrival, departure),
+  ]);
+  return calculateStayQuote({
+    roomId,
+    baseRate,
+    arrival,
+    departure,
+    promotions,
+    rateOverrides: buildRateLookup(dayRates),
+  });
+}
+
 export async function createBookingRequest(
   _previousState: BookingActionState,
   formData: FormData,
@@ -258,6 +299,10 @@ export async function createBookingRequest(
   const departure = getValue(formData, "departure");
   const note = getValue(formData, "guest-note");
   const propertySettings = await getPropertySettings();
+  const bankTransferConfigured = isBankTransferAvailable(
+    propertySettings,
+    propertySettings.currency,
+  );
   const selectedRoom = await getRoomForBooking(roomId);
   const arrivalDate = parseDate(arrival);
   const departureDate = parseDate(departure);
@@ -273,9 +318,7 @@ export async function createBookingRequest(
     fieldErrors["guest-email"] = "Enter a valid email address.";
   }
 
-  if (!guestPhone) {
-    fieldErrors["guest-phone"] = "Enter a phone number staff can reach you on.";
-  } else if (!isValidPhone(guestPhone)) {
+  if (guestPhone && !isValidPhone(guestPhone)) {
     fieldErrors["guest-phone"] = "Enter a valid phone number with at least 7 digits.";
   }
 
@@ -319,28 +362,27 @@ export async function createBookingRequest(
     );
   }
 
-  if (!hasStripeConfig()) {
+  if (!bankTransferConfigured && !hasStripeConfig()) {
     return bookingErrorState(
       "Payments are not configured yet. Add STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY before accepting bookings.",
       formData,
     );
   }
 
-  const promotions = await getRoomPromotionsForStay(selectedRoom.id, arrival, departure);
-  const quote = calculateStayQuote({
-    roomId: selectedRoom.id,
-    baseRate: selectedRoom.rate,
+  const quote = await quoteRoomStay(
+    selectedRoom.id,
+    selectedRoom.rate,
     arrival,
     departure,
-    promotions,
-  });
+  );
   const estimatedTotal = quote.total;
-  const depositAmount = calculateDepositAmount(estimatedTotal);
+  const stripeCharge = calculateStripeChargeAmount(estimatedTotal);
+  const depositAmount = estimatedTotal;
   const minimumCharge = getStripeMinimumChargeAmount(propertySettings.currency);
 
-  if (depositAmount < minimumCharge) {
+  if (!bankTransferConfigured && stripeCharge.totalDue < minimumCharge) {
     return bookingErrorState(
-      `Stripe needs at least ${formatMoneySuffix(minimumCharge, propertySettings.currency)} to take a payment. This stay totals ${formatMoneySuffix(depositAmount, propertySettings.currency)} — raise the room rate in staff settings, then try again.`,
+      `Stripe needs at least ${formatMoneySuffix(minimumCharge, propertySettings.currency)} to take a payment. This stay totals ${formatMoneySuffix(stripeCharge.totalDue, propertySettings.currency)} — raise the room rate in staff settings, then try again.`,
       formData,
     );
   }
@@ -379,7 +421,7 @@ export async function createBookingRequest(
         status: "pending_payment",
         conversation_token: randomUUID(),
       })
-      .select("id")
+      .select("*")
       .single();
 
     if (error || !booking) {
@@ -387,14 +429,26 @@ export async function createBookingRequest(
       return bookingErrorState(getBookingInsertErrorMessage(error ?? {}), formData);
     }
 
-    const { data: createdBooking } = await supabase
-      .from("booking_requests")
-      .select("*")
-      .eq("id", booking.id)
-      .single();
+    await seedGuestNoteMessage(booking);
 
-    if (createdBooking) {
-      await seedGuestNoteMessage(createdBooking);
+    const stayTotal = resolveBookingStayTotal({
+      depositAmount: booking.deposit_amount,
+      estimatedTotal: booking.estimated_total,
+    });
+    const persistedStripeCharge = calculateStripeChargeAmount(stayTotal);
+
+    if (bankTransferConfigured) {
+      return {
+        status: "payment_ready",
+        message: "",
+        values: getBookingFormValues(formData),
+        payment: {
+          clientSecret: null,
+          bookingId: booking.id,
+          stayTotal,
+          cardTotalDue: persistedStripeCharge.totalDue,
+        },
+      };
     }
 
     const paymentIntent = await createDepositPaymentIntent({
@@ -403,7 +457,9 @@ export async function createBookingRequest(
       roomName: selectedRoom.name,
       arrival,
       departure,
-      depositAmount,
+      depositAmount: persistedStripeCharge.totalDue,
+      stayTotal: persistedStripeCharge.stayTotal,
+      surcharge: persistedStripeCharge.surcharge,
       currency: propertySettings.currency,
       propertyName: propertySettings.propertyName,
       hasPromotion: quote.hasPromotion,
@@ -434,6 +490,8 @@ export async function createBookingRequest(
       payment: {
         clientSecret: paymentIntent.client_secret,
         bookingId: booking.id,
+        stayTotal,
+        cardTotalDue: persistedStripeCharge.totalDue,
       },
     };
   } catch {
@@ -475,11 +533,288 @@ export async function cancelPendingBooking(bookingId: string) {
     .eq("status", "pending_payment");
 }
 
+async function cancelPaymentIntentBestEffort(paymentIntentId: string) {
+  if (!hasStripeServerConfig()) {
+    return;
+  }
+
+  try {
+    await getStripe().paymentIntents.cancel(paymentIntentId);
+  } catch {
+    // Intent may already be canceled or completed.
+  }
+}
+
+export async function startCardPaymentForBooking(
+  bookingId: string,
+): Promise<
+  | { ok: true; clientSecret: string; stayTotal: number; cardTotalDue: number }
+  | { ok: false; errorCode: "cardPaymentStartFailed" }
+> {
+  if (!bookingId) {
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
+  }
+
+  if (!hasStripeConfig()) {
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: booking } = await supabase
+    .from("booking_requests")
+    .select("*")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking || booking.status !== "pending_payment") {
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
+  }
+
+  const propertySettings = await getPropertySettings();
+  const stripeCharge = calculateStripeChargeAmount(
+    booking.deposit_amount ?? booking.estimated_total,
+  );
+  const minimumCharge = getStripeMinimumChargeAmount(propertySettings.currency);
+
+  if (stripeCharge.totalDue < minimumCharge) {
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
+  }
+
+  try {
+    const createdNewPaymentIntent = !booking.stripe_payment_intent_id;
+    const paymentIntent = booking.stripe_payment_intent_id
+      ? await getStripe().paymentIntents.update(booking.stripe_payment_intent_id, {
+          amount: stripeCharge.totalDue * 100,
+          receipt_email: booking.guest_email,
+          payment_method_types: ["card"],
+          metadata: {
+            booking_id: booking.id,
+            room_name: booking.room_name,
+            stay_total: String(stripeCharge.stayTotal),
+            bank_charge: String(stripeCharge.surcharge),
+            bank_charge_rate: String(STRIPE_BANK_CHARGE_RATE),
+            payment_methods: "card",
+          },
+        })
+      : await createDepositPaymentIntent({
+          bookingId: booking.id,
+          guestEmail: booking.guest_email,
+          roomName: booking.room_name,
+          arrival: booking.arrival_date,
+          departure: booking.departure_date,
+          depositAmount: stripeCharge.totalDue,
+          stayTotal: stripeCharge.stayTotal,
+          surcharge: stripeCharge.surcharge,
+          currency: propertySettings.currency,
+          propertyName: propertySettings.propertyName,
+          hasPromotion: false,
+        });
+
+    if (!paymentIntent.client_secret) {
+      if (createdNewPaymentIntent) {
+        await cancelPaymentIntentBestEffort(paymentIntent.id);
+      }
+      return { ok: false, errorCode: "cardPaymentStartFailed" };
+    }
+
+    const attachQuery = supabase
+      .from("booking_requests")
+      .update({ stripe_payment_intent_id: paymentIntent.id })
+      .eq("id", booking.id)
+      .eq("status", "pending_payment");
+
+    const { data: updatedBooking, error } = await (createdNewPaymentIntent
+      ? attachQuery.is("stripe_payment_intent_id", null)
+      : attachQuery
+    )
+      .select("id")
+      .maybeSingle();
+
+    if (error || !updatedBooking) {
+      if (createdNewPaymentIntent) {
+        await cancelPaymentIntentBestEffort(paymentIntent.id);
+      }
+      return { ok: false, errorCode: "cardPaymentStartFailed" };
+    }
+
+    return {
+      ok: true,
+      clientSecret: paymentIntent.client_secret,
+      stayTotal: stripeCharge.stayTotal,
+      cardTotalDue: stripeCharge.totalDue,
+    };
+  } catch {
+    return { ok: false, errorCode: "cardPaymentStartFailed" };
+  }
+}
+
+export async function claimBankTransferPayment(
+  bookingId: string,
+): Promise<
+  | { ok: true }
+  | {
+      ok: false;
+      errorCode:
+        | "bankTransferClaimFailed"
+        | "card_already_paid"
+        | "card_processing";
+    }
+> {
+  if (!bookingId) {
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
+  }
+
+  const propertySettings = await getPropertySettings();
+  if (!isBankTransferAvailable(propertySettings, propertySettings.currency)) {
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: booking } = await supabase
+    .from("booking_requests")
+    .select("*")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking || booking.status !== "pending_payment") {
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
+  }
+
+  const room = await getRoomForBooking(booking.room_id);
+  if (!room) {
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
+  }
+
+  const hasCapacity = await hasCapacityForStay(
+    booking.room_id,
+    booking.arrival_date,
+    booking.departure_date,
+    room.availableCount,
+    { excludeBookingId: booking.id },
+  );
+  if (!hasCapacity) {
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
+  }
+
+  if (booking.stripe_payment_intent_id) {
+    if (!hasStripeServerConfig()) {
+      return { ok: false, errorCode: "bankTransferClaimFailed" };
+    }
+
+    try {
+      const paymentIntent = await getStripe().paymentIntents.retrieve(
+        booking.stripe_payment_intent_id,
+      );
+      const cardError = getBankClaimCardError(paymentIntent.status);
+      if (cardError) {
+        return {
+          ok: false,
+          errorCode: cardError,
+        };
+      }
+    } catch {
+      return { ok: false, errorCode: "bankTransferClaimFailed" };
+    }
+  }
+
+  const claimedAt = new Date().toISOString();
+  const stripePaymentIntentId = booking.stripe_payment_intent_id;
+  const claimQuery = supabase
+    .from("booking_requests")
+    .update({
+      status: "awaiting",
+      bank_transfer_claimed_at: claimedAt,
+      stripe_payment_intent_id: null,
+    })
+    .eq("id", booking.id)
+    .eq("status", "pending_payment");
+  const { data: claimedBooking, error } = await (stripePaymentIntentId
+    ? claimQuery.eq("stripe_payment_intent_id", stripePaymentIntentId)
+    : claimQuery.is("stripe_payment_intent_id", null))
+    .select("id")
+    .maybeSingle();
+
+  if (error || !claimedBooking) {
+    return { ok: false, errorCode: "bankTransferClaimFailed" };
+  }
+
+  if (stripePaymentIntentId) {
+    try {
+      await getStripe().paymentIntents.cancel(stripePaymentIntentId);
+    } catch {
+      let cardError: ReturnType<typeof getBankClaimCardError> = null;
+      let shouldRestoreCardPath = true;
+
+      try {
+        const paymentIntent =
+          await getStripe().paymentIntents.retrieve(stripePaymentIntentId);
+        cardError = getBankClaimCardError(paymentIntent.status);
+        shouldRestoreCardPath = paymentIntent.status !== "canceled";
+      } catch {
+        // Unknown Stripe state is unsafe for a bank claim; preserve the card path.
+      }
+
+      if (shouldRestoreCardPath) {
+        const { data: restoredBooking } = await supabase
+          .from("booking_requests")
+          .update({
+            status: "pending_payment",
+            bank_transfer_claimed_at: null,
+            stripe_payment_intent_id: stripePaymentIntentId,
+          })
+          .eq("id", booking.id)
+          .eq("status", "awaiting")
+          .eq("bank_transfer_claimed_at", claimedAt)
+          .is("deposit_paid_at", null)
+          .is("stripe_payment_intent_id", null)
+          .select("id")
+          .maybeSingle();
+
+        if (!restoredBooking) {
+          return { ok: false, errorCode: "bankTransferClaimFailed" };
+        }
+
+        if (cardError === "card_already_paid") {
+          await fulfillBookingDeposit({
+            bookingId: booking.id,
+            paymentIntentId: stripePaymentIntentId,
+          });
+        }
+
+        return {
+          ok: false,
+          errorCode: cardError ?? "bankTransferClaimFailed",
+        };
+      }
+    }
+  }
+
+  await sendStaffBookingEmail({
+    guestName: booking.guest_name,
+    guestEmail: booking.guest_email,
+    guestPhone: booking.guest_phone,
+    roomName: booking.room_name,
+    arrivalDate: booking.arrival_date,
+    departureDate: booking.departure_date,
+    nights: booking.nights,
+    estimatedTotal: booking.estimated_total,
+    note: [
+      "Bank transfer claimed by guest — verify the transfer before confirming.",
+      booking.note ?? "",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  });
+
+  revalidatePath("/staff");
+  revalidatePath("/staff/calendar");
+  return { ok: true };
+}
+
 export async function setPendingBookingPaymentMethods(
   bookingId: string,
-  methods: Array<"card" | "promptpay">,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (!bookingId || methods.length === 0) {
+  if (!bookingId) {
     return { ok: false, message: "Payment method update failed. Try again." };
   }
 
@@ -500,7 +835,7 @@ export async function setPendingBookingPaymentMethods(
 
   try {
     await getStripe().paymentIntents.update(booking.stripe_payment_intent_id, {
-      payment_method_types: methods,
+      payment_method_types: ["card"],
     });
     return { ok: true };
   } catch {
@@ -540,9 +875,16 @@ export async function confirmBookingRequest(formData: FormData) {
   }
 
   const supabase = createStaffSupabaseClient();
+  const confirmedAt =
+    booking.bank_transfer_claimed_at && !booking.deposit_paid_at
+      ? booking.bank_transfer_claimed_at
+      : booking.deposit_paid_at;
   await supabase
     .from("booking_requests")
-    .update({ status: "confirmed" })
+    .update({
+      status: "confirmed",
+      ...(confirmedAt ? { deposit_paid_at: confirmedAt } : {}),
+    })
     .eq("id", bookingId);
 
   await recordStaffChatMessage({
@@ -588,6 +930,25 @@ export async function updateConfirmedBooking(
 
   const bookingMonth = month || booking.arrival_date.slice(0, 7);
   const bookingHref = `/staff/calendar?month=${bookingMonth}&booking=${encodeURIComponent(bookingId)}`;
+  const requestedRoomId = getValue(formData, "room-id");
+  const staffRooms = await getStaffRooms();
+  const typeChange = resolveRoomTypeChange({
+    currentRoomId: booking.room_id,
+    requestedRoomId,
+    rooms: staffRooms.map((room) => ({ id: room.id, name: room.name })),
+    formRoomUnitId: roomUnitId,
+  });
+
+  if (!typeChange.ok) {
+    redirect(`${bookingHref}&error=invalid-room-type`);
+  }
+
+  const nextRoom = await getRoomForBooking(typeChange.roomId);
+  if (!nextRoom) {
+    redirect(`${bookingHref}&error=invalid-room-type`);
+  }
+
+  const effectiveRoomUnitId = typeChange.roomUnitId;
 
   if (!isStayStatus(stayStatus)) {
     redirect(bookingHref);
@@ -597,7 +958,7 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-name`);
   }
 
-  if (!isValidPhone(guestPhone)) {
+  if (guestPhone && !isValidPhone(guestPhone)) {
     redirect(`${bookingHref}&error=invalid-phone`);
   }
 
@@ -616,32 +977,37 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-dates`);
   }
 
-  // Keep capacity checks when dates change. When only assigning a room (or
-  // editing notes on an existing stay — including past stays), skip so staff
-  // can still assign a door number after the fact.
   const datesUnchanged =
     arrival === booking.arrival_date && departure === booking.departure_date;
 
-  const room = await getRoomForBooking(booking.room_id);
-  if (room && !datesUnchanged) {
+  if (typeChange.roomIdChanged) {
+    // Spec: like a normal booking — no excludeBookingId.
+    await redirectIfStayOverlaps(
+      bookingHref,
+      typeChange.roomId,
+      arrival,
+      departure,
+      nextRoom.availableCount,
+    );
+  } else if (!datesUnchanged) {
     await redirectIfStayOverlaps(
       bookingHref,
       booking.room_id,
       arrival,
       departure,
-      room.availableCount,
+      nextRoom.availableCount,
       { excludeBookingId: bookingId },
     );
   }
 
-  if (roomUnitId) {
+  if (effectiveRoomUnitId) {
     const [{ units }, confirmed, channels] = await Promise.all([
       getStaffRoomUnits(),
       getConfirmedBookings(),
       getChannelReservations(),
     ]);
-    const unit = getRoomUnitById(units, roomUnitId);
-    if (!unit || !isUnitEligibleForRoom(unit, booking.room_id)) {
+    const unit = getRoomUnitById(units, effectiveRoomUnitId);
+    if (!unit || !isUnitEligibleForRoom(unit, typeChange.roomId)) {
       redirect(`${bookingHref}&error=invalid-room-number`);
     }
 
@@ -651,7 +1017,7 @@ export async function updateConfirmedBooking(
     ];
     const conflict = findUnitAssignmentConflict({
       units,
-      unitId: roomUnitId,
+      unitId: effectiveRoomUnitId,
       arrivalDate: arrival,
       departureDate: departure,
       excludeId: bookingId,
@@ -662,16 +1028,16 @@ export async function updateConfirmedBooking(
     }
   }
 
-  const promotions = await getRoomPromotionsForStay(booking.room_id, arrival, departure);
-  const quote = calculateStayQuote({
-    roomId: booking.room_id,
-    baseRate:
-      room?.rate ?? Math.max(1, Math.round(booking.estimated_total / Math.max(booking.nights, 1))),
-    arrival,
-    departure,
-    promotions,
-  });
-  const estimatedTotal = quote.total;
+  const estimatedTotal = typeChange.roomIdChanged
+    ? booking.estimated_total
+    : (
+        await quoteRoomStay(
+          typeChange.roomId,
+          nextRoom.rate,
+          arrival,
+          departure,
+        )
+      ).total;
   const supabase = createStaffSupabaseClient();
 
   // Update core fields without room_unit_id first (avoids stale-column failures).
@@ -687,6 +1053,12 @@ export async function updateConfirmedBooking(
       estimated_total: estimatedTotal,
       staff_note: staffNote || null,
       stay_status: stayStatus,
+      ...(typeChange.roomIdChanged
+        ? {
+            room_id: typeChange.roomId,
+            room_name: typeChange.roomName,
+          }
+        : {}),
     })
     .eq("id", bookingId);
 
@@ -696,14 +1068,14 @@ export async function updateConfirmedBooking(
 
   const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
     p_booking_id: bookingId,
-    p_room_unit_id: roomUnitId,
+    p_room_unit_id: effectiveRoomUnitId,
   });
 
   if (unitError) {
     if (/Could not find the function|schema cache|PGRST202/i.test(unitError.message)) {
       const { error: fallbackError } = await supabase
         .from("booking_requests")
-        .update({ room_unit_id: roomUnitId })
+        .update({ room_unit_id: effectiveRoomUnitId })
         .eq("id", bookingId);
 
       if (fallbackError) {
@@ -733,6 +1105,68 @@ export async function updateConfirmedBooking(
 
   revalidatePath("/staff/calendar");
   redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
+}
+
+export async function updateInboxBookingRoomType(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const bookingId = getValue(formData, "booking-id");
+  const requestedRoomId = getValue(formData, "room-id");
+  const booking = await getBookingForStaff(bookingId);
+  const inboxHref = bookingId
+    ? `/staff?booking=${encodeURIComponent(bookingId)}`
+    : "/staff";
+
+  if (!booking || booking.status === "declined") {
+    redirect("/staff");
+  }
+
+  const staffRooms = await getStaffRooms();
+  const typeChange = resolveRoomTypeChange({
+    currentRoomId: booking.room_id,
+    requestedRoomId,
+    rooms: staffRooms.map((room) => ({ id: room.id, name: room.name })),
+    formRoomUnitId: booking.room_unit_id,
+  });
+
+  if (!typeChange.ok) {
+    redirect(`${inboxHref}&error=invalid-room-type`);
+  }
+
+  if (!typeChange.roomIdChanged) {
+    redirect(inboxHref);
+  }
+
+  const nextRoom = await getRoomForBooking(typeChange.roomId);
+  if (!nextRoom) {
+    redirect(`${inboxHref}&error=invalid-room-type`);
+  }
+
+  await redirectIfStayOverlaps(
+    inboxHref,
+    typeChange.roomId,
+    booking.arrival_date,
+    booking.departure_date,
+    nextRoom.availableCount,
+  );
+
+  const supabase = createStaffSupabaseClient();
+  const { error } = await supabase
+    .from("booking_requests")
+    .update({
+      room_id: typeChange.roomId,
+      room_name: typeChange.roomName,
+      room_unit_id: null,
+    })
+    .eq("id", bookingId);
+
+  if (error) {
+    redirect(`${inboxHref}&error=save-failed`);
+  }
+
+  revalidatePath("/staff");
+  revalidatePath("/staff/calendar");
+  redirect(`${inboxHref}&saved=1`);
 }
 
 /** Quick door-number assign from the Needs room # timeline row. */
@@ -1009,7 +1443,13 @@ export async function createWalkInBooking(formData: FormData) {
     );
   }
 
-  if (!isValidPhone(guestPhone)) {
+  if (!guestEmail || guestEmail === walkInEmailFallback || !emailPattern.test(guestEmail)) {
+    redirect(
+      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-email`,
+    );
+  }
+
+  if (guestPhone && !isValidPhone(guestPhone)) {
     redirect(
       `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-phone`,
     );
@@ -1034,14 +1474,7 @@ export async function createWalkInBooking(formData: FormData) {
     room.availableCount,
   );
 
-  const promotions = await getRoomPromotionsForStay(room.id, arrival, departure);
-  const quote = calculateStayQuote({
-    roomId: room.id,
-    baseRate: room.rate,
-    arrival,
-    departure,
-    promotions,
-  });
+  const quote = await quoteRoomStay(room.id, room.rate, arrival, departure);
 
   const supabase = createStaffSupabaseClient();
   const { data, error } = await supabase
@@ -1187,7 +1620,6 @@ export async function updateChannelReservation(
   }
 
   const blockHref = `/staff/calendar?month=${monthKey}&block=${encodeURIComponent(blockId)}`;
-  const room = await getRoomForBooking(block.room_id);
 
   const guestName = getValue(formData, "guest-name");
   const guestPhone = getValue(formData, "guest-phone");
@@ -1197,6 +1629,22 @@ export async function updateChannelReservation(
   const staffNote = getValue(formData, "staff-note");
   const roomUnitIdRaw = getValue(formData, "room-unit-id");
   const roomUnitId = roomUnitIdRaw || null;
+  const requestedRoomId = getValue(formData, "room-id");
+  const staffRooms = await getStaffRooms();
+  const typeChange = resolveRoomTypeChange({
+    currentRoomId: block.room_id,
+    requestedRoomId,
+    rooms: staffRooms.map((room) => ({ id: room.id, name: room.name })),
+    formRoomUnitId: roomUnitId,
+  });
+  if (!typeChange.ok) {
+    redirect(`${blockHref}&error=invalid-room-type`);
+  }
+  const nextRoom = await getRoomForBooking(typeChange.roomId);
+  if (!nextRoom) {
+    redirect(`${blockHref}&error=invalid-room-type`);
+  }
+  const effectiveRoomUnitId = typeChange.roomUnitId;
 
   if (guestName && guestName.length < 2) {
     redirect(`${blockHref}&error=invalid-name`);
@@ -1228,32 +1676,40 @@ export async function updateChannelReservation(
   const datesUnchanged =
     arrival === block.start_date && departure === block.end_date;
 
-  if (room && !datesUnchanged) {
+  if (typeChange.roomIdChanged) {
+    await redirectIfStayOverlaps(
+      blockHref,
+      typeChange.roomId,
+      arrival,
+      departure,
+      nextRoom.availableCount,
+    );
+  } else if (!datesUnchanged) {
     await redirectIfStayOverlaps(
       blockHref,
       block.room_id,
       arrival,
       departure,
-      room.availableCount,
+      nextRoom.availableCount,
       { excludeBlockId: blockId },
     );
   }
 
-  if (roomUnitId) {
+  if (effectiveRoomUnitId) {
     const [{ units }, confirmed, channels] = await Promise.all([
       getStaffRoomUnits(),
       getConfirmedBookings(),
       getChannelReservations(),
     ]);
-    const unit = getRoomUnitById(units, roomUnitId);
-    if (!unit || !isUnitEligibleForRoom(unit, block.room_id)) {
+    const unit = getRoomUnitById(units, effectiveRoomUnitId);
+    if (!unit || !isUnitEligibleForRoom(unit, typeChange.roomId)) {
       redirect(
         appendCalendarError(
           blockHref,
           "invalid-room-number",
           units.length === 0
             ? "No room numbers loaded from the database."
-            : `Door id ${roomUnitId.slice(0, 8)}… is not linked to this room type.`,
+            : `Door id ${effectiveRoomUnitId.slice(0, 8)}… is not linked to this room type.`,
         ),
       );
     }
@@ -1264,7 +1720,7 @@ export async function updateChannelReservation(
     ];
     const conflict = findUnitAssignmentConflict({
       units,
-      unitId: roomUnitId,
+      unitId: effectiveRoomUnitId,
       arrivalDate: arrival,
       departureDate: departure,
       excludeId: blockId,
@@ -1284,10 +1740,24 @@ export async function updateChannelReservation(
     p_start_date: arrival,
     p_end_date: departure,
     p_staff_note: staffNote || null,
-    p_room_unit_id: roomUnitId,
+    p_room_unit_id: effectiveRoomUnitId,
   });
 
   if (!rpcError) {
+    if (typeChange.roomIdChanged) {
+      const { error: roomTypeError } = await supabase
+        .from("room_blocks")
+        .update({
+          room_id: typeChange.roomId,
+          room_unit_id: null,
+        })
+        .eq("id", blockId);
+
+      if (roomTypeError) {
+        redirect(appendCalendarError(blockHref, "save-failed", roomTypeError.message));
+      }
+    }
+
     revalidatePath("/staff/calendar");
     redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
   }
@@ -1303,7 +1773,8 @@ export async function updateChannelReservation(
         start_date: arrival,
         end_date: departure,
         staff_note: staffNote || null,
-        room_unit_id: roomUnitId,
+        room_id: typeChange.roomId,
+        room_unit_id: effectiveRoomUnitId,
       })
       .eq("id", blockId);
 
@@ -1542,4 +2013,78 @@ export async function updateRoomDayAllotment(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/staff/calendar");
   redirect(`/staff/calendar?month=${month}&saved=allotment`);
+}
+
+export async function updateRoomDayRate(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const month = getValue(formData, "month");
+  const roomId = getValue(formData, "room-id");
+  const startDate = getValue(formData, "start-date");
+  const endDateInclusive = getValue(formData, "end-date");
+  const action = getValue(formData, "rate-action");
+  const nightlyRateRaw = Number.parseInt(getValue(formData, "nightly-rate"), 10);
+  const room = await getRoomForBooking(roomId);
+  const start = parseDate(startDate);
+  const endInclusive = parseDate(endDateInclusive);
+
+  const rateHref = month
+    ? `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(startDate || "")}&mode=rate`
+    : "/staff/calendar";
+
+  if (!room || !start || !endInclusive || endInclusive < start) {
+    redirect(`${rateHref}&error=invalid-dates`);
+  }
+
+  if (isPastCalendarDate(startDate)) {
+    redirect(`${rateHref}&error=past-date`);
+  }
+
+  if (action !== "set" && action !== "reset") {
+    redirect(`${rateHref}&error=invalid-dates`);
+  }
+
+  const days = eachIsoDayInclusive(startDate, endDateInclusive);
+  const supabase = createStaffSupabaseClient();
+
+  if (action === "reset") {
+    const { error } = await supabase
+      .from("room_day_rates")
+      .delete()
+      .eq("room_id", room.id)
+      .gte("date", startDate)
+      .lte("date", endDateInclusive);
+
+    if (error) {
+      redirect(`${rateHref}&error=save-failed`);
+    }
+
+    revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+    revalidatePath("/");
+    revalidatePath("/staff/calendar");
+    redirect(`/staff/calendar?month=${month}&saved=rate-reset`);
+  }
+
+  if (!Number.isFinite(nightlyRateRaw) || nightlyRateRaw < 0) {
+    redirect(`${rateHref}&error=invalid-rate`);
+  }
+
+  const rows = days.map((date) => ({
+    room_id: room.id,
+    date,
+    nightly_rate: nightlyRateRaw,
+  }));
+
+  const { error } = await supabase.from("room_day_rates").upsert(rows, {
+    onConflict: "room_id,date",
+  });
+
+  if (error) {
+    redirect(`${rateHref}&error=save-failed`);
+  }
+
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+  revalidatePath("/");
+  revalidatePath("/staff/calendar");
+  redirect(`/staff/calendar?month=${month}&saved=rate`);
 }

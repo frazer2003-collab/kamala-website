@@ -35,6 +35,11 @@ import {
   buildInventoryLookup,
   getRoomDayInventoryForMonth,
 } from "@/lib/room-day-inventory";
+import {
+  buildRateLookup,
+  getRoomDayRatesForMonth,
+} from "@/lib/room-day-rates";
+import { getNightlyRateDetails } from "@/lib/pricing";
 import { formatMoneySuffix } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
@@ -114,16 +119,25 @@ export default async function StaffCalendarPage({
   const { year, month } = parseCalendarMonth(monthParam);
   const monthKey = formatCalendarMonth(year, month);
   const calendarDays = buildCalendarDays(year, month);
-  const [confirmedBookings, calendarBlockData, dayInventory, rooms, settings, promotions, roomUnitsResult] =
-    await Promise.all([
-      getConfirmedBookings({ year, month }),
-      getStaffCalendarBlocks({ year, month }),
-      getRoomDayInventoryForMonth({ year, month }),
-      getStaffRooms(),
-      getPropertySettings(),
-      getStaffRoomPromotions(),
-      getStaffRoomUnits(),
-    ]);
+  const [
+    confirmedBookings,
+    calendarBlockData,
+    dayInventory,
+    dayRates,
+    rooms,
+    settings,
+    promotions,
+    roomUnitsResult,
+  ] = await Promise.all([
+    getConfirmedBookings({ year, month }),
+    getStaffCalendarBlocks({ year, month }),
+    getRoomDayInventoryForMonth({ year, month }),
+    getRoomDayRatesForMonth({ year, month }),
+    getStaffRooms(),
+    getPropertySettings(),
+    getStaffRoomPromotions(),
+    getStaffRoomUnits(),
+  ]);
   const roomUnits = roomUnitsResult.units;
   const allAssignmentBookings = attachRoomNumbers(confirmedBookings.bookings, roomUnits);
   const calendarBookings = allAssignmentBookings.filter((booking) =>
@@ -136,6 +150,7 @@ export default async function StaffCalendarPage({
     ...allAssignmentChannels.map(occupancyFromChannelBlock),
   ];
   const inventoryLookup = buildInventoryLookup(dayInventory.entries);
+  const rateLookup = buildRateLookup(dayRates.entries);
   const unassignedCount =
     calendarBookings.filter((booking) => !booking.roomUnitId).length +
     calendarBlocks.filter(
@@ -172,6 +187,7 @@ export default async function StaffCalendarPage({
     confirmedBookings.source === "supabase" &&
     calendarBlockData.source === "supabase" &&
     dayInventory.source === "supabase";
+  const canManageRates = canManage && dayRates.source === "supabase";
   const canManageSelected = canManage && Boolean(selected?.databaseId);
   const canManageBlock = canManage && Boolean(selectedBlock?.databaseId);
   const selectedKey = selected ? getStaffBookingKey(selected) : "";
@@ -211,27 +227,31 @@ export default async function StaffCalendarPage({
         ? "Your account can view the calendar but not make changes."
         : error === "invalid-allotment"
           ? "Enter how many rooms to sell (0 or more)."
+          : error === "invalid-rate"
+            ? "Enter a valid nightly rate (0 or more)."
           : error === "invalid-name"
             ? "Enter the guest name before saving."
             : error === "invalid-phone"
-              ? "Enter a valid phone number with at least 7 digits."
+              ? "Enter a valid phone number with at least 7 digits, or leave phone blank."
               : error === "invalid-email"
-                ? "Enter a valid email address, or leave it blank."
+                ? "Enter a valid email address."
                 : error === "invalid-dates"
                   ? "Choose a stay between 1 and 21 nights."
-                  : error === "invalid-room-number"
-                    ? "That room number cannot be used for this room type."
-                    : error === "room-number-taken"
-                      ? "That room number is already assigned for overlapping dates."
-                      : error === "room-unit-cache"
-                        ? "Room assignment isn’t available right now. Ask whoever set up the site to refresh the connection."
-                        : error === "room-unit-rpc"
-                          ? "Room assignment isn’t set up yet. Ask whoever set up the site to finish the room-number setup."
-                          : error === "room-unit-setup"
-                            ? "Room numbers aren’t ready on this site yet. Ask whoever set up the site to finish setup."
-                            : error === "save-failed"
-                              ? "Could not save this reservation."
-                              : overlapMessage;
+                  : error === "invalid-room-type"
+                    ? "Choose a valid room type."
+                    : error === "invalid-room-number"
+                      ? "That room number cannot be used for this room type."
+                      : error === "room-number-taken"
+                        ? "That room number is already assigned for overlapping dates."
+                        : error === "room-unit-cache"
+                          ? "Room assignment isn’t available right now. Ask whoever set up the site to refresh the connection."
+                          : error === "room-unit-rpc"
+                            ? "Room assignment isn’t set up yet. Ask whoever set up the site to finish the room-number setup."
+                            : error === "room-unit-setup"
+                              ? "Room numbers aren’t ready on this site yet. Ask whoever set up the site to finish setup."
+                              : error === "save-failed"
+                                ? "Could not save this reservation."
+                                : overlapMessage;
 
     if (!base) {
       return null;
@@ -408,6 +428,30 @@ export default async function StaffCalendarPage({
             </Link>
           </p>
         ) : null}
+        {saved === "rate" ? (
+          <p className="form-message form-message--success" role="status">
+            Temporary rate saved. Room settings default is unchanged.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {saved === "rate-reset" ? (
+          <p className="form-message form-message--success" role="status">
+            Selected dates reset to the default or promo rate.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {dayRates.error ? (
+          <p className="form-message form-message--error" role="alert">
+            {dayRates.error}{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
         {icalSynced !== undefined ? (
           <p className="form-message form-message--success" role="status">
             OTA calendars refreshed
@@ -448,6 +492,7 @@ export default async function StaffCalendarPage({
             canManage={canManage}
             currency={settings.currency}
             inventoryLookup={inventoryLookup}
+            rateLookup={rateLookup}
             monthKey={monthKey}
             monthLabel={formatCalendarMonthLabel(year, month)}
             occupancies={unitOccupancies}
@@ -523,6 +568,7 @@ export default async function StaffCalendarPage({
                 note={selected.note}
                 occupancies={unitOccupancies}
                 roomId={selected.roomId}
+                rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
                 roomUnitId={selected.roomUnitId}
                 roomUnits={roomUnits}
                 depositPaid={selected.depositPaid}
@@ -542,8 +588,10 @@ export default async function StaffCalendarPage({
                   <>
                     Assign a room number so the stay appears on the room-number
                     rows — this still works after the stay dates have passed.
-                    Saving updates dates, total, and assignment. To remove the
-                    stay, use Cancel stay — you will be asked to confirm.
+                    Saving updates dates and assignment; date changes may
+                    update the total, while room-type changes keep the booked
+                    price. To remove the stay, use Cancel stay — you will be
+                    asked to confirm.
                   </>
                 )}
               </p>
@@ -582,6 +630,7 @@ export default async function StaffCalendarPage({
               monthKey={monthKey}
               occupancies={unitOccupancies}
               room={rooms.find((room) => room.id === selectedBlock.roomId)}
+              rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
               roomUnits={roomUnits}
             />
           </CalendarBookingDialog>
@@ -609,11 +658,22 @@ export default async function StaffCalendarPage({
             title={`${selectedRoom.shortName} · ${selectedDate}`}
           >
             <CalendarDayPanel
-              canManage={canManage}
+              canManage={mode === "rate" ? canManageRates : canManage}
               currentAllotment={
                 selectedRoom && selectedDate
                   ? (inventoryLookup.get(`${selectedRoom.id}:${selectedDate}`) ??
                     selectedRoom.availableCount)
+                  : 0
+              }
+              currentRate={
+                selectedRoom && selectedDate
+                  ? getNightlyRateDetails(
+                      selectedRoom.id,
+                      selectedDate,
+                      selectedRoom.rate,
+                      promotions,
+                      rateLookup,
+                    ).rate
                   : 0
               }
               date={selectedDate}
@@ -623,6 +683,11 @@ export default async function StaffCalendarPage({
                 selectedRoom &&
                   selectedDate &&
                   inventoryLookup.has(`${selectedRoom.id}:${selectedDate}`),
+              )}
+              hasRateOverride={Boolean(
+                selectedRoom &&
+                  selectedDate &&
+                  rateLookup.has(`${selectedRoom.id}:${selectedDate}`),
               )}
               mode={mode}
               monthKey={monthKey}

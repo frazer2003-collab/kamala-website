@@ -506,6 +506,11 @@ export function getTimelineAllotmentHref(roomId: string, iso: string, monthKey: 
   return `${getTimelineDayHref(roomId, iso, monthKey)}&mode=allotment`;
 }
 
+/** Open the day panel to set a temporary nightly rate override. */
+export function getTimelineRateHref(roomId: string, iso: string, monthKey: string) {
+  return `${getTimelineDayHref(roomId, iso, monthKey)}&mode=rate`;
+}
+
 /** Bulk open/close room status (availability), not allotments. */
 export function getTimelineBulkAvailabilityHref(roomId: string, monthKey: string) {
   return `/staff/calendar?month=${monthKey}&room=${encodeURIComponent(roomId)}&mode=bulk-status`;

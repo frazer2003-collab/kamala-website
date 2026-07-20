@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { canCleanupPendingBooking } from "@/lib/booking-payment-race";
 import { fulfillBookingDeposit } from "@/lib/booking-payments";
 import { getStripe } from "@/lib/stripe";
 import { createStaffSupabaseClient } from "@/lib/supabase";
@@ -8,11 +9,28 @@ export const runtime = "nodejs";
 
 async function cleanupPendingBooking(bookingId: string) {
   const supabase = createStaffSupabaseClient();
+  const { data: booking } = await supabase
+    .from("booking_requests")
+    .select("status, bank_transfer_claimed_at")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (
+    !booking ||
+    !canCleanupPendingBooking({
+      status: booking.status,
+      bankTransferClaimedAt: booking.bank_transfer_claimed_at,
+    })
+  ) {
+    return;
+  }
+
   await supabase
     .from("booking_requests")
     .delete()
     .eq("id", bookingId)
-    .eq("status", "pending_payment");
+    .eq("status", "pending_payment")
+    .is("bank_transfer_claimed_at", null);
 }
 
 export async function POST(request: Request) {

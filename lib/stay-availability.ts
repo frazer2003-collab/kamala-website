@@ -1,21 +1,12 @@
 import type { Room } from "@/lib/content";
 import { bookingOccupiesDay } from "@/lib/calendar";
+import { bookingReservesRoom } from "@/lib/booking-reservation";
 import {
   buildInventoryLookup,
   getRoomDayInventoryForRange,
   getRoomsToSellForDay,
 } from "@/lib/room-day-inventory";
 import { createStaffSupabaseClient, hasStaffSupabaseConfig } from "@/lib/supabase";
-
-function bookingReservesRoom(booking: {
-  status: string;
-  deposit_paid_at: string | null;
-}) {
-  return (
-    booking.status === "confirmed" ||
-    (booking.deposit_paid_at !== null && booking.status !== "declined")
-  );
-}
 
 export type RoomStayAvailability = {
   roomId: string;
@@ -41,7 +32,9 @@ export async function getRoomsStayAvailability(
   const [bookingsResult, inventoryByRoom, blocksResult] = await Promise.all([
     supabase
       .from("booking_requests")
-      .select("room_id, arrival_date, departure_date, status, deposit_paid_at")
+      .select(
+        "room_id, arrival_date, departure_date, status, deposit_paid_at, bank_transfer_claimed_at",
+      )
       .in("room_id", roomIds)
       .lt("arrival_date", departure)
       .gt("departure_date", arrival),

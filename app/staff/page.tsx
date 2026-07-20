@@ -1,5 +1,6 @@
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
+import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form";
 import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import {
@@ -11,7 +12,12 @@ import {
 } from "@/lib/booking-requests";
 import { formatMoneySuffix } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
+import { getStaffRooms } from "@/lib/rooms";
 import { requireStaffSession } from "@/lib/staff-auth";
+import {
+  formatOverlapErrorMessage,
+  parseOverlapDays,
+} from "@/lib/stay-overlap";
 import type { BookingStatus } from "@/lib/content";
 
 const BookingChat = nextDynamic(
@@ -32,11 +38,23 @@ type InboxFilter = "all" | "new" | "awaiting" | "needs-reply";
 const statusCopy: Record<BookingStatus, string> = {
   new: "New request",
   pending_payment: "Awaiting payment",
-  awaiting: "Paid in full",
+  awaiting: "Payment received",
   "needs-reply": "Needs staff reply",
   confirmed: "Confirmed",
   declined: "Closed",
 };
+
+function getBookingStatusCopy(booking: StaffBooking) {
+  if (
+    booking.status === "awaiting" &&
+    booking.bankTransferClaimed &&
+    !booking.depositPaid
+  ) {
+    return "Transfer to verify";
+  }
+
+  return statusCopy[booking.status];
+}
 
 const STATUS_SORT: Partial<Record<BookingStatus, number>> = {
   "needs-reply": 0,
@@ -86,7 +104,14 @@ function sortInboxBookings(bookings: StaffBooking[]) {
 export default async function StaffBookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking?: string; filter?: string; view?: string }>;
+  searchParams: Promise<{
+    booking?: string;
+    filter?: string;
+    view?: string;
+    error?: string;
+    detail?: string;
+    overlap?: string;
+  }>;
 }) {
   await requireStaffSession();
 
@@ -94,14 +119,18 @@ export default async function StaffBookingsPage({
     booking: selectedBookingId,
     filter: filterParam,
     view: viewParam,
+    error,
+    detail: errorDetail,
+    overlap,
   } = await searchParams;
   const inboxFilter = parseInboxFilter(filterParam);
   const preferInboxView = viewParam === "inbox";
 
-  const [staffBookings, declinedBookings, settings] = await Promise.all([
+  const [staffBookings, declinedBookings, settings, rooms] = await Promise.all([
     getStaffBookingRequests(),
     getDeclinedBookings(),
     getPropertySettings(),
+    getStaffRooms(),
   ]);
 
   const sortedOpen = sortInboxBookings(staffBookings.bookings);
@@ -149,12 +178,20 @@ export default async function StaffBookingsPage({
   ).length;
   const focusDetailOnMobile = Boolean(selected) && !preferInboxView;
   const selectedKey = selected ? getStaffBookingKey(selected) : null;
+  const inboxRoomTypeError =
+    error === "invalid-room-type"
+      ? "That room type is not available."
+      : error === "overlap"
+        ? formatOverlapErrorMessage(parseOverlapDays(overlap))
+        : error === "save-failed"
+          ? `Could not update the room type.${errorDetail ? ` ${errorDetail}` : ""}`
+          : null;
 
   const filterTabs: { id: InboxFilter; label: string; count: number }[] = [
     { id: "all", label: "All", count: staffBookings.bookings.length },
     { id: "needs-reply", label: "Need reply", count: needsReplyCount },
     { id: "new", label: "New", count: newRequestCount },
-    { id: "awaiting", label: "Paid", count: awaitingCount },
+    { id: "awaiting", label: "Payment", count: awaitingCount },
   ];
 
   return (
@@ -198,6 +235,19 @@ export default async function StaffBookingsPage({
                         })}
                       >
                         {needsReplyCount} need reply
+                      </Link>
+                    </>
+                  ) : null}
+                  {awaitingCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "awaiting",
+                          view: "inbox",
+                        })}
+                      >
+                        {awaitingCount} payment review
                       </Link>
                     </>
                   ) : null}
@@ -301,7 +351,7 @@ export default async function StaffBookingsPage({
                           className={`staff-status staff-status--${booking.status}`}
                         >
                           <span aria-hidden="true" />
-                          {statusCopy[booking.status]}
+                          {getBookingStatusCopy(booking)}
                         </div>
                       </Link>
                     </article>
@@ -392,7 +442,7 @@ export default async function StaffBookingsPage({
                 <span>{selected.id}</span>
                 <div className={`staff-status staff-status--${selected.status}`}>
                   <span aria-hidden="true" />
-                  {statusCopy[selected.status] ?? selected.status}
+                  {getBookingStatusCopy(selected)}
                 </div>
               </div>
               <h2 id="detail-title">{selected.guest}</h2>
@@ -429,11 +479,22 @@ export default async function StaffBookingsPage({
               ) : null}
 
               <div className="reservation-detail__groups">
+                {selected.databaseId && !isClosedConversation ? (
+                  <StaffInboxRoomTypeForm
+                    bookingId={selected.databaseId}
+                    canManage={canManageSelected}
+                    formError={inboxRoomTypeError}
+                    roomId={selected.roomId}
+                    rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                  />
+                ) : null}
                 <dl className="detail-list detail-list--group" aria-label="Stay">
-                  <div>
-                    <dt>Room</dt>
-                    <dd>{selected.room}</dd>
-                  </div>
+                  {!selected.databaseId || isClosedConversation ? (
+                    <div>
+                      <dt>Room</dt>
+                      <dd>{selected.room}</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>Dates</dt>
                     <dd>
@@ -454,6 +515,8 @@ export default async function StaffBookingsPage({
                     <dd>
                       {selected.depositPaid
                         ? `${formatMoneySuffix(selected.depositAmount, settings.currency)} paid`
+                        : selected.bankTransferClaimed
+                          ? "Bank transfer reported — verify in bank app"
                         : "Not received yet"}
                     </dd>
                   </div>
@@ -482,6 +545,7 @@ export default async function StaffBookingsPage({
                   currency={settings.currency}
                   depositAmount={selected.depositAmount}
                   depositPaid={selected.depositPaid}
+                  bankTransferClaimed={selected.bankTransferClaimed}
                   guestEmail={selected.contact}
                   guestName={selected.guest}
                   practiceMode={isPracticeMode}

@@ -1,5 +1,5 @@
 -- Physical room numbers (door units) and assignment on confirmed stays.
--- Deluxe (garden) and Triple (veranda) share 112/117/119/114; Family (loft) can use 114.
+-- Deluxe (garden): 117/119; Triple (veranda): 112; Family (loft): 114.
 
 create table if not exists public.room_units (
   id uuid primary key default gen_random_uuid(),
@@ -67,15 +67,21 @@ from public.room_units u
 where u.number in ('113', '115', '118', '120')
 on conflict do nothing;
 
--- Deluxe + Triple shared pool
+-- Deluxe: 117, 119
 insert into public.room_unit_types (room_unit_id, room_id)
-select u.id, t.room_id
+select u.id, 'garden'
 from public.room_units u
-cross join (values ('garden'), ('veranda')) as t(room_id)
-where u.number in ('112', '114', '117', '119')
+where u.number in ('117', '119')
 on conflict do nothing;
 
--- Family can use 114
+-- Triple: 112
+insert into public.room_unit_types (room_unit_id, room_id)
+select u.id, 'veranda'
+from public.room_units u
+where u.number = '112'
+on conflict do nothing;
+
+-- Family: 114
 insert into public.room_unit_types (room_unit_id, room_id)
 select u.id, 'loft'
 from public.room_units u
@@ -84,8 +90,8 @@ on conflict do nothing;
 
 -- Align default sellable counts with physical units for each type.
 update public.rooms set available_count = 4 where id = 'courtyard';
-update public.rooms set available_count = 4 where id = 'garden';
-update public.rooms set available_count = 4 where id = 'veranda';
+update public.rooms set available_count = 2 where id = 'garden';
+update public.rooms set available_count = 1 where id = 'veranda';
 update public.rooms set available_count = 1 where id = 'loft';
 
 -- OTA / channel reservations can also be assigned a door number.

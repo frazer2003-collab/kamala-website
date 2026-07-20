@@ -34,6 +34,10 @@ export type PropertySettings = {
   termsSummary: string;
   lineUrl: string | null;
   whatsappUrl: string | null;
+  promptPayId: string | null;
+  bankName: string | null;
+  accountName: string | null;
+  accountNumber: string | null;
   calendarColors: CalendarColors;
   heroImageUrl: string | null;
   source: "supabase" | "defaults";
@@ -60,6 +64,10 @@ const defaultSettings: PropertySettings = {
     "Payment in full reserves your room when you book. Staff confirm every reservation.",
   lineUrl: null,
   whatsappUrl: null,
+  promptPayId: null,
+  bankName: null,
+  accountName: null,
+  accountNumber: null,
   calendarColors: { ...DEFAULT_CALENDAR_COLORS },
   heroImageUrl: DEFAULT_HERO_IMAGE_URL,
   source: "defaults",
@@ -83,6 +91,10 @@ function mapPropertySettings(row: PropertySettingsRow): PropertySettings {
     termsSummary: row.terms_summary,
     lineUrl: row.line_url,
     whatsappUrl: row.whatsapp_url,
+    promptPayId: row.promptpay_id,
+    bankName: row.bank_name,
+    accountName: row.account_name,
+    accountNumber: row.account_number,
     calendarColors: normalizeCalendarColors({
       available: row.calendar_color_available,
       closed: row.calendar_color_closed,
@@ -150,6 +162,10 @@ export type PropertySettingsInput = {
   termsSummary: string;
   lineUrl: string | null;
   whatsappUrl: string | null;
+  promptPayId: string | null;
+  bankName: string | null;
+  accountName: string | null;
+  accountNumber: string | null;
   calendarColors: CalendarColors;
 };
 
@@ -171,6 +187,10 @@ export function toPropertySettingsRow(input: PropertySettingsInput) {
     terms_summary: input.termsSummary,
     line_url: input.lineUrl,
     whatsapp_url: input.whatsappUrl,
+    promptpay_id: input.promptPayId,
+    bank_name: input.bankName,
+    account_name: input.accountName,
+    account_number: input.accountNumber,
     calendar_color_available: input.calendarColors.available,
     calendar_color_closed: input.calendarColors.closed,
     calendar_color_booking: input.calendarColors.booking,

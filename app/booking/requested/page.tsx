@@ -4,15 +4,18 @@ import { SiteFooter } from "@/components/site-footer";
 import { getGuestChatUrl } from "@/lib/booking-chat";
 import { getPropertySettings } from "@/lib/property-settings";
 import { createStaffSupabaseClient } from "@/lib/supabase";
+import { isLocale, t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function BookingRequestedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking?: string }>;
+  searchParams: Promise<{ booking?: string; lang?: string; payment?: string }>;
 }) {
-  const { booking: bookingId } = await searchParams;
+  const { booking: bookingId, lang, payment } = await searchParams;
+  const locale = isLocale(lang) ? lang : "en";
+  const isBankTransfer = payment === "bank-transfer";
   const settings = await getPropertySettings();
   let chatUrl: string | null = null;
 
@@ -37,20 +40,25 @@ export default async function BookingRequestedPage({
     <main className="guest-site site-shell">
       <GuestTopbar settings={settings} />
       <section className="section booking-result">
-        <h1>We received your booking request.</h1>
+        <h1>
+          {isBankTransfer
+            ? t(locale, "bankTransferWaitingTitle")
+            : "We received your booking request."}
+        </h1>
         <p>
-          Staff at {settings.propertyName} will review your dates and reply with
-          confirmation details. No card payment was taken online.
+          {isBankTransfer
+            ? t(locale, "bankTransferWaitingBody")
+            : `Staff at ${settings.propertyName} will review your dates and reply with confirmation details. No card payment was taken online.`}
         </p>
         {chatUrl ? (
           <p>
             <Link className="button button--primary" href={chatUrl}>
-              Open booking conversation
+              {t(locale, "openBookingConversation")}
             </Link>
           </p>
         ) : null}
         <Link className="button button--secondary" href="/">
-          Back to home
+          {t(locale, "backToHome")}
         </Link>
       </section>
       <SiteFooter settings={settings} />
