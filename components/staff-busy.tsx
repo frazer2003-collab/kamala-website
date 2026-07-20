@@ -13,12 +13,16 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 import { usePathname, useSearchParams } from "next/navigation";
+import { formatCalendarMonthLabel, parseCalendarMonth } from "@/lib/calendar";
+
+const DEFAULT_BUSY_MESSAGE = "Working…";
 
 type StaffBusyContextValue = {
   busy: boolean;
-  startBusy: () => void;
+  message: string;
+  startBusy: (message?: string) => void;
   endBusy: () => void;
-  withBusy: <T>(work: Promise<T>) => Promise<T>;
+  withBusy: <T>(work: Promise<T>, message?: string) => Promise<T>;
 };
 
 const StaffBusyContext = createContext<StaffBusyContextValue | null>(null);
@@ -36,23 +40,74 @@ export function useOptionalStaffBusy() {
   return useContext(StaffBusyContext);
 }
 
-export function StaffBusyProvider({ children }: { children: ReactNode }) {
-  const [count, setCount] = useState(0);
-  const countRef = useRef(0);
+function messageForStaffUrl(url: URL) {
+  const path = url.pathname;
+  if (path.startsWith("/staff/calendar")) {
+    const month = url.searchParams.get("month");
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const { year, month: monthNum } = parseCalendarMonth(month);
+      return `Opening ${formatCalendarMonthLabel(year, monthNum)}…`;
+    }
+    return "Opening calendar…";
+  }
+  if (path.startsWith("/staff/settings/calendars")) {
+    return "Opening channel calendars…";
+  }
+  if (path.startsWith("/staff/settings/rooms")) {
+    return "Opening rooms…";
+  }
+  if (path.startsWith("/staff/settings/tours")) {
+    return "Opening tours…";
+  }
+  if (path.startsWith("/staff/settings")) {
+    return "Opening settings…";
+  }
+  if (path.startsWith("/staff/promotions")) {
+    return "Opening discounts…";
+  }
+  if (path.startsWith("/staff/gallery")) {
+    return "Opening gallery…";
+  }
+  if (path === "/staff" || path === "/staff/") {
+    return "Opening requests…";
+  }
+  return "Opening page…";
+}
 
-  const startBusy = useCallback(() => {
-    countRef.current += 1;
-    setCount(countRef.current);
+export function StaffBusyProvider({ children }: { children: ReactNode }) {
+  const stackRef = useRef<string[]>([]);
+  const [count, setCount] = useState(0);
+  const [message, setMessage] = useState(DEFAULT_BUSY_MESSAGE);
+
+  const syncFromStack = useCallback(() => {
+    const nextCount = stackRef.current.length;
+    setCount(nextCount);
+    setMessage(
+      nextCount > 0
+        ? (stackRef.current[nextCount - 1] ?? DEFAULT_BUSY_MESSAGE)
+        : DEFAULT_BUSY_MESSAGE,
+    );
   }, []);
+
+  const startBusy = useCallback(
+    (nextMessage = DEFAULT_BUSY_MESSAGE) => {
+      stackRef.current.push(nextMessage.trim() || DEFAULT_BUSY_MESSAGE);
+      syncFromStack();
+    },
+    [syncFromStack],
+  );
 
   const endBusy = useCallback(() => {
-    countRef.current = Math.max(0, countRef.current - 1);
-    setCount(countRef.current);
-  }, []);
+    if (stackRef.current.length === 0) {
+      return;
+    }
+    stackRef.current.pop();
+    syncFromStack();
+  }, [syncFromStack]);
 
   const withBusy = useCallback(
-    async <T,>(work: Promise<T>) => {
-      startBusy();
+    async <T,>(work: Promise<T>, nextMessage?: string) => {
+      startBusy(nextMessage);
       try {
         return await work;
       } finally {
@@ -65,11 +120,12 @@ export function StaffBusyProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       busy: count > 0,
+      message,
       startBusy,
       endBusy,
       withBusy,
     }),
-    [count, endBusy, startBusy, withBusy],
+    [count, endBusy, message, startBusy, withBusy],
   );
 
   return (
@@ -78,7 +134,7 @@ export function StaffBusyProvider({ children }: { children: ReactNode }) {
 }
 
 export function StaffBusyOverlay() {
-  const { busy } = useStaffBusy();
+  const { busy, message } = useStaffBusy();
 
   if (!busy) {
     return null;
@@ -92,7 +148,7 @@ export function StaffBusyOverlay() {
       role="status"
     >
       <span aria-hidden="true" className="staff-busy-overlay__spinner" />
-      <p className="staff-busy-overlay__label">Working…</p>
+      <p className="staff-busy-overlay__label">{message}</p>
     </div>
   );
 }
@@ -156,19 +212,22 @@ function StaffNavBusyListener() {
     endBusy();
   }, [endBusy]);
 
-  const beginNavBusy = useCallback(() => {
-    if (navigatingRef.current) {
-      return;
-    }
-    navigatingRef.current = true;
-    startBusy();
-    if (safetyTimerRef.current) {
-      clearTimeout(safetyTimerRef.current);
-    }
-    safetyTimerRef.current = setTimeout(() => {
-      clearNavBusy();
-    }, 12_000);
-  }, [clearNavBusy, startBusy]);
+  const beginNavBusy = useCallback(
+    (message: string) => {
+      if (navigatingRef.current) {
+        return;
+      }
+      navigatingRef.current = true;
+      startBusy(message);
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
+      }
+      safetyTimerRef.current = setTimeout(() => {
+        clearNavBusy();
+      }, 12_000);
+    },
+    [clearNavBusy, startBusy],
+  );
 
   useEffect(() => {
     clearNavBusy();
@@ -196,7 +255,7 @@ function StaffNavBusyListener() {
         return;
       }
 
-      beginNavBusy();
+      beginNavBusy(messageForStaffUrl(new URL(anchor.href)));
     }
 
     document.addEventListener("click", onClick, true);
@@ -216,7 +275,11 @@ function StaffNavBusyListener() {
 }
 
 /** Mount inside any staff `<form action={…}>` to drive the global veil. */
-export function StaffFormBusyBridge() {
+export function StaffFormBusyBridge({
+  message = "Saving…",
+}: {
+  message?: string;
+}) {
   const { pending } = useFormStatus();
   const busy = useOptionalStaffBusy();
   const wasPending = useRef(false);
@@ -227,13 +290,13 @@ export function StaffFormBusyBridge() {
     }
 
     if (pending && !wasPending.current) {
-      busy.startBusy();
+      busy.startBusy(message);
       wasPending.current = true;
     } else if (!pending && wasPending.current) {
       busy.endBusy();
       wasPending.current = false;
     }
-  }, [busy, pending]);
+  }, [busy, message, pending]);
 
   useEffect(() => {
     return () => {
@@ -248,7 +311,13 @@ export function StaffFormBusyBridge() {
 }
 
 /** Drive the veil from `useActionState` pending or local upload flags. */
-export function StaffBusyEffect({ active }: { active: boolean }) {
+export function StaffBusyEffect({
+  active,
+  message = "Working…",
+}: {
+  active: boolean;
+  message?: string;
+}) {
   const busy = useOptionalStaffBusy();
   const wasActive = useRef(false);
 
@@ -258,13 +327,13 @@ export function StaffBusyEffect({ active }: { active: boolean }) {
     }
 
     if (active && !wasActive.current) {
-      busy.startBusy();
+      busy.startBusy(message);
       wasActive.current = true;
     } else if (!active && wasActive.current) {
       busy.endBusy();
       wasActive.current = false;
     }
-  }, [active, busy]);
+  }, [active, busy, message]);
 
   useEffect(() => {
     return () => {

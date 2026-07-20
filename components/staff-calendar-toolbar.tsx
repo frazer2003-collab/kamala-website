@@ -63,7 +63,7 @@ export function StaffCalendarToolbar({
         </Link>
         {canSyncOta ? (
           <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
-            <StaffFormBusyBridge />
+            <StaffFormBusyBridge message="Syncing channel calendars…" />
             <input name="month" type="hidden" value={monthKey} />
             <StaffOtaSyncControls />
           </form>
@@ -87,23 +87,27 @@ export function StaffCalendarToolbar({
       </div>
 
       <details className="staff-calendar-toolbar__legend-details">
-        <summary>Colors</summary>
+        <summary>Legend</summary>
         <div className="staff-calendar-toolbar__legend" aria-label="Status colors">
-          <span
-            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--bookable"
-            style={{ background: calendarColors.available }}
-          />
-          Bookable
-          <span
-            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--closed"
-            style={{ background: calendarColors.closed }}
-          />
+          <span className="extranet-status-mark extranet-status-mark--bookable" aria-hidden="true">
+            O
+          </span>
+          Open
+          <span className="extranet-status-mark extranet-status-mark--closed" aria-hidden="true">
+            ×
+          </span>
           Closed
+          <span className="extranet-status-mark extranet-status-mark--sold-out" aria-hidden="true">
+            F
+          </span>
+          Full
           <span
-            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--sold"
-            style={{ background: calendarColors.soldOut }}
-          />
-          Sold out
+            className="extranet-status-mark extranet-status-mark--overbooked"
+            aria-hidden="true"
+          >
+            !
+          </span>
+          Overbooked
           <span
             className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--booking"
             style={{ background: calendarColors.booking }}

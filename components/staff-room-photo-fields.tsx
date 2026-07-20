@@ -101,7 +101,7 @@ export function StaffRoomPhotoFields({ room, disabled }: StaffRoomPhotoFieldsPro
 
   return (
     <div className="staff-room-photos field-pair--wide">
-      <StaffBusyEffect active={isUploading} />
+      <StaffBusyEffect active={isUploading} message="Uploading photo…" />
       <div className="staff-room-photos__section">
         <label htmlFor={`${room.id}-cover-photo`}>Cover photo</label>
         <p className="staff-room-photos__hint">

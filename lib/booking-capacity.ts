@@ -249,13 +249,17 @@ export async function getUnavailableStayDays(
   }
 }
 
-export async function hasCapacityForStay(
+export type StayCapacityResult =
+  | { ok: true }
+  | { ok: false; reason: "unavailable" | "verify-failed" };
+
+export async function checkStayCapacity(
   roomId: string,
   arrival: string,
   departure: string,
   availableCount: number,
   options?: { excludeBookingId?: string; excludeBlockId?: string },
-) {
+): Promise<StayCapacityResult> {
   try {
     const supabase = createStaffSupabaseClient();
     const [bookingsResult, blocksResult, inventoryEntries] = await Promise.all([
@@ -277,7 +281,7 @@ export async function hasCapacityForStay(
     ]);
 
     if (bookingsResult.error || blocksResult.error) {
-      return false;
+      return { ok: false, reason: "verify-failed" };
     }
 
     const bookings = bookingsResult.data ?? [];
@@ -310,7 +314,7 @@ export async function hasCapacityForStay(
         if (block.ical_feed_id) {
           netBooked += 1;
         } else {
-          return false;
+          return { ok: false, reason: "unavailable" };
         }
       }
 
@@ -339,15 +343,31 @@ export async function hasCapacityForStay(
       const roomsToSell = inventoryLookup.get(`${roomId}:${iso}`) ?? availableCount;
 
       if (netBooked >= roomsToSell) {
-        return false;
+        return { ok: false, reason: "unavailable" };
       }
 
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    return true;
+    return { ok: true };
   } catch {
-    // Fail closed: never sell when availability data cannot be trusted.
-    return false;
+    return { ok: false, reason: "verify-failed" };
   }
+}
+
+export async function hasCapacityForStay(
+  roomId: string,
+  arrival: string,
+  departure: string,
+  availableCount: number,
+  options?: { excludeBookingId?: string; excludeBlockId?: string },
+) {
+  const result = await checkStayCapacity(
+    roomId,
+    arrival,
+    departure,
+    availableCount,
+    options,
+  );
+  return result.ok;
 }

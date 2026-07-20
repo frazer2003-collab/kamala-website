@@ -66,8 +66,8 @@ export function StaffOtaCalendarsPanel({
           appear on the Kamala calendar. Busy nights are not pushed back to OTAs from this page.
         </p>
         <p className="staff-room-ical__hint staff-room-ical__hint--alert">
-          After connecting a feed, use <strong>Sync OTA bookings</strong> on the staff calendar.
-          OTA calendars are not live; refresh sync if dates look stale.
+          After connecting a feed, use <strong>Sync channel calendars</strong> on the staff calendar.
+          Channel calendars are not live; refresh sync if dates look stale.
         </p>
       </div>
 

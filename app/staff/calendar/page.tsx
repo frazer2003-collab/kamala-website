@@ -454,9 +454,10 @@ export default async function StaffCalendarPage({
         ) : null}
         {icalSynced !== undefined ? (
           <p className="form-message form-message--success" role="status">
-            OTA calendars refreshed
+            Channel calendars updated
             {icalFeeds ? ` (${icalFeeds} feed${icalFeeds === "1" ? "" : "s"})` : ""}.{" "}
-            {icalSynced} reservation{icalSynced === "1" ? "" : "s"} imported.{" "}
+            {icalSynced} stay{icalSynced === "1" ? "" : "s"} on the board. Check dates and room
+            numbers.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
@@ -464,7 +465,8 @@ export default async function StaffCalendarPage({
         ) : null}
         {icalError ? (
           <p className="form-message form-message--error" role="alert">
-            OTA sync failed: {decodeURIComponent(icalError)}{" "}
+            Channel sync didn’t finish: {decodeURIComponent(icalError)}. Try Sync again, or check
+            the feed URLs under Settings → Calendars.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
@@ -472,7 +474,7 @@ export default async function StaffCalendarPage({
         ) : null}
         {icalWarning ? (
           <p className="form-message form-message--setup" role="status">
-            OTA sync note: {decodeURIComponent(icalWarning)}{" "}
+            Channel sync note: {decodeURIComponent(icalWarning)}. Existing stays were kept.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>

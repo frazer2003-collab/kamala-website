@@ -75,7 +75,7 @@ export function StaffHeroImageField({ heroImageUrl, disabled }: StaffHeroImageFi
 
   return (
     <div className="staff-hero-image">
-      <StaffBusyEffect active={isUploading || removing} />
+      <StaffBusyEffect active={isUploading || removing} message="Uploading photo…" />
       <div className="staff-hero-image__preview-shell">
         {previewUrl ? (
           <div

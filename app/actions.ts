@@ -11,7 +11,7 @@ import {
 import { formatMoneySuffix, getStripeCurrencyCode } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
-import { hasCapacityForStay } from "@/lib/booking-capacity";
+import { checkStayCapacity, hasCapacityForStay } from "@/lib/booking-capacity";
 import {
   fulfillBookingDeposit,
   releaseBookingReservation,
@@ -365,14 +365,24 @@ export async function createBookingRequest(
     );
   }
 
-  const hasCapacity = await hasCapacityForStay(
+  const capacity = await checkStayCapacity(
     selectedRoom.id,
     arrival,
     departure,
     selectedRoom.availableCount,
   );
 
-  if (!hasCapacity) {
+  if (!capacity.ok) {
+    if (capacity.reason === "verify-failed") {
+      return bookingErrorState(
+        "We couldn’t confirm availability just now. Please try again in a moment, or message us if it keeps happening.",
+        formData,
+        {
+          room: "We couldn’t confirm availability for these dates. Please try again.",
+        },
+      );
+    }
+
     return bookingErrorState(
       "These dates are no longer available for this room.",
       formData,

@@ -191,24 +191,27 @@ function DayCell({
   );
 }
 
-function StatusPill({ status }: { status: DaySaleStatus }) {
+function StatusDot({ status }: { status: DaySaleStatus }) {
   const label = getDaySaleStatusLabel(status);
+  const mark =
+    status === "bookable"
+      ? "O"
+      : status === "closed"
+        ? "×"
+        : status === "sold-out"
+          ? "F"
+          : "!";
 
   return (
     <span
       className={[
-        "extranet-pill",
-        status === "closed"
-          ? "extranet-pill--closed"
-          : status === "sold-out"
-            ? "extranet-pill--sold-out"
-            : status === "overbooked"
-              ? "extranet-pill--overbooked"
-              : "extranet-pill--bookable",
+        "extranet-status-mark",
+        `extranet-status-mark--${status}`,
       ].join(" ")}
       title={status === "overbooked" ? "Overbooked — needs attention" : label}
     >
-      {status === "overbooked" ? "Overbooked" : label}
+      <span aria-hidden="true">{mark}</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }
@@ -499,8 +502,13 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
 
   const firstFutureDay = dayMetrics.find((day) => !day.isPast && day.inCurrentMonth)?.iso
     ?? dayMetrics.find((day) => !day.isPast)?.iso;
-  const [showInventory, setShowInventory] = useState(true);
+  const [showInventory, setShowInventory] = useState(false);
   const needsAssignment = unassignedCount > 0;
+  const overbookedDays = dayMetrics.filter(
+    (day) => day.inCurrentMonth && day.saleStatus === "overbooked",
+  );
+  const hasOverbook = overbookedDays.length > 0;
+  const firstOverbookIso = overbookedDays[0]?.iso;
 
   return (
     <section aria-label={room.name} className="extranet-room">
@@ -521,7 +529,9 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             aria-expanded={showInventory}
             className={[
               "extranet-room__inventory-toggle",
-              needsAssignment ? "extranet-room__inventory-toggle--attention" : "",
+              needsAssignment || hasOverbook
+                ? "extranet-room__inventory-toggle--attention"
+                : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -529,14 +539,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             type="button"
           >
             <span className="extranet-room__inventory-toggle-label">
-              {showInventory ? "Hide availability" : "Availability"}
+              {showInventory ? "Hide details" : "Room details"}
             </span>
             {needsAssignment ? (
               <span className="extranet-room__inventory-toggle-badge">
                 {unassignedCount} need room #
               </span>
             ) : null}
-            {dayMetrics.some((day) => day.saleStatus === "overbooked") ? (
+            {hasOverbook ? (
               <span
                 className="extranet-room__inventory-toggle-badge extranet-room__inventory-toggle-badge--urgent"
                 title="More stays than rooms to sell — needs attention"
@@ -558,6 +568,37 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           ) : null}
         </div>
       </div>
+
+      {hasOverbook || needsAssignment ? (
+        <div className="extranet-room__attention" role="status">
+          <p>
+            {hasOverbook ? (
+              <>
+                Overbooked on {overbookedDays.length} night
+                {overbookedDays.length === 1 ? "" : "s"}
+                {firstOverbookIso ? ` (from ${firstOverbookIso})` : ""}. More stays than rooms to
+                sell — open Room details, check status marks, and move or reassign stays.
+              </>
+            ) : null}
+            {hasOverbook && needsAssignment ? " " : null}
+            {needsAssignment ? (
+              <>
+                {unassignedCount} stay{unassignedCount === 1 ? "" : "s"} still need a room number.
+                Assign on the yellow-dashed bars.
+              </>
+            ) : null}
+          </p>
+          {!showInventory ? (
+            <button
+              className="button button--quiet"
+              onClick={() => setShowInventory(true)}
+              type="button"
+            >
+              Open room details
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {showInventory ? (
       <div
@@ -586,7 +627,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             href={day.statusHref}
             key={`status-${day.iso}`}
           >
-            <StatusPill status={day.saleStatus} />
+            <StatusDot status={day.saleStatus} />
           </DayCell>
         ))}
 

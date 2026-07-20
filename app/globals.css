@@ -5998,6 +5998,39 @@ textarea:focus {
   line-height: 1.2;
 }
 
+.staff-calendar-toolbar__month-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.staff-calendar-toolbar__month-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 1.35rem;
+  font-weight: 650;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.staff-calendar-toolbar__month-step:hover {
+  background: var(--color-surface-muted);
+}
+
+.staff-calendar-toolbar__month-step:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
 .staff-calendar-toolbar__month-picker {
   position: relative;
   display: inline-flex;
@@ -6061,6 +6094,7 @@ textarea:focus {
 }
 
 .staff-calendar-toolbar__month-picker:focus-within,
+.staff-calendar-toolbar__month-step:focus-visible,
 .staff-calendar-toolbar__today:focus-visible,
 .staff-calendar-toolbar__density-btn:focus-visible {
   outline: 2px solid var(--color-maroon);
@@ -6905,7 +6939,28 @@ textarea:focus {
 
 .extranet-room__grid--inventory {
   border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface-muted) 55%, white);
+  background: color-mix(in srgb, var(--color-surface-muted) 35%, white);
+}
+
+.extranet-room__attention {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-danger) 22%, var(--color-border));
+  background: var(--color-danger-wash);
+}
+
+.extranet-room__attention p {
+  margin: 0;
+  flex: 1 1 16rem;
+  color: var(--color-danger);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.4;
+  max-width: 70ch;
 }
 
 .extranet-room__no-units {
@@ -7100,6 +7155,68 @@ textarea:focus {
   background: color-mix(in srgb, var(--calendar-color-closed) 78%, white);
   color: var(--color-danger);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 22%, transparent);
+}
+
+.extranet-status-dot {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 12%, transparent);
+}
+
+.extranet-status-dot--bookable {
+  background: var(--color-success);
+}
+
+.extranet-status-dot--blocked {
+  background: var(--color-danger);
+}
+
+.extranet-status-dot--overbooked {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 18%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--color-danger) 35%, transparent);
+}
+
+.extranet-status-mark {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
+  padding: 0.05rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.extranet-status-mark--bookable {
+  background: color-mix(in srgb, var(--calendar-color-available) 78%, white);
+  color: var(--color-success);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 28%, transparent);
+}
+
+.extranet-status-mark--closed {
+  background: color-mix(in srgb, var(--calendar-color-closed) 78%, white);
+  color: var(--color-danger);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 28%, transparent);
+}
+
+.extranet-status-mark--sold-out {
+  background: color-mix(in srgb, var(--calendar-color-sold-out) 70%, white);
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 18%, transparent);
+}
+
+.extranet-status-mark--overbooked {
+  background: var(--color-danger-wash);
+  color: var(--color-danger);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 35%, transparent);
 }
 
 .extranet-pill--sold-out {
@@ -7625,6 +7742,64 @@ textarea:focus {
 
   .staff-extranet__scroll {
     gap: 0.7rem;
+  }
+}
+
+/* Desktop/tablet: fit the full month width — vertical scroll only. */
+@media (min-width: 900px) {
+  .staff-extranet,
+  .staff-timeline {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .staff-extranet__scroll,
+  .staff-timeline__scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-width: 0;
+  }
+
+  .staff-extranet__dates,
+  .extranet-room__grid {
+    width: 100%;
+    min-width: 0;
+    --extranet-day-width: 0px;
+    grid-template-columns: var(--extranet-label-width) repeat(
+        var(--timeline-days),
+        minmax(0, 1fr)
+      );
+  }
+
+  .extranet-room__header {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .extranet-reservations {
+    grid-template-columns: repeat(var(--timeline-days), minmax(0, 1fr));
+  }
+
+  .staff-timeline__grid {
+    width: 100%;
+    min-width: 0;
+    --timeline-day-width: 0px;
+    grid-template-columns: var(--timeline-room-width) repeat(
+        var(--timeline-days),
+        minmax(0, 1fr)
+      );
+  }
+
+  .staff-timeline__track {
+    grid-template-columns: repeat(var(--timeline-days), minmax(0, 1fr));
+  }
+
+  .staff-extranet__daynum {
+    font-size: 0.8rem;
+  }
+
+  .staff-extranet__weekday {
+    font-size: 0.58rem;
   }
 }
 

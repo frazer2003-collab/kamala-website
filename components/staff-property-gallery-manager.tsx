@@ -128,7 +128,10 @@ export function StaffPropertyGalleryManager({
 
   return (
     <div className="staff-gallery-manager">
-      <StaffBusyEffect active={isUploading || removing || moving} />
+      <StaffBusyEffect
+        active={isUploading || removing || moving}
+        message={isUploading ? "Uploading photos…" : "Updating gallery…"}
+      />
       <div className="staff-gallery-manager__toolbar">
         <div>
           <p className="staff-gallery-manager__count">

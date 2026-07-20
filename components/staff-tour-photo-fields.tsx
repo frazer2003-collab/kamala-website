@@ -114,7 +114,7 @@ export function StaffTourPhotoFields({ tour, disabled }: StaffTourPhotoFieldsPro
 
   return (
     <div className="staff-tour-photos field-pair--wide">
-      <StaffBusyEffect active={isUploading} />
+      <StaffBusyEffect active={isUploading} message="Uploading photo…" />
       <div className="staff-tour-photos__section">
         <label>Cover photo</label>
         <p className="staff-tour-photos__hint">

@@ -10,9 +10,17 @@ export function CalendarJumpToToday() {
       return;
     }
 
-    const scrollRoot = today.closest<HTMLElement>(".staff-timeline__scroll");
+    const scrollRoot =
+      today.closest<HTMLElement>(".staff-extranet__scroll") ??
+      today.closest<HTMLElement>(".staff-timeline__scroll");
     if (!scrollRoot) {
-      today.scrollIntoView({ block: "nearest", inline: "center" });
+      today.scrollIntoView({ block: "nearest", inline: "nearest" });
+      return;
+    }
+
+    // Whole month fits on desktop — only nudge vertically if needed.
+    if (window.matchMedia("(min-width: 900px)").matches) {
+      today.scrollIntoView({ block: "nearest", inline: "nearest" });
       return;
     }
 
