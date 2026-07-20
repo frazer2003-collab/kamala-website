@@ -16,16 +16,22 @@ export type RoomUnit = {
 /** Superior (courtyard) door numbers — Airbnb import slots and assignment. */
 export const COURTYARD_UNIT_NUMBERS = ["113", "115", "118", "120"] as const;
 
+/** Deluxe (garden) door numbers — Airbnb import slots and assignment. */
+export const GARDEN_UNIT_NUMBERS = ["117", "119"] as const;
+
+/** Triple (veranda) door numbers — Airbnb import slots and assignment. */
+export const VERANDA_UNIT_NUMBERS = ["112"] as const;
+
 /** Door number → room type ids (used to repair missing room_unit_types rows). */
 const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "113": ["courtyard"],
   "115": ["courtyard"],
   "118": ["courtyard"],
   "120": ["courtyard"],
-  "112": ["garden", "veranda"],
-  "114": ["garden", "veranda", "loft"],
-  "117": ["garden", "veranda"],
-  "119": ["garden", "veranda"],
+  "112": ["veranda"],
+  "114": ["loft"],
+  "117": ["garden"],
+  "119": ["garden"],
 };
 
 export const SAMPLE_ROOM_UNITS: RoomUnit[] = Object.entries(DEFAULT_UNIT_ROOM_IDS).map(
@@ -57,9 +63,15 @@ export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
       if (!unit.roomIds.includes(roomId)) {
         return false;
       }
-      // Superior is only 113 / 115 / 118 / 120 (ignore stale DB links like 116).
+      // Ignore stale DB links that no longer match Airbnb unit pools.
       if (roomId === "courtyard") {
         return (COURTYARD_UNIT_NUMBERS as readonly string[]).includes(unit.number);
+      }
+      if (roomId === "garden") {
+        return (GARDEN_UNIT_NUMBERS as readonly string[]).includes(unit.number);
+      }
+      if (roomId === "veranda") {
+        return (VERANDA_UNIT_NUMBERS as readonly string[]).includes(unit.number);
       }
       return true;
     })
@@ -243,9 +255,15 @@ function withDefaultRoomIds(units: RoomUnit[]): RoomUnit[] {
   return units.map((unit) => {
     let roomIds = unit.roomIds.length > 0 ? unit.roomIds : (DEFAULT_UNIT_ROOM_IDS[unit.number] ?? []);
 
-    // Never treat 116 (or any non-allowlisted door) as Superior.
+    // Strip type links that no longer match the Airbnb door pools.
     if (unit.number === "116" || !(COURTYARD_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
       roomIds = roomIds.filter((id) => id !== "courtyard");
+    }
+    if (!(GARDEN_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
+      roomIds = roomIds.filter((id) => id !== "garden");
+    }
+    if (!(VERANDA_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
+      roomIds = roomIds.filter((id) => id !== "veranda");
     }
 
     if (unit.roomIds.length > 0 && roomIds === unit.roomIds) {

@@ -93,7 +93,7 @@ export const rooms: Room[] = [
     rate: 950,
     sleeps: "Sleeps 2",
     outlook: "45 sqm - king bed - balcony - garden view",
-    availableCount: 4,
+    availableCount: 2,
     summary:
       "More space for longer stays: 45 sqm with a private balcony over the guesthouse garden, seating for two, refrigerator, and en-suite bathroom. Quiet room facing greenery above the old city.",
     amenities: [
@@ -118,7 +118,7 @@ export const rooms: Room[] = [
     rate: 900,
     sleeps: "Sleeps 3",
     outlook: "45 sqm - queen + single - balcony - garden view",
-    availableCount: 4,
+    availableCount: 1,
     summary:
       "Ideal for three guests travelling together: queen and single bed configuration, private balcony with seating, and room to spread out after a day around Chiang Mai's old city.",
     amenities: [

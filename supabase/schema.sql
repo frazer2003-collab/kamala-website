@@ -49,7 +49,7 @@ values
     950,
     'Sleeps 2',
     '45 m² · king bed · balcony · garden view',
-    4,
+    2,
     'More space for longer stays — 45 m² with a private balcony over the guesthouse garden, seating for two, refrigerator, and en-suite bathroom. Quiet room facing greenery above the old city.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'King bed', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
     'garden'
@@ -61,7 +61,7 @@ values
     900,
     'Sleeps 3',
     '45 m² · queen + single · balcony · garden view',
-    4,
+    1,
     'Ideal for three guests travelling together — queen and single bed configuration, private balcony with seating, and room to spread out after a day around Chiang Mai''s old city.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'Queen and single beds', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
     'veranda'
@@ -197,7 +197,10 @@ with check (
   status in ('new', 'pending_payment')
   and length(trim(guest_name)) between 2 and 120
   and guest_email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$'
-  and length(trim(guest_phone)) between 7 and 30
+  and (
+    length(trim(guest_phone)) = 0
+    or length(trim(guest_phone)) between 7 and 30
+  )
 );
 
 drop policy if exists "Service role can manage booking requests" on public.booking_requests;
