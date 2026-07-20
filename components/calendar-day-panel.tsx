@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { createRoomBlock, createWalkInBooking, updateRoomDayAllotment } from "@/app/actions";
+import {
+  createRoomBlock,
+  createWalkInBooking,
+  updateRoomDayAllotment,
+  updateRoomDayRate,
+} from "@/app/actions";
 import { getTodayIso } from "@/lib/calendar";
 import type { Room } from "@/lib/content";
 import {
@@ -27,6 +32,8 @@ type CalendarDayPanelProps = {
   overlap?: string;
   currentAllotment: number;
   hasAllotmentOverride: boolean;
+  currentRate: number;
+  hasRateOverride: boolean;
   dayStays?: DayStayLink[];
 };
 
@@ -58,7 +65,11 @@ function getErrorMessage(error?: string, overlap?: string) {
   }
 
   if (error === "invalid-phone") {
-    return "Enter a valid phone number with at least 7 digits.";
+    return "Enter a valid phone number with at least 7 digits, or leave phone blank.";
+  }
+
+  if (error === "invalid-email") {
+    return "Enter a valid email address before saving the walk-in.";
   }
 
   if (error === "invalid-dates") {
@@ -69,8 +80,12 @@ function getErrorMessage(error?: string, overlap?: string) {
     return "Enter how many rooms to sell (0 or more).";
   }
 
+  if (error === "invalid-rate") {
+    return "Enter a valid nightly rate (0 or more).";
+  }
+
   if (error === "save-failed") {
-    return "Could not save the allotment. Try again, or ask whoever set up the site if the problem continues.";
+    return "Could not save. Try again, or ask whoever set up the site if the problem continues.";
   }
 
   return null;
@@ -86,6 +101,8 @@ export function CalendarDayPanel({
   overlap,
   currentAllotment,
   hasAllotmentOverride,
+  currentRate,
+  hasRateOverride,
   dayStays = [],
 }: CalendarDayPanelProps) {
   const defaultDeparture = useMemo(() => addIsoDays(date, 1), [date]);
@@ -219,6 +236,101 @@ export function CalendarDayPanel({
     );
   }
 
+  if (mode === "rate") {
+    return (
+      <>
+        <p className="calendar-day-panel__intro">
+          Temporarily set the nightly rate for <strong>{room.name}</strong>. The
+          room default stays <strong>{room.rate}</strong>. This overrides any
+          promotion for the selected nights.
+        </p>
+        {errorMessage ? (
+          <p className="form-message form-message--error" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+        <form action={updateRoomDayRate} className="calendar-manage-form">
+          <input name="month" type="hidden" value={monthKey} />
+          <input name="room-id" type="hidden" value={room.id} />
+          <div className="field-pair">
+            <label htmlFor="rate-start-date">First night</label>
+            <input
+              defaultValue={date}
+              disabled={!canManage}
+              id="rate-start-date"
+              min={todayIso}
+              name="start-date"
+              required
+              type="date"
+            />
+          </div>
+          <div className="field-pair">
+            <label htmlFor="rate-end-date">Last night</label>
+            <input
+              defaultValue={date}
+              disabled={!canManage}
+              id="rate-end-date"
+              min={todayIso}
+              name="end-date"
+              required
+              type="date"
+            />
+            <span className="field-help">Both nights are included.</span>
+          </div>
+          <div className="field-pair">
+            <label htmlFor="rate-nightly-rate">Nightly rate</label>
+            <input
+              defaultValue={currentRate}
+              disabled={!canManage}
+              id="rate-nightly-rate"
+              min={0}
+              name="nightly-rate"
+              required
+              type="number"
+            />
+            <span className="field-help">
+              Room default is {room.rate}.
+              {hasRateOverride
+                ? ` Tonight’s temporary rate is ${currentRate}.`
+                : " Tonight currently uses the default or promo price."}
+            </span>
+          </div>
+          <div className="calendar-day-panel__actions">
+            <Link className="button button--quiet" href={dayHref}>
+              Back
+            </Link>
+            <div className="calendar-day-panel__actions-end">
+              <button
+                className="button button--quiet"
+                disabled={!canManage}
+                name="rate-action"
+                title={`Clear temporary rates for the selected nights and restore ${room.rate}`}
+                type="submit"
+                value="reset"
+              >
+                Reset selected dates
+              </button>
+              <button
+                className="button button--primary"
+                disabled={!canManage}
+                name="rate-action"
+                type="submit"
+                value="set"
+              >
+                Save temporary rate
+              </button>
+            </div>
+          </div>
+        </form>
+        {!canManage ? (
+          <p className="detail-help">
+            Day rates aren’t available until the site connection is set up.
+          </p>
+        ) : null}
+      </>
+    );
+  }
+
   if (mode === "walk-in") {
     return (
       <>
@@ -246,24 +358,24 @@ export function CalendarDayPanel({
             />
           </div>
           <div className="field-pair">
-            <label htmlFor="walk-in-guest-phone">Phone number</label>
+            <label htmlFor="walk-in-guest-phone">Phone number (optional)</label>
             <input
               autoComplete="tel"
               disabled={!canManage}
               id="walk-in-guest-phone"
               inputMode="tel"
               name="guest-phone"
-              required
               type="tel"
             />
           </div>
           <div className="field-pair">
-            <label htmlFor="walk-in-guest-email">Email (optional)</label>
+            <label htmlFor="walk-in-guest-email">Email</label>
             <input
               autoComplete="email"
               disabled={!canManage}
               id="walk-in-guest-email"
               name="guest-email"
+              required
               type="email"
             />
           </div>
@@ -431,6 +543,14 @@ export function CalendarDayPanel({
             {hasAllotmentOverride ? ` · override is ${currentAllotment}` : ""}.
           </span>
         </Link>
+        <Link className="calendar-day-choice" href={`${dayHref}&mode=rate`}>
+          <strong>Set temporary rate</strong>
+          <span>
+            Exact nightly price for selected nights (overrides default and promos).
+            Room default stays {room.rate}
+            {hasRateOverride ? ` · tonight is ${currentRate}` : ""}.
+          </span>
+        </Link>
         <Link className="calendar-day-choice" href={`${dayHref}&mode=block`}>
           <strong>Close dates</strong>
           <span>
@@ -442,7 +562,8 @@ export function CalendarDayPanel({
       <p className="detail-help">
         Prefer <strong>Close</strong> when the room type should not sell.
         Prefer <strong>Allotment</strong> when it stays open but you need a
-        temporary count. Sold out means bookings already filled inventory.
+        temporary count. Prefer <strong>Rate</strong> for a one-off price.
+        Sold out means bookings already filled inventory.
       </p>
     </>
   );

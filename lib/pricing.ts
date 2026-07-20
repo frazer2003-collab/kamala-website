@@ -70,13 +70,44 @@ export function getPromoRateForNight(
   night: string,
   baseRate: number,
   promotions: RoomPromotionRate[],
+  rateOverrides?: Map<string, number>,
 ) {
+  const override = rateOverrides?.get(`${roomId}:${night}`);
+  if (override !== undefined) {
+    return override;
+  }
+
   const percentOff = getBestPercentOffForNight(roomId, night, promotions);
   if (percentOff <= 0) {
     return baseRate;
   }
 
   return applyPercentOff(baseRate, percentOff);
+}
+
+/** Temp day rate wins over room default and promo %. */
+export function getNightlyRateDetails(
+  roomId: string,
+  night: string,
+  baseRate: number,
+  promotions: RoomPromotionRate[],
+  rateOverrides?: Map<string, number>,
+) {
+  const override = rateOverrides?.get(`${roomId}:${night}`);
+  if (override !== undefined) {
+    return {
+      rate: override,
+      percentOff: 0,
+      hasRateOverride: true,
+    };
+  }
+
+  const percentOff = getBestPercentOffForNight(roomId, night, promotions);
+  return {
+    rate: percentOff > 0 ? applyPercentOff(baseRate, percentOff) : baseRate,
+    percentOff,
+    hasRateOverride: false,
+  };
 }
 
 /** Best active discount for a room on a given night (or today). */
@@ -104,12 +135,14 @@ export function calculateStayQuote({
   arrival,
   departure,
   promotions,
+  rateOverrides,
 }: {
   roomId: string;
   baseRate: number;
   arrival: string;
   departure: string;
   promotions: RoomPromotionRate[];
+  rateOverrides?: Map<string, number>;
 }): StayQuote {
   const stayNights = eachStayNight(arrival, departure);
 
@@ -128,10 +161,16 @@ export function calculateStayQuote({
   let promoNights = 0;
 
   for (const night of stayNights) {
-    const nightlyRate = getPromoRateForNight(roomId, night, baseRate, promotions);
+    const details = getNightlyRateDetails(
+      roomId,
+      night,
+      baseRate,
+      promotions,
+      rateOverrides,
+    );
     baseTotal += baseRate;
-    total += nightlyRate;
-    if (nightlyRate < baseRate) {
+    total += details.rate;
+    if (!details.hasRateOverride && details.rate < baseRate) {
       promoNights += 1;
     }
   }

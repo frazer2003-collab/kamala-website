@@ -108,6 +108,14 @@ export type RoomDayInventoryRow = {
   created_at: string;
 };
 
+export type RoomDayRateRow = {
+  id: string;
+  room_id: string;
+  date: string;
+  nightly_rate: number;
+  created_at: string;
+};
+
 export type StaffCalendarAccess = "read" | "read_write";
 
 export type StaffNotificationEmailRow = {
@@ -307,6 +315,15 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Omit<RoomDayInventoryRow, "id" | "created_at">>;
+        Relationships: [];
+      };
+      room_day_rates: {
+        Row: RoomDayRateRow;
+        Insert: Omit<RoomDayRateRow, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<RoomDayRateRow, "id" | "created_at">>;
         Relationships: [];
       };
       staff_notification_emails: {

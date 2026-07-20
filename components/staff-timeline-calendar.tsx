@@ -16,6 +16,7 @@ import {
   getTimelineBulkAvailabilityHref,
   getTimelineDayHref,
   getTimelineLaneCount,
+  getTimelineRateHref,
   type DaySaleStatus,
   type TimelineBar,
 } from "@/lib/calendar-timeline";
@@ -27,8 +28,7 @@ import type { StaffBooking } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
 import { formatMoneyCompactSuffix, type PropertyCurrency } from "@/lib/currency";
 import {
-  getBestPercentOffForNight,
-  getPromoRateForNight,
+  getNightlyRateDetails,
   type RoomPromotionRate,
 } from "@/lib/pricing";
 import {
@@ -61,10 +61,12 @@ type DayMetrics = {
   statusHref?: string;
   bookedHref?: string;
   allotmentHref?: string;
+  rateHref?: string;
   isSelected: boolean;
   rate: number;
   baseRate: number;
   percentOff: number;
+  hasRateOverride: boolean;
 };
 
 type StaffExtranetRoomSectionProps = {
@@ -74,6 +76,7 @@ type StaffExtranetRoomSectionProps = {
   blocks: StaffRoomBlock[];
   calendarDays: CalendarDay[];
   inventoryLookup: Map<string, number>;
+  rateLookup: Map<string, number>;
   promotions: RoomPromotionRate[];
   monthKey: string;
   canManage: boolean;
@@ -338,6 +341,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   blocks,
   calendarDays,
   inventoryLookup,
+  rateLookup,
   promotions,
   monthKey,
   canManage,
@@ -421,8 +425,13 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             selectedBlockKey === (blockForDay.databaseId ?? blockForDay.id),
         );
       const weekday = day.date.getDay();
-      const percentOff = getBestPercentOffForNight(room.id, day.iso, promotions);
-      const rate = getPromoRateForNight(room.id, day.iso, room.rate, promotions);
+      const rateDetails = getNightlyRateDetails(
+        room.id,
+        day.iso,
+        room.rate,
+        promotions,
+        rateLookup,
+      );
       const dayHref = getTimelineDayHref(room.id, day.iso, monthKey);
 
       return {
@@ -451,10 +460,16 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           : canManage
             ? getTimelineAllotmentHref(room.id, day.iso, monthKey)
             : dayHref,
+        rateHref: isPast
+          ? undefined
+          : canManage
+            ? getTimelineRateHref(room.id, day.iso, monthKey)
+            : dayHref,
         isSelected,
-        rate,
+        rate: rateDetails.rate,
         baseRate: room.rate,
-        percentOff,
+        percentOff: rateDetails.percentOff,
+        hasRateOverride: rateDetails.hasRateOverride,
       };
     });
   }, [
@@ -462,6 +477,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     canManage,
     channelReservations,
     inventoryLookup,
+    rateLookup,
     manualClosures,
     monthKey,
     promotions,
@@ -475,7 +491,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
 
   const firstFutureDay = dayMetrics.find((day) => !day.isPast && day.inCurrentMonth)?.iso
     ?? dayMetrics.find((day) => !day.isPast)?.iso;
-  const [showInventory, setShowInventory] = useState(false);
+  const [showInventory, setShowInventory] = useState(true);
   const needsAssignment = unassignedCount > 0;
 
   return (
@@ -759,6 +775,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             </Link>
           }
           className="extranet-row--inventory"
+          hint="Click a day to set a temporary rate"
         >
           Standard rate
           <span className="extranet-row__meta">Sleeps {room.sleeps.replace(/^Sleeps\s+/i, "")}</span>
@@ -766,13 +783,17 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         {dayMetrics.map((day) => (
           <DayCell
             ariaLabel={
-              day.percentOff > 0
-                ? `Promo rate on ${day.iso}: ${formatRate(day.rate, currency)}, ${day.percentOff}% off`
-                : `Rate on ${day.iso}: ${formatRate(day.rate, currency)}`
+              day.hasRateOverride
+                ? `Temporary rate on ${day.iso}: ${formatRate(day.rate, currency)}`
+                : day.percentOff > 0
+                  ? `Promo rate on ${day.iso}: ${formatRate(day.rate, currency)}, ${day.percentOff}% off`
+                  : `Rate on ${day.iso}: ${formatRate(day.rate, currency)}`
             }
             className={[
               "extranet-cell--rate",
+              "extranet-cell--clickable",
               "extranet-row--inventory",
+              day.hasRateOverride ? "extranet-cell--rate-override" : "",
               day.percentOff > 0 ? "extranet-cell--promo" : "",
               day.isPast ? "extranet-cell--past" : "",
               !day.inCurrentMonth ? "extranet-cell--muted" : "",
@@ -783,9 +804,22 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
               .join(" ")}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
+            disabled={day.isPast}
+            href={day.rateHref}
             key={`rate-${day.iso}`}
           >
-            {day.percentOff > 0 ? (
+            {day.hasRateOverride ? (
+              <span className="extranet-rate extranet-rate--override">
+                <strong>{formatRate(day.rate, currency)}</strong>
+                <span
+                  aria-label="Temporary rate"
+                  className="extranet-metric__override"
+                  title="Temporary rate — differs from room default"
+                >
+                  *
+                </span>
+              </span>
+            ) : day.percentOff > 0 ? (
               <span className="extranet-rate extranet-rate--promo">
                 <span className="extranet-rate__was">{formatRate(day.baseRate, currency)}</span>
                 <strong>{formatRate(day.rate, currency)}</strong>
@@ -837,6 +871,7 @@ type StaffTimelineCalendarProps = {
   calendarDays: CalendarDay[];
   calendarColors: CalendarColors;
   inventoryLookup: Map<string, number>;
+  rateLookup: Map<string, number>;
   promotions: RoomPromotionRate[];
   monthKey: string;
   monthLabel: string;
@@ -857,6 +892,7 @@ export function StaffTimelineCalendar({
   calendarDays,
   calendarColors,
   inventoryLookup,
+  rateLookup,
   promotions,
   monthKey,
   monthLabel,
@@ -918,6 +954,7 @@ export function StaffTimelineCalendar({
             key={room.id}
             monthKey={monthKey}
             promotions={promotions}
+            rateLookup={rateLookup}
             room={room}
             roomUnits={roomUnits}
             rooms={rooms}
