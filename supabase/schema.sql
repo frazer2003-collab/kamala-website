@@ -77,6 +77,18 @@ values
     'The largest room in the house — 70 m² with four single beds, private balcony, and space for a family stay steps from Tha Phae Gate and the Sunday walking street.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'Four single beds', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
     'attic'
+  ),
+  (
+    'ground',
+    'Family Room Ground Floor',
+    'Family GF',
+    1100,
+    'Sleeps 4',
+    'Ground floor · family room · private bathroom',
+    1,
+    'A ground-floor family room with space for four guests, private bathroom, and easy access without stairs — practical for families with young children or guests who prefer not to climb.',
+    array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'Family bedding', 'Cable TV', 'Safe', 'Breakfast included'],
+    'attic'
   )
 on conflict (id) do update
 set

@@ -54,6 +54,8 @@ const OTA_ICAL_HOST_ALLOWLIST = [
   /(^|\.)booking\.com$/i,
   /(^|\.)expedia\.[a-z.]+$/i,
   /(^|\.)ical\.booking\.com$/i,
+  // Nobeds channel-manager booking exports (often wrap Booking/Expedia inventory).
+  /(^|\.)nobeds\.app$/i,
 ];
 
 function isPrivateOrLocalHostname(hostname: string) {
@@ -79,7 +81,7 @@ function isPrivateOrLocalHostname(hostname: string) {
   return false;
 }
 
-/** HTTPS OTA calendar URLs only (Airbnb / Booking.com / Expedia hosts). */
+/** HTTPS OTA calendar URLs only (Airbnb / Booking.com / Expedia / Nobeds hosts). */
 export function isValidIcalImportUrl(value: string) {
   try {
     const url = new URL(value);

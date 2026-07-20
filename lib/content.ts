@@ -161,6 +161,29 @@ export const rooms: Room[] = [
     imageUrl: "/rooms/family.jpg",
     galleryUrls: ["/rooms/family-2.jpg"],
   },
+  {
+    id: "ground",
+    name: "Family Room Ground Floor",
+    shortName: "Family GF",
+    rate: 1100,
+    sleeps: "Sleeps 4",
+    outlook: "Ground floor - family room - private bathroom",
+    availableCount: 1,
+    summary:
+      "A ground-floor family room with space for four guests, private bathroom, and easy access without stairs — practical for families with young children or guests who prefer not to climb.",
+    amenities: [
+      "Air conditioning",
+      "Free Wi-Fi",
+      "Private bathroom",
+      "Family bedding",
+      "Cable TV",
+      "Safe",
+      "Breakfast included",
+    ],
+    tone: "attic",
+    imageUrl: "/rooms/family.jpg",
+    galleryUrls: ["/rooms/family-2.jpg"],
+  },
 ];
 
 export const bookings: Booking[] = [];

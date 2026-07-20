@@ -62,8 +62,9 @@ export function StaffOtaCalendarsPanel({
     <div className="staff-room-ical staff-room-ical--page">
       <div className="staff-room-ical__alerts" role="note">
         <p className="staff-room-ical__hint">
-          Import only — paste each OTA’s <strong>export</strong> calendar URL so reservations
-          appear on the Kamala calendar. Busy nights are not pushed back to OTAs from this page.
+          Import only — paste each OTA’s <strong>export</strong> calendar URL (or a Nobeds
+          bookings iCal for Booking/Expedia) so reservations appear on the Kamala calendar.
+          Busy nights are not pushed back to OTAs from this page.
         </p>
         <p className="staff-room-ical__hint staff-room-ical__hint--alert">
           After connecting a feed, use <strong>Sync channel calendars</strong> on the staff calendar.
@@ -107,26 +108,26 @@ export function StaffOtaCalendarsPanel({
 
       <OtaImportSection
         channel="booking"
-        description="One calendar per room type. Paste the Booking.com export URL for that type."
+        description="One calendar per room type. Paste the Booking.com export URL, or the Nobeds bookings iCal for that type."
         title="Booking.com"
       >
         <RoomTypeFeedList
           canManage={canManage}
           channel="booking"
-          placeholder="https://admin.booking.com/… or iCal URL"
+          placeholder="https://admin.booking.com/…, iCal URL, or https://nobeds.app/ICAL/…"
           types={bookingTypes}
         />
       </OtaImportSection>
 
       <OtaImportSection
         channel="expedia"
-        description="One calendar per room type. Paste the Expedia export URL for that type."
+        description="One calendar per room type. Paste the Expedia export URL, or the Nobeds bookings iCal for that type."
         title="Expedia"
       >
         <RoomTypeFeedList
           canManage={canManage}
           channel="expedia"
-          placeholder="https://…expedia…/ical…"
+          placeholder="https://…expedia…/ical… or https://nobeds.app/ICAL/…"
           types={expediaTypes}
         />
       </OtaImportSection>

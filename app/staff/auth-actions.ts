@@ -961,7 +961,7 @@ export async function addRoomIcalFeed(
   }
 
   if (!isValidIcalImportUrl(importUrl)) {
-    return { error: "Enter a valid https calendar URL from Airbnb, Booking.com, or Expedia." };
+    return { error: "Enter a valid https calendar URL from Airbnb, Booking.com, Expedia, or Nobeds." };
   }
 
   if (channel === "airbnb" && !roomUnitId) {

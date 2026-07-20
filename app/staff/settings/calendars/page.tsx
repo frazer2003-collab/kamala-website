@@ -7,6 +7,9 @@ import { getStaffRooms } from "@/lib/rooms";
 import {
   COURTYARD_UNIT_NUMBERS,
   GARDEN_UNIT_NUMBERS,
+  GROUND_UNIT_NUMBERS,
+  LOFT_UNIT_NUMBERS,
+  VERANDA_UNIT_NUMBERS,
   getStaffRoomUnits,
   getUnitsForRoomType,
 } from "@/lib/room-units";
@@ -15,7 +18,13 @@ import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-const DOOR_ORDER = [...COURTYARD_UNIT_NUMBERS, ...GARDEN_UNIT_NUMBERS] as const;
+const DOOR_ORDER = [
+  ...COURTYARD_UNIT_NUMBERS,
+  ...GARDEN_UNIT_NUMBERS,
+  ...VERANDA_UNIT_NUMBERS,
+  ...LOFT_UNIT_NUMBERS,
+  ...GROUND_UNIT_NUMBERS,
+] as const;
 
 export default async function StaffSettingsCalendarsPage() {
   await requireStaffCalendarWrite();

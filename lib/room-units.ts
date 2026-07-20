@@ -25,6 +25,9 @@ export const VERANDA_UNIT_NUMBERS = ["112"] as const;
 /** Family (loft) — Airbnb iCal door 114. */
 export const LOFT_UNIT_NUMBERS = ["114"] as const;
 
+/** Family Ground Floor — Airbnb iCal door 116. */
+export const GROUND_UNIT_NUMBERS = ["116"] as const;
+
 /** Door number → room type ids (used to repair missing room_unit_types rows). */
 const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "113": ["courtyard"],
@@ -33,6 +36,7 @@ const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "120": ["courtyard"],
   "112": ["garden", "veranda"],
   "114": ["garden", "loft"],
+  "116": ["ground"],
   "117": ["garden"],
   "119": ["garden"],
 };
@@ -78,6 +82,9 @@ export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
       }
       if (roomId === "loft") {
         return (LOFT_UNIT_NUMBERS as readonly string[]).includes(unit.number);
+      }
+      if (roomId === "ground") {
+        return (GROUND_UNIT_NUMBERS as readonly string[]).includes(unit.number);
       }
       return true;
     })
@@ -273,6 +280,9 @@ function withDefaultRoomIds(units: RoomUnit[]): RoomUnit[] {
     }
     if (!(LOFT_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
       roomIds = roomIds.filter((id) => id !== "loft");
+    }
+    if (!(GROUND_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
+      roomIds = roomIds.filter((id) => id !== "ground");
     }
 
     if (unit.roomIds.length > 0 && roomIds === unit.roomIds) {
