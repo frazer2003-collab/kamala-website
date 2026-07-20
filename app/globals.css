@@ -6091,6 +6091,56 @@ textarea:focus {
   min-height: 2.75rem;
 }
 
+.staff-ota-sync-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in oklab, var(--color-ink) 28%, transparent);
+}
+
+.staff-ota-sync-popup {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  min-width: min(18rem, 100%);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+  text-align: center;
+}
+
+.staff-ota-sync-popup p {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.staff-ota-sync-popup__spinner {
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-maroon);
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .staff-ota-sync-popup__spinner {
+    animation: staff-ota-sync-spin 0.7s linear infinite;
+  }
+}
+
+@keyframes staff-ota-sync-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .staff-calendar-toolbar__density {
   display: inline-flex;
   align-items: center;
