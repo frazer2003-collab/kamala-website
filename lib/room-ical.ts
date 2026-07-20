@@ -28,6 +28,8 @@ export type RoomIcalSyncResult = {
   ok: boolean;
   imported: number;
   error?: string;
+  /** Soft issue — existing stays were kept (not a hard sync failure). */
+  warning?: string;
 };
 
 export type RoomIcalRoomSyncResult = {
@@ -545,9 +547,21 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
     // Never wipe a populated feed when the fetch/parse produced zero stays —
     // Airbnb glitches / partial responses would otherwise erase the calendar.
     if (events.length === 0 && previousSnapshot.length > 0) {
-      throw new Error(
-        "Calendar feed returned no reservations; kept existing imported stays.",
-      );
+      await supabase
+        .from("room_ical_feeds")
+        .update({
+          last_synced_at: new Date().toISOString(),
+          last_sync_error: "Feed returned no reservations; kept existing stays.",
+        })
+        .eq("id", feed.id);
+
+      return {
+        feedId: feed.id,
+        label: feed.label,
+        ok: true,
+        imported: previousSnapshot.length,
+        warning: "Feed returned no reservations; kept existing stays.",
+      };
     }
 
     const preservedByUid = new Map<string, PreservedChannelFields>();
@@ -555,11 +569,9 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
       if (!block.ical_uid) {
         continue;
       }
-      // If staff moved the stay to another room type, drop the foreign door #
-      // so re-import lands on this feed's door again.
-      const keepUnit = block.room_id === feed.room_id;
       preservedByUid.set(block.ical_uid, {
-        room_unit_id: keepUnit ? (block.room_unit_id ?? null) : null,
+        // Door comes from the feed for Airbnb unit links; only keep guest fields.
+        room_unit_id: null,
         guest_name: block.guest_name ?? null,
         guest_email: block.guest_email ?? null,
         guest_phone: block.guest_phone ?? null,
@@ -589,7 +601,8 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
           reason: event.summary || feed.label,
           ical_feed_id: feed.id,
           ical_uid: event.uid,
-          room_unit_id: preserved?.room_unit_id ?? defaultUnitId,
+          // Always pin Airbnb door feeds back to the linked room number.
+          room_unit_id: defaultUnitId,
           guest_name: preserved?.guest_name ?? null,
           guest_email: preserved?.guest_email ?? null,
           guest_phone: preserved?.guest_phone ?? null,

@@ -239,21 +239,16 @@ function UnitReservationRow({
   currentRoomId: string;
 }) {
   const dayCount = calendarDays.length;
+  // Match by door only — room_id can lag after staff type moves / sync, and a
+  // stay pinned to this door must still render on this row.
   const unitBookings = useMemo(
-    () =>
-      bookings.filter(
-        (booking) =>
-          booking.roomUnitId === unit.id && booking.roomId === currentRoomId,
-      ),
-    [bookings, currentRoomId, unit.id],
+    () => bookings.filter((booking) => booking.roomUnitId === unit.id),
+    [bookings, unit.id],
   );
   const unitChannels = useMemo(
     () =>
-      channelReservations.filter(
-        (reservation) =>
-          reservation.roomUnitId === unit.id && reservation.roomId === currentRoomId,
-      ),
-    [channelReservations, currentRoomId, unit.id],
+      channelReservations.filter((reservation) => reservation.roomUnitId === unit.id),
+    [channelReservations, unit.id],
   );
   const bars = useMemo(
     () =>
@@ -367,6 +362,11 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   const channelReservations = useMemo(
     () => roomBlocks.filter(isChannelReservation),
     [roomBlocks],
+  );
+  /** All channel stays — unit rows match by door even if room_id is stale. */
+  const allChannelReservations = useMemo(
+    () => blocks.filter(isChannelReservation),
+    [blocks],
   );
   const manualClosures = useMemo(
     () => roomBlocks.filter((block) => !isChannelReservation(block)),
@@ -843,9 +843,9 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           </div>
           {typeUnits.map((unit) => (
             <UnitReservationRow
-              bookings={roomBookings}
+              bookings={bookings}
               calendarDays={calendarDays}
-              channelReservations={channelReservations}
+              channelReservations={allChannelReservations}
               currentRoomId={room.id}
               dayMetrics={dayMetrics}
               key={unit.id}

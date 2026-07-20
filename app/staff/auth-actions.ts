@@ -1085,6 +1085,7 @@ export async function syncAllRoomIcalFeedsAction(formData: FormData) {
 
   const results = await syncAllRoomIcalFeeds();
   const failed = results.find((result) => !result.ok);
+  const warning = results.find((result) => result.warning)?.warning;
 
   revalidatePath("/staff/calendar");
   revalidatePath("/");
@@ -1099,8 +1100,11 @@ export async function syncAllRoomIcalFeedsAction(formData: FormData) {
 
   const imported = results.reduce((total, result) => total + result.imported, 0);
   const feedCount = results.length;
+  const warningQuery = warning
+    ? `&ical-warning=${encodeURIComponent(warning)}`
+    : "";
   redirect(
-    `/staff/calendar?${monthQuery}ical-synced=${imported}&ical-feeds=${feedCount}`,
+    `/staff/calendar?${monthQuery}ical-synced=${imported}&ical-feeds=${feedCount}${warningQuery}`,
   );
 }
 

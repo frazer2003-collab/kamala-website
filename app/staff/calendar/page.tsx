@@ -94,6 +94,7 @@ export default async function StaffCalendarPage({
     "ical-synced"?: string;
     "ical-feeds"?: string;
     "ical-error"?: string;
+    "ical-warning"?: string;
   }>;
 }) {
   const staffSession = await requireStaffSessionDetails();
@@ -115,6 +116,7 @@ export default async function StaffCalendarPage({
     "ical-synced": icalSynced,
     "ical-feeds": icalFeeds,
     "ical-error": icalError,
+    "ical-warning": icalWarning,
   } = await searchParams;
   const { year, month } = parseCalendarMonth(monthParam);
   const monthKey = formatCalendarMonth(year, month);
@@ -465,6 +467,14 @@ export default async function StaffCalendarPage({
         {icalError ? (
           <p className="form-message form-message--error" role="alert">
             OTA sync failed: {decodeURIComponent(icalError)}{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {icalWarning ? (
+          <p className="form-message form-message--setup" role="status">
+            OTA sync note: {decodeURIComponent(icalWarning)}{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
