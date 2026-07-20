@@ -16,11 +16,14 @@ export type RoomUnit = {
 /** Superior (courtyard) door numbers — Airbnb import slots and assignment. */
 export const COURTYARD_UNIT_NUMBERS = ["113", "115", "118", "120"] as const;
 
-/** Deluxe (garden) door numbers — Airbnb import slots and assignment. */
-export const GARDEN_UNIT_NUMBERS = ["117", "119"] as const;
+/** Deluxe (garden) door numbers — assignment / sellable inventory. */
+export const GARDEN_UNIT_NUMBERS = ["112", "114", "117", "119"] as const;
 
-/** Triple (veranda) door numbers — Airbnb import slots and assignment. */
+/** Triple (veranda) — Airbnb iCal door 112. */
 export const VERANDA_UNIT_NUMBERS = ["112"] as const;
+
+/** Family (loft) — Airbnb iCal door 114. */
+export const LOFT_UNIT_NUMBERS = ["114"] as const;
 
 /** Door number → room type ids (used to repair missing room_unit_types rows). */
 const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
@@ -28,8 +31,8 @@ const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "115": ["courtyard"],
   "118": ["courtyard"],
   "120": ["courtyard"],
-  "112": ["veranda"],
-  "114": ["loft"],
+  "112": ["garden", "veranda"],
+  "114": ["garden", "loft"],
   "117": ["garden"],
   "119": ["garden"],
 };
@@ -72,6 +75,9 @@ export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
       }
       if (roomId === "veranda") {
         return (VERANDA_UNIT_NUMBERS as readonly string[]).includes(unit.number);
+      }
+      if (roomId === "loft") {
+        return (LOFT_UNIT_NUMBERS as readonly string[]).includes(unit.number);
       }
       return true;
     })
@@ -264,6 +270,9 @@ function withDefaultRoomIds(units: RoomUnit[]): RoomUnit[] {
     }
     if (!(VERANDA_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
       roomIds = roomIds.filter((id) => id !== "veranda");
+    }
+    if (!(LOFT_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
+      roomIds = roomIds.filter((id) => id !== "loft");
     }
 
     if (unit.roomIds.length > 0 && roomIds === unit.roomIds) {

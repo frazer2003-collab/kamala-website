@@ -38,7 +38,7 @@ const messages = {
     payDeposit: "Pay in full",
     continueToPayment: "Continue to payment",
     stripeSecureCheckout:
-      "Card details are secured by Stripe. A fixed 3% bank charge is included in the total shown below.",
+      "Card details are secured by Stripe. A fixed 6% bank charge is included in the total shown below.",
     paymentSecureBadge: "Processed securely by Stripe",
     paymentTrustPolicies: "Read our Privacy Policy and Terms before you pay.",
     paymentPrivacyLink: "Privacy Policy",
@@ -87,7 +87,7 @@ const messages = {
       "Your card payment is still processing. Wait for card confirmation before choosing bank transfer.",
     cardPaymentStartFailed:
       "We could not start card payment. Please try again in a moment.",
-    bankChargeLabel: "Bank charge (3%)",
+    bankChargeLabel: "Bank charge (6%)",
     promptPayQrAlt: "PromptPay QR code for your stay",
     bankTransferWaitingTitle: "We’re checking your transfer.",
     bankTransferWaitingBody:
@@ -138,7 +138,7 @@ const messages = {
     payDeposit: "ชำระเต็มจำนวน",
     continueToPayment: "ดำเนินการชำระเงิน",
     stripeSecureCheckout:
-      "ข้อมูลบัตรได้รับการดูแลอย่างปลอดภัยโดย Stripe ยอดรวมด้านล่างรวมค่าธรรมเนียมธนาคาร 3% แล้ว",
+      "ข้อมูลบัตรได้รับการดูแลอย่างปลอดภัยโดย Stripe ยอดรวมด้านล่างรวมค่าธรรมเนียมธนาคาร 6% แล้ว",
     paymentSecureBadge: "ชำระเงินอย่างปลอดภัยผ่าน Stripe",
     paymentTrustPolicies:
       "อ่านนโยบายความเป็นส่วนตัวและข้อกำหนดก่อนชำระเงิน",
@@ -188,7 +188,7 @@ const messages = {
       "การชำระด้วยบัตรกำลังดำเนินการ กรุณารอการยืนยันก่อนเลือกโอนเงินผ่านธนาคาร",
     cardPaymentStartFailed:
       "ไม่สามารถเริ่มการชำระด้วยบัตรได้ กรุณาลองอีกครั้งในอีกสักครู่",
-    bankChargeLabel: "ค่าธรรมเนียมธนาคาร (3%)",
+    bankChargeLabel: "ค่าธรรมเนียมธนาคาร (6%)",
     promptPayQrAlt: "คิวอาร์โค้ดพร้อมเพย์สำหรับค่าที่พัก",
     bankTransferWaitingTitle: "เรากำลังตรวจสอบการโอนเงินของคุณ",
     bankTransferWaitingBody:

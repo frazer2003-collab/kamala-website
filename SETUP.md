@@ -61,6 +61,8 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 17. `supabase/migrate-hide-ical-export-token.sql` (hide calendar export tokens from public API)
 18. `supabase/migrate-room-unit-ical.sql` (Airbnb per room-number export/import)
 19. `supabase/migrate-superior-four-units.sql` (Superior rooms: 113, 115, 118, 120 only)
+20. `supabase/migrate-deluxe-four-units.sql` (Deluxe doors 112/114/117/119; Airbnb 112→Triple, 114→Family)
+21. `supabase/migrate-deluxe-ical-triple-family.sql` (only if an older Deluxe iCal retarget already ran)
 
 Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airbnb per door number, Booking.com and Expedia per room type. Sync with **Sync OTA bookings** on the staff calendar. OTA calendars are not live — refresh sync if dates look stale.
 

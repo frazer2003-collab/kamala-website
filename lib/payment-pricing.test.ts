@@ -7,15 +7,15 @@ import {
 } from "./payment-pricing";
 
 describe("calculateStripeChargeAmount", () => {
-  it("adds 3% bank charge and keeps integers", () => {
-    assert.equal(STRIPE_BANK_CHARGE_RATE, 0.03);
+  it("adds 6% bank charge and keeps integers", () => {
+    assert.equal(STRIPE_BANK_CHARGE_RATE, 0.06);
     const result = calculateStripeChargeAmount(1000);
-    assert.deepEqual(result, { stayTotal: 1000, surcharge: 30, totalDue: 1030 });
+    assert.deepEqual(result, { stayTotal: 1000, surcharge: 60, totalDue: 1060 });
   });
 
   it("rounds to nearest major unit", () => {
     const result = calculateStripeChargeAmount(999);
-    assert.equal(result.totalDue, Math.round(999 * 1.03));
+    assert.equal(result.totalDue, Math.round(999 * 1.06));
     assert.equal(result.surcharge, result.totalDue - 999);
   });
 

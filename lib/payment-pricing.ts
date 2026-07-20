@@ -1,4 +1,4 @@
-export const STRIPE_BANK_CHARGE_RATE = 0.03;
+export const STRIPE_BANK_CHARGE_RATE = 0.06;
 
 export function resolveBookingStayTotal(booking: {
   depositAmount: number | null | undefined;

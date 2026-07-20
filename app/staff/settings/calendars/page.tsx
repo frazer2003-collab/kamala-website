@@ -7,7 +7,6 @@ import { getStaffRooms } from "@/lib/rooms";
 import {
   COURTYARD_UNIT_NUMBERS,
   GARDEN_UNIT_NUMBERS,
-  VERANDA_UNIT_NUMBERS,
   getStaffRoomUnits,
   getUnitsForRoomType,
 } from "@/lib/room-units";
@@ -16,12 +15,7 @@ import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-const DOOR_ORDER = [
-  ...COURTYARD_UNIT_NUMBERS,
-  ...GARDEN_UNIT_NUMBERS,
-  ...VERANDA_UNIT_NUMBERS,
-  "114",
-] as const;
+const DOOR_ORDER = [...COURTYARD_UNIT_NUMBERS, ...GARDEN_UNIT_NUMBERS] as const;
 
 export default async function StaffSettingsCalendarsPage() {
   await requireStaffCalendarWrite();
@@ -55,6 +49,11 @@ export default async function StaffSettingsCalendarsPage() {
 
   for (const room of rooms) {
     for (const unit of getUnitsForRoomType(unitsResult.units, room.id)) {
+      // 112/114 are Deluxe doors for assignment, but Airbnb iCal rows stay under Triple/Family.
+      if (room.id === "garden" && (unit.number === "112" || unit.number === "114")) {
+        continue;
+      }
+
       airbnbUnits.push({
         id: unit.id,
         number: unit.number,

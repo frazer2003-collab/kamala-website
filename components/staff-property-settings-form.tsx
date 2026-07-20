@@ -73,7 +73,7 @@ export function StaffPropertySettingsForm({
       <div className="field-pair field-pair--wide staff-settings-calendar-colors">
         <h3 className="staff-settings-subheading">Bank transfer / PromptPay</h3>
         <p className="staff-settings-calendar-colors__hint">
-          Guests see these when paying by bank transfer. Card payments still use Stripe (+3% bank
+          Guests see these when paying by bank transfer. Card payments still use Stripe (+6% bank
           charge).
         </p>
         <div className="staff-settings-calendar-colors__grid">
