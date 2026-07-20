@@ -1005,6 +1005,7 @@ export async function addRoomIcalFeed(
 
   revalidatePath("/staff/calendar");
   revalidatePath("/staff/settings/rooms");
+  revalidatePath("/staff/settings/calendars");
 
   if (!syncResult.ok) {
     return {
@@ -1024,7 +1025,7 @@ export async function removeRoomIcalFeed(formData: FormData) {
   const roomId = getValue(formData, "room-id");
 
   if (!feedId || !hasStaffSupabaseConfig()) {
-    redirect("/staff/settings/rooms");
+    redirect("/staff/settings/calendars");
   }
 
   const supabase = createStaffSupabaseClient();
@@ -1034,7 +1035,8 @@ export async function removeRoomIcalFeed(formData: FormData) {
   revalidatePath("/staff/calendar");
   revalidatePath("/");
   revalidatePath("/staff/settings/rooms");
-  redirect(roomId ? `/staff/settings/rooms?room=${encodeURIComponent(roomId)}` : "/staff/settings/rooms");
+  revalidatePath("/staff/settings/calendars");
+  redirect("/staff/settings/calendars");
 }
 
 /** Resync every connected OTA feed (all room types / Airbnb room numbers). */
@@ -1054,6 +1056,7 @@ export async function syncAllRoomIcalFeedsAction(formData: FormData) {
   revalidatePath("/staff/calendar");
   revalidatePath("/");
   revalidatePath("/staff/settings/rooms");
+  revalidatePath("/staff/settings/calendars");
 
   if (failed) {
     redirect(

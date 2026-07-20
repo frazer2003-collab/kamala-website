@@ -11,8 +11,7 @@ import {
 import { formatMoneySuffix, getStripeCurrencyCode } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
-import { hasCapacityForStay, getUnavailableStayDays } from "@/lib/booking-capacity";
-import { appendOverlapErrorToHref } from "@/lib/stay-overlap";
+import { hasCapacityForStay } from "@/lib/booking-capacity";
 import {
   fulfillBookingDeposit,
   releaseBookingReservation,
@@ -154,27 +153,6 @@ function getValue(formData: FormData, key: string) {
 function parseDate(value: string) {
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-async function redirectIfStayOverlaps(
-  href: string,
-  roomId: string,
-  arrival: string,
-  departure: string,
-  availableCount: number,
-  options?: { excludeBookingId?: string; excludeBlockId?: string },
-) {
-  const unavailableDays = await getUnavailableStayDays(
-    roomId,
-    arrival,
-    departure,
-    availableCount,
-    options,
-  );
-
-  if (unavailableDays.length > 0) {
-    redirect(appendOverlapErrorToHref(href, unavailableDays));
-  }
 }
 
 function getBookingFormValues(formData: FormData): BookingFormValues {
@@ -977,28 +955,8 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-dates`);
   }
 
-  const datesUnchanged =
-    arrival === booking.arrival_date && departure === booking.departure_date;
-
-  if (typeChange.roomIdChanged) {
-    // Spec: like a normal booking — no excludeBookingId.
-    await redirectIfStayOverlaps(
-      bookingHref,
-      typeChange.roomId,
-      arrival,
-      departure,
-      nextRoom.availableCount,
-    );
-  } else if (!datesUnchanged) {
-    await redirectIfStayOverlaps(
-      bookingHref,
-      booking.room_id,
-      arrival,
-      departure,
-      nextRoom.availableCount,
-      { excludeBookingId: bookingId },
-    );
-  }
+  // Staff may save even when allotment is already over (OTA/iCal lag). Guest
+  // booking paths still enforce capacity.
 
   if (effectiveRoomUnitId) {
     const [{ units }, confirmed, channels] = await Promise.all([
@@ -1141,14 +1099,6 @@ export async function updateInboxBookingRoomType(formData: FormData) {
   if (!nextRoom) {
     redirect(`${inboxHref}&error=invalid-room-type`);
   }
-
-  await redirectIfStayOverlaps(
-    inboxHref,
-    typeChange.roomId,
-    booking.arrival_date,
-    booking.departure_date,
-    nextRoom.availableCount,
-  );
 
   const supabase = createStaffSupabaseClient();
   const { error } = await supabase
@@ -1465,15 +1415,6 @@ export async function createWalkInBooking(formData: FormData) {
     );
   }
 
-  const walkInHref = `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in`;
-  await redirectIfStayOverlaps(
-    walkInHref,
-    roomId,
-    arrival,
-    departure,
-    room.availableCount,
-  );
-
   const quote = await quoteRoomStay(room.id, room.rate, arrival, departure);
 
   const supabase = createStaffSupabaseClient();
@@ -1673,27 +1614,7 @@ export async function updateChannelReservation(
     redirect(`${blockHref}&error=invalid-dates`);
   }
 
-  const datesUnchanged =
-    arrival === block.start_date && departure === block.end_date;
-
-  if (typeChange.roomIdChanged) {
-    await redirectIfStayOverlaps(
-      blockHref,
-      typeChange.roomId,
-      arrival,
-      departure,
-      nextRoom.availableCount,
-    );
-  } else if (!datesUnchanged) {
-    await redirectIfStayOverlaps(
-      blockHref,
-      block.room_id,
-      arrival,
-      departure,
-      nextRoom.availableCount,
-      { excludeBlockId: blockId },
-    );
-  }
+  // Staff channel edits may keep overlapping stays visible for manual resolution.
 
   if (effectiveRoomUnitId) {
     const [{ units }, confirmed, channels] = await Promise.all([
