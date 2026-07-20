@@ -12,7 +12,7 @@ import {
   type PropertySettingsRow,
 } from "@/lib/supabase";
 import type { PropertyCurrency } from "@/lib/currency";
-import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache";
+import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache-tags";
 import { DEFAULT_HERO_IMAGE_URL } from "@/lib/home-hero-media";
 import { sanitizeMediaUrl } from "@/lib/media-url";
 import { normalizePropertyBrand } from "@/lib/property-brand";

@@ -1,6 +1,6 @@
 import { type RoomPromotionRate } from "@/lib/pricing";
 import { getTodayIso } from "@/lib/calendar";
-import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache";
+import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache-tags";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import {

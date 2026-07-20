@@ -4,7 +4,7 @@ import {
   feedMatchesOtaChannel,
   otaChannelFromLabel,
   type RoomIcalFeed,
-} from "./room-ical";
+} from "./ota-ical-channel";
 
 function feed(partial: Partial<RoomIcalFeed> & Pick<RoomIcalFeed, "label">): RoomIcalFeed {
   return {

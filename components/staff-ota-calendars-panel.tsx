@@ -10,7 +10,7 @@ import {
   otaChannelLabel,
   type OtaIcalChannel,
   type RoomIcalFeed,
-} from "@/lib/room-ical";
+} from "@/lib/ota-ical-channel";
 
 const initialState: StaffRoomState = {};
 

@@ -2,7 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { rooms as fallbackRooms, type Room } from "@/lib/content";
 import { sanitizeMediaUrl, sanitizeMediaUrlList } from "@/lib/media-url";
-import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache";
+import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache-tags";
 import {
   createGuestSupabaseClient,
   createStaffSupabaseClient,

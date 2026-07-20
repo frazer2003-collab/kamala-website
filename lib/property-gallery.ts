@@ -1,5 +1,5 @@
 import type { PropertyGalleryPhotoRow } from "@/lib/supabase";
-import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache";
+import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache-tags";
 import { sanitizeMediaUrl } from "@/lib/media-url";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
