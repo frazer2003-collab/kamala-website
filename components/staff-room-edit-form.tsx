@@ -163,7 +163,7 @@ export function StaffRoomEditForm({
       </form>
 
       <p className="detail-help">
-        Airbnb import/export calendars live under{" "}
+        OTA calendar imports (Airbnb, Booking.com, Expedia) live under{" "}
         <Link href="/staff/settings/calendars">Settings → Calendars</Link>.
       </p>
     </article>

@@ -8315,6 +8315,31 @@ textarea:focus {
   border-top: none;
   padding-top: 0;
   margin-top: 0;
+  gap: var(--space-6);
+}
+
+.staff-room-ical__channel {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.staff-room-ical__channel:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.staff-room-ical__channel-header {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.staff-room-ical__channel-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 
 .staff-room-ical__alerts {

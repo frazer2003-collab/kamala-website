@@ -62,7 +62,7 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 18. `supabase/migrate-room-unit-ical.sql` (Airbnb per room-number export/import)
 19. `supabase/migrate-superior-four-units.sql` (Superior rooms: 113, 115, 118, 120 only)
 
-Under Staff → Settings → Calendars, paste each Airbnb listing’s export URL (import into Kamala) and copy Kamala’s per-door export URL back into Airbnb. Sync with **Sync OTA bookings** on the staff calendar. Allotment updates are not instant — Airbnb refreshes iCal on its own schedule.
+Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airbnb per door number, Booking.com and Expedia per room type. Sync with **Sync OTA bookings** on the staff calendar. OTA calendars are not live — refresh sync if dates look stale.
 
 ## 3. Configure the property
 

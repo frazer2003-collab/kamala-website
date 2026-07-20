@@ -34,10 +34,14 @@ import { MAX_TOURS } from "@/lib/tour-catalog";
 import { getNextTourSortOrder, getTourCount } from "@/lib/tours";
 import { resolveRoomPhotosFromForm } from "@/lib/room-photo-upload";
 import {
+  feedMatchesOtaChannel,
+  getStaffRoomIcalFeeds,
   isValidIcalImportUrl,
+  otaChannelLabel,
   removeChannelBlocksForFeed,
   syncAllRoomIcalFeeds,
   syncRoomIcalFeed,
+  type OtaIcalChannel,
 } from "@/lib/room-ical";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -929,6 +933,13 @@ export async function removeTour(formData: FormData) {
   redirect("/staff/settings/tours?removed=1");
 }
 
+function parseOtaIcalChannel(value: string): OtaIcalChannel | null {
+  if (value === "airbnb" || value === "booking" || value === "expedia") {
+    return value;
+  }
+  return null;
+}
+
 export async function addRoomIcalFeed(
   _prevState: StaffRoomState,
   formData: FormData,
@@ -940,21 +951,31 @@ export async function addRoomIcalFeed(
   }
 
   const roomId = getValue(formData, "room-id");
+  const channel = parseOtaIcalChannel(getValue(formData, "channel"));
   const roomUnitId = getValue(formData, "room-unit-id") || null;
   const label = getValue(formData, "label");
   const importUrl = getValue(formData, "import-url");
 
-  if (!roomId || !label) {
-    return { error: "Choose a channel name for this calendar feed." };
+  if (!roomId || !label || !channel) {
+    return { error: "Choose a channel for this calendar feed." };
   }
 
   if (!isValidIcalImportUrl(importUrl)) {
     return { error: "Enter a valid https calendar URL from Airbnb, Booking.com, or Expedia." };
   }
 
-  const supabase = createStaffSupabaseClient();
+  if (channel === "airbnb" && !roomUnitId) {
+    return { error: "Airbnb calendars link to a room number." };
+  }
 
-  if (roomUnitId) {
+  if (channel !== "airbnb" && roomUnitId) {
+    return { error: `${otaChannelLabel(channel)} calendars link to a room type, not a room number.` };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const existingFeeds = await getStaffRoomIcalFeeds();
+
+  if (channel === "airbnb" && roomUnitId) {
     const { data: unit } = await supabase
       .from("room_units")
       .select("id")
@@ -964,13 +985,25 @@ export async function addRoomIcalFeed(
       return { error: "That room number was not found. Refresh and try again." };
     }
 
-    const { data: existingUnitFeed } = await supabase
-      .from("room_ical_feeds")
-      .select("id")
-      .eq("room_unit_id", roomUnitId)
-      .maybeSingle();
-    if (existingUnitFeed) {
+    const hasAirbnb = existingFeeds.some(
+      (feed) => feed.roomUnitId === roomUnitId && feedMatchesOtaChannel(feed, "airbnb"),
+    );
+    if (hasAirbnb) {
       return { error: "This room number already has an Airbnb calendar connected." };
+    }
+  }
+
+  if (channel === "booking" || channel === "expedia") {
+    const hasTypeFeed = existingFeeds.some(
+      (feed) =>
+        feed.roomId === roomId &&
+        !feed.roomUnitId &&
+        feedMatchesOtaChannel(feed, channel),
+    );
+    if (hasTypeFeed) {
+      return {
+        error: `This room type already has a ${otaChannelLabel(channel)} calendar connected.`,
+      };
     }
   }
 
@@ -978,7 +1011,7 @@ export async function addRoomIcalFeed(
     .from("room_ical_feeds")
     .insert({
       room_id: roomId,
-      room_unit_id: roomUnitId,
+      room_unit_id: channel === "airbnb" ? roomUnitId : null,
       label,
       import_url: importUrl,
     })

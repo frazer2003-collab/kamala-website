@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { StaffAirbnbCalendarsPanel } from "@/components/staff-airbnb-calendars-panel";
+import { StaffOtaCalendarsPanel } from "@/components/staff-ota-calendars-panel";
 import { StaffSettingsNav } from "@/components/staff-settings-nav";
 import { StaffSidebar } from "@/components/staff-sidebar";
-import { getStaffRoomIcalFeeds } from "@/lib/room-ical";
+import { feedMatchesOtaChannel, getStaffRoomIcalFeeds } from "@/lib/room-ical";
 import { getStaffRooms } from "@/lib/rooms";
 import {
   COURTYARD_UNIT_NUMBERS,
@@ -11,7 +11,6 @@ import {
   getStaffRoomUnits,
   getUnitsForRoomType,
 } from "@/lib/room-units";
-import { getRoomUnitIcalExportUrl } from "@/lib/site-url";
 import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
@@ -34,30 +33,39 @@ export default async function StaffSettingsCalendarsPage() {
     Promise.resolve(hasStaffSupabaseConfig()),
   ]);
 
-  const feedByUnitId = new Map(
+  const airbnbFeedByUnitId = new Map(
     icalFeeds
-      .filter((feed) => feed.roomUnitId)
+      .filter((feed) => feed.roomUnitId && feedMatchesOtaChannel(feed, "airbnb"))
       .map((feed) => [feed.roomUnitId as string, feed]),
   );
 
-  const units = [];
+  const bookingFeedByRoomId = new Map(
+    icalFeeds
+      .filter((feed) => !feed.roomUnitId && feedMatchesOtaChannel(feed, "booking"))
+      .map((feed) => [feed.roomId, feed]),
+  );
+
+  const expediaFeedByRoomId = new Map(
+    icalFeeds
+      .filter((feed) => !feed.roomUnitId && feedMatchesOtaChannel(feed, "expedia"))
+      .map((feed) => [feed.roomId, feed]),
+  );
+
+  const airbnbUnits = [];
 
   for (const room of rooms) {
     for (const unit of getUnitsForRoomType(unitsResult.units, room.id)) {
-      units.push({
+      airbnbUnits.push({
         id: unit.id,
         number: unit.number,
         roomId: room.id,
         roomName: room.shortName || room.name,
-        exportUrl: unit.icalExportToken
-          ? getRoomUnitIcalExportUrl(unit.icalExportToken)
-          : null,
-        feed: feedByUnitId.get(unit.id) ?? null,
+        feed: airbnbFeedByUnitId.get(unit.id) ?? null,
       });
     }
   }
 
-  units.sort((left, right) => {
+  airbnbUnits.sort((left, right) => {
     const leftIndex = (DOOR_ORDER as readonly string[]).indexOf(left.number);
     const rightIndex = (DOOR_ORDER as readonly string[]).indexOf(right.number);
     const leftRank = leftIndex === -1 ? 999 : leftIndex;
@@ -69,13 +77,25 @@ export default async function StaffSettingsCalendarsPage() {
   });
 
   const seen = new Set<string>();
-  const uniqueUnits = units.filter((unit) => {
+  const uniqueAirbnbUnits = airbnbUnits.filter((unit) => {
     if (seen.has(unit.id)) {
       return false;
     }
     seen.add(unit.id);
     return true;
   });
+
+  const bookingTypes = rooms.map((room) => ({
+    id: room.id,
+    name: room.shortName || room.name,
+    feed: bookingFeedByRoomId.get(room.id) ?? null,
+  }));
+
+  const expediaTypes = rooms.map((room) => ({
+    id: room.id,
+    name: room.shortName || room.name,
+    feed: expediaFeedByRoomId.get(room.id) ?? null,
+  }));
 
   return (
     <main className="staff-shell">
@@ -85,10 +105,10 @@ export default async function StaffSettingsCalendarsPage() {
         <div className="staff-header">
           <div>
             <p className="section-note">Settings · Calendars</p>
-            <h1 id="staff-calendars-title">Airbnb calendars</h1>
+            <h1 id="staff-calendars-title">OTA calendars</h1>
             <p>
-              Link each door number to its Airbnb listing. Room details stay under Settings →
-              Rooms.
+              Import Airbnb by door number, and Booking.com or Expedia by room type. Room details
+              stay under Settings → Rooms.
             </p>
           </div>
           <Link className="button button--secondary" href="/staff/settings/rooms">
@@ -103,7 +123,12 @@ export default async function StaffSettingsCalendarsPage() {
             Add Supabase environment variables before linking calendars here.
           </p>
         ) : (
-          <StaffAirbnbCalendarsPanel canManage={supabaseReady} units={uniqueUnits} />
+          <StaffOtaCalendarsPanel
+            airbnbUnits={uniqueAirbnbUnits}
+            bookingTypes={bookingTypes}
+            canManage={supabaseReady}
+            expediaTypes={expediaTypes}
+          />
         )}
       </section>
     </main>
