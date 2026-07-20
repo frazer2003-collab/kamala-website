@@ -9,3 +9,8 @@ export function bookingReservesRoom(booking: {
   if (booking.bank_transfer_claimed_at) return true;
   return false;
 }
+
+/** Open website stays (including unconfirmed) block Airbnb export / type sold-out nights. */
+export function bookingBlocksCalendarExport(booking: { status: string }): boolean {
+  return booking.status !== "declined";
+}

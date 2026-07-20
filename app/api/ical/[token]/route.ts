@@ -1,18 +1,33 @@
 import { NextResponse } from "next/server";
+import {
+  buildRoomIcalExport,
+  getRoomByIcalExportToken,
+} from "@/lib/room-ical";
 
-/**
- * Calendar export is disabled — Kamala only imports OTA bookings.
- * Old export URLs return 410 so Airbnb/Booking.com stop pulling.
- */
-export async function GET() {
-  return new NextResponse(
-    "Calendar export is disabled. Kamala imports OTA calendars only and does not publish availability.",
-    {
-      status: 410,
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    },
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ token: string }> },
+) {
+  const { token } = await context.params;
+  const room = await getRoomByIcalExportToken(token);
+
+  if (!room) {
+    return new NextResponse("Calendar not found.", { status: 404 });
+  }
+
+  const calendar = await buildRoomIcalExport(
+    room.id,
+    room.short_name || room.name || "Room",
   );
+  const safeName = (room.short_name || room.name || "room")
+    .replace(/[^\w.\-]+/g, "_")
+    .slice(0, 80);
+
+  return new NextResponse(calendar, {
+    headers: {
+      "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${safeName}.ics"`,
+      "Cache-Control": "public, max-age=300",
+    },
+  });
 }

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { bookingReservesRoom } from "./booking-reservation";
+import {
+  bookingBlocksCalendarExport,
+  bookingReservesRoom,
+} from "./booking-reservation";
 
 describe("bookingReservesRoom", () => {
   it("reserves inventory for a bank transfer claim", () => {
@@ -23,5 +26,17 @@ describe("bookingReservesRoom", () => {
       }),
       false,
     );
+  });
+});
+
+describe("bookingBlocksCalendarExport", () => {
+  it("blocks export for open unconfirmed requests", () => {
+    assert.equal(bookingBlocksCalendarExport({ status: "new" }), true);
+    assert.equal(bookingBlocksCalendarExport({ status: "pending_payment" }), true);
+    assert.equal(bookingBlocksCalendarExport({ status: "awaiting" }), true);
+  });
+
+  it("does not block export for declined requests", () => {
+    assert.equal(bookingBlocksCalendarExport({ status: "declined" }), false);
   });
 });

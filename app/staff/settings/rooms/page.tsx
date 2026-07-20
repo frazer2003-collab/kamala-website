@@ -6,8 +6,6 @@ import { StaffSidebar } from "@/components/staff-sidebar";
 import { MAX_ROOM_TYPES } from "@/lib/room-catalog";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRooms } from "@/lib/rooms";
-import { getStaffRoomIcalFeeds } from "@/lib/room-ical";
-import { getStaffRoomUnits, getUnitsForRoomType } from "@/lib/room-units";
 import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
@@ -25,26 +23,11 @@ export default async function StaffSettingsRoomsPage({
   await requireStaffCalendarWrite();
 
   const { error, removed } = await searchParams;
-  const [rooms, settings, supabaseReady, icalFeeds, unitsResult] = await Promise.all([
+  const [rooms, settings, supabaseReady] = await Promise.all([
     getStaffRooms(),
     getPropertySettings(),
     Promise.resolve(hasStaffSupabaseConfig()),
-    getStaffRoomIcalFeeds(),
-    getStaffRoomUnits(),
   ]);
-  const feedsByRoom = new Map<string, typeof icalFeeds>();
-
-  for (const feed of icalFeeds) {
-    const current = feedsByRoom.get(feed.roomId) ?? [];
-    current.push(feed);
-    feedsByRoom.set(feed.roomId, current);
-  }
-
-  const feedByUnitId = new Map(
-    icalFeeds
-      .filter((feed) => feed.roomUnitId)
-      .map((feed) => [feed.roomUnitId as string, feed]),
-  );
 
   return (
     <main className="staff-shell">
@@ -87,25 +70,14 @@ export default async function StaffSettingsRoomsPage({
         ) : null}
 
         <div className="staff-rooms-stack">
-          {rooms.map((room) => {
-            const roomFeeds = feedsByRoom.get(room.id) ?? [];
-            const icalUnits = getUnitsForRoomType(unitsResult.units, room.id).map((unit) => ({
-              id: unit.id,
-              number: unit.number,
-              feed: feedByUnitId.get(unit.id) ?? null,
-            }));
-
-            return (
-              <StaffRoomEditForm
-                currency={settings.currency}
-                disabled={!supabaseReady}
-                icalFeeds={roomFeeds}
-                icalUnits={icalUnits}
-                key={room.id}
-                room={room}
-              />
-            );
-          })}
+          {rooms.map((room) => (
+            <StaffRoomEditForm
+              currency={settings.currency}
+              disabled={!supabaseReady}
+              key={room.id}
+              room={room}
+            />
+          ))}
         </div>
 
         <section className="staff-settings-card staff-room-add-card">

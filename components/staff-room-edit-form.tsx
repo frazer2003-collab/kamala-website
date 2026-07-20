@@ -1,15 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { removeRoom, updateRoomDetails, type StaffRoomState } from "@/app/staff/auth-actions";
 import { StaffRoomPhotoFields } from "@/components/staff-room-photo-fields";
-import {
-  StaffRoomIcalFields,
-  type StaffRoomIcalUnit,
-} from "@/components/staff-room-ical-fields";
 import type { Room } from "@/lib/content";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
-import type { RoomIcalFeed } from "@/lib/room-ical";
 
 const initialState: StaffRoomState = {};
 
@@ -17,18 +13,13 @@ export function StaffRoomEditForm({
   room,
   currency,
   disabled,
-  icalFeeds,
-  icalUnits,
 }: {
   room: Room;
   currency: PropertyCurrency;
   disabled: boolean;
-  icalFeeds: RoomIcalFeed[];
-  icalUnits: StaffRoomIcalUnit[];
 }) {
   const [state, formAction, pending] = useActionState(updateRoomDetails, initialState);
   const coverPreview = room.imageUrl;
-  const typeFeeds = icalFeeds.filter((feed) => !feed.roomUnitId);
 
   return (
     <article className="staff-room-row">
@@ -171,12 +162,10 @@ export function StaffRoomEditForm({
         </div>
       </form>
 
-      <StaffRoomIcalFields
-        disabled={disabled}
-        roomId={room.id}
-        typeFeeds={typeFeeds}
-        units={icalUnits}
-      />
+      <p className="detail-help">
+        Airbnb import/export calendars live under{" "}
+        <Link href="/staff/settings/calendars">Settings → Calendars</Link>.
+      </p>
     </article>
   );
 }
