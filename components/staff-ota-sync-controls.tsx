@@ -1,9 +1,8 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { syncAllRoomIcalFeedsAction } from "@/app/staff/auth-actions";
 
-function StaffOtaSyncControls() {
+export function StaffOtaSyncControls() {
   const { pending } = useFormStatus();
 
   return (
@@ -25,14 +24,5 @@ function StaffOtaSyncControls() {
         </div>
       ) : null}
     </>
-  );
-}
-
-export function StaffOtaSyncForm({ monthKey }: { monthKey: string }) {
-  return (
-    <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
-      <input name="month" type="hidden" value={monthKey} />
-      <StaffOtaSyncControls />
-    </form>
   );
 }

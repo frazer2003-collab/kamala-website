@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { syncAllRoomIcalFeedsAction } from "@/app/staff/auth-actions";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
-import { StaffOtaSyncForm } from "@/components/staff-ota-sync-form";
+import { StaffOtaSyncControls } from "@/components/staff-ota-sync-controls";
 import { formatCalendarMonth } from "@/lib/calendar";
 import type { CalendarMonthStats } from "@/lib/calendar-timeline";
 import type { CalendarColors } from "@/lib/calendar-colors";
@@ -59,7 +60,12 @@ export function StaffCalendarToolbar({
         >
           Jump to today
         </Link>
-        {canSyncOta ? <StaffOtaSyncForm monthKey={monthKey} /> : null}
+        {canSyncOta ? (
+          <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
+            <input name="month" type="hidden" value={monthKey} />
+            <StaffOtaSyncControls />
+          </form>
+        ) : null}
       </div>
 
       <div className="staff-calendar-toolbar__meta" aria-label="Month summary">
