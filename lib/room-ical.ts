@@ -463,10 +463,26 @@ type PreservedChannelFields = {
   staff_note: string | null;
 };
 
+type PreviousChannelBlockRow = {
+  room_id: string;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  ical_feed_id: string | null;
+  ical_uid: string | null;
+  room_unit_id: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  staff_note: string | null;
+};
+
 /**
  * Full refresh for one feed: fetch ICS, then replace every imported stay for
- * that feed. Staff room # / guest details are kept when the same UID returns.
- * Unit-linked feeds default new stays to that room number.
+ * that feed. Staff room # / guest details are kept when the same UID returns
+ * and the stay is still on this feed's room type. Unit-linked feeds default
+ * new stays to that room number. Stays always re-import onto the feed's room
+ * type (staff type moves are overwritten by sync).
  */
 export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResult> {
   if (!hasStaffSupabaseConfig()) {
@@ -496,26 +512,54 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
     };
   }
 
+  let previousSnapshot: PreviousChannelBlockRow[] = [];
+  let didDelete = false;
+
   try {
     const icsText = await fetchIcalFeedText(feed.import_url);
-    const events = parseIcsEvents(icsText).filter(isOtaReservationEvent);
+    if (!icsText.trim()) {
+      throw new Error("Calendar feed was empty.");
+    }
+
+    const parsedEvents = parseIcsEvents(icsText).filter(isOtaReservationEvent);
+    // Airbnb occasionally repeats UIDs; one bad batch must not fail the whole feed.
+    const eventsByUid = new Map<string, (typeof parsedEvents)[number]>();
+    for (const event of parsedEvents) {
+      eventsByUid.set(event.uid, event);
+    }
+    const events = [...eventsByUid.values()];
 
     const { data: previousBlocks, error: previousError } = await supabase
       .from("room_blocks")
-      .select("ical_uid, room_unit_id, guest_name, guest_email, guest_phone, staff_note")
+      .select(
+        "room_id, start_date, end_date, reason, ical_feed_id, ical_uid, room_unit_id, guest_name, guest_email, guest_phone, staff_note",
+      )
       .eq("ical_feed_id", feed.id);
 
     if (previousError) {
       throw new Error(previousError.message);
     }
 
+    previousSnapshot = previousBlocks ?? [];
+
+    // Never wipe a populated feed when the fetch/parse produced zero stays —
+    // Airbnb glitches / partial responses would otherwise erase the calendar.
+    if (events.length === 0 && previousSnapshot.length > 0) {
+      throw new Error(
+        "Calendar feed returned no reservations; kept existing imported stays.",
+      );
+    }
+
     const preservedByUid = new Map<string, PreservedChannelFields>();
-    for (const block of previousBlocks ?? []) {
+    for (const block of previousSnapshot) {
       if (!block.ical_uid) {
         continue;
       }
+      // If staff moved the stay to another room type, drop the foreign door #
+      // so re-import lands on this feed's door again.
+      const keepUnit = block.room_id === feed.room_id;
       preservedByUid.set(block.ical_uid, {
-        room_unit_id: block.room_unit_id ?? null,
+        room_unit_id: keepUnit ? (block.room_unit_id ?? null) : null,
         guest_name: block.guest_name ?? null,
         guest_email: block.guest_email ?? null,
         guest_phone: block.guest_phone ?? null,
@@ -531,6 +575,7 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
     if (deleteError) {
       throw new Error(deleteError.message);
     }
+    didDelete = true;
 
     const defaultUnitId = feed.room_unit_id ?? null;
 
@@ -573,6 +618,10 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
       imported: events.length,
     };
   } catch (error) {
+    if (didDelete && previousSnapshot.length > 0) {
+      await supabase.from("room_blocks").insert(previousSnapshot);
+    }
+
     const message =
       error instanceof Error ? error.message : "Could not sync this calendar feed.";
 
@@ -617,9 +666,41 @@ export async function removeChannelBlocksForFeed(feedId: string): Promise<number
 }
 
 /**
- * Removes channel stays for a room type whose feed is gone (removed calendar / broken cascade).
- * Active feed IDs are kept even if their latest sync failed.
+ * Removes channel stays whose feed no longer exists anywhere (removed calendar).
+ * Uses the global active feed list — not per room type — so a stay staff moved
+ * to another type is not treated as an orphan of that type.
  */
+export async function removeOrphanedChannelBlocks(
+  activeFeedIds: string[],
+): Promise<number> {
+  if (!hasStaffSupabaseConfig()) {
+    return 0;
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: blocks } = await supabase
+    .from("room_blocks")
+    .select("id, ical_feed_id")
+    .not("ical_feed_id", "is", null);
+
+  const active = new Set(activeFeedIds);
+  const orphanIds = (blocks ?? [])
+    .filter((block) => block.ical_feed_id && !active.has(block.ical_feed_id))
+    .map((block) => block.id);
+
+  if (orphanIds.length === 0) {
+    return 0;
+  }
+
+  const { error } = await supabase.from("room_blocks").delete().in("id", orphanIds);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return orphanIds.length;
+}
+
+/** @deprecated Prefer removeOrphanedChannelBlocks — per-room active feeds wrongly drop moved stays. */
 export async function removeOrphanedChannelBlocksForRoom(
   roomId: string,
   activeFeedIds: string[],
@@ -628,6 +709,8 @@ export async function removeOrphanedChannelBlocksForRoom(
     return 0;
   }
 
+  // Still scoped to the room for callers that only sync one type, but orphans
+  // are only IDs missing from the provided active list (pass global IDs).
   const supabase = createStaffSupabaseClient();
   const { data: blocks } = await supabase
     .from("room_blocks")
@@ -652,34 +735,6 @@ export async function removeOrphanedChannelBlocksForRoom(
   return orphanIds.length;
 }
 
-async function sweepOrphanedChannelBlocks(feeds: RoomIcalFeed[]) {
-  if (!hasStaffSupabaseConfig()) {
-    return;
-  }
-
-  const activeByRoom = new Map<string, string[]>();
-  for (const feed of feeds) {
-    const current = activeByRoom.get(feed.roomId) ?? [];
-    current.push(feed.id);
-    activeByRoom.set(feed.roomId, current);
-  }
-
-  const supabase = createStaffSupabaseClient();
-  const { data: channelRooms } = await supabase
-    .from("room_blocks")
-    .select("room_id")
-    .not("ical_feed_id", "is", null);
-
-  const roomIds = new Set<string>([
-    ...activeByRoom.keys(),
-    ...(channelRooms ?? []).map((row) => row.room_id),
-  ]);
-
-  for (const roomId of roomIds) {
-    await removeOrphanedChannelBlocksForRoom(roomId, activeByRoom.get(roomId) ?? []);
-  }
-}
-
 export async function syncAllRoomIcalFeeds() {
   const feeds = await getStaffRoomIcalFeeds();
   const results: RoomIcalSyncResult[] = [];
@@ -688,23 +743,26 @@ export async function syncAllRoomIcalFeeds() {
     results.push(await syncRoomIcalFeed(feed.id));
   }
 
-  await sweepOrphanedChannelBlocks(feeds);
+  await removeOrphanedChannelBlocks(feeds.map((feed) => feed.id));
 
   return results;
 }
 
-/** Full refresh of every OTA feed on a room type, then drop orphans from removed calendars. */
+/** Full refresh of every OTA feed on a room type, then drop truly removed feeds. */
 export async function syncRoomIcalFeedsForRoom(roomId: string): Promise<RoomIcalRoomSyncResult> {
-  const feeds = (await getStaffRoomIcalFeeds()).filter((feed) => feed.roomId === roomId);
+  const allFeeds = await getStaffRoomIcalFeeds();
+  const feeds = allFeeds.filter((feed) => feed.roomId === roomId);
   const results: RoomIcalSyncResult[] = [];
 
   for (const feed of feeds) {
     results.push(await syncRoomIcalFeed(feed.id));
   }
 
+  // Pass every active feed id so a stay moved onto this type from another
+  // Airbnb door is not deleted as an "orphan".
   const removedOrphans = await removeOrphanedChannelBlocksForRoom(
     roomId,
-    feeds.map((feed) => feed.id),
+    allFeeds.map((feed) => feed.id),
   );
 
   return { results, removedOrphans };
