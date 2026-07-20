@@ -36,6 +36,9 @@ After swapping keys: redeploy (or restart `npm run dev`), and confirm property c
 4. **Hosting** — deploy to Vercel (or similar) and set:
    - `NEXT_PUBLIC_APP_URL=https://your-domain.com`
    - `STAFF_ADMIN_USERNAME` / `STAFF_ADMIN_PASSWORD` / `STAFF_SESSION_SECRET`
+   - `CRON_SECRET` — random string; authorizes `/api/cron/sync-ical` (Airbnb auto-sync)
+
+5. **Airbnb sync every 5 minutes** — the repo includes `.github/workflows/sync-airbnb-ical.yml`. In GitHub → Settings → Secrets, add the same `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` as on Vercel. The workflow calls `GET /api/cron/sync-ical?channel=airbnb` on a schedule. (Vercel Hobby only allows daily built-in crons; GitHub Actions is what hits every 5 minutes.)
 
 ## 2. Run database migrations
 
@@ -64,7 +67,7 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 20. `supabase/migrate-deluxe-four-units.sql` (Deluxe doors 112/114/117/119; Airbnb 112→Triple, 114→Family)
 22. `supabase/migrate-family-ground-116.sql` (Family Room Ground Floor + door 116)
 
-Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airbnb per door number, Booking.com and Expedia per room type. Sync with **Sync OTA bookings** on the staff calendar. OTA calendars are not live — refresh sync if dates look stale.
+Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airbnb per door number, Booking.com and Expedia per room type. Airbnb feeds also refresh automatically every ~5 minutes when the GitHub Actions cron + `CRON_SECRET` are configured. You can still use **Sync OTA bookings** on the staff calendar anytime; Booking.com / Expedia stay manual unless you call `?channel=all`.
 
 ## 3. Configure the property
 

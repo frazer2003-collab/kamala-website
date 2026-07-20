@@ -6,7 +6,7 @@ import {
   parseIcsEvents,
   type IcalEvent,
 } from "@/lib/ical";
-import { type RoomIcalFeed } from "@/lib/ota-ical-channel";
+import { type RoomIcalFeed, feedMatchesOtaChannel } from "@/lib/ota-ical-channel";
 import {
   addIsoDays,
   buildInventoryLookup,
@@ -793,14 +793,25 @@ export async function removeOrphanedChannelBlocksForRoom(
 }
 
 export async function syncAllRoomIcalFeeds() {
-  const feeds = await getStaffRoomIcalFeeds();
+  return syncRoomIcalFeedsByChannel("all");
+}
+
+/** Sync OTA import feeds. Orphan cleanup always uses every active feed id. */
+export async function syncRoomIcalFeedsByChannel(
+  channel: "all" | "airbnb" | "booking" | "expedia" = "all",
+) {
+  const allFeeds = await getStaffRoomIcalFeeds();
+  const feeds =
+    channel === "all"
+      ? allFeeds
+      : allFeeds.filter((feed) => feedMatchesOtaChannel(feed, channel));
   const results: RoomIcalSyncResult[] = [];
 
   for (const feed of feeds) {
     results.push(await syncRoomIcalFeed(feed.id));
   }
 
-  await removeOrphanedChannelBlocks(feeds.map((feed) => feed.id));
+  await removeOrphanedChannelBlocks(allFeeds.map((feed) => feed.id));
 
   return results;
 }

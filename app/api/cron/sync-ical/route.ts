@@ -1,6 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { syncAllRoomIcalFeeds } from "@/lib/room-ical";
+import { syncRoomIcalFeedsByChannel } from "@/lib/room-ical";
+
+export const maxDuration = 60;
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -16,12 +18,21 @@ function isAuthorized(request: Request) {
   return request.headers.get("x-cron-secret") === secret;
 }
 
+function parseChannel(value: string | null): "all" | "airbnb" | "booking" | "expedia" {
+  if (value === "airbnb" || value === "booking" || value === "expedia" || value === "all") {
+    return value;
+  }
+  // Default: Airbnb door calendars (requested auto-refresh cadence).
+  return "airbnb";
+}
+
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const results = await syncAllRoomIcalFeeds();
+  const channel = parseChannel(new URL(request.url).searchParams.get("channel"));
+  const results = await syncRoomIcalFeedsByChannel(channel);
   const synced = results.filter((result) => result.ok).length;
   const failed = results.filter((result) => !result.ok).length;
 
@@ -30,6 +41,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: failed === 0,
+    channel,
     synced,
     failed,
     results,

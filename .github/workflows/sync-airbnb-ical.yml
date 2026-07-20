@@ -1,0 +1,25 @@
+# Pull Airbnb iCal bookings into Kamala every 5 minutes.
+# Requires repo secrets: CRON_SECRET, NEXT_PUBLIC_APP_URL (e.g. https://your-domain.com)
+name: Sync Airbnb iCal
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync Airbnb calendars
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$APP_URL" ]; then
+            echo "Missing CRON_SECRET or NEXT_PUBLIC_APP_URL secrets."
+            exit 1
+          fi
+          base="${APP_URL%/}"
+          curl -fsS -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${base}/api/cron/sync-ical?channel=airbnb"
