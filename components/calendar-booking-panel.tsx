@@ -30,6 +30,7 @@ type CalendarBookingPanelProps = {
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
   depositPaid: boolean;
+  estimatedTotal: number;
   formError?: string | null;
 };
 
@@ -63,6 +64,7 @@ export function CalendarBookingPanel({
   roomUnits,
   occupancies,
   depositPaid,
+  estimatedTotal,
   formError,
 }: CalendarBookingPanelProps) {
   const initialEmail = guestEmail === WALK_IN_EMAIL_PLACEHOLDER ? "" : guestEmail;
@@ -77,6 +79,7 @@ export function CalendarBookingPanel({
     staffNote,
     roomId,
     roomUnitId: roomUnitId ?? "",
+    estimatedTotal: String(estimatedTotal),
   });
 
   useEffect(() => {
@@ -91,6 +94,7 @@ export function CalendarBookingPanel({
       staffNote,
       roomId,
       roomUnitId: roomUnitId ?? "",
+      estimatedTotal: String(estimatedTotal),
     });
   }, [
     bookingKey,
@@ -103,6 +107,7 @@ export function CalendarBookingPanel({
     staffNote,
     roomId,
     roomUnitId,
+    estimatedTotal,
   ]);
 
   const saveAction = useMemo(
@@ -190,7 +195,8 @@ export function CalendarBookingPanel({
             ))}
           </select>
           <p className="detail-help">
-            Changing room type keeps the booked price. Room number is cleared.
+            Changing room type does not auto-change the stay total below. Room number is
+            cleared.
           </p>
         </div>
         <div className="field-pair">
@@ -240,6 +246,30 @@ export function CalendarBookingPanel({
             type="date"
             value={fields.departureDate}
           />
+        </div>
+        <div className="field-pair">
+          <label htmlFor={`calendar-stay-total-${bookingKey}`}>Stay total</label>
+          <input
+            disabled={!canManage}
+            id={`calendar-stay-total-${bookingKey}`}
+            inputMode="numeric"
+            min={0}
+            name="custom-total"
+            onChange={(event) =>
+              setFields((current) => ({
+                ...current,
+                estimatedTotal: event.target.value,
+              }))
+            }
+            required
+            step={1}
+            type="number"
+            value={fields.estimatedTotal}
+          />
+          <p className="detail-help">
+            Edit to override the booked price for this stay. Changing dates does not
+            auto-recalculate it.
+          </p>
         </div>
         <div className="field-pair field-pair--wide">
           <label htmlFor={`calendar-guest-name-${bookingKey}`}>Guest name</label>

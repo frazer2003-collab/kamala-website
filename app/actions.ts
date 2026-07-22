@@ -1093,16 +1093,12 @@ export async function updateConfirmedBooking(
     }
   }
 
-  const estimatedTotal = typeChange.roomIdChanged
-    ? booking.estimated_total
-    : (
-        await quoteRoomStay(
-          typeChange.roomId,
-          nextRoom.rate,
-          arrival,
-          departure,
-        )
-      ).total;
+  const customTotalRaw = getValue(formData, "custom-total").trim();
+  const estimatedTotal = Number.parseInt(customTotalRaw, 10);
+  if (!Number.isFinite(estimatedTotal) || estimatedTotal < 0) {
+    redirect(`${bookingHref}&error=invalid-custom-total`);
+  }
+
   const supabase = createStaffSupabaseClient();
 
   // Update core fields without room_unit_id first (avoids stale-column failures).

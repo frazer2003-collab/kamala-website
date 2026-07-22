@@ -584,6 +584,7 @@ export default async function StaffCalendarPage({
                 roomUnitId={selected.roomUnitId}
                 roomUnits={roomUnits}
                 depositPaid={selected.depositPaid}
+                estimatedTotal={selected.estimatedTotal}
                 formError={panelFormError}
                 staffNote={selected.staffNote}
                 stayStatus={selected.stayStatus}
