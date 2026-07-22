@@ -16,6 +16,7 @@ import { buildPromptPayPayload } from "@/lib/promptpay";
 export function BookingBankTransferPanel({
   bankTransfer,
   bookingId,
+  conversationToken,
   currency,
   locale,
   onCancel,
@@ -24,6 +25,7 @@ export function BookingBankTransferPanel({
 }: {
   bankTransfer: BankTransferDetails;
   bookingId: string;
+  conversationToken: string;
   currency: PropertyCurrency;
   locale: Locale;
   onCancel: () => void;
@@ -74,7 +76,7 @@ export function BookingBankTransferPanel({
     setClaimError(null);
 
     try {
-      const result = await claimBankTransferPayment(bookingId);
+      const result = await claimBankTransferPayment(bookingId, conversationToken);
       if (!result.ok) {
         setClaimError(t(locale, result.errorCode));
         setIsClaiming(false);

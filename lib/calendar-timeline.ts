@@ -427,6 +427,7 @@ export function getRoomsLeftForDay(
 }
 
 export type CalendarMonthStats = {
+  currentGuests: number;
   arriving: number;
   departed: number;
   occupancyPercent: number;
@@ -458,6 +459,16 @@ export function getCalendarMonthStats({
 
   const dateInViewedMonth = (iso: string) =>
     Boolean(monthStart && monthEnd && iso >= monthStart && iso <= monthEnd);
+
+  // In-house now: stay occupies property-local today (not month-scoped).
+  const currentGuests =
+    bookings.filter((booking) => bookingOccupiesDay(booking, todayIso)).length +
+    channelStays.filter((stay) =>
+      bookingOccupiesDay(
+        { arrivalDate: stay.startDate, departureDate: stay.endDate },
+        todayIso,
+      ),
+    ).length;
 
   // Departed: checkout day is in the viewed month and the stay has already ended.
   const departed =
@@ -501,6 +512,7 @@ export function getCalendarMonthStats({
     availableNights > 0 ? Math.round((bookedNights / availableNights) * 100) : 0;
 
   return {
+    currentGuests,
     arriving,
     departed,
     occupancyPercent,

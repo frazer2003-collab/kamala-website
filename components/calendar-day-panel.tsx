@@ -17,6 +17,7 @@ import {
   formatOverlapErrorMessage,
   parseOverlapDays,
 } from "@/lib/stay-overlap";
+import { staffCapacityErrorMessage } from "@/lib/booking-overbook";
 
 type DayStayLink = {
   key: string;
@@ -92,6 +93,10 @@ function getErrorMessage(error?: string, overlap?: string) {
 
   if (error === "invalid-custom-total") {
     return "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates.";
+  }
+
+  if (error === "overbook" || error === "capacity-verify-failed") {
+    return staffCapacityErrorMessage(error);
   }
 
   if (error === "save-failed") {

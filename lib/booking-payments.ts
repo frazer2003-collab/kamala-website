@@ -5,6 +5,7 @@ import {
   getGuestChatUrl,
 } from "@/lib/booking-chat";
 import { hasCapacityForStay } from "@/lib/booking-capacity";
+import { OVERBOOKED_AT_PAYMENT_NOTE } from "@/lib/booking-overbook";
 import { getRoomForBooking } from "@/lib/rooms";
 import { getStripe, hasStripeServerConfig } from "@/lib/stripe";
 import { createStaffSupabaseClient } from "@/lib/supabase";
@@ -98,7 +99,7 @@ export async function fulfillBookingDeposit({
   }
 
   if (booking.deposit_paid_at) {
-    return { ok: true as const, alreadyPaid: true as const };
+    return { ok: true as const, alreadyPaid: true as const, overbooked: false as const };
   }
 
   if (booking.status !== "pending_payment") {
@@ -121,6 +122,7 @@ export async function fulfillBookingDeposit({
     return { ok: false as const, reason: verified.reason };
   }
 
+  let overbooked = false;
   const room = await getRoomForBooking(booking.room_id);
   if (room) {
     const hasCapacity = await hasCapacityForStay(
@@ -130,25 +132,46 @@ export async function fulfillBookingDeposit({
       room.availableCount,
       { excludeBookingId: bookingId },
     );
-
-    if (!hasCapacity) {
-      return { ok: false as const, reason: "no-capacity" as const };
-    }
+    // Paid stays still go to staff requests when full — staff resolve with the guest.
+    overbooked = !hasCapacity;
   }
 
-  const { error: updateError } = await supabase
+  const nextStaffNote = overbooked
+    ? [booking.staff_note?.trim(), OVERBOOKED_AT_PAYMENT_NOTE]
+        .filter(Boolean)
+        .join("\n")
+    : booking.staff_note;
+
+  const paidAt = new Date().toISOString();
+  const { data: updatedRows, error: updateError } = await supabase
     .from("booking_requests")
     .update({
       status: "awaiting",
-      deposit_paid_at: new Date().toISOString(),
+      deposit_paid_at: paidAt,
+      staff_note: nextStaffNote,
       ...(verified.checkoutSessionId
         ? { stripe_checkout_session_id: verified.checkoutSessionId }
         : {}),
       stripe_payment_intent_id: verified.paymentIntentId,
     })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .eq("status", "pending_payment")
+    .is("deposit_paid_at", null)
+    .select("id");
 
   if (updateError) {
+    return { ok: false as const, reason: "update-failed" as const };
+  }
+
+  if (!updatedRows?.length) {
+    const { data: again } = await supabase
+      .from("booking_requests")
+      .select("deposit_paid_at")
+      .eq("id", bookingId)
+      .maybeSingle();
+    if (again?.deposit_paid_at) {
+      return { ok: true as const, alreadyPaid: true as const, overbooked: false as const };
+    }
     return { ok: false as const, reason: "update-failed" as const };
   }
 
@@ -166,6 +189,7 @@ export async function fulfillBookingDeposit({
     estimatedTotal: booking.estimated_total,
     note: booking.note ?? "",
     depositPaid: booking.deposit_amount ?? booking.estimated_total,
+    overbooked,
   });
 
   if (booking.guest_email !== "walk-in@kamala.local") {
@@ -175,8 +199,9 @@ export async function fulfillBookingDeposit({
         to: booking.guest_email,
         guestName: booking.guest_name,
         roomName: booking.room_name,
-        message:
-          "Thank you — we received payment for your stay and your room is reserved. Staff will review your request and message you here with arrival details.",
+        message: overbooked
+          ? "Thank you — we received your payment. Our staff will check your dates and message you here to confirm your stay and share arrival details."
+          : "Thank you — we received payment for your stay and your room is reserved. Staff will review your request and message you here with arrival details.",
         chatUrl: getGuestChatUrl(token),
         kind: "welcome",
       });
@@ -187,7 +212,7 @@ export async function fulfillBookingDeposit({
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
 
-  return { ok: true as const, alreadyPaid: false as const };
+  return { ok: true as const, alreadyPaid: false as const, overbooked };
 }
 
 export async function releaseBookingReservation(bookingId: string) {

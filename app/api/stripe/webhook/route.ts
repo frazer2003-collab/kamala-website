@@ -59,10 +59,13 @@ export async function POST(request: Request) {
     const bookingId = paymentIntent.metadata?.booking_id;
 
     if (bookingId) {
-      await fulfillBookingDeposit({
+      const result = await fulfillBookingDeposit({
         bookingId,
         paymentIntentId: paymentIntent.id,
       });
+      if (!result.ok && shouldRetryFulfill(result.reason)) {
+        return NextResponse.json({ error: result.reason }, { status: 500 });
+      }
     }
   }
 
@@ -86,11 +89,14 @@ export async function POST(request: Request) {
     const paymentIntentId =
       typeof session.payment_intent === "string" ? session.payment_intent : null;
 
-    await fulfillBookingDeposit({
+    const result = await fulfillBookingDeposit({
       bookingId,
       checkoutSessionId: session.id,
       paymentIntentId,
     });
+    if (!result.ok && shouldRetryFulfill(result.reason)) {
+      return NextResponse.json({ error: result.reason }, { status: 500 });
+    }
   }
 
   if (event.type === "checkout.session.expired") {
@@ -103,4 +109,13 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+function shouldRetryFulfill(reason: string) {
+  return (
+    reason === "update-failed" ||
+    reason === "payment-not-verified" ||
+    reason === "stripe-not-configured" ||
+    reason === "missing-booking"
+  );
 }

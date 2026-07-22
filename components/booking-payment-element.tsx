@@ -77,7 +77,7 @@ function CardPaymentForm({
       });
 
       if (error) {
-        setErrorMessage(t(locale, "paymentFailed"));
+        setErrorMessage(error.message || t(locale, "paymentFailed"));
         setIsPaying(false);
       }
     } catch {
@@ -153,6 +153,7 @@ export function BookingPaymentElement({
   bookingId,
   cardTotalDue,
   clientSecret,
+  conversationToken,
   currency,
   locale,
   onCancel,
@@ -164,6 +165,7 @@ export function BookingPaymentElement({
   bookingId: string;
   cardTotalDue: number;
   clientSecret: string | null;
+  conversationToken: string;
   currency: PropertyCurrency;
   locale: Locale;
   onCancel: () => void;
@@ -194,7 +196,7 @@ export function BookingPaymentElement({
 
     void (async () => {
       try {
-        const result = await startCardPaymentForBooking(bookingId);
+        const result = await startCardPaymentForBooking(bookingId, conversationToken);
         if (cancelled) {
           return;
         }
@@ -220,7 +222,7 @@ export function BookingPaymentElement({
     return () => {
       cancelled = true;
     };
-  }, [bookingId, cardClientSecret, cardError, locale, method]);
+  }, [bookingId, cardClientSecret, cardError, conversationToken, locale, method]);
 
   const options = useMemo<StripeElementsOptions | null>(
     () =>
@@ -320,6 +322,7 @@ export function BookingPaymentElement({
         <BookingBankTransferPanel
           bankTransfer={bankTransfer}
           bookingId={bookingId}
+          conversationToken={conversationToken}
           currency={currency}
           locale={locale}
           onCancel={onCancel}
@@ -331,9 +334,30 @@ export function BookingPaymentElement({
           stayTotal={serverStayTotal}
         />
       ) : cardError ? (
-        <p className="form-message form-message--error" role="alert">
-          {cardError}
-        </p>
+        <div className="booking-payment__card-error">
+          <p className="form-message form-message--error" role="alert">
+            {cardError}
+          </p>
+          <div className="booking-payment__actions">
+            <button
+              className="button button--primary"
+              onClick={() => {
+                setCardError(null);
+                setIsStartingCard(true);
+              }}
+              type="button"
+            >
+              {t(locale, "tryCardAgain")}
+            </button>
+            <button
+              className="button button--secondary"
+              onClick={onCancel}
+              type="button"
+            >
+              {t(locale, "editBookingDetails")}
+            </button>
+          </div>
+        </div>
       ) : isStartingCard || !cardClientSecret ? (
         <p className="booking-summary__hint" aria-live="polite">
           {t(locale, "startingCheckout")}

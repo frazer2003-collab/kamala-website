@@ -29,6 +29,8 @@ type StaffRequestDecisionPanelProps = {
   depositAmount: number;
   currency?: PropertyCurrency;
   canManage: boolean;
+  /** Paid stay that still needs date/room resolution with the guest. */
+  paidOverbooked?: boolean;
   /** Sample inbox: full decide UI without writing to Supabase or emailing guests. */
   practiceMode?: boolean;
 };
@@ -42,6 +44,7 @@ export function StaffRequestDecisionPanel({
   depositAmount,
   currency = "thb",
   canManage,
+  paidOverbooked = false,
   practiceMode = false,
 }: StaffRequestDecisionPanelProps) {
   const depositLabel = formatMoneySuffix(depositAmount, currency);
@@ -112,6 +115,9 @@ export function StaffRequestDecisionPanel({
             : bankTransferClaimed
               ? " The guest reported a bank transfer; verify it before sending confirmation."
             : " No payment is on record yet."}
+          {paidOverbooked
+            ? " These dates still look full — confirm only after you have settled dates or room with the guest."
+            : null}
         </p>
         <form
           action={practiceMode ? undefined : confirmBookingRequest}
@@ -168,6 +174,9 @@ export function StaffRequestDecisionPanel({
           then close this request
           {depositPaid ? ` and refund their ${depositLabel} payment` : ""}.
           This cannot be undone from here.
+          {depositPaid && !practiceMode
+            ? " If the refund fails, the request stays open so you can retry."
+            : null}
         </p>
         <form
           action={practiceMode ? undefined : declineBookingRequest}
@@ -234,6 +243,9 @@ export function StaffRequestDecisionPanel({
         closes the request
         {depositPaid ? ", refunds their payment," : ""} and emails them. You will
         review the message before it sends.
+        {paidOverbooked
+          ? " This paid stay still needs dates or a room worked out with the guest before you confirm."
+          : null}
       </p>
       <div className="staff-decide__actions">
         <button

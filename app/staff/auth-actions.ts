@@ -1084,27 +1084,37 @@ export async function syncAllRoomIcalFeedsAction(formData: FormData) {
   }
 
   const results = await syncAllRoomIcalFeeds();
-  const failed = results.find((result) => !result.ok);
+  const okResults = results.filter((result) => result.ok);
+  const failedResults = results.filter((result) => !result.ok);
   const warning = results.find((result) => result.warning)?.warning;
+  const imported = okResults.reduce((total, result) => total + result.imported, 0);
 
   revalidatePath("/staff/calendar");
   revalidatePath("/");
   revalidatePath("/staff/settings/rooms");
   revalidatePath("/staff/settings/calendars");
 
-  if (failed) {
+  if (failedResults.length === 0) {
+    const warningQuery = warning
+      ? `&ical-warning=${encodeURIComponent(warning)}`
+      : "";
     redirect(
-      `/staff/calendar?${monthQuery}ical-error=${encodeURIComponent(failed.error ?? "sync-failed")}`,
+      `/staff/calendar?${monthQuery}ical-synced=${imported}&ical-feeds=${okResults.length}${warningQuery}`,
     );
   }
 
-  const imported = results.reduce((total, result) => total + result.imported, 0);
-  const feedCount = results.length;
+  const failSummary = failedResults
+    .slice(0, 3)
+    .map((result) => `${result.label}: ${result.error ?? "failed"}`)
+    .join("; ");
+  const more =
+    failedResults.length > 3 ? ` (+${failedResults.length - 3} more)` : "";
   const warningQuery = warning
     ? `&ical-warning=${encodeURIComponent(warning)}`
     : "";
+
   redirect(
-    `/staff/calendar?${monthQuery}ical-synced=${imported}&ical-feeds=${feedCount}${warningQuery}`,
+    `/staff/calendar?${monthQuery}ical-synced=${imported}&ical-feeds=${okResults.length}&ical-failed=${failedResults.length}&ical-error=${encodeURIComponent(`${failSummary}${more}`)}${warningQuery}`,
   );
 }
 

@@ -72,6 +72,9 @@ export function StaffCalendarToolbar({
 
       <div className="staff-calendar-toolbar__meta" aria-label="Month summary">
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
+          <strong>{stats.currentGuests}</strong> current guests
+        </span>
+        <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
           <strong>{stats.departed}</strong> departed
         </span>
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">

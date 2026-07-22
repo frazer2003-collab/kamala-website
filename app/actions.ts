@@ -11,7 +11,8 @@ import {
 import { formatMoneySuffix, getStripeCurrencyCode } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
-import { checkStayCapacity, hasCapacityForStay, isStayOverCapacity } from "@/lib/booking-capacity";
+import { checkStayCapacity, hasCapacityForStay } from "@/lib/booking-capacity";
+import { overbookedByStaffNote } from "@/lib/booking-overbook";
 import {
   fulfillBookingDeposit,
   releaseBookingReservation,
@@ -74,6 +75,7 @@ export type BookingActionState = {
   payment?: {
     clientSecret: string | null;
     bookingId: string;
+    conversationToken: string;
     stayTotal: number;
     cardTotalDue: number;
   };
@@ -349,7 +351,7 @@ export async function createBookingRequest(
 
   if (!bankTransferConfigured && !hasStripeConfig()) {
     return bookingErrorState(
-      "Payments are not configured yet. Add STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY before accepting bookings.",
+      "Online payment is temporarily unavailable. Please contact the guesthouse to complete your booking.",
       formData,
     );
   }
@@ -367,7 +369,7 @@ export async function createBookingRequest(
 
   if (!bankTransferConfigured && stripeCharge.totalDue < minimumCharge) {
     return bookingErrorState(
-      `Stripe needs at least ${formatMoneySuffix(minimumCharge, propertySettings.currency)} to take a payment. This stay totals ${formatMoneySuffix(stripeCharge.totalDue, propertySettings.currency)} — raise the room rate in staff settings, then try again.`,
+      `This stay totals ${formatMoneySuffix(stripeCharge.totalDue, propertySettings.currency)}. Online card payment isn’t available for this amount — please contact the guesthouse, or try different dates.`,
       formData,
     );
   }
@@ -449,69 +451,22 @@ export async function createBookingRequest(
       if (payload.ok && payload.booking?.id) {
         booking = payload.booking;
       }
-    } else if (atomicError && !isMissingAtomicBookingRpc(atomicError)) {
+    } else if (atomicError && isMissingAtomicBookingRpc(atomicError)) {
+      console.error("create_guest_booking_if_capacity missing:", atomicError);
+      return bookingErrorState(
+        "Online booking is temporarily unavailable. Please contact the guesthouse to complete your booking, or try again later.",
+        formData,
+      );
+    } else if (atomicError) {
       console.error("create_guest_booking_if_capacity failed:", atomicError);
       return bookingErrorState(getBookingInsertErrorMessage(atomicError), formData);
     }
 
     if (!booking) {
-      const { data: inserted, error } = await supabase
-        .from("booking_requests")
-        .insert({
-          guest_name: guestName,
-          guest_email: guestEmail,
-          guest_phone: guestPhone,
-          room_id: selectedRoom.id,
-          room_name: selectedRoom.name,
-          arrival_date: arrival,
-          departure_date: departure,
-          nights,
-          estimated_total: estimatedTotal,
-          deposit_amount: depositAmount,
-          note: note || null,
-          status: "pending_payment",
-          conversation_token: conversationToken,
-        })
-        .select("*")
-        .single();
-
-      if (error || !inserted) {
-        console.error("createBookingRequest insert failed:", error);
-        return bookingErrorState(getBookingInsertErrorMessage(error ?? {}), formData);
-      }
-
-      const overCapacity = await isStayOverCapacity(
-        selectedRoom.id,
-        arrival,
-        departure,
-        selectedRoom.availableCount,
+      return bookingErrorState(
+        "We couldn’t save this booking just now. Please try again in a moment, or message us if it keeps happening.",
+        formData,
       );
-
-      if (!overCapacity.ok) {
-        await supabase
-          .from("booking_requests")
-          .delete()
-          .eq("id", inserted.id)
-          .eq("status", "pending_payment");
-
-        if (overCapacity.reason === "verify-failed") {
-          return bookingErrorState(
-            "We couldn’t confirm availability just now. Please try again in a moment, or message us if it keeps happening.",
-            formData,
-            {
-              room: "We couldn’t confirm availability for these dates. Please try again.",
-            },
-          );
-        }
-
-        return bookingErrorState(
-          "These dates are no longer available for this room.",
-          formData,
-          { room: "These dates are no longer available for this room." },
-        );
-      }
-
-      booking = inserted;
     }
 
     await seedGuestNoteMessage(booking);
@@ -521,6 +476,14 @@ export async function createBookingRequest(
       estimatedTotal: booking.estimated_total,
     });
     const persistedStripeCharge = calculateStripeChargeAmount(stayTotal);
+    const checkoutToken = booking.conversation_token || conversationToken;
+
+    if (!checkoutToken) {
+      return bookingErrorState(
+        "We couldn’t start checkout just now. Please try again in a moment.",
+        formData,
+      );
+    }
 
     if (bankTransferConfigured) {
       return {
@@ -530,6 +493,7 @@ export async function createBookingRequest(
         payment: {
           clientSecret: null,
           bookingId: booking.id,
+          conversationToken: checkoutToken,
           stayTotal,
           cardTotalDue: persistedStripeCharge.totalDue,
         },
@@ -575,6 +539,7 @@ export async function createBookingRequest(
       payment: {
         clientSecret: paymentIntent.client_secret,
         bookingId: booking.id,
+        conversationToken: checkoutToken,
         stayTotal,
         cardTotalDue: persistedStripeCharge.totalDue,
       },
@@ -587,19 +552,39 @@ export async function createBookingRequest(
   }
 }
 
-export async function cancelPendingBooking(bookingId: string) {
-  if (!bookingId) {
+function bookingMatchesCheckoutToken(
+  booking: { id: string; conversation_token: string | null },
+  bookingId: string,
+  conversationToken: string,
+) {
+  return (
+    Boolean(bookingId) &&
+    Boolean(conversationToken) &&
+    booking.id === bookingId &&
+    booking.conversation_token === conversationToken
+  );
+}
+
+export async function cancelPendingBooking(
+  bookingId: string,
+  conversationToken: string,
+) {
+  if (!bookingId || !conversationToken) {
     return;
   }
 
   const supabase = createStaffSupabaseClient();
   const { data: booking } = await supabase
     .from("booking_requests")
-    .select("stripe_payment_intent_id, status")
+    .select("id, stripe_payment_intent_id, status, conversation_token")
     .eq("id", bookingId)
     .maybeSingle();
 
-  if (!booking || booking.status !== "pending_payment") {
+  if (
+    !booking ||
+    booking.status !== "pending_payment" ||
+    !bookingMatchesCheckoutToken(booking, bookingId, conversationToken)
+  ) {
     return;
   }
 
@@ -615,7 +600,8 @@ export async function cancelPendingBooking(bookingId: string) {
     .from("booking_requests")
     .delete()
     .eq("id", bookingId)
-    .eq("status", "pending_payment");
+    .eq("status", "pending_payment")
+    .eq("conversation_token", conversationToken);
 }
 
 async function cancelPaymentIntentBestEffort(paymentIntentId: string) {
@@ -632,11 +618,12 @@ async function cancelPaymentIntentBestEffort(paymentIntentId: string) {
 
 export async function startCardPaymentForBooking(
   bookingId: string,
+  conversationToken: string,
 ): Promise<
   | { ok: true; clientSecret: string; stayTotal: number; cardTotalDue: number }
   | { ok: false; errorCode: "cardPaymentStartFailed" }
 > {
-  if (!bookingId) {
+  if (!bookingId || !conversationToken) {
     return { ok: false, errorCode: "cardPaymentStartFailed" };
   }
 
@@ -651,7 +638,11 @@ export async function startCardPaymentForBooking(
     .eq("id", bookingId)
     .maybeSingle();
 
-  if (!booking || booking.status !== "pending_payment") {
+  if (
+    !booking ||
+    booking.status !== "pending_payment" ||
+    !bookingMatchesCheckoutToken(booking, bookingId, conversationToken)
+  ) {
     return { ok: false, errorCode: "cardPaymentStartFailed" };
   }
 
@@ -735,6 +726,7 @@ export async function startCardPaymentForBooking(
 
 export async function claimBankTransferPayment(
   bookingId: string,
+  conversationToken: string,
 ): Promise<
   | { ok: true }
   | {
@@ -745,7 +737,7 @@ export async function claimBankTransferPayment(
         | "card_processing";
     }
 > {
-  if (!bookingId) {
+  if (!bookingId || !conversationToken) {
     return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
@@ -761,7 +753,11 @@ export async function claimBankTransferPayment(
     .eq("id", bookingId)
     .maybeSingle();
 
-  if (!booking || booking.status !== "pending_payment") {
+  if (
+    !booking ||
+    booking.status !== "pending_payment" ||
+    !bookingMatchesCheckoutToken(booking, bookingId, conversationToken)
+  ) {
     return { ok: false, errorCode: "bankTransferClaimFailed" };
   }
 
@@ -986,10 +982,16 @@ export async function confirmBookingRequest(formData: FormData) {
   );
 }
 
+export type UpdateConfirmedBookingState = {
+  status: "idle" | "error" | "overbook";
+  error?: string;
+};
+
 export async function updateConfirmedBooking(
   bookingId: string,
+  _previousState: UpdateConfirmedBookingState,
   formData: FormData,
-) {
+): Promise<UpdateConfirmedBookingState> {
   await requireStaffCalendarWrite();
 
   const month = getValue(formData, "month");
@@ -1003,6 +1005,7 @@ export async function updateConfirmedBooking(
   const guestEmail = guestEmailInput || walkInEmailFallback;
   const roomUnitIdRaw = getValue(formData, "room-unit-id");
   const roomUnitId = roomUnitIdRaw || null;
+  const overbookConfirmed = getValue(formData, "overbook-confirm") === "1";
   const booking = await getBookingForStaff(bookingId);
 
   const isAssignableCalendarStay =
@@ -1066,8 +1069,22 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-dates`);
   }
 
-  // Staff may save even when allotment is already over (OTA/iCal lag). Guest
-  // booking paths still enforce capacity.
+  const capacity = await checkStayCapacity(
+    typeChange.roomId,
+    arrival,
+    departure,
+    nextRoom.availableCount,
+    { excludeBookingId: bookingId },
+  );
+
+  if (!capacity.ok) {
+    if (capacity.reason === "verify-failed") {
+      return { status: "error", error: "capacity-verify-failed" };
+    }
+    if (!overbookConfirmed) {
+      return { status: "overbook", error: "overbook" };
+    }
+  }
 
   if (effectiveRoomUnitId) {
     const [{ units }, confirmed, channels] = await Promise.all([
@@ -1111,6 +1128,14 @@ export async function updateConfirmedBooking(
     ).total;
   }
 
+  const overbookStaffNote =
+    !capacity.ok && overbookConfirmed
+      ? overbookedByStaffNote(new Date().toISOString().slice(0, 10))
+      : null;
+  const nextStaffNote = overbookStaffNote
+    ? [staffNote.trim(), overbookStaffNote].filter(Boolean).join("\n")
+    : staffNote || null;
+
   const supabase = createStaffSupabaseClient();
 
   // Update core fields without room_unit_id first (avoids stale-column failures).
@@ -1124,7 +1149,7 @@ export async function updateConfirmedBooking(
       departure_date: departure,
       nights,
       estimated_total: estimatedTotal,
-      staff_note: staffNote || null,
+      staff_note: nextStaffNote,
       stay_status: stayStatus,
       ...(typeChange.roomIdChanged
         ? {
@@ -1408,7 +1433,9 @@ export async function declineBookingRequest(formData: FormData) {
         payment_intent: booking.stripe_payment_intent_id,
       });
     } catch {
-      // Refund failure should not block staff from declining the request.
+      redirect(
+        `/staff?booking=${encodeURIComponent(bookingId)}&error=refund-failed`,
+      );
     }
     await releaseBookingReservation(bookingId);
   }
@@ -1477,7 +1504,55 @@ function formatBookingEmailDate(iso: string) {
   }).format(parsed);
 }
 
-export async function createWalkInBooking(formData: FormData) {
+export type WalkInBookingState = {
+  status: "idle" | "error" | "overbook";
+  error?: string;
+  values: {
+    guestName: string;
+    guestPhone: string;
+    guestEmail: string;
+    arrival: string;
+    departure: string;
+    staffNote: string;
+    customTotal: string;
+    showEmail: boolean;
+    showTotal: boolean;
+  };
+};
+
+function walkInValuesFromForm(formData: FormData, fallbackArrival: string) {
+  const guestEmail = getValue(formData, "guest-email");
+  const customTotal = getValue(formData, "custom-total");
+  return {
+    guestName: getValue(formData, "guest-name"),
+    guestPhone: getValue(formData, "guest-phone"),
+    guestEmail,
+    arrival: getValue(formData, "arrival") || fallbackArrival,
+    departure: getValue(formData, "departure"),
+    staffNote: getValue(formData, "staff-note"),
+    customTotal,
+    showEmail: Boolean(guestEmail) || getValue(formData, "show-email") === "1",
+    showTotal: Boolean(customTotal) || getValue(formData, "show-total") === "1",
+  };
+}
+
+function walkInError(
+  error: string,
+  formData: FormData,
+  fallbackArrival: string,
+  status: "error" | "overbook" = "error",
+): WalkInBookingState {
+  return {
+    status,
+    error,
+    values: walkInValuesFromForm(formData, fallbackArrival),
+  };
+}
+
+export async function createWalkInBooking(
+  _previousState: WalkInBookingState,
+  formData: FormData,
+): Promise<WalkInBookingState> {
   await requireStaffCalendarWrite();
 
   const month = getValue(formData, "month");
@@ -1488,37 +1563,30 @@ export async function createWalkInBooking(formData: FormData) {
   const arrival = getValue(formData, "arrival");
   const departure = getValue(formData, "departure");
   const staffNote = getValue(formData, "staff-note");
+  const overbookConfirmed = getValue(formData, "overbook-confirm") === "1";
   const room = await getRoomForBooking(roomId);
   const arrivalDate = parseDate(arrival);
   const departureDate = parseDate(departure);
+  const fallbackArrival = arrival || getValue(formData, "date") || "";
 
   if (!room || !arrivalDate || !departureDate || departureDate <= arrivalDate) {
-    redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
+    return walkInError("invalid-dates", formData, fallbackArrival);
   }
 
   if (isPastCalendarDate(arrival)) {
-    redirect(
-      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=past-date`,
-    );
+    return walkInError("past-date", formData, arrival);
   }
 
   if (guestName.length < 2) {
-    redirect(
-      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-name`,
-    );
+    return walkInError("invalid-name", formData, arrival);
   }
 
-  // Blank email is allowed for walk-ins (stored as a local placeholder).
   if (guestEmail !== walkInEmailFallback && !emailPattern.test(guestEmail)) {
-    redirect(
-      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-email`,
-    );
+    return walkInError("invalid-email", formData, arrival);
   }
 
   if (guestPhone && !isValidPhone(guestPhone)) {
-    redirect(
-      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-phone`,
-    );
+    return walkInError("invalid-phone", formData, arrival);
   }
 
   const nights = Math.round(
@@ -1526,9 +1594,7 @@ export async function createWalkInBooking(formData: FormData) {
   );
 
   if (nights < 1 || nights > 21) {
-    redirect(
-      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-dates`,
-    );
+    return walkInError("invalid-dates", formData, arrival);
   }
 
   const customTotalRaw = getValue(formData, "custom-total").trim();
@@ -1536,14 +1602,28 @@ export async function createWalkInBooking(formData: FormData) {
   if (customTotalRaw) {
     const customTotal = Number.parseInt(customTotalRaw, 10);
     if (!Number.isFinite(customTotal) || customTotal < 0) {
-      redirect(
-        `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-custom-total`,
-      );
+      return walkInError("invalid-custom-total", formData, arrival);
     }
     estimatedTotal = customTotal;
   } else {
     const quote = await quoteRoomStay(room.id, room.rate, arrival, departure);
     estimatedTotal = quote.total;
+  }
+
+  const capacity = await checkStayCapacity(
+    room.id,
+    arrival,
+    departure,
+    room.availableCount,
+  );
+
+  if (!capacity.ok) {
+    if (capacity.reason === "verify-failed") {
+      return walkInError("capacity-verify-failed", formData, arrival);
+    }
+    if (!overbookConfirmed) {
+      return walkInError("overbook", formData, arrival, "overbook");
+    }
   }
 
   const supabase = createStaffSupabaseClient();
@@ -1569,9 +1649,7 @@ export async function createWalkInBooking(formData: FormData) {
     .single();
 
   if (error || !data) {
-    redirect(
-      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=save-failed`,
-    );
+    return walkInError("save-failed", formData, arrival);
   }
 
   if (guestEmail !== walkInEmailFallback) {

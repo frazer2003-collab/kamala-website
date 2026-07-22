@@ -201,6 +201,7 @@ export function BookingRequest({
   const [state, formAction] = useActionState(createBookingRequest, initialState);
   const [paymentStep, setPaymentStep] = useState<{
     bookingId: string;
+    conversationToken: string;
     clientSecret: string | null;
     stayTotal: number;
     cardTotalDue: number;
@@ -285,25 +286,47 @@ export function BookingRequest({
 
   const [serverQuote, setServerQuote] = useState<BookingQuoteResult | null>(null);
   const [quotePending, setQuotePending] = useState(false);
+  const [quoteFailed, setQuoteFailed] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const updateOnline = () => setIsOnline(navigator.onLine);
+    updateOnline();
+    window.addEventListener("online", updateOnline);
+    window.addEventListener("offline", updateOnline);
+    return () => {
+      window.removeEventListener("online", updateOnline);
+      window.removeEventListener("offline", updateOnline);
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasValidStayDates(fields.arrival, fields.departure)) {
       setServerQuote(null);
       setQuotePending(false);
+      setQuoteFailed(false);
       return;
     }
 
     let cancelled = false;
     setQuotePending(true);
+    setQuoteFailed(false);
 
-    void getBookingQuote(selectedRoom.id, fields.arrival, fields.departure).then(
-      (quote) => {
+    void getBookingQuote(selectedRoom.id, fields.arrival, fields.departure)
+      .then((quote) => {
         if (!cancelled) {
           setServerQuote(quote);
           setQuotePending(false);
+          setQuoteFailed(false);
         }
-      },
-    );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setServerQuote(null);
+          setQuotePending(false);
+          setQuoteFailed(true);
+        }
+      });
 
     return () => {
       cancelled = true;
@@ -367,8 +390,9 @@ export function BookingRequest({
     }
 
     const bookingId = paymentStep.bookingId;
+    const conversationToken = paymentStep.conversationToken;
     startCancelPayment(async () => {
-      await cancelPendingBooking(bookingId);
+      await cancelPendingBooking(bookingId, conversationToken);
       setPaymentStep(null);
     });
   }
@@ -411,6 +435,11 @@ export function BookingRequest({
       </div>
 
       <div className="booking-panel__main">
+      {!isOnline ? (
+        <p className="form-message form-message--error" role="alert">
+          {t(locale, "offlineBanner")}
+        </p>
+      ) : null}
       <form className="booking-form" action={formAction}>
         <fieldset className="booking-form__fields" disabled={Boolean(paymentStep)}>
         <div className="field-pair">
@@ -427,6 +456,7 @@ export function BookingRequest({
             aria-describedby={
               state.fieldErrors?.["guest-name"] ? "guest-name-error" : undefined
             }
+            aria-invalid={Boolean(state.fieldErrors?.["guest-name"]) || undefined}
             required
           />
           {state.fieldErrors?.["guest-name"] ? (
@@ -452,6 +482,7 @@ export function BookingRequest({
             aria-describedby={
               state.fieldErrors?.["guest-email"] ? "guest-email-error" : undefined
             }
+            aria-invalid={Boolean(state.fieldErrors?.["guest-email"]) || undefined}
             required
           />
           {state.fieldErrors?.["guest-email"] ? (
@@ -478,6 +509,7 @@ export function BookingRequest({
             aria-describedby={
               state.fieldErrors?.["guest-phone"] ? "guest-phone-error" : undefined
             }
+            aria-invalid={Boolean(state.fieldErrors?.["guest-phone"]) || undefined}
             placeholder={t(locale, "phonePlaceholder")}
             required
           />
@@ -595,7 +627,12 @@ export function BookingRequest({
 
         <div className="booking-summary booking-summary--receipt" aria-live="polite">
           {quotePending && hasDates ? (
-            <p className="booking-summary__quote-status">Confirming stay total…</p>
+            <p className="booking-summary__quote-status">{t(locale, "confirmingQuote")}</p>
+          ) : null}
+          {quoteFailed && hasDates && !quotePending ? (
+            <p className="form-message form-message--error" role="status">
+              {t(locale, "quoteUnavailable")}
+            </p>
           ) : null}
           {hasDates ? (
             <>
@@ -705,6 +742,7 @@ export function BookingRequest({
           bookingId={paymentStep.bookingId}
           cardTotalDue={paymentStep.cardTotalDue}
           clientSecret={paymentStep.clientSecret}
+          conversationToken={paymentStep.conversationToken}
           currency={currency}
           locale={locale}
           onCancel={handleCancelPayment}

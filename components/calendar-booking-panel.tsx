@@ -1,11 +1,19 @@
 "use client";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 
-import { useEffect, useMemo, useState } from "react";
-import { cancelConfirmedBooking, updateConfirmedBooking } from "@/app/actions";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import {
+  cancelConfirmedBooking,
+  updateConfirmedBooking,
+  type UpdateConfirmedBookingState,
+} from "@/app/actions";
 import type { StayStatus } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
+import {
+  OVERBOOK_SAVE_ANYWAY_HINT,
+  staffCapacityErrorMessage,
+} from "@/lib/booking-overbook";
 import {
   calculateStayQuote,
   type RoomPromotionRate,
@@ -14,6 +22,8 @@ import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
 import { getAssignableUnitsForStay, getRoomUnitById } from "@/lib/room-units";
 
 const WALK_IN_EMAIL_PLACEHOLDER = "walk-in@kamala.local";
+
+const idleUpdateState: UpdateConfirmedBookingState = { status: "idle" };
 
 type CalendarBookingPanelProps = {
   bookingKey: string;
@@ -126,6 +136,10 @@ export function CalendarBookingPanel({
     () => updateConfirmedBooking.bind(null, databaseId),
     [databaseId],
   );
+  const [saveState, formAction, savePending] = useActionState(
+    saveAction,
+    idleUpdateState,
+  );
 
   const cancelAction = useMemo(
     () => cancelConfirmedBooking.bind(null, databaseId, monthKey),
@@ -184,22 +198,34 @@ export function CalendarBookingPanel({
 
   const stayTotalHelpId = `calendar-stay-total-help-${bookingKey}`;
   const emailHelpId = `calendar-guest-email-help-${bookingKey}`;
-  const formErrorId = formError ? `calendar-booking-error-${bookingKey}` : undefined;
+  const actionError =
+    saveState.status === "error" || saveState.status === "overbook"
+      ? staffCapacityErrorMessage(saveState.error)
+      : null;
+  const displayError = actionError || formError;
+  const needsOverbookConfirm = saveState.status === "overbook";
+  const formErrorId = displayError
+    ? `calendar-booking-error-${bookingKey}`
+    : undefined;
 
   return (
     <>
-      {formError ? (
+      {displayError ? (
         <p className="form-message form-message--error" id={formErrorId} role="alert">
-          {formError}
+          {displayError}
+          {needsOverbookConfirm ? OVERBOOK_SAVE_ANYWAY_HINT : null}
         </p>
       ) : null}
-      <form action={saveAction} className="calendar-manage-form">
+      <form action={formAction} className="calendar-manage-form">
         <StaffFormBusyBridge />
         <input name="month" type="hidden" value={monthKey} />
+        {needsOverbookConfirm ? (
+          <input name="overbook-confirm" type="hidden" value="1" />
+        ) : null}
         <div className="field-pair">
           <label htmlFor={`calendar-stay-status-${bookingKey}`}>Check-in status</label>
           <select
-            disabled={!canManage}
+            disabled={!canManage || savePending}
             id={`calendar-stay-status-${bookingKey}`}
             name="stay-status"
             onChange={(event) =>
@@ -401,8 +427,18 @@ export function CalendarBookingPanel({
             value={fields.staffNote}
           />
         </div>
-        <button className="button button--primary" disabled={!canManage} type="submit">
-          Save changes
+        <button
+          className="button button--primary"
+          disabled={!canManage || savePending}
+          type="submit"
+        >
+          {needsOverbookConfirm
+            ? savePending
+              ? "Saving…"
+              : "Save anyway"
+            : savePending
+              ? "Saving…"
+              : "Save changes"}
         </button>
       </form>
 

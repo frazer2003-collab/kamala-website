@@ -62,4 +62,20 @@ describe("getCalendarMonthStats departed / arriving", () => {
 
     assert.equal(stats.arriving, 1);
   });
+
+  it("counts current guests as stays occupying today", () => {
+    const stats = getCalendarMonthStats({
+      bookings: [
+        booking("2026-07-18", "2026-07-21"),
+        booking("2026-07-20", "2026-07-22"),
+        booking("2026-07-10", "2026-07-12"),
+        booking("2026-07-21", "2026-07-23"),
+      ],
+      calendarDays,
+      rooms,
+      todayIso: "2026-07-20",
+    });
+
+    assert.equal(stats.currentGuests, 2);
+  });
 });

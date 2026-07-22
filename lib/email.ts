@@ -11,6 +11,8 @@ type StaffBookingEmail = {
   estimatedTotal: number;
   note: string;
   depositPaid?: number;
+  /** Paid stay that exceeded sellable inventory — staff must resolve. */
+  overbooked?: boolean;
 };
 
 type EmailResult =
@@ -36,12 +38,26 @@ export async function sendStaffBookingEmail(
     return { ok: false, reason: "missing-config" };
   }
 
-  const subject = booking.depositPaid
-    ? `Paid in full: ${booking.roomName}`
-    : `New booking request: ${booking.roomName}`;
+  const subject = booking.overbooked
+    ? `Paid — needs dates: ${booking.roomName}`
+    : booking.depositPaid
+      ? `Paid in full: ${booking.roomName}`
+      : `New booking request: ${booking.roomName}`;
   const note = booking.note || "No note added.";
+  const headline = booking.overbooked
+    ? "Paid — needs dates (contact guest before confirming)"
+    : booking.depositPaid
+      ? "Paid in full — room reserved"
+      : "New booking request";
+  const intro = booking.overbooked
+    ? "A guest paid in full, but these dates already look full. The request is under Payment in Requests. Email or call them to offer other dates or a room, then confirm only after that is settled."
+    : booking.depositPaid
+      ? "A guest paid the full stay and the room is reserved pending your review."
+      : "A guest has requested a room through the Kamala website.";
   const text = [
-    booking.depositPaid ? "Paid in full — room reserved" : "New booking request",
+    headline,
+    "",
+    intro,
     "",
     `Guest: ${booking.guestName}`,
     `Email: ${booking.guestEmail}`,
@@ -55,15 +71,15 @@ export async function sendStaffBookingEmail(
     "Guest note:",
     note,
     "",
-    "Open the staff bookings page to review and reply.",
+    "Open Requests → Payment to review and reply.",
   ]
     .filter(Boolean)
     .join("\n");
 
   const html = `
     <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5;">
-      <h1 style="font-size: 22px;">${booking.depositPaid ? "Paid in full — room reserved" : "New booking request"}</h1>
-      <p>${booking.depositPaid ? "A guest paid the full stay and the room is reserved pending your review." : "A guest has requested a room through the Kamala website."}</p>
+      <h1 style="font-size: 22px;">${escapeHtml(headline)}</h1>
+      <p>${escapeHtml(intro)}</p>
       <table style="border-collapse: collapse; width: 100%; max-width: 560px;">
         <tr><td style="padding: 8px 0; color: #6b5559;">Guest</td><td>${escapeHtml(booking.guestName)}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b5559;">Email</td><td>${escapeHtml(booking.guestEmail)}</td></tr>

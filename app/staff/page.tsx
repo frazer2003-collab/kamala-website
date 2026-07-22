@@ -18,6 +18,7 @@ import {
   formatOverlapErrorMessage,
   parseOverlapDays,
 } from "@/lib/stay-overlap";
+import { isPaidOverbookNote } from "@/lib/booking-overbook";
 import type { BookingStatus } from "@/lib/content";
 
 const BookingChat = nextDynamic(
@@ -51,6 +52,10 @@ function getBookingStatusCopy(booking: StaffBooking) {
     !booking.depositPaid
   ) {
     return "Transfer to verify";
+  }
+
+  if (booking.status === "awaiting" && isPaidOverbookNote(booking.staffNote)) {
+    return "Paid — needs dates";
   }
 
   return statusCopy[booking.status];
@@ -260,6 +265,13 @@ export default async function StaffBookingsPage({
           </Link>
         </div>
 
+        {error === "refund-failed" ? (
+          <p className="form-message form-message--error" role="alert">
+            The Stripe refund did not go through, so this request is still open
+            and the guest may still be charged. Check the payment in Stripe,
+            then try Decline again — or settle the refund with the guest first.
+          </p>
+        ) : null}
         {staffBookings.error ? (
           <p className="form-message form-message--error" role="alert">
             {staffBookings.error}
@@ -445,6 +457,14 @@ export default async function StaffBookingsPage({
               </div>
               <h2 id="detail-title">{selected.guest}</h2>
 
+              {isPaidOverbookNote(selected.staffNote) ? (
+                <p className="form-message form-message--warning" role="status">
+                  This guest paid, but these dates look full. Email or call them
+                  to offer other dates or a room, then confirm only after that is
+                  settled.
+                </p>
+              ) : null}
+
               {selected.note ? (
                 <div className="guest-note guest-note--priority">
                   <span>Guest note</span>
@@ -546,6 +566,7 @@ export default async function StaffBookingsPage({
                   bankTransferClaimed={selected.bankTransferClaimed}
                   guestEmail={selected.contact}
                   guestName={selected.guest}
+                  paidOverbooked={isPaidOverbookNote(selected.staffNote)}
                   practiceMode={isPracticeMode}
                 />
               ) : (

@@ -87,6 +87,12 @@ const messages = {
       "Your card payment is still processing. Wait for card confirmation before choosing bank transfer.",
     cardPaymentStartFailed:
       "We could not start card payment. Please try again in a moment.",
+    tryCardAgain: "Try card again",
+    confirmingQuote: "Confirming stay total…",
+    quoteUnavailable:
+      "Could not confirm the live total. Showing the calculated price — check again before paying.",
+    offlineBanner:
+      "You’re offline. Reconnect to continue booking and payment.",
     bankChargeLabel: "Bank charge (6%)",
     promptPayQrAlt: "PromptPay QR code for your stay",
     bankTransferWaitingTitle: "We’re checking your transfer.",
@@ -95,10 +101,13 @@ const messages = {
     staySummaryDates: "Stay",
     confirmedTitle: "Your room is reserved.",
     confirmedPendingTitle: "Payment confirmed — finishing your reservation",
+    confirmedOverbookedTitle: "Payment received — we’ll confirm shortly",
     confirmedBody:
       "We received your full payment for {room} and reserved those dates. Staff will review the request and message you with arrival details.",
     confirmedPendingBody:
       "Your payment went through. We’re setting up your reservation now. Refresh this page in a moment, or check your email — we’ll confirm as soon as it’s ready.",
+    confirmedOverbookedBody:
+      "We received your full payment for {room}. Our staff will check your dates and message you to confirm your stay and share arrival details. Your payment is safe.",
     confirmedChatHint:
       "Save your private conversation link — it is the only way to message us about this booking. We also email you when there is a new message.",
     openBookingConversation: "Open booking conversation",
@@ -188,6 +197,11 @@ const messages = {
       "การชำระด้วยบัตรกำลังดำเนินการ กรุณารอการยืนยันก่อนเลือกโอนเงินผ่านธนาคาร",
     cardPaymentStartFailed:
       "ไม่สามารถเริ่มการชำระด้วยบัตรได้ กรุณาลองอีกครั้งในอีกสักครู่",
+    tryCardAgain: "ลองชำระด้วยบัตรอีกครั้ง",
+    confirmingQuote: "กำลังยืนยันยอดที่พัก…",
+    quoteUnavailable:
+      "ไม่สามารถยืนยันยอดล่าสุดได้ กำลังแสดงราคาคำนวณ — ตรวจสอบอีกครั้งก่อนชำระเงิน",
+    offlineBanner: "คุณออฟไลน์อยู่ กรุณาเชื่อมต่ออินเทอร์เน็ตเพื่อจองและชำระเงินต่อ",
     bankChargeLabel: "ค่าธรรมเนียมธนาคาร (6%)",
     promptPayQrAlt: "คิวอาร์โค้ดพร้อมเพย์สำหรับค่าที่พัก",
     bankTransferWaitingTitle: "เรากำลังตรวจสอบการโอนเงินของคุณ",
@@ -196,10 +210,13 @@ const messages = {
     staySummaryDates: "วันที่พัก",
     confirmedTitle: "ห้องของคุณถูกจองแล้ว",
     confirmedPendingTitle: "ชำระเงินสำเร็จ — กำลังจัดทำการจอง",
+    confirmedOverbookedTitle: "ได้รับชำระเงินแล้ว — เราจะยืนยันในไม่ช้า",
     confirmedBody:
       "เราได้รับชำระเต็มจำนวนสำหรับ {room} และจองวันที่ของคุณไว้แล้ว เจ้าหน้าที่จะตรวจสอบคำขอและส่งข้อความพร้อมรายละเอียดการเข้าพัก",
     confirmedPendingBody:
       "การชำระเงินของคุณสำเร็จแล้ว เรากำลังจัดทำการจอง รีเฟรชหน้านี้ในอีกสักครู่ หรือตรวจสอบอีเมล — เราจะยืนยันเมื่อพร้อม",
+    confirmedOverbookedBody:
+      "เราได้รับชำระเต็มจำนวนสำหรับ {room} แล้ว เจ้าหน้าที่จะตรวจสอบวันที่พักและส่งข้อความยืนยันพร้อมรายละเอียดการเข้าพัก การชำระเงินของคุณปลอดภัย",
     confirmedChatHint:
       "บันทึกลิงก์สนทนาส่วนตัวไว้ — นี่คือช่องทางเดียวสำหรับติดต่อเรื่องการจองนี้ เราจะส่งอีเมลเมื่อมีข้อความใหม่",
     openBookingConversation: "เปิดสนทนาการจอง",

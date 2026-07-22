@@ -93,6 +93,7 @@ export default async function StaffCalendarPage({
     assignUnit?: string;
     "ical-synced"?: string;
     "ical-feeds"?: string;
+    "ical-failed"?: string;
     "ical-error"?: string;
     "ical-warning"?: string;
   }>;
@@ -115,6 +116,7 @@ export default async function StaffCalendarPage({
     assignUnit,
     "ical-synced": icalSynced,
     "ical-feeds": icalFeeds,
+    "ical-failed": icalFailed,
     "ical-error": icalError,
     "ical-warning": icalWarning,
   } = await searchParams;
@@ -454,7 +456,7 @@ export default async function StaffCalendarPage({
             </Link>
           </p>
         ) : null}
-        {icalSynced !== undefined ? (
+        {icalSynced !== undefined && !icalFailed ? (
           <p className="form-message form-message--success" role="status">
             Channel calendars updated
             {icalFeeds ? ` (${icalFeeds} feed${icalFeeds === "1" ? "" : "s"})` : ""}.{" "}
@@ -465,7 +467,19 @@ export default async function StaffCalendarPage({
             </Link>
           </p>
         ) : null}
-        {icalError ? (
+        {icalFailed ? (
+          <p className="form-message form-message--error" role="alert">
+            Channel sync partially finished: {icalSynced ?? "0"} stay
+            {icalSynced === "1" ? "" : "s"} from {icalFeeds ?? "0"} feed
+            {icalFeeds === "1" ? "" : "s"} updated; {icalFailed} feed
+            {icalFailed === "1" ? "" : "s"} failed
+            {icalError ? ` (${decodeURIComponent(icalError)})` : ""}. Try Sync again, or check
+            the feed URLs under Settings → Calendars.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : icalError ? (
           <p className="form-message form-message--error" role="alert">
             Channel sync didn’t finish: {decodeURIComponent(icalError)}. Try Sync again, or check
             the feed URLs under Settings → Calendars.{" "}

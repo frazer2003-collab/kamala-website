@@ -3,6 +3,7 @@ import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { fulfillBookingDeposit } from "@/lib/booking-payments";
 import { getGuestChatUrl } from "@/lib/booking-chat";
+import { isPaidOverbookNote } from "@/lib/booking-overbook";
 import { getRequestGuestLocale } from "@/lib/guest-locale";
 import { t, tReplace } from "@/lib/i18n";
 import { getPropertySettings } from "@/lib/property-settings";
@@ -33,6 +34,7 @@ export default async function BookingConfirmedPage({
   let roomName = locale === "th" ? "ห้องของคุณ" : "your room";
   let chatUrl: string | null = null;
   let paymentPending = false;
+  let paymentOverbooked = false;
 
   if (hasStripeServerConfig()) {
     try {
@@ -56,7 +58,7 @@ export default async function BookingConfirmedPage({
         const supabase = createStaffSupabaseClient();
         const { data: booking } = await supabase
           .from("booking_requests")
-          .select("room_name, conversation_token, deposit_paid_at")
+          .select("room_name, conversation_token, deposit_paid_at, staff_note")
           .eq("id", resolvedBookingId)
           .maybeSingle();
 
@@ -73,9 +75,10 @@ export default async function BookingConfirmedPage({
           });
 
           if (result.ok) {
+            paymentOverbooked = Boolean(result.overbooked);
             const { data: paidBooking } = await supabase
               .from("booking_requests")
-              .select("conversation_token")
+              .select("conversation_token, staff_note")
               .eq("id", resolvedBookingId)
               .maybeSingle();
             if (paidBooking?.conversation_token) {
@@ -83,13 +86,19 @@ export default async function BookingConfirmedPage({
             } else if (booking?.conversation_token) {
               chatUrl = getGuestChatUrl(booking.conversation_token);
             }
+            if (!paymentOverbooked && isPaidOverbookNote(paidBooking?.staff_note)) {
+              paymentOverbooked = true;
+            }
           } else {
             paymentPending = true;
           }
         } else if (booking?.deposit_paid_at && booking.conversation_token) {
           chatUrl = getGuestChatUrl(booking.conversation_token);
+          paymentOverbooked = isPaidOverbookNote(booking.staff_note);
         } else if (!booking?.deposit_paid_at) {
           paymentPending = true;
+        } else if (booking?.deposit_paid_at) {
+          paymentOverbooked = isPaidOverbookNote(booking.staff_note);
         }
       } else {
         paymentPending = true;
@@ -99,20 +108,23 @@ export default async function BookingConfirmedPage({
     }
   }
 
+  const title = paymentPending
+    ? t(locale, "confirmedPendingTitle")
+    : paymentOverbooked
+      ? t(locale, "confirmedOverbookedTitle")
+      : t(locale, "confirmedTitle");
+  const body = paymentPending
+    ? t(locale, "confirmedPendingBody")
+    : paymentOverbooked
+      ? tReplace(locale, "confirmedOverbookedBody", { room: roomName })
+      : tReplace(locale, "confirmedBody", { room: roomName });
+
   return (
     <main className="guest-site site-shell">
       <GuestTopbar settings={settings} />
       <section className="section booking-result">
-        <h1>
-          {paymentPending
-            ? t(locale, "confirmedPendingTitle")
-            : t(locale, "confirmedTitle")}
-        </h1>
-        <p>
-          {paymentPending
-            ? t(locale, "confirmedPendingBody")
-            : tReplace(locale, "confirmedBody", { room: roomName })}
-        </p>
+        <h1>{title}</h1>
+        <p>{body}</p>
         {chatUrl ? (
           <>
             <p>{t(locale, "confirmedChatHint")}</p>
@@ -123,9 +135,11 @@ export default async function BookingConfirmedPage({
             </p>
           </>
         ) : null}
-        <Link className="button button--secondary" href="/">
-          {t(locale, "backToHome")}
-        </Link>
+        <p>
+          <Link className="button button--quiet" href="/">
+            {t(locale, "backToHome")}
+          </Link>
+        </p>
       </section>
       <SiteFooter settings={settings} />
     </main>
