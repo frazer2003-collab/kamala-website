@@ -70,7 +70,7 @@ function getErrorMessage(error?: string, overlap?: string) {
   }
 
   if (error === "invalid-email") {
-    return "Enter a valid email address before saving the walk-in.";
+    return "Enter a valid email address, or leave email blank for walk-ins.";
   }
 
   if (error === "invalid-dates") {
@@ -83,6 +83,10 @@ function getErrorMessage(error?: string, overlap?: string) {
 
   if (error === "invalid-rate") {
     return "Enter a valid nightly rate (0 or more).";
+  }
+
+  if (error === "invalid-custom-total") {
+    return "Enter a valid stay total (0 or more), or leave it blank to use the usual rate.";
   }
 
   if (error === "save-failed") {
@@ -373,13 +377,12 @@ export function CalendarDayPanel({
             />
           </div>
           <div className="field-pair">
-            <label htmlFor="walk-in-guest-email">Email</label>
+            <label htmlFor="walk-in-guest-email">Email (optional)</label>
             <input
               autoComplete="email"
               disabled={!canManage}
               id="walk-in-guest-email"
               name="guest-email"
-              required
               type="email"
             />
           </div>
@@ -406,6 +409,23 @@ export function CalendarDayPanel({
               required
               type="date"
             />
+          </div>
+          <div className="field-pair">
+            <label htmlFor="walk-in-custom-total">Stay total (optional)</label>
+            <input
+              disabled={!canManage}
+              id="walk-in-custom-total"
+              inputMode="numeric"
+              min={0}
+              name="custom-total"
+              placeholder="Usual room rate if blank"
+              step={1}
+              type="number"
+            />
+            <p className="detail-help">
+              Override the booked price for this stay. Leave blank to use the
+              usual rate for these dates (from about {room.rate}/night).
+            </p>
           </div>
           <div className="field-pair field-pair--wide">
             <label htmlFor="walk-in-note">Staff note</label>

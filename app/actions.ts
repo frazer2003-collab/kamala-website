@@ -1500,7 +1500,8 @@ export async function createWalkInBooking(formData: FormData) {
     );
   }
 
-  if (!guestEmail || guestEmail === walkInEmailFallback || !emailPattern.test(guestEmail)) {
+  // Blank email is allowed for walk-ins (stored as a local placeholder).
+  if (guestEmail !== walkInEmailFallback && !emailPattern.test(guestEmail)) {
     redirect(
       `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-email`,
     );
@@ -1522,7 +1523,20 @@ export async function createWalkInBooking(formData: FormData) {
     );
   }
 
-  const quote = await quoteRoomStay(room.id, room.rate, arrival, departure);
+  const customTotalRaw = getValue(formData, "custom-total").trim();
+  let estimatedTotal: number;
+  if (customTotalRaw) {
+    const customTotal = Number.parseInt(customTotalRaw, 10);
+    if (!Number.isFinite(customTotal) || customTotal < 0) {
+      redirect(
+        `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(arrival)}&mode=walk-in&error=invalid-custom-total`,
+      );
+    }
+    estimatedTotal = customTotal;
+  } else {
+    const quote = await quoteRoomStay(room.id, room.rate, arrival, departure);
+    estimatedTotal = quote.total;
+  }
 
   const supabase = createStaffSupabaseClient();
   const { data, error } = await supabase
@@ -1536,7 +1550,7 @@ export async function createWalkInBooking(formData: FormData) {
       arrival_date: arrival,
       departure_date: departure,
       nights,
-      estimated_total: quote.total,
+      estimated_total: estimatedTotal,
       note: "Walk-in booking",
       staff_note: staffNote || null,
       status: "confirmed",
