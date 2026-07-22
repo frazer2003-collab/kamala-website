@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useMemo } from "react";
 import {
   createRoomBlock,
-  createWalkInBooking,
   updateRoomDayAllotment,
   updateRoomDayRate,
 } from "@/app/actions";
+import { CalendarWalkInForm } from "@/components/calendar-walk-in-form";
 import { getTodayIso } from "@/lib/calendar";
 import type { Room } from "@/lib/content";
+import type { PropertyCurrency } from "@/lib/currency";
+import type { RoomPromotionRate } from "@/lib/pricing";
 import {
   formatOverlapErrorMessage,
   parseOverlapDays,
@@ -35,6 +37,9 @@ type CalendarDayPanelProps = {
   hasAllotmentOverride: boolean;
   currentRate: number;
   hasRateOverride: boolean;
+  currency: PropertyCurrency;
+  promotions: RoomPromotionRate[];
+  rateOverrides: Record<string, number>;
   dayStays?: DayStayLink[];
 };
 
@@ -70,7 +75,7 @@ function getErrorMessage(error?: string, overlap?: string) {
   }
 
   if (error === "invalid-email") {
-    return "Enter a valid email address, or leave email blank for walk-ins.";
+    return "Enter a valid email, or leave blank if the guest has no email.";
   }
 
   if (error === "invalid-dates") {
@@ -86,7 +91,7 @@ function getErrorMessage(error?: string, overlap?: string) {
   }
 
   if (error === "invalid-custom-total") {
-    return "Enter a valid stay total (0 or more), or leave it blank to use the usual rate.";
+    return "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates.";
   }
 
   if (error === "save-failed") {
@@ -108,6 +113,9 @@ export function CalendarDayPanel({
   hasAllotmentOverride,
   currentRate,
   hasRateOverride,
+  currency,
+  promotions,
+  rateOverrides,
   dayStays = [],
 }: CalendarDayPanelProps) {
   const defaultDeparture = useMemo(() => addIsoDays(date, 1), [date]);
@@ -340,117 +348,19 @@ export function CalendarDayPanel({
 
   if (mode === "walk-in") {
     return (
-      <>
-        <p className="calendar-day-panel__intro">
-          Add a confirmed walk-in for <strong>{room.name}</strong>, starting{" "}
-          {formatDisplayDate(date)}.
-        </p>
-        {errorMessage ? (
-          <p className="form-message form-message--error" role="alert">
-            {errorMessage}
-          </p>
-        ) : null}
-        <form action={createWalkInBooking} className="calendar-manage-form">
-      <StaffFormBusyBridge />
-          <input name="month" type="hidden" value={monthKey} />
-          <input name="room-id" type="hidden" value={room.id} />
-          <div className="field-pair">
-            <label htmlFor="walk-in-guest-name">Guest name</label>
-            <input
-              autoComplete="name"
-              disabled={!canManage}
-              id="walk-in-guest-name"
-              name="guest-name"
-              required
-              type="text"
-            />
-          </div>
-          <div className="field-pair">
-            <label htmlFor="walk-in-guest-phone">Phone number (optional)</label>
-            <input
-              autoComplete="tel"
-              disabled={!canManage}
-              id="walk-in-guest-phone"
-              inputMode="tel"
-              name="guest-phone"
-              type="tel"
-            />
-          </div>
-          <div className="field-pair">
-            <label htmlFor="walk-in-guest-email">Email (optional)</label>
-            <input
-              autoComplete="email"
-              disabled={!canManage}
-              id="walk-in-guest-email"
-              name="guest-email"
-              type="email"
-            />
-          </div>
-          <div className="field-pair">
-            <label htmlFor="walk-in-arrival">Arrival</label>
-            <input
-              defaultValue={date}
-              disabled={!canManage}
-              id="walk-in-arrival"
-              min={todayIso}
-              name="arrival"
-              required
-              type="date"
-            />
-          </div>
-          <div className="field-pair">
-            <label htmlFor="walk-in-departure">Departure</label>
-            <input
-              defaultValue={defaultDeparture}
-              disabled={!canManage}
-              id="walk-in-departure"
-              min={todayIso}
-              name="departure"
-              required
-              type="date"
-            />
-          </div>
-          <div className="field-pair">
-            <label htmlFor="walk-in-custom-total">Stay total (optional)</label>
-            <input
-              disabled={!canManage}
-              id="walk-in-custom-total"
-              inputMode="numeric"
-              min={0}
-              name="custom-total"
-              placeholder="Usual room rate if blank"
-              step={1}
-              type="number"
-            />
-            <p className="detail-help">
-              Override the booked price for this stay. Leave blank to use the
-              usual rate for these dates (from about {room.rate}/night).
-            </p>
-          </div>
-          <div className="field-pair field-pair--wide">
-            <label htmlFor="walk-in-note">Staff note</label>
-            <textarea
-              disabled={!canManage}
-              id="walk-in-note"
-              name="staff-note"
-              rows={3}
-            />
-          </div>
-          <div className="calendar-day-panel__actions">
-            <Link className="button button--quiet" href={dayHref}>
-              Back
-            </Link>
-            <button className="button button--primary" disabled={!canManage} type="submit">
-              Save walk-in
-            </button>
-          </div>
-        </form>
-        {!canManage ? (
-          <p className="detail-help">
-            Connect the site to save walk-ins from the calendar.
-          </p>
-        ) : null}
-      </>
+      <CalendarWalkInForm
+        canManage={canManage}
+        currency={currency}
+        date={date}
+        dayHref={dayHref}
+        errorMessage={errorMessage}
+        monthKey={monthKey}
+        promotions={promotions}
+        rateOverrides={rateOverrides}
+        roomId={room.id}
+        roomName={room.name}
+        roomRate={room.rate}
+      />
     );
   }
 

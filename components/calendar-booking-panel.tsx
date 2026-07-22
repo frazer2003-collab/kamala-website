@@ -4,6 +4,12 @@ import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { useEffect, useMemo, useState } from "react";
 import { cancelConfirmedBooking, updateConfirmedBooking } from "@/app/actions";
 import type { StayStatus } from "@/lib/content";
+import type { PropertyCurrency } from "@/lib/currency";
+import { formatMoneySuffix } from "@/lib/currency";
+import {
+  calculateStayQuote,
+  type RoomPromotionRate,
+} from "@/lib/pricing";
 import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
 import { getAssignableUnitsForStay, getRoomUnitById } from "@/lib/room-units";
 
@@ -25,12 +31,15 @@ type CalendarBookingPanelProps = {
   note: string;
   staffNote: string;
   roomId: string;
-  rooms: Array<{ id: string; name: string }>;
+  rooms: Array<{ id: string; name: string; rate: number }>;
   roomUnitId: string | null;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
   depositPaid: boolean;
   estimatedTotal: number;
+  currency: PropertyCurrency;
+  promotions: RoomPromotionRate[];
+  rateOverrides: Record<string, number>;
   formError?: string | null;
 };
 
@@ -65,6 +74,9 @@ export function CalendarBookingPanel({
   occupancies,
   depositPaid,
   estimatedTotal,
+  currency,
+  promotions,
+  rateOverrides,
   formError,
 }: CalendarBookingPanelProps) {
   const initialEmail = guestEmail === WALK_IN_EMAIL_PLACEHOLDER ? "" : guestEmail;
@@ -144,15 +156,45 @@ export function CalendarBookingPanel({
     roomUnits,
   ]);
 
+  const selectedRoom = rooms.find((room) => room.id === fields.roomId);
+  const quote = useMemo(() => {
+    if (!selectedRoom) {
+      return null;
+    }
+    return calculateStayQuote({
+      roomId: selectedRoom.id,
+      baseRate: selectedRoom.rate,
+      arrival: fields.arrivalDate,
+      departure: fields.departureDate,
+      promotions,
+      rateOverrides: new Map(Object.entries(rateOverrides)),
+    });
+  }, [
+    fields.arrivalDate,
+    fields.departureDate,
+    promotions,
+    rateOverrides,
+    selectedRoom,
+  ]);
+
+  const quoteLabel =
+    quote && quote.nights > 0
+      ? `${formatMoneySuffix(quote.total, currency)} · ${quote.nights} night${quote.nights === 1 ? "" : "s"}`
+      : null;
+
+  const stayTotalHelpId = `calendar-stay-total-help-${bookingKey}`;
+  const emailHelpId = `calendar-guest-email-help-${bookingKey}`;
+  const formErrorId = formError ? `calendar-booking-error-${bookingKey}` : undefined;
+
   return (
     <>
       {formError ? (
-        <p className="form-message form-message--error" role="alert">
+        <p className="form-message form-message--error" id={formErrorId} role="alert">
           {formError}
         </p>
       ) : null}
       <form action={saveAction} className="calendar-manage-form">
-      <StaffFormBusyBridge />
+        <StaffFormBusyBridge />
         <input name="month" type="hidden" value={monthKey} />
         <div className="field-pair">
           <label htmlFor={`calendar-stay-status-${bookingKey}`}>Check-in status</label>
@@ -194,10 +236,10 @@ export function CalendarBookingPanel({
               </option>
             ))}
           </select>
-          <p className="detail-help">
-            Changing room type does not auto-change the stay total below. Room number is
-            cleared.
-          </p>
+          <span className="field-help">
+            Room number clears when the type changes. Stay total stays as entered
+            unless you change or clear it.
+          </span>
         </div>
         <div className="field-pair">
           <label htmlFor={`calendar-room-unit-${bookingKey}`}>Room number</label>
@@ -248,8 +290,11 @@ export function CalendarBookingPanel({
           />
         </div>
         <div className="field-pair">
-          <label htmlFor={`calendar-stay-total-${bookingKey}`}>Stay total</label>
+          <label htmlFor={`calendar-stay-total-${bookingKey}`}>
+            Stay total ({currency.toUpperCase()})
+          </label>
           <input
+            aria-describedby={[stayTotalHelpId, formErrorId].filter(Boolean).join(" ") || undefined}
             disabled={!canManage}
             id={`calendar-stay-total-${bookingKey}`}
             inputMode="numeric"
@@ -261,15 +306,34 @@ export function CalendarBookingPanel({
                 estimatedTotal: event.target.value,
               }))
             }
-            required
+            placeholder={quote ? String(quote.total) : undefined}
             step={1}
             type="number"
             value={fields.estimatedTotal}
           />
-          <p className="detail-help">
-            Edit to override the booked price for this stay. Changing dates does not
-            auto-recalculate it.
-          </p>
+          <span className="field-help" id={stayTotalHelpId}>
+            {quoteLabel ? (
+              <>
+                Usual rate for these dates: <strong>{quoteLabel}</strong>.{" "}
+              </>
+            ) : null}
+            Leave blank to use that usual rate. Changing dates does not change the
+            saved total unless you edit or clear this field.
+          </span>
+          {canManage && quote && quote.nights > 0 ? (
+            <button
+              className="button button--quiet"
+              onClick={() =>
+                setFields((current) => ({
+                  ...current,
+                  estimatedTotal: String(quote.total),
+                }))
+              }
+              type="button"
+            >
+              Use usual rate
+            </button>
+          ) : null}
         </div>
         <div className="field-pair field-pair--wide">
           <label htmlFor={`calendar-guest-name-${bookingKey}`}>Guest name</label>
@@ -304,6 +368,7 @@ export function CalendarBookingPanel({
         <div className="field-pair">
           <label htmlFor={`calendar-guest-email-${bookingKey}`}>Email (optional)</label>
           <input
+            aria-describedby={emailHelpId}
             autoComplete="email"
             disabled={!canManage}
             id={`calendar-guest-email-${bookingKey}`}
@@ -311,10 +376,12 @@ export function CalendarBookingPanel({
             onChange={(event) =>
               setFields((current) => ({ ...current, guestEmail: event.target.value }))
             }
-            placeholder="Leave blank for walk-in placeholder"
             type="email"
             value={fields.guestEmail}
           />
+          <span className="field-help" id={emailHelpId}>
+            Leave blank if the guest has no email.
+          </span>
         </div>
         <div className="field-pair field-pair--wide guest-note">
           <span>Guest note</span>
@@ -355,7 +422,7 @@ export function CalendarBookingPanel({
             </p>
             <div className="calendar-cancel-confirm__actions">
               <form action={cancelAction}>
-      <StaffFormBusyBridge />
+                <StaffFormBusyBridge />
                 <button className="button button--danger" disabled={!canManage} type="submit">
                   Yes, cancel stay
                 </button>

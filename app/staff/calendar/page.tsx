@@ -232,13 +232,13 @@ export default async function StaffCalendarPage({
           : error === "invalid-rate"
             ? "Enter a valid nightly rate (0 or more)."
           : error === "invalid-custom-total"
-            ? "Enter a valid stay total (0 or more), or leave it blank to use the usual rate."
+            ? "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates."
           : error === "invalid-name"
             ? "Enter the guest name before saving."
             : error === "invalid-phone"
               ? "Enter a valid phone number with at least 7 digits, or leave phone blank."
               : error === "invalid-email"
-                ? "Enter a valid email address, or leave email blank for walk-ins."
+                ? "Enter a valid email, or leave blank if the guest has no email."
                 : error === "invalid-dates"
                   ? "Choose a stay between 1 and 21 nights."
                   : error === "invalid-room-type"
@@ -580,11 +580,18 @@ export default async function StaffCalendarPage({
                 note={selected.note}
                 occupancies={unitOccupancies}
                 roomId={selected.roomId}
-                rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                rooms={rooms.map((room) => ({
+                  id: room.id,
+                  name: room.name,
+                  rate: room.rate,
+                }))}
                 roomUnitId={selected.roomUnitId}
                 roomUnits={roomUnits}
                 depositPaid={selected.depositPaid}
                 estimatedTotal={selected.estimatedTotal}
+                currency={settings.currency}
+                promotions={promotions}
+                rateOverrides={Object.fromEntries(rateLookup)}
                 formError={panelFormError}
                 staffNote={selected.staffNote}
                 stayStatus={selected.stayStatus}
@@ -601,9 +608,10 @@ export default async function StaffCalendarPage({
                   <>
                     Assign a room number so the stay appears on the room-number
                     rows — this still works after the stay dates have passed.
-                    Saving updates dates and assignment; date changes may
-                    update the total, while room-type changes keep the booked
-                    price. To remove the stay, use Cancel stay — you will be
+                    Saving updates guest details, dates, assignment, and stay
+                    total. Changing dates does not change the stay total unless
+                    you edit it or leave it blank to use the usual rate for the
+                    new dates. To remove the stay, use Cancel stay — you will be
                     asked to confirm.
                   </>
                 )}
@@ -689,6 +697,7 @@ export default async function StaffCalendarPage({
                     ).rate
                   : 0
               }
+              currency={settings.currency}
               date={selectedDate}
               dayStays={dayStays}
               error={error}
@@ -705,6 +714,8 @@ export default async function StaffCalendarPage({
               mode={mode}
               monthKey={monthKey}
               overlap={overlap}
+              promotions={promotions}
+              rateOverrides={Object.fromEntries(rateLookup)}
               room={selectedRoom}
             />
           </CalendarBookingDialog>

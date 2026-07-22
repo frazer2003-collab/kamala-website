@@ -1047,6 +1047,10 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-phone`);
   }
 
+  if (guestEmail !== walkInEmailFallback && !emailPattern.test(guestEmail)) {
+    redirect(`${bookingHref}&error=invalid-email`);
+  }
+
   const arrivalDate = parseDate(arrival);
   const departureDate = parseDate(departure);
 
@@ -1094,9 +1098,17 @@ export async function updateConfirmedBooking(
   }
 
   const customTotalRaw = getValue(formData, "custom-total").trim();
-  const estimatedTotal = Number.parseInt(customTotalRaw, 10);
-  if (!Number.isFinite(estimatedTotal) || estimatedTotal < 0) {
-    redirect(`${bookingHref}&error=invalid-custom-total`);
+  let estimatedTotal: number;
+  if (customTotalRaw) {
+    const customTotal = Number.parseInt(customTotalRaw, 10);
+    if (!Number.isFinite(customTotal) || customTotal < 0) {
+      redirect(`${bookingHref}&error=invalid-custom-total`);
+    }
+    estimatedTotal = customTotal;
+  } else {
+    estimatedTotal = (
+      await quoteRoomStay(typeChange.roomId, nextRoom.rate, arrival, departure)
+    ).total;
   }
 
   const supabase = createStaffSupabaseClient();
