@@ -142,11 +142,12 @@ export function buildAtmosphereLede(
     return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast, and an easy walk to the beach — book here and we reply to confirm.`;
   }
 
+  if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
+    return "A friendly, cozy guesthouse where travellers meet, share stories, and feel at home — just across from the Sunday Walking Street, with Tha Phae Gate a two-minute walk away.";
+  }
+
   if (isChiangMaiLocation(locationLabel)) {
-    const gateNote = isNearThaPhaeGate(addressLine)
-      ? "steps from Tha Phae Gate"
-      : "in Chiang Mai Old City";
-    return `A family-run ${typeLabel} ${gateNote}. Shaded garden rooms, included breakfast, and a short walk to temples and markets — book here and we reply to confirm.`;
+    return `A family-run ${typeLabel} in Chiang Mai Old City. Shaded garden rooms, included breakfast, and a short walk to temples and markets — book here and we reply to confirm.`;
   }
 
   return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast — book here and we reply to confirm.`;
@@ -157,7 +158,7 @@ export function buildStayStoryHeading(
   addressLine: string | null = null,
 ): string {
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return "A garden guesthouse in Chiang Mai Old City";
+    return "A cozy guesthouse by Tha Phae Gate";
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -172,13 +173,14 @@ export function buildStayStoryLede(
   locationLabel: string,
   addressLine: string | null,
 ): string {
+  if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
+    return `${propertyName} is a friendly, cozy guesthouse — a hub for travellers to exchange stories in an easy, welcoming atmosphere. Feel at home here. We sit just across the street from the Sunday Walking Street, with Tha Phae Gate about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market, one of the city’s best-known evening spots, are about six minutes away.`;
+  }
+
   const atmosphereLine = buildStayStoryAtmosphereLine(locationLabel);
 
   if (isChiangMaiLocation(locationLabel)) {
-    const placeNote = isNearThaPhaeGate(addressLine)
-      ? "one minute from Tha Phae Gate"
-      : "in Chiang Mai Old City";
-    return `${propertyName} is family-run — wooden rooms around a courtyard garden, ${placeNote}, not a resort block. ${atmosphereLine}`;
+    return `${propertyName} is family-run — wooden rooms around a courtyard garden in Chiang Mai Old City, not a resort block. ${atmosphereLine}`;
   }
 
   if (isCoastalLocation(locationLabel)) {

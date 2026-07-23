@@ -62,7 +62,7 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
 
   if (isThaPhaeSeoContext(locationLabel, addressLine)) {
-    return `Book ${propertyName}, a family-run guesthouse one minute from Tha Phae Gate in Chiang Mai Old City. Garden rooms, breakfast included — request dates here and we confirm every stay.`;
+    return `Book ${propertyName}, a friendly cozy guesthouse across from the Sunday Walking Street — Tha Phae Gate is a two-minute walk. Feel at home near Chiang Mai Old City’s best-known spots.`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
