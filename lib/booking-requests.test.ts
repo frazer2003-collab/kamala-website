@@ -28,6 +28,7 @@ const bankClaimRow: BookingRequestRow = {
   bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z",
   conversation_token: null,
   room_unit_id: null,
+  bed_setup: "double",
   created_at: "2026-07-18T08:00:00.000Z",
   updated_at: "2026-07-18T08:00:00.000Z",
 };

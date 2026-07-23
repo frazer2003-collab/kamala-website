@@ -25,6 +25,9 @@ import { calculateStayQuote, type RoomPromotionRate } from "@/lib/pricing";
 import { getRoomAvailabilityLabel, isRoomBookable } from "@/lib/room-availability";
 import { getBookingPaymentReturnUrl } from "@/lib/booking-payment-url";
 import type { BankTransferDetails } from "@/lib/bank-transfer";
+import {
+  defaultBedSetupForRoom,
+} from "@/lib/bed-setup";
 
 function persistGuestLocale(nextLocale: Locale) {
   try {
@@ -144,6 +147,7 @@ function emptyFormFields(
     arrival,
     departure,
     note: "",
+    bedSetup: defaultBedSetupForRoom(roomId),
   };
 }
 
@@ -232,6 +236,7 @@ export function BookingRequest({
         setFields((current) => ({
           ...current,
           roomId: detail.roomId,
+          bedSetup: defaultBedSetupForRoom(detail.roomId),
           arrival: detail.arrival ?? current.arrival,
           departure: detail.departure ?? current.departure,
         }));
@@ -262,12 +267,25 @@ export function BookingRequest({
       selected &&
       !isRoomBookable(getRoomAvailableCount(selected, availabilityByRoomId))
     ) {
-      setFields((current) => ({
-        ...current,
-        roomId: getDefaultRoomId(rooms, availabilityByRoomId),
-      }));
+      setFields((current) => {
+        const nextRoomId = getDefaultRoomId(rooms, availabilityByRoomId);
+        return {
+          ...current,
+          roomId: nextRoomId,
+          bedSetup: defaultBedSetupForRoom(nextRoomId),
+        };
+      });
     }
   }, [availabilityByRoomId, fields.roomId, rooms]);
+
+  useEffect(() => {
+    setFields((current) => {
+      if (current.bedSetup === "double" || current.bedSetup === "twin") {
+        return current;
+      }
+      return { ...current, bedSetup: defaultBedSetupForRoom(current.roomId) };
+    });
+  }, [fields.roomId]);
 
   const selectedRoom = useMemo(
     () => rooms.find((room) => room.id === fields.roomId) ?? rooms[0],
@@ -566,7 +584,12 @@ export function BookingRequest({
             name="room"
             value={fields.roomId}
             onChange={(event) => {
-              setFields((current) => ({ ...current, roomId: event.target.value }));
+              const nextRoomId = event.target.value;
+              setFields((current) => ({
+                ...current,
+                roomId: nextRoomId,
+                bedSetup: defaultBedSetupForRoom(nextRoomId),
+              }));
             }}
             aria-describedby={state.fieldErrors?.room ? "room-error" : undefined}
           >
@@ -599,6 +622,39 @@ export function BookingRequest({
               {t(locale, "roomFull")}
             </span>
           ) : null}
+        </div>
+        <div className="field-pair">
+          <label htmlFor="bed-setup">{t(locale, "beds")}</label>
+          <select
+            id="bed-setup"
+            name="bed-setup"
+            value={fields.bedSetup || "double"}
+            onChange={(event) =>
+              setFields((current) => ({
+                ...current,
+                bedSetup: event.target.value,
+              }))
+            }
+            aria-describedby={
+              state.fieldErrors?.["bed-setup"]
+                ? "bed-setup-error"
+                : "bed-setup-help"
+            }
+            aria-invalid={Boolean(state.fieldErrors?.["bed-setup"]) || undefined}
+            required
+          >
+            <option value="double">{t(locale, "bedDouble")}</option>
+            <option value="twin">{t(locale, "bedTwin")}</option>
+          </select>
+          {state.fieldErrors?.["bed-setup"] ? (
+            <span className="field-error" id="bed-setup-error">
+              {state.fieldErrors["bed-setup"]}
+            </span>
+          ) : (
+            <span className="field-help" id="bed-setup-help">
+              {t(locale, "bedsHelp")}
+            </span>
+          )}
         </div>
         <div className="field-pair">
           <label htmlFor="nights">{t(locale, "nights")}</label>

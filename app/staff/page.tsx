@@ -19,6 +19,7 @@ import {
   parseOverlapDays,
 } from "@/lib/stay-overlap";
 import { isPaidOverbookNote } from "@/lib/booking-overbook";
+import { formatBedSetup } from "@/lib/bed-setup";
 import type { BookingStatus } from "@/lib/content";
 
 const BookingChat = nextDynamic(
@@ -519,6 +520,12 @@ export default async function StaffBookingsPage({
                       {selected.dates} · {selected.nights} nights
                     </dd>
                   </div>
+                  {selected.bedSetup ? (
+                    <div>
+                      <dt>Bed setup</dt>
+                      <dd>{formatBedSetup(selected.bedSetup)} requested</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>Total</dt>
                     <dd>

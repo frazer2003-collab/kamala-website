@@ -1,3 +1,5 @@
+import type { BedSetup } from "@/lib/bed-setup";
+
 export type Tour = {
   id: string;
   title: string;
@@ -59,6 +61,8 @@ export type Booking = {
   /** Physical door number assignment; null until staff assigns. */
   roomUnitId: string | null;
   roomNumber: string | null;
+  /** Guest bed setup preference: double or twin. */
+  bedSetup: BedSetup | null;
 };
 
 export const rooms: Room[] = [

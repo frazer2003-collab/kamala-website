@@ -26,6 +26,7 @@ import {
   getConfirmedBookings,
   getStaffBookingKey,
 } from "@/lib/booking-requests";
+import { formatBedSetup } from "@/lib/bed-setup";
 import {
   getRoomBlockById,
   getStaffCalendarBlocks,
@@ -573,6 +574,12 @@ export default async function StaffCalendarPage({
                     {selected.nights} nights
                   </dd>
                 </div>
+                {selected.bedSetup ? (
+                  <div>
+                    <dt>Bed setup</dt>
+                    <dd>{formatBedSetup(selected.bedSetup)} requested</dd>
+                  </div>
+                ) : null}
               </dl>
 
               <CalendarBookingPanel

@@ -46,6 +46,7 @@ export type BookingRequestRow = {
   bank_transfer_claimed_at: string | null;
   conversation_token: string | null;
   room_unit_id: string | null;
+  bed_setup?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -164,6 +165,7 @@ export type PropertySettingsRow = {
   calendar_color_sold_out?: string | null;
   hero_image_url: string | null;
   hero_image_storage_path: string | null;
+  show_room_photos_on_gallery?: boolean | null;
   updated_at: string;
 };
 
@@ -238,6 +240,7 @@ export type Database = {
           bank_transfer_claimed_at?: string | null;
           conversation_token?: string | null;
           room_unit_id?: string | null;
+          bed_setup?: string;
         };
         Update: Partial<Omit<BookingRequestRow, "id" | "created_at">>;
         Relationships: [];
@@ -417,6 +420,7 @@ export type Database = {
           p_note: string | null;
           p_conversation_token: string;
           p_available_count: number;
+          p_bed_setup?: string | null;
         };
         Returns: {
           ok: boolean;

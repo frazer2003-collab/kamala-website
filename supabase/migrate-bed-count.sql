@@ -1,0 +1,2 @@
+-- Superseded by migrate-bed-setup.sql (double / twin instead of 1–4 beds).
+-- Run migrate-bed-setup.sql only.

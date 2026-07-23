@@ -189,6 +189,7 @@ export async function fulfillBookingDeposit({
     estimatedTotal: booking.estimated_total,
     note: booking.note ?? "",
     depositPaid: booking.deposit_amount ?? booking.estimated_total,
+    bedSetup: booking.bed_setup,
     overbooked,
   });
 

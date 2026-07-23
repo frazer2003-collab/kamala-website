@@ -1,4 +1,5 @@
 import { type Booking, type BookingStatus } from "@/lib/content";
+import { parseBedSetup } from "@/lib/bed-setup";
 import { getCalendarMonthBounds, monthOverlapsBooking } from "@/lib/calendar";
 import {
   createStaffSupabaseClient,
@@ -93,6 +94,7 @@ export function mapBookingRequest(
     staffNote: row.staff_note ?? "",
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
     roomNumber: null,
+    bedSetup: parseBedSetup(row.bed_setup),
   };
 }
 

@@ -773,6 +773,102 @@ export async function movePropertyGalleryPhoto(
   return { success: "Photo order updated." };
 }
 
+export async function reorderPropertyGalleryPhotos(
+  _prevState: StaffGalleryState,
+  formData: FormData,
+): Promise<StaffGalleryState> {
+  await requireStaffCalendarWrite();
+
+  if (!hasStaffSupabaseConfig()) {
+    return { error: "Supabase is not configured yet." };
+  }
+
+  const orderedIds = getValue(formData, "ordered-ids")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (orderedIds.length === 0) {
+    return { error: "Could not save the new photo order." };
+  }
+
+  if (new Set(orderedIds).size !== orderedIds.length) {
+    return { error: "Could not save the new photo order." };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data, error } = await supabase
+    .from("property_gallery_photos")
+    .select("id")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error || !data?.length) {
+    return { error: "Could not save the new photo order." };
+  }
+
+  const existingIds = data.map((row) => row.id);
+  if (
+    orderedIds.length !== existingIds.length ||
+    orderedIds.some((id) => !existingIds.includes(id))
+  ) {
+    return { error: "Photo list changed. Refresh and try again." };
+  }
+
+  for (let index = 0; index < orderedIds.length; index += 1) {
+    const { error: updateError } = await supabase
+      .from("property_gallery_photos")
+      .update({ sort_order: index })
+      .eq("id", orderedIds[index]);
+
+    if (updateError) {
+      return { error: "Could not save the new photo order. Try again." };
+    }
+  }
+
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.propertyGallery);
+  revalidatePath("/gallery");
+  revalidatePath("/staff/gallery");
+  return { success: "Photo order saved." };
+}
+
+export async function updateGalleryRoomPhotosVisibility(
+  _prevState: StaffGalleryState,
+  formData: FormData,
+): Promise<StaffGalleryState> {
+  await requireStaffCalendarWrite();
+
+  if (!hasStaffSupabaseConfig()) {
+    return { error: "Supabase is not configured yet." };
+  }
+
+  const showRoomPhotos = getValue(formData, "show-room-photos") === "1";
+  const supabase = createStaffSupabaseClient();
+  const { error } = await supabase
+    .from("property_settings")
+    .update({
+      show_room_photos_on_gallery: showRoomPhotos,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", "default");
+
+  if (error) {
+    return {
+      error: "Could not update room photo visibility. Try again in a moment.",
+    };
+  }
+
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.propertySettings);
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.propertyGallery);
+  revalidatePath("/gallery");
+  revalidatePath("/staff/gallery");
+  return {
+    success: showRoomPhotos
+      ? "Room photos will show on the guest gallery."
+      : "Room photos are hidden from the guest gallery.",
+  };
+}
+
 export async function addTour(
   _prevState: StaffTourState,
   formData: FormData,

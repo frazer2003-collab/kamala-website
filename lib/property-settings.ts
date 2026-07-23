@@ -40,6 +40,8 @@ export type PropertySettings = {
   accountNumber: string | null;
   calendarColors: CalendarColors;
   heroImageUrl: string | null;
+  /** When false, guest gallery skips the Rooms photo section. */
+  showRoomPhotosOnGallery: boolean;
   source: "supabase" | "defaults";
 };
 
@@ -70,6 +72,7 @@ const defaultSettings: PropertySettings = {
   accountNumber: null,
   calendarColors: { ...DEFAULT_CALENDAR_COLORS },
   heroImageUrl: DEFAULT_HERO_IMAGE_URL,
+  showRoomPhotosOnGallery: true,
   source: "defaults",
 };
 
@@ -102,6 +105,7 @@ function mapPropertySettings(row: PropertySettingsRow): PropertySettings {
       soldOut: row.calendar_color_sold_out ?? undefined,
     }),
     heroImageUrl: sanitizeMediaUrl(row.hero_image_url) ?? DEFAULT_HERO_IMAGE_URL,
+    showRoomPhotosOnGallery: row.show_room_photos_on_gallery !== false,
     source: "supabase",
   };
 }

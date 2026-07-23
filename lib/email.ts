@@ -1,3 +1,4 @@
+import { formatBedSetup, parseBedSetup } from "@/lib/bed-setup";
 import { getStaffNotificationRecipients } from "@/lib/staff-notification-emails";
 
 type StaffBookingEmail = {
@@ -11,6 +12,7 @@ type StaffBookingEmail = {
   estimatedTotal: number;
   note: string;
   depositPaid?: number;
+  bedSetup?: string | null;
   /** Paid stay that exceeded sellable inventory — staff must resolve. */
   overbooked?: boolean;
 };
@@ -54,6 +56,7 @@ export async function sendStaffBookingEmail(
     : booking.depositPaid
       ? "A guest paid the full stay and the room is reserved pending your review."
       : "A guest has requested a room through the Kamala website.";
+  const bedSetupLabel = parseBedSetup(booking.bedSetup ?? undefined);
   const text = [
     headline,
     "",
@@ -65,6 +68,7 @@ export async function sendStaffBookingEmail(
     `Room: ${booking.roomName}`,
     `Dates: ${booking.arrivalDate} to ${booking.departureDate}`,
     `Nights: ${booking.nights}`,
+    bedSetupLabel ? `Bed setup: ${formatBedSetup(bedSetupLabel)}` : "",
     `Stay total: $${booking.estimatedTotal}`,
     booking.depositPaid ? `Amount paid: $${booking.depositPaid}` : "",
     "",
@@ -87,6 +91,13 @@ export async function sendStaffBookingEmail(
         <tr><td style="padding: 8px 0; color: #6b5559;">Room</td><td>${escapeHtml(booking.roomName)}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b5559;">Dates</td><td>${escapeHtml(booking.arrivalDate)} to ${escapeHtml(booking.departureDate)}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b5559;">Nights</td><td>${booking.nights}</td></tr>
+        ${
+          bedSetupLabel
+            ? `<tr><td style="padding: 8px 0; color: #6b5559;">Bed setup</td><td>${escapeHtml(
+                formatBedSetup(bedSetupLabel),
+              )}</td></tr>`
+            : ""
+        }
         <tr><td style="padding: 8px 0; color: #6b5559;">Stay total</td><td>$${booking.estimatedTotal}</td></tr>
         ${booking.depositPaid ? `<tr><td style="padding: 8px 0; color: #6b5559;">Amount paid</td><td>$${booking.depositPaid}</td></tr>` : ""}
       </table>

@@ -128,6 +128,7 @@ create table if not exists public.booking_requests (
   bank_transfer_claimed_at timestamptz,
   conversation_token text unique,
   room_unit_id uuid,
+  bed_setup text not null default 'double' check (bed_setup in ('double', 'twin')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -314,6 +315,7 @@ create table if not exists public.property_settings (
   calendar_color_closed text not null default '#fecaca',
   calendar_color_booking text not null default '#fef08a',
   calendar_color_sold_out text not null default '#fdba74',
+  show_room_photos_on_gallery boolean not null default true,
   updated_at timestamptz not null default now()
 );
 

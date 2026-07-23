@@ -1,42 +1,56 @@
 "use client";
 import { StaffBusyEffect, StaffFormBusyBridge } from "@/components/staff-busy";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   movePropertyGalleryPhoto,
   removePropertyGalleryPhoto,
+  reorderPropertyGalleryPhotos,
   type StaffGalleryState,
 } from "@/app/staff/auth-actions";
+import { OptimizedImage } from "@/components/optimized-image";
 import type { PropertyGalleryPhoto } from "@/lib/property-gallery";
 import { prepareRoomPhotoFile } from "@/lib/prepare-room-photo";
 import { MAX_PROPERTY_GALLERY_PHOTOS } from "@/lib/room-photo-shared";
 
+const STAFF_GALLERY_THUMB_SIZES = "(max-width: 720px) 45vw, 10rem";
+
 type StaffPropertyGalleryManagerProps = {
   initialPhotos: PropertyGalleryPhoto[];
   disabled: boolean;
+  /** When true, guest gallery shows rooms before these photos. */
+  roomsShowFirst?: boolean;
 };
 
 const initialState: StaffGalleryState = {};
 
-function guestLayoutClass(index: number, total: number) {
-  if (total === 1) {
-    return "staff-gallery-manager__layout-chip--solo";
+function reorderLocally(
+  photos: PropertyGalleryPhoto[],
+  fromId: string,
+  toId: string,
+) {
+  if (fromId === toId) {
+    return photos;
   }
-  if (total === 2) {
-    return "staff-gallery-manager__layout-chip--half";
+
+  const fromIndex = photos.findIndex((photo) => photo.id === fromId);
+  const toIndex = photos.findIndex((photo) => photo.id === toId);
+  if (fromIndex < 0 || toIndex < 0) {
+    return photos;
   }
-  if (total === 3 && index === 0) {
-    return "staff-gallery-manager__layout-chip--wide";
-  }
-  const pattern = index % 8;
-  if (pattern === 0) {
-    return "staff-gallery-manager__layout-chip--wide";
-  }
-  if (pattern === 5) {
-    return "staff-gallery-manager__layout-chip--feature";
-  }
-  return "";
+
+  const next = [...photos];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
 }
 
 async function uploadGalleryPhoto(file: File) {
@@ -60,31 +74,51 @@ async function uploadGalleryPhoto(file: File) {
 export function StaffPropertyGalleryManager({
   initialPhotos,
   disabled,
+  roomsShowFirst = false,
 }: StaffPropertyGalleryManagerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const reorderFormRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const [photos, setPhotos] = useState(initialPhotos);
+  const [orderedIds, setOrderedIds] = useState(() =>
+    initialPhotos.map((photo) => photo.id).join(","),
+  );
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [removeState, removeAction, removing] = useActionState(
     removePropertyGalleryPhoto,
     initialState,
   );
   const [moveState, moveAction, moving] = useActionState(movePropertyGalleryPhoto, initialState);
-  const busy = disabled || isUploading || removing || moving;
+  const [reorderState, reorderAction, reordering] = useActionState(
+    reorderPropertyGalleryPhotos,
+    initialState,
+  );
+  const busy = disabled || isUploading || removing || moving || reordering;
 
   useEffect(() => {
     setPhotos(initialPhotos);
+    setOrderedIds(initialPhotos.map((photo) => photo.id).join(","));
   }, [initialPhotos]);
 
   useEffect(() => {
-    if (removeState.success || moveState.success) {
+    if (removeState.success || moveState.success || reorderState.success) {
       setConfirmingId(null);
       router.refresh();
     }
-  }, [moveState.success, removeState.success, router]);
+  }, [moveState.success, removeState.success, reorderState.success, router]);
+
+  const submitReorder = useEffectEvent((nextPhotos: PropertyGalleryPhoto[]) => {
+    const nextIds = nextPhotos.map((photo) => photo.id).join(",");
+    setOrderedIds(nextIds);
+    queueMicrotask(() => {
+      reorderFormRef.current?.requestSubmit();
+    });
+  });
 
   async function handleUpload(fileList: FileList | null) {
     if (!fileList || fileList.length === 0 || disabled || isUploading) {
@@ -113,8 +147,8 @@ export function StaffPropertyGalleryManager({
       setPhotos((current) => [...current, ...uploaded]);
       setUploadSuccess(
         uploaded.length === 1
-          ? "1 photo added — visible on the gallery page after rooms."
-          : `${uploaded.length} photos added — visible on the gallery page after rooms.`,
+          ? "1 photo added — visible on the gallery page."
+          : `${uploaded.length} photos added — visible on the gallery page.`,
       );
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Could not upload photos.");
@@ -126,20 +160,70 @@ export function StaffPropertyGalleryManager({
     }
   }
 
+  function handleDragStart(event: DragEvent<HTMLLIElement>, photoId: string) {
+    if (busy) {
+      event.preventDefault();
+      return;
+    }
+    setDraggingId(photoId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", photoId);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLLIElement>, photoId: string) {
+    if (!draggingId || draggingId === photoId || busy) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropTargetId(photoId);
+  }
+
+  function handleDrop(event: DragEvent<HTMLLIElement>, photoId: string) {
+    event.preventDefault();
+    const fromId = event.dataTransfer.getData("text/plain") || draggingId;
+    setDraggingId(null);
+    setDropTargetId(null);
+
+    if (!fromId || fromId === photoId || busy) {
+      return;
+    }
+
+    setPhotos((current) => {
+      const next = reorderLocally(current, fromId, photoId);
+      if (next === current) {
+        return current;
+      }
+      submitReorder(next);
+      return next;
+    });
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null);
+    setDropTargetId(null);
+  }
+
   return (
     <div className="staff-gallery-manager">
       <StaffBusyEffect
-        active={isUploading || removing || moving}
+        active={isUploading || removing || moving || reordering}
         message={isUploading ? "Uploading photos…" : "Updating gallery…"}
       />
+      <form action={reorderAction} className="sr-only" ref={reorderFormRef}>
+        <StaffFormBusyBridge />
+        <input name="ordered-ids" type="hidden" value={orderedIds} />
+        <button type="submit">Save order</button>
+      </form>
       <div className="staff-gallery-manager__toolbar">
         <div>
           <p className="staff-gallery-manager__count">
             {photos.length} of {MAX_PROPERTY_GALLERY_PHOTOS} photos
           </p>
           <p className="staff-gallery-manager__hint">
-            JPEG, PNG, WebP, or GIF · up to 4 MB each. Photos are resized before upload. Use Move
-            up/down so the guest order matches what you want.
+            Drag to set guesthouse photo order
+            {roomsShowFirst ? " (after rooms on the guest page)" : ""}. Up/Down works too · JPEG,
+            PNG, WebP, or GIF · up to 4 MB each.
           </p>
         </div>
         <input
@@ -175,129 +259,135 @@ export function StaffPropertyGalleryManager({
           {uploadError}
         </p>
       ) : null}
-      {removeState.error || moveState.error ? (
+      {removeState.error || moveState.error || reorderState.error ? (
         <p className="form-message form-message--error" role="alert">
-          {removeState.error ?? moveState.error}
+          {removeState.error ?? moveState.error ?? reorderState.error}
         </p>
       ) : null}
-      {removeState.success || moveState.success ? (
+      {removeState.success || moveState.success || reorderState.success ? (
         <p className="form-message form-message--success" role="status">
-          {removeState.success ?? moveState.success}
+          {removeState.success ?? moveState.success ?? reorderState.success}
         </p>
       ) : null}
 
       {photos.length > 0 ? (
-        <>
-          <div className="staff-gallery-manager__guest-preview" aria-label="Guest layout preview">
-            <p className="staff-gallery-manager__preview-label">Guest layout (after rooms)</p>
-            <ul className="staff-gallery-manager__layout-preview">
-              {photos.map((photo, index) => (
-                <li
-                  className={`staff-gallery-manager__layout-chip ${guestLayoutClass(index, photos.length)}`.trim()}
-                  key={`layout-${photo.id}`}
-                >
-                  <img alt="" src={photo.url} />
-                  <span>{index + 1}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <ul className="staff-gallery-manager__grid" aria-label="Guesthouse photo order">
+          {photos.map((photo, index) => {
+            const alt = photo.caption ?? `Guesthouse gallery photo ${index + 1} of ${photos.length}`;
+            const confirming = confirmingId === photo.id;
+            const isDragging = draggingId === photo.id;
+            const isDropTarget = dropTargetId === photo.id && draggingId !== photo.id;
 
-          <ul className="staff-gallery-manager__grid">
-            {photos.map((photo, index) => {
-              const alt = photo.caption ?? `Guesthouse gallery photo ${index + 1} of ${photos.length}`;
-              const confirming = confirmingId === photo.id;
-
-              return (
-                <li key={photo.id}>
-                  <img alt={alt} className="staff-gallery-manager__thumb" src={photo.url} />
-                  <span className="staff-gallery-manager__caption">
-                    {index + 1} of {photos.length}
-                    {index % 8 === 0 || (photos.length === 3 && index === 0)
-                      ? " · wider on guest page"
-                      : index % 8 === 5
-                        ? " · featured on guest page"
-                        : ""}
+            return (
+              <li
+                className={[
+                  "staff-gallery-manager__item",
+                  isDragging ? "staff-gallery-manager__item--dragging" : "",
+                  isDropTarget ? "staff-gallery-manager__item--drop-target" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                draggable={!busy}
+                key={photo.id}
+                onDragEnd={handleDragEnd}
+                onDragOver={(event) => handleDragOver(event, photo.id)}
+                onDragStart={(event) => handleDragStart(event, photo.id)}
+                onDrop={(event) => handleDrop(event, photo.id)}
+              >
+                <div className="staff-gallery-manager__thumb">
+                  <OptimizedImage
+                    alt={alt}
+                    className="staff-gallery-manager__thumb-image"
+                    fill
+                    loading={index < 2 ? "eager" : "lazy"}
+                    quality={70}
+                    sizes={STAFF_GALLERY_THUMB_SIZES}
+                    src={photo.url}
+                  />
+                  <span className="staff-gallery-manager__order-badge" aria-hidden="true">
+                    {index + 1}
                   </span>
-                  <div className="staff-gallery-manager__item-actions">
-                    <form action={moveAction}>
-      <StaffFormBusyBridge />
+                </div>
+                <span className="staff-gallery-manager__caption sr-only">
+                  Position {index + 1} of {photos.length}
+                </span>
+                <div className="staff-gallery-manager__item-actions">
+                  <form action={moveAction}>
+                    <StaffFormBusyBridge />
+                    <input name="photo-id" type="hidden" value={photo.id} />
+                    <input name="direction" type="hidden" value="up" />
+                    <button
+                      aria-label={`Move ${alt} earlier`}
+                      className="button button--quiet staff-gallery-manager__action"
+                      disabled={busy || index === 0}
+                      type="submit"
+                    >
+                      Up
+                    </button>
+                  </form>
+                  <form action={moveAction}>
+                    <StaffFormBusyBridge />
+                    <input name="photo-id" type="hidden" value={photo.id} />
+                    <input name="direction" type="hidden" value="down" />
+                    <button
+                      aria-label={`Move ${alt} later`}
+                      className="button button--quiet staff-gallery-manager__action"
+                      disabled={busy || index === photos.length - 1}
+                      type="submit"
+                    >
+                      Down
+                    </button>
+                  </form>
+                  {confirming ? (
+                    <form
+                      action={removeAction}
+                      aria-label={`Confirm remove ${alt}`}
+                      className="staff-gallery-manager__confirm"
+                    >
+                      <StaffFormBusyBridge />
                       <input name="photo-id" type="hidden" value={photo.id} />
-                      <input name="direction" type="hidden" value="up" />
-                      <button
-                        aria-label={`Move ${alt} earlier`}
-                        className="button button--quiet staff-gallery-manager__action"
-                        disabled={busy || index === 0}
-                        type="submit"
-                      >
-                        Up
-                      </button>
+                      <p className="staff-gallery-manager__confirm-copy">
+                        Remove this photo? Guests will no longer see it on the gallery page.
+                      </p>
+                      <div className="staff-gallery-manager__confirm-actions">
+                        <button
+                          className="button button--primary staff-gallery-manager__action"
+                          disabled={busy}
+                          type="submit"
+                        >
+                          {removing ? "Removing…" : "Remove photo"}
+                        </button>
+                        <button
+                          className="button button--quiet staff-gallery-manager__action"
+                          disabled={busy}
+                          onClick={() => setConfirmingId(null)}
+                          type="button"
+                        >
+                          Keep it
+                        </button>
+                      </div>
                     </form>
-                    <form action={moveAction}>
-      <StaffFormBusyBridge />
-                      <input name="photo-id" type="hidden" value={photo.id} />
-                      <input name="direction" type="hidden" value="down" />
-                      <button
-                        aria-label={`Move ${alt} later`}
-                        className="button button--quiet staff-gallery-manager__action"
-                        disabled={busy || index === photos.length - 1}
-                        type="submit"
-                      >
-                        Down
-                      </button>
-                    </form>
-                    {confirming ? (
-                      <form
-                        action={removeAction}
-                        aria-label={`Confirm remove ${alt}`}
-                        className="staff-gallery-manager__confirm"
-                      >
-      <StaffFormBusyBridge />
-                        <input name="photo-id" type="hidden" value={photo.id} />
-                        <p className="staff-gallery-manager__confirm-copy">
-                          Remove this photo? Guests will no longer see it on the gallery page.
-                        </p>
-                        <div className="staff-gallery-manager__confirm-actions">
-                          <button
-                            className="button button--primary staff-gallery-manager__action"
-                            disabled={busy}
-                            type="submit"
-                          >
-                            {removing ? "Removing…" : "Remove photo"}
-                          </button>
-                          <button
-                            className="button button--quiet staff-gallery-manager__action"
-                            disabled={busy}
-                            onClick={() => setConfirmingId(null)}
-                            type="button"
-                          >
-                            Keep it
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <button
-                        aria-label={`Remove ${alt}`}
-                        className="button button--quiet staff-gallery-manager__action"
-                        disabled={busy}
-                        onClick={() => setConfirmingId(photo.id)}
-                        type="button"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </>
+                  ) : (
+                    <button
+                      aria-label={`Remove ${alt}`}
+                      className="button button--quiet staff-gallery-manager__action"
+                      disabled={busy}
+                      onClick={() => setConfirmingId(photo.id)}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
         <div className="staff-empty-state staff-gallery-manager__empty">
           <h3>No guesthouse photos yet</h3>
           <p>
-            Add photos of the garden, common areas, and views. Guests see them after the room
-            photos.
+            Add photos of the garden, common areas, and views. Guests see them on the gallery page.
           </p>
           <label
             className={`button button--primary${busy ? " button--disabled" : ""}`}

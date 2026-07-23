@@ -10,9 +10,12 @@ export const revalidate = 120;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
+  const description = settings.showRoomPhotosOnGallery
+    ? `Photos of ${settings.propertyName} — rooms, the guesthouse, garden, and surroundings.`
+    : `Photos of ${settings.propertyName} — the guesthouse, garden, and surroundings.`;
   return {
     title: `Gallery · ${settings.propertyName}`,
-    description: `Photos of ${settings.propertyName} — rooms, the guesthouse, garden, and surroundings.`,
+    description,
   };
 }
 
@@ -21,6 +24,7 @@ export default async function GalleryPage() {
     getPropertySettings(),
     getGuestGallerySections(),
   ]);
+  const showRooms = settings.showRoomPhotosOnGallery && sections.some((section) => section.id === "rooms");
 
   return (
     <main className="guest-site site-shell guest-page gallery-page">
@@ -29,7 +33,11 @@ export default async function GalleryPage() {
       <div className="guest-page__intro gallery-page__intro">
         <p className="section-note">Gallery</p>
         <h1>A look around {settings.propertyName}.</h1>
-        <p>Room photos first, then the guesthouse, garden, and common areas.</p>
+        <p>
+          {showRooms
+            ? "Room photos first, then the guesthouse, garden, and common areas."
+            : "The guesthouse, garden, and common areas."}
+        </p>
       </div>
 
       <PropertyGallery propertyName={settings.propertyName} sections={sections} />

@@ -26,6 +26,7 @@ export function OptimizedImage({
   width,
   height,
   loading,
+  quality,
 }: OptimizedImageProps) {
   if (!src) {
     return null;
@@ -53,6 +54,7 @@ export function OptimizedImage({
       height={height}
       loading={loading}
       priority={priority}
+      quality={quality}
       sizes={sizes}
       src={src}
       width={width}

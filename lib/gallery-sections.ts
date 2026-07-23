@@ -4,6 +4,7 @@ import {
   samplePropertyGalleryPhotos,
   type PropertyGalleryPhoto,
 } from "@/lib/property-gallery";
+import { getPropertySettings } from "@/lib/property-settings";
 import { getPublicRooms } from "@/lib/rooms";
 
 export type GuestGallerySection = {
@@ -49,12 +50,15 @@ export function collectRoomGalleryPhotos(rooms: Room[]): PropertyGalleryPhoto[] 
 }
 
 export async function getGuestGallerySections(): Promise<GuestGallerySection[]> {
-  const [rooms, propertyPhotos] = await Promise.all([
+  const [rooms, propertyPhotos, settings] = await Promise.all([
     getPublicRooms(),
     getPublicPropertyGalleryPhotos(),
+    getPropertySettings(),
   ]);
 
-  const roomPhotos = collectRoomGalleryPhotos(rooms);
+  const roomPhotos = settings.showRoomPhotosOnGallery
+    ? collectRoomGalleryPhotos(rooms)
+    : [];
   const sections: GuestGallerySection[] = [];
 
   if (roomPhotos.length > 0) {

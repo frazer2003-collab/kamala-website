@@ -56,6 +56,9 @@ import {
   hasStripeConfig,
   hasStripeServerConfig,
 } from "@/lib/stripe";
+import {
+  resolveBedSetupForRoom,
+} from "@/lib/bed-setup";
 
 export type BookingFormValues = {
   guestName: string;
@@ -65,6 +68,7 @@ export type BookingFormValues = {
   arrival: string;
   departure: string;
   note: string;
+  bedSetup: string;
 };
 
 export type BookingActionState = {
@@ -166,6 +170,7 @@ function getBookingFormValues(formData: FormData): BookingFormValues {
     arrival: getValue(formData, "arrival"),
     departure: getValue(formData, "departure"),
     note: getValue(formData, "guest-note"),
+    bedSetup: getValue(formData, "bed-setup"),
   };
 }
 
@@ -292,6 +297,10 @@ export async function createBookingRequest(
   const arrivalDate = parseDate(arrival);
   const departureDate = parseDate(departure);
   const fieldErrors: Record<string, string> = {};
+  const bedResolution = selectedRoom
+    ? resolveBedSetupForRoom(selectedRoom.id, getValue(formData, "bed-setup"))
+    : { bedSetup: null, error: null };
+  const bedSetup = bedResolution.bedSetup;
 
   if (guestName.length < 2) {
     fieldErrors["guest-name"] = "Please enter the guest name.";
@@ -329,7 +338,12 @@ export async function createBookingRequest(
     fieldErrors.room = "This room is full. Choose another room or ask about flexible dates in your note.";
   }
 
-  if (Object.keys(fieldErrors).length > 0 || !selectedRoom || !arrivalDate || !departureDate) {
+  if (bedResolution.error || !bedSetup) {
+    fieldErrors["bed-setup"] =
+      bedResolution.error ?? "Choose one double bed or two single beds.";
+  }
+
+  if (Object.keys(fieldErrors).length > 0 || !selectedRoom || !arrivalDate || !departureDate || !bedSetup) {
     return bookingErrorState(
       "Please fix the highlighted details before sending the request.",
       formData,
@@ -420,6 +434,7 @@ export async function createBookingRequest(
         p_note: note || null,
         p_conversation_token: conversationToken,
         p_available_count: selectedRoom.availableCount,
+        p_bed_setup: bedSetup,
       },
     );
 
