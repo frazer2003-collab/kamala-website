@@ -26,6 +26,7 @@ import { getRoomAvailabilityLabel, isRoomBookable } from "@/lib/room-availabilit
 import { getBookingPaymentReturnUrl } from "@/lib/booking-payment-url";
 import type { BankTransferDetails } from "@/lib/bank-transfer";
 import {
+  BED_SETUP_REQUIRED_ERROR,
   defaultBedSetupForRoom,
   roomOffersBedSetupChoice,
 } from "@/lib/bed-setup";
@@ -626,6 +627,10 @@ export function BookingRequest({
             <span className="field-error" id="room-full-error">
               {t(locale, "roomFull")}
             </span>
+          ) : !roomOffersBedSetupChoice(fields.roomId) ? (
+            <span className="field-help" id="bed-setup-fixed">
+              {t(locale, "bedsFixedHelp")}
+            </span>
           ) : null}
         </div>
         {roomOffersBedSetupChoice(fields.roomId) ? (
@@ -634,7 +639,7 @@ export function BookingRequest({
             <select
               id="bed-setup"
               name="bed-setup"
-              value={fields.bedSetup || "double"}
+              value={fields.bedSetup}
               onChange={(event) =>
                 setFields((current) => ({
                   ...current,
@@ -649,12 +654,17 @@ export function BookingRequest({
               aria-invalid={Boolean(state.fieldErrors?.["bed-setup"]) || undefined}
               required
             >
+              <option disabled value="">
+                {t(locale, "bedsChoose")}
+              </option>
               <option value="double">{t(locale, "bedDouble")}</option>
               <option value="twin">{t(locale, "bedTwin")}</option>
             </select>
             {state.fieldErrors?.["bed-setup"] ? (
               <span className="field-error" id="bed-setup-error">
-                {state.fieldErrors["bed-setup"]}
+                {state.fieldErrors["bed-setup"] === BED_SETUP_REQUIRED_ERROR
+                  ? t(locale, "bedsRequired")
+                  : state.fieldErrors["bed-setup"]}
               </span>
             ) : (
               <span className="field-help" id="bed-setup-help">
@@ -760,6 +770,14 @@ export function BookingRequest({
             {getRoomAvailabilityLabel(
               getRoomAvailableCount(selectedRoom, availabilityByRoomId),
             )}
+            {roomOffersBedSetupChoice(fields.roomId) &&
+            (fields.bedSetup === "double" || fields.bedSetup === "twin")
+              ? ` · ${t(locale, "bedReceiptLabel")}: ${
+                  fields.bedSetup === "twin"
+                    ? t(locale, "bedTwin")
+                    : t(locale, "bedDouble")
+                }`
+              : null}
             .
             {showPromoPricing
               ? ` Promotional pricing applies to ${displayQuote.promoNights} of ${nights} night${nights === 1 ? "" : "s"}.`

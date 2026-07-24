@@ -5,6 +5,9 @@ const ALL_BED_SETUPS: BedSetup[] = ["double", "twin"];
 /** Superior Double or Twin Room — the only type with a guest bed choice. */
 const BED_SETUP_CHOICE_ROOM_IDS = new Set(["courtyard"]);
 
+/** Stable field-error token mapped to i18n on the booking form. */
+export const BED_SETUP_REQUIRED_ERROR = "bed_setup_required";
+
 export function isBedSetup(value: string): value is BedSetup {
   return value === "double" || value === "twin";
 }
@@ -24,7 +27,7 @@ export function getAllowedBedSetups(roomId?: string): BedSetup[] {
 
 /**
  * Resolve the bed setup to persist for a booking.
- * Only Superior (courtyard) requires / stores double or twin; other rooms stay null.
+ * Only Superior (courtyard) requires / stores double (king) or twin; other rooms stay null.
  */
 export function resolveBedSetupForRoom(
   roomId: string,
@@ -38,7 +41,7 @@ export function resolveBedSetupForRoom(
   if (!parsed) {
     return {
       bedSetup: null,
-      error: "Choose one double bed or two single beds.",
+      error: BED_SETUP_REQUIRED_ERROR,
     };
   }
 
@@ -46,13 +49,14 @@ export function resolveBedSetupForRoom(
 }
 
 export function formatBedSetup(setup: BedSetup): string {
-  return setup === "twin" ? "Two single beds" : "One double bed";
+  return setup === "twin" ? "Twin — two single beds" : "King — one bed";
 }
 
 export function formatBedSetupShort(setup: BedSetup): string {
-  return setup === "twin" ? "Twin" : "Double";
+  return setup === "twin" ? "Twin" : "King";
 }
 
-export function defaultBedSetupForRoom(roomId?: string): BedSetup | "" {
-  return roomOffersBedSetupChoice(roomId) ? "double" : "";
+/** No silent default — Superior guests must choose explicitly. */
+export function defaultBedSetupForRoom(_roomId?: string): BedSetup | "" {
+  return "";
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  BED_SETUP_REQUIRED_ERROR,
   defaultBedSetupForRoom,
   formatBedSetup,
   getAllowedBedSetups,
@@ -9,10 +10,10 @@ import {
 } from "./bed-setup";
 
 describe("bed setup by room", () => {
-  it("offers double or twin only on Superior (courtyard)", () => {
+  it("offers king or twin only on Superior (courtyard), with no silent default", () => {
     assert.deepEqual(getAllowedBedSetups("courtyard"), ["double", "twin"]);
     assert.equal(roomOffersBedSetupChoice("courtyard"), true);
-    assert.equal(defaultBedSetupForRoom("courtyard"), "double");
+    assert.equal(defaultBedSetupForRoom("courtyard"), "");
 
     for (const roomId of ["garden", "veranda", "loft", "ground"]) {
       assert.deepEqual(getAllowedBedSetups(roomId), []);
@@ -21,13 +22,23 @@ describe("bed setup by room", () => {
     }
   });
 
-  it("requires a valid double or twin choice on Superior only", () => {
+  it("requires a valid king or twin choice on Superior only", () => {
     assert.deepEqual(resolveBedSetupForRoom("courtyard", "twin"), {
       bedSetup: "twin",
       error: null,
     });
-    assert.equal(resolveBedSetupForRoom("courtyard", "queen").error !== null, true);
-    assert.equal(resolveBedSetupForRoom("courtyard", "").error !== null, true);
+    assert.deepEqual(resolveBedSetupForRoom("courtyard", "double"), {
+      bedSetup: "double",
+      error: null,
+    });
+    assert.deepEqual(resolveBedSetupForRoom("courtyard", "queen"), {
+      bedSetup: null,
+      error: BED_SETUP_REQUIRED_ERROR,
+    });
+    assert.deepEqual(resolveBedSetupForRoom("courtyard", ""), {
+      bedSetup: null,
+      error: BED_SETUP_REQUIRED_ERROR,
+    });
 
     assert.deepEqual(resolveBedSetupForRoom("garden", "twin"), {
       bedSetup: null,
@@ -39,8 +50,8 @@ describe("bed setup by room", () => {
     });
   });
 
-  it("formats bed setup in plain language", () => {
-    assert.equal(formatBedSetup("double"), "One double bed");
-    assert.equal(formatBedSetup("twin"), "Two single beds");
+  it("formats bed setup in plain language matching room marketing", () => {
+    assert.equal(formatBedSetup("double"), "King — one bed");
+    assert.equal(formatBedSetup("twin"), "Twin — two single beds");
   });
 });
