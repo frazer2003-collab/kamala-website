@@ -8,6 +8,9 @@ import {
   getGuesthouseLocationLabel,
 } from "@/lib/home-hero-copy";
 import { getPropertyTodayIso } from "@/lib/calendar";
+import {
+  refreshStaleStayDates,
+} from "@/lib/stay-dates";
 
 type HomeDateSearchProps = {
   arrival?: string;
@@ -110,6 +113,19 @@ export function HomeDateSearch({
     () => buildAtmosphereLede(locationLabel, propertyTagline, addressLine),
     [addressLine, locationLabel, propertyTagline],
   );
+
+  useEffect(() => {
+    const refreshed = refreshStaleStayDates(arrival, departure);
+    if (!refreshed) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("arrival", refreshed.arrival);
+    params.set("departure", refreshed.departure);
+    params.delete("error");
+    router.replace(`/?${params.toString()}`);
+  }, [arrival, departure, router, searchParams]);
 
   useEffect(() => {
     const nextArrival = arrival ?? propertyToday;

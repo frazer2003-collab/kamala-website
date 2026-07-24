@@ -695,7 +695,115 @@ p {
 }
 
 .hero-atmosphere--loading {
-  min-height: clamp(18rem, 48vh, 28rem);
+  min-height: clamp(14rem, 36vh, 22rem);
+  pointer-events: none;
+}
+
+.hero-atmosphere__skeleton {
+  border-radius: var(--radius-sm);
+  background: oklch(100% 0 0 / 0.16);
+}
+
+.hero-atmosphere__skeleton--brand {
+  width: min(100%, 10rem);
+  height: 0.85rem;
+  margin-bottom: var(--space-3);
+}
+
+.hero-atmosphere__skeleton--title {
+  width: min(100%, 14ch);
+  height: clamp(2.6rem, 7vw, 4.2rem);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.hero-atmosphere__skeleton--lede {
+  width: min(100%, 36ch);
+  height: 2.8rem;
+}
+
+.hero-atmosphere__skeleton--search {
+  width: min(100%, 40rem);
+  height: 4.8rem;
+  border-radius: var(--radius-lg);
+  background: oklch(100% 0 0 / 0.2);
+  box-shadow: var(--shadow-search);
+}
+
+@media (min-width: 960px) {
+  .hero-atmosphere__skeleton--brand {
+    display: none;
+  }
+
+  .hero-atmosphere__skeleton--search {
+    width: min(100%, 26rem);
+    justify-self: end;
+  }
+}
+
+.home-sticky-dates {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 3.25rem;
+  padding: 0.55rem clamp(var(--space-4), 4vw, var(--space-8));
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  box-shadow: none;
+}
+
+.home-sticky-dates__spacer {
+  height: 3.25rem;
+}
+
+.home-sticky-dates__label {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.92rem;
+  font-weight: 750;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.home-sticky-dates__change {
+  flex-shrink: 0;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
+.home-sticky-dates__change:hover,
+.home-sticky-dates__change:focus-visible {
+  color: var(--color-maroon-deep);
+}
+
+@media (max-width: 640px) {
+  .home-sticky-dates {
+    min-height: 3rem;
+    padding-block: 0.45rem;
+  }
+
+  .home-sticky-dates__spacer {
+    height: 3rem;
+  }
+
+  .home-sticky-dates__label {
+    font-size: 0.84rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-sticky-dates {
+    transition: none;
+  }
 }
 
 .hero-atmosphere__actions {

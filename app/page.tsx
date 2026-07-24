@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getBookingQuote } from "@/app/actions";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { HomeBookingSection } from "@/components/home-booking-section";
@@ -17,7 +18,11 @@ import { hasStripeClientConfig, getStripePublishableKey } from "@/lib/stripe";
 import { getPublicRooms } from "@/lib/rooms";
 import { getPublicRoomPromotions } from "@/lib/room-promotions";
 import { getRoomsStayAvailability } from "@/lib/stay-availability";
-import { parseStayDates } from "@/lib/stay-dates";
+import {
+  buildHomeStaySearchParams,
+  parseStayDates,
+  refreshStaleStayDates,
+} from "@/lib/stay-dates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
@@ -35,6 +40,19 @@ export default async function Home({
   }>;
 }) {
   const { room: initialRoomId, lang, arrival, departure } = await searchParams;
+
+  const refreshed = refreshStaleStayDates(arrival, departure);
+  if (refreshed) {
+    redirect(
+      `/?${buildHomeStaySearchParams({
+        arrival: refreshed.arrival,
+        departure: refreshed.departure,
+        room: initialRoomId,
+        lang,
+      })}`,
+    );
+  }
+
   const [rooms, promotions, settings] = await Promise.all([
     getPublicRooms(),
     getPublicRoomPromotions(),

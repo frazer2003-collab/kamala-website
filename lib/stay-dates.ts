@@ -1,4 +1,5 @@
 import { getPropertyTodayIso } from "@/lib/calendar";
+import { addIsoDays } from "@/lib/room-day-inventory";
 
 export type StayDates = {
   arrival: string;
@@ -6,11 +7,13 @@ export type StayDates = {
   nights: number;
 };
 
-export function parseStayDates(arrival?: string, departure?: string): StayDates | null {
-  if (!arrival || !departure || !/^\d{4}-\d{2}-\d{2}$/.test(arrival) || !/^\d{4}-\d{2}-\d{2}$/.test(departure)) {
-    return null;
-  }
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+function isIsoDate(value: string | undefined): value is string {
+  return Boolean(value && ISO_DATE.test(value));
+}
+
+function nightsBetween(arrival: string, departure: string): number | null {
   const arrivalDate = new Date(`${arrival}T00:00:00`);
   const departureDate = new Date(`${departure}T00:00:00`);
 
@@ -22,11 +25,18 @@ export function parseStayDates(arrival?: string, departure?: string): StayDates 
     return null;
   }
 
-  const nights = Math.round(
+  return Math.round(
     (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
   );
+}
 
-  if (nights < 1 || nights > 21) {
+export function parseStayDates(arrival?: string, departure?: string): StayDates | null {
+  if (!isIsoDate(arrival) || !isIsoDate(departure)) {
+    return null;
+  }
+
+  const nights = nightsBetween(arrival, departure);
+  if (nights === null || nights < 1 || nights > 21) {
     return null;
   }
 
@@ -36,6 +46,63 @@ export function parseStayDates(arrival?: string, departure?: string): StayDates 
   }
 
   return { arrival, departure, nights };
+}
+
+/** True when the query has a well-formed stay whose arrival is already in the past. */
+export function isStaleStayDateQuery(arrival?: string, departure?: string): boolean {
+  if (!isIsoDate(arrival) || !isIsoDate(departure)) {
+    return false;
+  }
+
+  const nights = nightsBetween(arrival, departure);
+  if (nights === null || nights < 1 || nights > 21) {
+    return false;
+  }
+
+  return arrival < getPropertyTodayIso();
+}
+
+/**
+ * Roll a past stay forward to property-local today, keeping the same night count.
+ * Returns null when the query is not a recognizable past stay.
+ */
+export function refreshStaleStayDates(
+  arrival?: string,
+  departure?: string,
+): StayDates | null {
+  if (!isStaleStayDateQuery(arrival, departure) || !isIsoDate(arrival) || !isIsoDate(departure)) {
+    return null;
+  }
+
+  const nights = nightsBetween(arrival, departure);
+  if (nights === null) {
+    return null;
+  }
+
+  const today = getPropertyTodayIso();
+  return {
+    arrival: today,
+    departure: addIsoDays(today, nights),
+    nights,
+  };
+}
+
+export function buildHomeStaySearchParams(input: {
+  arrival: string;
+  departure: string;
+  room?: string;
+  lang?: string;
+}): string {
+  const params = new URLSearchParams();
+  params.set("arrival", input.arrival);
+  params.set("departure", input.departure);
+  if (input.room) {
+    params.set("room", input.room);
+  }
+  if (input.lang) {
+    params.set("lang", input.lang);
+  }
+  return params.toString();
 }
 
 export function formatStayDateRange(arrival: string, departure: string) {

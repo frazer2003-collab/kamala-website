@@ -8,8 +8,13 @@ type HomeStickyDatesProps = {
   departure?: string;
 };
 
+function heroIsPastThreshold(hero: Element) {
+  return hero.getBoundingClientRect().bottom <= 64;
+}
+
 export function HomeStickyDates({ arrival, departure }: HomeStickyDatesProps) {
-  const [visible, setVisible] = useState(false);
+  const [heroPast, setHeroPast] = useState(false);
+  const [allowSticky, setAllowSticky] = useState(true);
 
   useEffect(() => {
     const hero = document.querySelector(".home-hero");
@@ -18,13 +23,9 @@ export function HomeStickyDates({ arrival, departure }: HomeStickyDatesProps) {
     }
 
     if (typeof IntersectionObserver === "undefined") {
+      const heroEl = hero;
       function onScroll() {
-        if (!hero) {
-          return;
-        }
-
-        const rect = hero.getBoundingClientRect();
-        setVisible(rect.bottom <= 64);
+        setHeroPast(heroIsPastThreshold(heroEl));
       }
 
       onScroll();
@@ -39,7 +40,7 @@ export function HomeStickyDates({ arrival, departure }: HomeStickyDatesProps) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry) {
-          setVisible(!entry.isIntersecting);
+          setHeroPast(!entry.isIntersecting);
         }
       },
       { rootMargin: "-64px 0px 0px 0px", threshold: 0 },
@@ -49,23 +50,78 @@ export function HomeStickyDates({ arrival, departure }: HomeStickyDatesProps) {
     return () => observer.disconnect();
   }, []);
 
-  if (!arrival || !departure || !visible) {
+  // Hold sticky chrome while the post-search #rooms jump settles.
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let settleTimer = 0;
+    let scrollListener: (() => void) | null = null;
+
+    function clearListeners() {
+      window.clearTimeout(settleTimer);
+      if (scrollListener) {
+        window.removeEventListener("scroll", scrollListener);
+        window.removeEventListener("scrollend", scrollListener);
+        scrollListener = null;
+      }
+    }
+
+    function armSettle() {
+      clearListeners();
+      setAllowSticky(false);
+
+      scrollListener = () => {
+        window.clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(() => {
+          setAllowSticky(true);
+          clearListeners();
+        }, 160);
+      };
+
+      window.addEventListener("scroll", scrollListener, { passive: true });
+      window.addEventListener("scrollend", scrollListener);
+      settleTimer = window.setTimeout(() => {
+        setAllowSticky(true);
+        clearListeners();
+      }, 800);
+    }
+
+    function onHashOrDates() {
+      if (window.location.hash === "#rooms") {
+        armSettle();
+      } else {
+        clearListeners();
+        setAllowSticky(true);
+      }
+    }
+
+    onHashOrDates();
+    window.addEventListener("hashchange", onHashOrDates);
+    return () => {
+      clearListeners();
+      window.removeEventListener("hashchange", onHashOrDates);
+    };
+  }, [arrival, departure]);
+
+  const visible = Boolean(arrival && departure && heroPast && allowSticky);
+
+  if (!arrival || !departure) {
     return null;
   }
 
   return (
-    <div className="home-sticky-dates" role="region" aria-label="Your selected dates">
-      <p className="home-sticky-dates__label">
-        {formatStayDateRange(arrival, departure)}
-      </p>
-      <div className="home-sticky-dates__actions">
-        <a className="home-sticky-dates__change" href="#dates">
-          Change dates
-        </a>
-        <a className="button button--primary home-sticky-dates__action" href="#rooms">
-          View rooms
-        </a>
-      </div>
-    </div>
+    <>
+      {visible ? (
+        <div className="home-sticky-dates" role="region" aria-label="Your selected dates">
+          <p className="home-sticky-dates__label">{formatStayDateRange(arrival, departure)}</p>
+          <a className="home-sticky-dates__change" href="#dates">
+            Change dates
+          </a>
+        </div>
+      ) : null}
+      {visible ? <div aria-hidden="true" className="home-sticky-dates__spacer" /> : null}
+    </>
   );
 }
