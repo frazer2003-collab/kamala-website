@@ -128,7 +128,7 @@ create table if not exists public.booking_requests (
   bank_transfer_claimed_at timestamptz,
   conversation_token text unique,
   room_unit_id uuid,
-  bed_setup text not null default 'double' check (bed_setup in ('double', 'twin')),
+  bed_setup text check (bed_setup is null or bed_setup in ('double', 'twin')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

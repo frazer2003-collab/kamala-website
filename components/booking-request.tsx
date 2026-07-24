@@ -27,6 +27,7 @@ import { getBookingPaymentReturnUrl } from "@/lib/booking-payment-url";
 import type { BankTransferDetails } from "@/lib/bank-transfer";
 import {
   defaultBedSetupForRoom,
+  roomOffersBedSetupChoice,
 } from "@/lib/bed-setup";
 
 function persistGuestLocale(nextLocale: Locale) {
@@ -280,10 +281,14 @@ export function BookingRequest({
 
   useEffect(() => {
     setFields((current) => {
+      const nextBedSetup = defaultBedSetupForRoom(current.roomId);
+      if (!roomOffersBedSetupChoice(current.roomId)) {
+        return current.bedSetup === "" ? current : { ...current, bedSetup: "" };
+      }
       if (current.bedSetup === "double" || current.bedSetup === "twin") {
         return current;
       }
-      return { ...current, bedSetup: defaultBedSetupForRoom(current.roomId) };
+      return { ...current, bedSetup: nextBedSetup };
     });
   }, [fields.roomId]);
 
@@ -623,39 +628,41 @@ export function BookingRequest({
             </span>
           ) : null}
         </div>
-        <div className="field-pair">
-          <label htmlFor="bed-setup">{t(locale, "beds")}</label>
-          <select
-            id="bed-setup"
-            name="bed-setup"
-            value={fields.bedSetup || "double"}
-            onChange={(event) =>
-              setFields((current) => ({
-                ...current,
-                bedSetup: event.target.value,
-              }))
-            }
-            aria-describedby={
-              state.fieldErrors?.["bed-setup"]
-                ? "bed-setup-error"
-                : "bed-setup-help"
-            }
-            aria-invalid={Boolean(state.fieldErrors?.["bed-setup"]) || undefined}
-            required
-          >
-            <option value="double">{t(locale, "bedDouble")}</option>
-            <option value="twin">{t(locale, "bedTwin")}</option>
-          </select>
-          {state.fieldErrors?.["bed-setup"] ? (
-            <span className="field-error" id="bed-setup-error">
-              {state.fieldErrors["bed-setup"]}
-            </span>
-          ) : (
-            <span className="field-help" id="bed-setup-help">
-              {t(locale, "bedsHelp")}
-            </span>
-          )}
-        </div>
+        {roomOffersBedSetupChoice(fields.roomId) ? (
+          <div className="field-pair">
+            <label htmlFor="bed-setup">{t(locale, "beds")}</label>
+            <select
+              id="bed-setup"
+              name="bed-setup"
+              value={fields.bedSetup || "double"}
+              onChange={(event) =>
+                setFields((current) => ({
+                  ...current,
+                  bedSetup: event.target.value,
+                }))
+              }
+              aria-describedby={
+                state.fieldErrors?.["bed-setup"]
+                  ? "bed-setup-error"
+                  : "bed-setup-help"
+              }
+              aria-invalid={Boolean(state.fieldErrors?.["bed-setup"]) || undefined}
+              required
+            >
+              <option value="double">{t(locale, "bedDouble")}</option>
+              <option value="twin">{t(locale, "bedTwin")}</option>
+            </select>
+            {state.fieldErrors?.["bed-setup"] ? (
+              <span className="field-error" id="bed-setup-error">
+                {state.fieldErrors["bed-setup"]}
+              </span>
+            ) : (
+              <span className="field-help" id="bed-setup-help">
+                {t(locale, "bedsHelp")}
+              </span>
+            )}
+          </div>
+        ) : null}
         <div className="field-pair">
           <label htmlFor="nights">{t(locale, "nights")}</label>
           <input

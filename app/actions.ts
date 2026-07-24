@@ -338,12 +338,11 @@ export async function createBookingRequest(
     fieldErrors.room = "This room is full. Choose another room or ask about flexible dates in your note.";
   }
 
-  if (bedResolution.error || !bedSetup) {
-    fieldErrors["bed-setup"] =
-      bedResolution.error ?? "Choose one double bed or two single beds.";
+  if (bedResolution.error) {
+    fieldErrors["bed-setup"] = bedResolution.error;
   }
 
-  if (Object.keys(fieldErrors).length > 0 || !selectedRoom || !arrivalDate || !departureDate || !bedSetup) {
+  if (Object.keys(fieldErrors).length > 0 || !selectedRoom || !arrivalDate || !departureDate) {
     return bookingErrorState(
       "Please fix the highlighted details before sending the request.",
       formData,
