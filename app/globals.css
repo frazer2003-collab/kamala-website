@@ -1818,6 +1818,8 @@ p {
 .staff-gallery-manager__thumb-image {
   object-fit: cover;
   pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .staff-gallery-manager__order-badge {

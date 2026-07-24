@@ -2,6 +2,7 @@
 import { StaffBusyEffect, StaffFormBusyBridge } from "@/components/staff-busy";
 
 import {
+  startTransition,
   useActionState,
   useEffect,
   useEffectEvent,
@@ -77,12 +78,9 @@ export function StaffPropertyGalleryManager({
   roomsShowFirst = false,
 }: StaffPropertyGalleryManagerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const reorderFormRef = useRef<HTMLFormElement>(null);
+  const draggingIdRef = useRef<string | null>(null);
   const router = useRouter();
   const [photos, setPhotos] = useState(initialPhotos);
-  const [orderedIds, setOrderedIds] = useState(() =>
-    initialPhotos.map((photo) => photo.id).join(","),
-  );
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -102,7 +100,6 @@ export function StaffPropertyGalleryManager({
 
   useEffect(() => {
     setPhotos(initialPhotos);
-    setOrderedIds(initialPhotos.map((photo) => photo.id).join(","));
   }, [initialPhotos]);
 
   useEffect(() => {
@@ -113,10 +110,13 @@ export function StaffPropertyGalleryManager({
   }, [moveState.success, removeState.success, reorderState.success, router]);
 
   const submitReorder = useEffectEvent((nextPhotos: PropertyGalleryPhoto[]) => {
-    const nextIds = nextPhotos.map((photo) => photo.id).join(",");
-    setOrderedIds(nextIds);
-    queueMicrotask(() => {
-      reorderFormRef.current?.requestSubmit();
+    const formData = new FormData();
+    formData.set(
+      "ordered-ids",
+      nextPhotos.map((photo) => photo.id).join(","),
+    );
+    startTransition(() => {
+      reorderAction(formData);
     });
   });
 
@@ -165,13 +165,16 @@ export function StaffPropertyGalleryManager({
       event.preventDefault();
       return;
     }
+    // Ref updates sync so dragOver can allow drops before React re-renders.
+    draggingIdRef.current = photoId;
     setDraggingId(photoId);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", photoId);
   }
 
   function handleDragOver(event: DragEvent<HTMLLIElement>, photoId: string) {
-    if (!draggingId || draggingId === photoId || busy) {
+    const fromId = draggingIdRef.current;
+    if (!fromId || fromId === photoId || busy) {
       return;
     }
     event.preventDefault();
@@ -181,7 +184,8 @@ export function StaffPropertyGalleryManager({
 
   function handleDrop(event: DragEvent<HTMLLIElement>, photoId: string) {
     event.preventDefault();
-    const fromId = event.dataTransfer.getData("text/plain") || draggingId;
+    const fromId = event.dataTransfer.getData("text/plain") || draggingIdRef.current;
+    draggingIdRef.current = null;
     setDraggingId(null);
     setDropTargetId(null);
 
@@ -189,17 +193,17 @@ export function StaffPropertyGalleryManager({
       return;
     }
 
-    setPhotos((current) => {
-      const next = reorderLocally(current, fromId, photoId);
-      if (next === current) {
-        return current;
-      }
-      submitReorder(next);
-      return next;
-    });
+    const next = reorderLocally(photos, fromId, photoId);
+    if (next === photos) {
+      return;
+    }
+
+    setPhotos(next);
+    submitReorder(next);
   }
 
   function handleDragEnd() {
+    draggingIdRef.current = null;
     setDraggingId(null);
     setDropTargetId(null);
   }
@@ -210,11 +214,6 @@ export function StaffPropertyGalleryManager({
         active={isUploading || removing || moving || reordering}
         message={isUploading ? "Uploading photos…" : "Updating gallery…"}
       />
-      <form action={reorderAction} className="sr-only" ref={reorderFormRef}>
-        <StaffFormBusyBridge />
-        <input name="ordered-ids" type="hidden" value={orderedIds} />
-        <button type="submit">Save order</button>
-      </form>
       <div className="staff-gallery-manager__toolbar">
         <div>
           <p className="staff-gallery-manager__count">
@@ -311,7 +310,10 @@ export function StaffPropertyGalleryManager({
                 <span className="staff-gallery-manager__caption sr-only">
                   Position {index + 1} of {photos.length}
                 </span>
-                <div className="staff-gallery-manager__item-actions">
+                <div
+                  className="staff-gallery-manager__item-actions"
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
                   <form action={moveAction}>
                     <StaffFormBusyBridge />
                     <input name="photo-id" type="hidden" value={photo.id} />
