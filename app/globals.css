@@ -7042,6 +7042,33 @@ textarea:focus {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-maroon) 25%, transparent);
 }
 
+/* Month starts win over weekend tint so new months stay easy to spot. */
+.staff-extranet__dayhead--month-start,
+.staff-extranet__dayhead--month-start.staff-extranet__dayhead--weekend {
+  border-color: color-mix(in srgb, var(--color-maroon) 42%, var(--color-border));
+  border-left-width: 3px;
+  border-left-color: var(--color-maroon);
+  background: color-mix(in srgb, var(--color-maroon-wash) 72%, var(--color-surface));
+  box-shadow: 0 1px 0 oklch(22% 0.025 12 / 0.04);
+}
+
+.staff-extranet__dayhead--month-start .staff-extranet__weekday {
+  color: var(--color-maroon-deep);
+  font-weight: 800;
+}
+
+.staff-extranet__dayhead--month-start .staff-extranet__daynum {
+  color: var(--color-maroon-deep);
+  font-weight: 800;
+}
+
+.staff-extranet__dayhead--month-start.staff-extranet__dayhead--today {
+  border-color: color-mix(in srgb, var(--color-maroon) 55%, var(--color-border));
+  border-left-color: var(--color-maroon-deep);
+  background: var(--color-maroon-wash);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-maroon) 28%, transparent);
+}
+
 .staff-extranet__dayhead--muted {
   opacity: 0.55;
 }

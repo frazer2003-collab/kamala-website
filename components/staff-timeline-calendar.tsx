@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { CalendarJumpToToday } from "@/components/calendar-jump-to-today";
 import { CalendarStayBarLink } from "@/components/calendar-stay-bar-link";
@@ -25,7 +25,13 @@ import {
 import { getRoomsToSellForDay } from "@/lib/room-day-inventory";
 import type { CalendarColors } from "@/lib/calendar-colors";
 import { getCalendarColorStyleProps } from "@/lib/calendar-colors";
-import { getTodayIso, isPastCalendarDate, type CalendarDay } from "@/lib/calendar";
+import {
+  formatCalendarMonthLabelFromIso,
+  getTodayIso,
+  isPastCalendarDate,
+  pickLeadingVisibleCalendarDayIso,
+  type CalendarDay,
+} from "@/lib/calendar";
 import type { StaffBooking } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
 import { formatMoneyCompactSuffix, type PropertyCurrency } from "@/lib/currency";
@@ -1001,6 +1007,8 @@ export function StaffTimelineCalendar({
   const staySelection = useCalendarStaySelection();
   const activeBookingKey = staySelection?.bookingKey || selectedBookingKey;
   const activeBlockKey = staySelection?.blockKey || selectedBlockKey;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [visibleMonthLabel, setVisibleMonthLabel] = useState(monthLabel);
   // Size columns so the anchor month (1st → last) fills the first screenful.
   const fitMonthDayCount = Math.max(
     28,
@@ -1012,6 +1020,65 @@ export function StaffTimelineCalendar({
       ).getDate(),
   );
 
+  useEffect(() => {
+    setVisibleMonthLabel(monthLabel);
+  }, [monthLabel]);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) {
+      return;
+    }
+
+    let frame = 0;
+    const updateVisibleMonth = () => {
+      frame = 0;
+      const monthCell = root.querySelector<HTMLElement>(".staff-extranet__month");
+      const dayHeads = root.querySelectorAll<HTMLElement>("[data-calendar-day]");
+      if (!monthCell || dayHeads.length === 0) {
+        return;
+      }
+
+      const labelRight = monthCell.getBoundingClientRect().right;
+      const days = Array.from(dayHeads, (dayHead) => {
+        const rect = dayHead.getBoundingClientRect();
+        return {
+          iso: dayHead.dataset.calendarDay ?? "",
+          left: rect.left,
+          right: rect.right,
+        };
+      }).filter((day) => day.iso.length > 0);
+
+      const leadingIso = pickLeadingVisibleCalendarDayIso(days, labelRight);
+      if (!leadingIso) {
+        return;
+      }
+
+      const nextLabel = formatCalendarMonthLabelFromIso(leadingIso);
+      setVisibleMonthLabel((current) => (current === nextLabel ? current : nextLabel));
+    };
+
+    const onScrollOrResize = () => {
+      if (frame) {
+        return;
+      }
+      frame = window.requestAnimationFrame(updateVisibleMonth);
+    };
+
+    updateVisibleMonth();
+    root.addEventListener("scroll", onScrollOrResize, { passive: true });
+    const resizeObserver = new ResizeObserver(onScrollOrResize);
+    resizeObserver.observe(root);
+
+    return () => {
+      root.removeEventListener("scroll", onScrollOrResize);
+      resizeObserver.disconnect();
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [calendarDays, monthLabel]);
+
   return (
     <div
       className="staff-extranet staff-extranet--full"
@@ -1022,14 +1089,20 @@ export function StaffTimelineCalendar({
     >
       <CalendarJumpToToday />
       <h2 className="sr-only">Room availability by day</h2>
-      <div className="staff-extranet__scroll" id="calendar-today">
+      <div className="staff-extranet__scroll" id="calendar-today" ref={scrollRef}>
         <div
           className="staff-extranet__dates"
           style={{ ["--timeline-days" as string]: dayCount }}
         >
-          <div className="staff-extranet__month">{monthLabel}</div>
+          <div
+            aria-live="polite"
+            className="staff-extranet__month"
+          >
+            {visibleMonthLabel}
+          </div>
           {calendarDays.map((day, columnIndex) => {
             const header = formatTimelineDayHeader(day.date, day.iso, todayIso);
+            const isMonthStart = header.dayNumber === 1;
 
             return (
               <div
@@ -1037,6 +1110,7 @@ export function StaffTimelineCalendar({
                   "staff-extranet__dayhead",
                   header.isWeekend ? "staff-extranet__dayhead--weekend" : "",
                   header.isToday ? "staff-extranet__dayhead--today extranet-cell--today" : "",
+                  isMonthStart ? "staff-extranet__dayhead--month-start" : "",
                   !day.inCurrentMonth ? "staff-extranet__dayhead--muted" : "",
                 ]
                   .filter(Boolean)
