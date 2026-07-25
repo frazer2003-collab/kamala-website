@@ -49,7 +49,7 @@ values
     950,
     'Sleeps 2',
     '45 m² · king bed · balcony · garden view',
-    2,
+    4,
     'More space for longer stays — 45 m² with a private balcony over the guesthouse garden, seating for two, refrigerator, and en-suite bathroom. Quiet room facing greenery above the old city.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'King bed', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
     'garden'
