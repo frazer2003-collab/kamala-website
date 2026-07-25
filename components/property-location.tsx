@@ -1,12 +1,15 @@
 import {
-  buildGoogleMapsEmbedUrl,
   buildGoogleMapsSearchUrl,
+  buildMapEmbedUrl,
+  type MapCoordinates,
 } from "@/lib/google-maps";
 
 type PropertyLocationProps = {
   addressLine: string | null;
   contactPhone?: string | null;
   showMap?: boolean;
+  /** When set, show a working map embed (OpenStreetMap). */
+  coordinates?: MapCoordinates | null;
 };
 
 function MapPinIcon() {
@@ -33,6 +36,7 @@ export function PropertyLocation({
   addressLine,
   contactPhone,
   showMap = true,
+  coordinates = null,
 }: PropertyLocationProps) {
   if (!addressLine) {
     return (
@@ -46,6 +50,7 @@ export function PropertyLocation({
   }
 
   const mapsUrl = buildGoogleMapsSearchUrl(addressLine);
+  const embedUrl = coordinates ? buildMapEmbedUrl(coordinates) : null;
 
   return (
     <div className="property-location">
@@ -59,20 +64,36 @@ export function PropertyLocation({
         <MapPinIcon />
         <span>
           <strong>{addressLine}</strong>
-          {contactPhone ? <span className="property-location__phone">{contactPhone}</span> : null}
+          {contactPhone ? (
+            <span className="property-location__phone">{contactPhone}</span>
+          ) : null}
         </span>
       </a>
-      {showMap ? (
+      {showMap && embedUrl ? (
         <div className="property-location__map">
           <iframe
             allowFullScreen
             className="property-location__map-frame"
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
-            src={buildGoogleMapsEmbedUrl(addressLine)}
+            src={embedUrl}
             title={`Map showing ${addressLine}`}
           />
+          <a
+            className="property-location__maps-hint"
+            href={mapsUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Open in Google Maps
+          </a>
         </div>
+      ) : showMap ? (
+        <p className="property-location__maps-hint">
+          <a href={mapsUrl} rel="noopener noreferrer" target="_blank">
+            Open this address in Google Maps
+          </a>
+        </p>
       ) : null}
     </div>
   );

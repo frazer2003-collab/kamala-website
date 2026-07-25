@@ -1368,17 +1368,32 @@ p {
 }
 
 .property-location__map {
+  display: grid;
+  gap: 0.55rem;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface-muted);
+  padding-bottom: 0.65rem;
 }
 
 .property-location__map-frame {
   display: block;
   width: 100%;
-  height: 12rem;
+  height: min(18rem, 52vw);
   border: 0;
+  background: var(--color-surface-strong);
+}
+
+.property-location__map .property-location__maps-hint {
+  margin: 0;
+  padding: 0 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.location-page .property-location__map-frame {
+  height: min(22rem, 58vw);
 }
 
 .hero-search__form {
