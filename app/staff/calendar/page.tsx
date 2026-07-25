@@ -27,6 +27,7 @@ import {
   getStaffBookingKey,
 } from "@/lib/booking-requests";
 import { formatBedSetup } from "@/lib/bed-setup";
+import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS } from "@/lib/stay-dates";
 import {
   getRoomBlockById,
   getStaffCalendarBlocks,
@@ -243,7 +244,7 @@ export default async function StaffCalendarPage({
               : error === "invalid-email"
                 ? "Enter a valid email, or leave blank if the guest has no email."
                 : error === "invalid-dates"
-                  ? "Choose a stay between 1 and 21 nights."
+                  ? `Choose a stay between ${MIN_STAY_NIGHTS} and ${MAX_STAY_NIGHTS} nights.`
                   : error === "invalid-room-type"
                     ? "Choose a valid room type."
                     : error === "invalid-room-number"

@@ -59,6 +59,7 @@ import {
 import {
   resolveBedSetupForRoom,
 } from "@/lib/bed-setup";
+import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS, isStayLengthAllowed } from "@/lib/stay-dates";
 
 export type BookingFormValues = {
   guestName: string;
@@ -354,11 +355,13 @@ export async function createBookingRequest(
     (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (nights < 1 || nights > 21) {
+  if (!isStayLengthAllowed(nights)) {
     return bookingErrorState(
-      "Stays can be requested for 1 to 21 nights.",
+      `Stays can be requested for ${MIN_STAY_NIGHTS} to ${MAX_STAY_NIGHTS} nights.`,
       formData,
-      { departure: "Choose a stay between 1 and 21 nights." },
+      {
+        departure: `Choose a stay between ${MIN_STAY_NIGHTS} and ${MAX_STAY_NIGHTS} nights.`,
+      },
     );
   }
 
@@ -1079,7 +1082,7 @@ export async function updateConfirmedBooking(
     (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (nights < 1 || nights > 21) {
+  if (!isStayLengthAllowed(nights)) {
     redirect(`${bookingHref}&error=invalid-dates`);
   }
 
@@ -1607,7 +1610,7 @@ export async function createWalkInBooking(
     (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (nights < 1 || nights > 21) {
+  if (!isStayLengthAllowed(nights)) {
     return walkInError("invalid-dates", formData, arrival);
   }
 

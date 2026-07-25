@@ -7,6 +7,18 @@ export type StayDates = {
   nights: number;
 };
 
+/** Inclusive guest/staff stay length bounds (nights between arrival and departure). */
+export const MIN_STAY_NIGHTS = 1;
+export const MAX_STAY_NIGHTS = 31;
+
+export function isStayLengthAllowed(nights: number): boolean {
+  return (
+    Number.isFinite(nights) &&
+    nights >= MIN_STAY_NIGHTS &&
+    nights <= MAX_STAY_NIGHTS
+  );
+}
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function isIsoDate(value: string | undefined): value is string {
@@ -36,7 +48,7 @@ export function parseStayDates(arrival?: string, departure?: string): StayDates 
   }
 
   const nights = nightsBetween(arrival, departure);
-  if (nights === null || nights < 1 || nights > 21) {
+  if (nights === null || !isStayLengthAllowed(nights)) {
     return null;
   }
 
@@ -55,7 +67,7 @@ export function isStaleStayDateQuery(arrival?: string, departure?: string): bool
   }
 
   const nights = nightsBetween(arrival, departure);
-  if (nights === null || nights < 1 || nights > 21) {
+  if (nights === null || !isStayLengthAllowed(nights)) {
     return false;
   }
 

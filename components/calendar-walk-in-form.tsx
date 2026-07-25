@@ -18,6 +18,7 @@ import {
   calculateStayQuote,
   type RoomPromotionRate,
 } from "@/lib/pricing";
+import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS } from "@/lib/stay-dates";
 
 type CalendarWalkInFormProps = {
   roomId: string;
@@ -53,7 +54,7 @@ function walkInErrorCopy(code?: string) {
     case "invalid-email":
       return "Enter a valid email, or leave blank if the guest has no email.";
     case "invalid-dates":
-      return "Choose a valid date range (1–21 nights).";
+      return `Choose a valid date range (${MIN_STAY_NIGHTS}–${MAX_STAY_NIGHTS} nights).`;
     case "invalid-custom-total":
       return "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates.";
     case "capacity-verify-failed":

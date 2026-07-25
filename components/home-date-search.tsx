@@ -10,6 +10,8 @@ import {
 import { getPropertyTodayIso } from "@/lib/calendar";
 import { buildGoogleMapsSearchUrl } from "@/lib/google-maps";
 import {
+  MAX_STAY_NIGHTS,
+  MIN_STAY_NIGHTS,
   refreshStaleStayDates,
 } from "@/lib/stay-dates";
 
@@ -233,8 +235,8 @@ export function HomeDateSearch({
 
       {dateError ? (
         <p className="form-message form-message--error hero-atmosphere__message" role="alert">
-          Check-out must be after check-in. Choose a stay between 1 and 21 nights, starting
-          from today.
+          Check-out must be after check-in. Choose a stay between {MIN_STAY_NIGHTS} and{" "}
+          {MAX_STAY_NIGHTS} nights, starting from today.
         </p>
       ) : null}
     </section>

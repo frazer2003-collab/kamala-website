@@ -111,7 +111,7 @@ create table if not exists public.booking_requests (
   room_name text not null,
   arrival_date date not null,
   departure_date date not null,
-  nights integer not null check (nights between 1 and 21),
+  nights integer not null check (nights between 1 and 31),
   estimated_total integer not null check (estimated_total >= 0),
   note text,
   staff_note text,
