@@ -30,10 +30,22 @@ export function SiteFooter({ settings }: { settings: PropertySettings }) {
         <nav aria-label="Guest pages and legal" className="site-footer__nav">
           <Link href="/gallery">Gallery</Link>
           <Link href="/#rooms">Rooms</Link>
+          <Link href="/location">Location</Link>
           <Link href="/tours">Tours</Link>
+          <Link href="/#booking">Contact</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/cancellation">Cancellation</Link>
+          {settings.lineUrl ? (
+            <a href={settings.lineUrl} rel="noopener noreferrer" target="_blank">
+              LINE
+            </a>
+          ) : null}
+          {settings.whatsappUrl ? (
+            <a href={settings.whatsappUrl} rel="noopener noreferrer" target="_blank">
+              WhatsApp
+            </a>
+          ) : null}
           <Link className="site-footer__staff" href="/staff/login">
             Staff
           </Link>

@@ -4,7 +4,7 @@ import { formatPropertyTagline } from "@/lib/property-brand";
 
 type GuestTopbarProps = {
   settings: PropertySettings;
-  current?: "home" | "gallery" | "tours";
+  current?: "home" | "gallery" | "tours" | "location";
   tone?: "default" | "on-dark";
 };
 
@@ -31,6 +31,9 @@ export function GuestTopbar({ settings, current, tone = "default" }: GuestTopbar
           Gallery
         </Link>
         <Link href="/#rooms">Rooms</Link>
+        <Link aria-current={current === "location" ? "page" : undefined} href="/location">
+          Location
+        </Link>
         <Link aria-current={current === "tours" ? "page" : undefined} href="/tours">
           Tours
         </Link>

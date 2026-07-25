@@ -11,8 +11,8 @@ export const revalidate = 120;
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
   return {
-    title: `Tours`,
-    description: `Local Chiang Mai tours and experiences arranged through ${settings.propertyName}.`,
+    title: "Tours",
+    description: `Chiang Mai tours from ${settings.propertyName} near Tha Pae Gate — temples, cooking, and day trips while you stay.`,
   };
 }
 
@@ -29,8 +29,9 @@ export default async function ToursPage() {
           <h1>Experiences around Chiang Mai.</h1>
           <p>
             Temples, mountains, cooking, and ethical wildlife visits we can help
-            arrange while you stay. Tell us what you want when you book, or ask
-            at the front desk for current operators and pickup times.
+            arrange from our guesthouse near Tha Pae Gate. Tell us what you want
+            when you book, or ask at the front desk for current operators and
+            pickup times.
           </p>
         </div>
 
