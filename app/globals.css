@@ -7031,6 +7031,17 @@ textarea:focus {
   box-shadow: 0 1px 0 oklch(22% 0.025 12 / 0.03);
 }
 
+.staff-extranet__dayhead--month-start {
+  border-left-color: color-mix(in srgb, var(--color-maroon) 55%, var(--color-border));
+  border-left-width: 2px;
+  background: color-mix(in srgb, var(--color-maroon-wash) 55%, var(--color-surface));
+}
+
+.staff-extranet__dayhead--month-start .staff-extranet__weekday {
+  color: var(--color-maroon-deep);
+  font-weight: 800;
+}
+
 .staff-extranet__dayhead--weekend {
   background: color-mix(in srgb, var(--color-surface) 88%, var(--color-maroon-wash));
   border-color: color-mix(in srgb, var(--color-border) 70%, var(--color-maroon-wash));

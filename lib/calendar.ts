@@ -32,6 +32,37 @@ export function formatCalendarMonthLabel(year: number, month: number) {
   }).format(new Date(year, month - 1, 1));
 }
 
+/** Month label for a YYYY-MM-DD (or YYYY-MM) value. */
+export function formatCalendarMonthLabelFromIso(iso: string) {
+  const year = Number(iso.slice(0, 4));
+  const month = Number(iso.slice(5, 7));
+  if (!year || month < 1 || month > 12) {
+    return formatCalendarMonthLabel(new Date().getFullYear(), new Date().getMonth() + 1);
+  }
+  return formatCalendarMonthLabel(year, month);
+}
+
+/**
+ * Pick the first day column whose right edge clears the sticky label edge
+ * (the leading visible day while scrolling the staff timeline).
+ */
+export function pickLeadingVisibleCalendarDayIso(
+  days: Array<{ iso: string; left: number; right: number }>,
+  labelRight: number,
+) {
+  if (days.length === 0) {
+    return null;
+  }
+
+  for (const day of days) {
+    if (day.right > labelRight + 1) {
+      return day.iso;
+    }
+  }
+
+  return days[days.length - 1]?.iso ?? null;
+}
+
 export const PROPERTY_TIME_ZONE = "Asia/Bangkok";
 
 function toIsoDate(date: Date) {
