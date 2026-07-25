@@ -6887,10 +6887,10 @@ textarea:focus {
 
 .staff-extranet__dates,
 .extranet-room__grid {
-  --extranet-label-width: 10.5rem;
-  /* Compact card columns — denser so more nights fit on screen. */
-  --extranet-day-width: 3.15rem;
-  --extranet-day-gap: 0.28rem;
+  --extranet-label-width: 9.25rem;
+  /* Same card look, tighter columns so more nights fit in the viewport. */
+  --extranet-day-width: 2.55rem;
+  --extranet-day-gap: 0.14rem;
   display: grid;
   column-gap: var(--extranet-day-gap);
   grid-template-columns: var(--extranet-label-width) repeat(
@@ -7003,9 +7003,9 @@ textarea:focus {
   gap: var(--space-3);
   box-sizing: border-box;
   min-width: calc(
-    var(--extranet-label-width, 10.5rem) +
+    var(--extranet-label-width, 9.25rem) +
       var(--timeline-days) *
-      (var(--extranet-day-width, 3.15rem) + var(--extranet-day-gap, 0.28rem))
+      (var(--extranet-day-width, 2.55rem) + var(--extranet-day-gap, 0.14rem))
   );
   padding: 0.65rem 0.85rem;
   border-bottom: 1px solid color-mix(in srgb, var(--color-success) 22%, var(--color-border));
@@ -7570,10 +7570,10 @@ textarea:focus {
   );
   position: relative;
   display: grid;
-  column-gap: var(--extranet-day-gap, 0.28rem);
+  column-gap: var(--extranet-day-gap, 0.14rem);
   grid-template-columns: repeat(
     var(--timeline-days),
-    minmax(var(--extranet-day-width, 3.15rem), 1fr)
+    minmax(var(--extranet-day-width, 2.55rem), 1fr)
   );
   grid-template-rows: var(--extranet-reservations-height);
   align-items: stretch;
@@ -7890,9 +7890,9 @@ textarea:focus {
 
   .staff-extranet__dates,
   .extranet-room__grid {
-    --extranet-label-width: 7.75rem;
-    --extranet-day-width: 3.45rem;
-    --extranet-day-gap: 0.22rem;
+    --extranet-label-width: 7.25rem;
+    --extranet-day-width: 2.7rem;
+    --extranet-day-gap: 0.12rem;
   }
 
   .extranet-pill {
