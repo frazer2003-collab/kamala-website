@@ -54,8 +54,16 @@ export function isPastCalendarDate(iso: string) {
   return iso < getTodayIso();
 }
 
-/** Past nights kept visible when the staff timeline is on the current month. */
-export const STAFF_TIMELINE_PAST_LOOKBACK_DAYS = 2;
+/** Max months the staff timeline can show in one view. */
+export const STAFF_TIMELINE_MAX_MONTHS = 3;
+
+/** Default span: anchor month plus the next two. */
+export const STAFF_TIMELINE_DEFAULT_MONTHS = 3;
+
+export type CalendarMonthRef = {
+  year: number;
+  month: number;
+};
 
 function parseIsoToLocalDate(iso: string) {
   const [year, month, day] = iso.split("-").map(Number);
@@ -68,12 +76,98 @@ function shiftIsoDate(iso: string, days: number) {
   return toIsoDate(date);
 }
 
-function buildIsoDayRange(
-  startIso: string,
-  endIso: string,
-  year: number,
-  month: number,
-): CalendarDay[] {
+/** Inclusive month count from start through end (same month → 1). */
+export function calendarMonthSpan(start: CalendarMonthRef, end: CalendarMonthRef) {
+  return (end.year - start.year) * 12 + (end.month - start.month) + 1;
+}
+
+export function listCalendarMonths(
+  start: CalendarMonthRef,
+  monthCount: number,
+): CalendarMonthRef[] {
+  const count = Math.max(1, Math.floor(monthCount));
+  return Array.from({ length: count }, (_, index) =>
+    shiftCalendarMonth(start.year, start.month, index),
+  );
+}
+
+/**
+ * Normalize a month range so start ≤ end and the span is at most
+ * STAFF_TIMELINE_MAX_MONTHS (extra months are trimmed from the end).
+ */
+export function clampCalendarMonthRange(
+  start: CalendarMonthRef,
+  end: CalendarMonthRef,
+  maxMonths = STAFF_TIMELINE_MAX_MONTHS,
+): { start: CalendarMonthRef; end: CalendarMonthRef; monthCount: number } {
+  const ordered =
+    calendarMonthSpan(start, end) > 0
+      ? { start, end }
+      : { start: end, end: start };
+  const rawCount = calendarMonthSpan(ordered.start, ordered.end);
+  const monthCount = Math.min(Math.max(1, rawCount), Math.max(1, maxMonths));
+  const clampedEnd = shiftCalendarMonth(
+    ordered.start.year,
+    ordered.start.month,
+    monthCount - 1,
+  );
+
+  return {
+    start: ordered.start,
+    end: clampedEnd,
+    monthCount,
+  };
+}
+
+export function parseStaffTimelineRange(
+  monthParam?: string,
+  throughParam?: string,
+  {
+    defaultMonths = STAFF_TIMELINE_DEFAULT_MONTHS,
+    maxMonths = STAFF_TIMELINE_MAX_MONTHS,
+  }: {
+    defaultMonths?: number;
+    maxMonths?: number;
+  } = {},
+) {
+  const start = parseCalendarMonth(monthParam);
+  const requestedEnd = throughParam
+    ? parseCalendarMonth(throughParam)
+    : shiftCalendarMonth(start.year, start.month, Math.max(1, defaultMonths) - 1);
+  const clamped = clampCalendarMonthRange(start, requestedEnd, maxMonths);
+  const months = listCalendarMonths(clamped.start, clamped.monthCount);
+  const monthKey = formatCalendarMonth(clamped.start.year, clamped.start.month);
+  const throughKey = formatCalendarMonth(clamped.end.year, clamped.end.month);
+
+  return {
+    ...clamped,
+    months,
+    monthKey,
+    throughKey,
+  };
+}
+
+export function formatCalendarMonthRangeLabel(
+  start: CalendarMonthRef,
+  end: CalendarMonthRef,
+) {
+  if (start.year === end.year && start.month === end.month) {
+    return formatCalendarMonthLabel(start.year, start.month);
+  }
+
+  const startLabel = new Intl.DateTimeFormat("en", {
+    month: "short",
+    year: start.year === end.year ? undefined : "numeric",
+  }).format(new Date(start.year, start.month - 1, 1));
+  const endLabel = new Intl.DateTimeFormat("en", {
+    month: "short",
+    year: "numeric",
+  }).format(new Date(end.year, end.month - 1, 1));
+
+  return `${startLabel} – ${endLabel}`;
+}
+
+function buildIsoDayRange(startIso: string, endIso: string): CalendarDay[] {
   const days: CalendarDay[] = [];
   let cursor = startIso;
 
@@ -82,7 +176,8 @@ function buildIsoDayRange(
     days.push({
       date,
       iso: cursor,
-      inCurrentMonth: date.getFullYear() === year && date.getMonth() + 1 === month,
+      // All days in the selected staff timeline range are interactive.
+      inCurrentMonth: true,
     });
     cursor = shiftIsoDate(cursor, 1);
   }
@@ -91,30 +186,38 @@ function buildIsoDayRange(
 }
 
 /**
- * Staff timeline day columns: mostly today + future.
- * In the current month, only a short past lookback is kept so the board
- * is not dominated by completed nights.
+ * Staff timeline day columns for one or more full calendar months
+ * (max STAFF_TIMELINE_MAX_MONTHS).
  */
 export function buildStaffTimelineDays(
   year: number,
   month: number,
   {
-    todayIso = getTodayIso(),
-    pastLookbackDays = STAFF_TIMELINE_PAST_LOOKBACK_DAYS,
+    monthCount = STAFF_TIMELINE_DEFAULT_MONTHS,
+    through,
   }: {
-    todayIso?: string;
-    pastLookbackDays?: number;
+    monthCount?: number;
+    through?: CalendarMonthRef;
   } = {},
 ): CalendarDay[] {
-  const { monthStart, monthEnd } = getCalendarMonthBounds(year, month);
+  const start = { year, month };
+  const end = through
+    ? through
+    : shiftCalendarMonth(year, month, Math.max(1, Math.floor(monthCount)) - 1);
+  const range = clampCalendarMonthRange(start, end);
+  const { monthStart } = getCalendarMonthBounds(range.start.year, range.start.month);
+  const { monthEnd } = getCalendarMonthBounds(range.end.year, range.end.month);
+  return buildIsoDayRange(monthStart, monthEnd);
+}
 
-  if (todayIso < monthStart || todayIso > monthEnd) {
-    return buildIsoDayRange(monthStart, monthEnd, year, month);
-  }
-
-  const lookback = Math.max(0, Math.floor(pastLookbackDays));
-  const rangeStart = shiftIsoDate(todayIso, -lookback);
-  return buildIsoDayRange(rangeStart, monthEnd, year, month);
+export function rangeOverlapsBooking(
+  booking: { arrivalDate: string; departureDate: string },
+  start: CalendarMonthRef,
+  end: CalendarMonthRef,
+) {
+  const { monthStart } = getCalendarMonthBounds(start.year, start.month);
+  const { monthEnd } = getCalendarMonthBounds(end.year, end.month);
+  return booking.arrivalDate <= monthEnd && booking.departureDate > monthStart;
 }
 
 export function buildCalendarDays(year: number, month: number): CalendarDay[] {

@@ -81,6 +81,7 @@ type StaffExtranetRoomSectionProps = {
   rateLookup: Map<string, number>;
   promotions: RoomPromotionRate[];
   monthKey: string;
+  throughKey?: string;
   canManage: boolean;
   selectedBookingKey: string;
   selectedBlockKey: string;
@@ -229,6 +230,7 @@ function UnitReservationRow({
   calendarDays,
   dayMetrics,
   monthKey,
+  throughKey,
   selectedBookingKey,
   selectedBlockKey,
   roomShortNameById,
@@ -240,6 +242,7 @@ function UnitReservationRow({
   calendarDays: CalendarDay[];
   dayMetrics: DayMetrics[];
   monthKey: string;
+  throughKey?: string;
   selectedBookingKey: string;
   selectedBlockKey: string;
   roomShortNameById: Map<string, string>;
@@ -312,7 +315,7 @@ function UnitReservationRow({
             <CalendarStayBarLink
               ariaLabel={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
               className={getBarClassName(bar, isSelected)}
-              href={getTimelineBarHref(bar, monthKey)}
+              href={getTimelineBarHref(bar, monthKey, throughKey)}
               itemKey={bar.itemKey}
               key={bar.key}
               kind={bar.kind === "booking" ? "booking" : "block"}
@@ -347,6 +350,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   rateLookup,
   promotions,
   monthKey,
+  throughKey,
   canManage,
   selectedBookingKey,
   selectedBlockKey,
@@ -446,7 +450,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         promotions,
         rateLookup,
       );
-      const dayHref = getTimelineDayHref(room.id, day.iso, monthKey);
+      const dayHref = getTimelineDayHref(room.id, day.iso, monthKey, throughKey);
 
       return {
         iso: day.iso,
@@ -466,18 +470,24 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           ? undefined
           : saleStatus === "sold-out"
             ? dayHref
-            : getStatusCellHref(room.id, day.iso, monthKey, manualClosures),
+            : getStatusCellHref(
+                room.id,
+                day.iso,
+                monthKey,
+                manualClosures,
+                throughKey,
+              ),
         // Day actions panel only — never deep-link into a booking/block detail.
         bookedHref: isPast ? undefined : dayHref,
         allotmentHref: isPast
           ? undefined
           : canManage
-            ? getTimelineAllotmentHref(room.id, day.iso, monthKey)
+            ? getTimelineAllotmentHref(room.id, day.iso, monthKey, throughKey)
             : dayHref,
         rateHref: isPast
           ? undefined
           : canManage
-            ? getTimelineRateHref(room.id, day.iso, monthKey)
+            ? getTimelineRateHref(room.id, day.iso, monthKey, throughKey)
             : dayHref,
         isSelected,
         rate: rateDetails.rate,
@@ -494,6 +504,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     rateLookup,
     manualClosures,
     monthKey,
+    throughKey,
     promotions,
     room,
     roomBookings,
@@ -564,7 +575,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           {firstFutureDay && canManage ? (
             <Link
               className="extranet-room__bulk"
-              href={getTimelineBulkAvailabilityHref(room.id, monthKey)}
+              href={getTimelineBulkAvailabilityHref(room.id, monthKey, throughKey)}
             >
               Close dates
             </Link>
@@ -731,7 +742,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                   sourceBooking?.databaseId ?? sourceChannel?.databaseId ?? null;
                 const showInlineAssign =
                   canManage && Boolean(stayId) && bar.needsRoom && bar.showLabel;
-                const detailHref = getTimelineBarHref(bar, monthKey);
+                const detailHref = getTimelineBarHref(bar, monthKey, throughKey);
 
                 return (
                   <div
@@ -913,6 +924,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
               dayMetrics={dayMetrics}
               key={unit.id}
               monthKey={monthKey}
+              throughKey={throughKey}
               roomShortNameById={roomShortNameById}
               selectedBlockKey={selectedBlockKey}
               selectedBookingKey={selectedBookingKey}
@@ -937,6 +949,7 @@ type StaffTimelineCalendarProps = {
   rateLookup: Map<string, number>;
   promotions: RoomPromotionRate[];
   monthKey: string;
+  throughKey?: string;
   monthLabel: string;
   canManage: boolean;
   selectedBookingKey: string;
@@ -958,6 +971,7 @@ export function StaffTimelineCalendar({
   rateLookup,
   promotions,
   monthKey,
+  throughKey,
   monthLabel,
   canManage,
   selectedBookingKey,
@@ -1020,6 +1034,7 @@ export function StaffTimelineCalendar({
             inventoryLookup={inventoryLookup}
             key={room.id}
             monthKey={monthKey}
+            throughKey={throughKey}
             promotions={promotions}
             rateLookup={rateLookup}
             room={room}

@@ -1,49 +1,76 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { getTodayIso, type CalendarDay } from "@/lib/calendar";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  STAFF_TIMELINE_MAX_MONTHS,
+  clampCalendarMonthRange,
+  formatCalendarMonth,
+  formatCalendarMonthLabel,
+  listCalendarMonths,
+  parseCalendarMonth,
+  shiftCalendarMonth,
+  type CalendarMonthRef,
+} from "@/lib/calendar";
 
 type CalendarDateStripProps = {
-  days: CalendarDay[];
-  selectedDate?: string;
+  monthKey: string;
+  throughKey: string;
+  selectedBookingKey?: string;
+  selectedBlockKey?: string;
 };
 
-function scrollTimelineToDay(iso: string) {
-  const target = document.querySelector<HTMLElement>(
-    `.staff-extranet__dayhead[data-calendar-day="${CSS.escape(iso)}"]`,
-  );
-  if (!target) {
-    return;
-  }
-
-  const scrollRoot =
-    target.closest<HTMLElement>(".staff-extranet__scroll") ??
-    target.closest<HTMLElement>(".staff-timeline__scroll");
-
-  if (!scrollRoot) {
-    target.scrollIntoView({ block: "nearest", inline: "center" });
-    return;
-  }
-
-  const rootRect = scrollRoot.getBoundingClientRect();
-  const cellRect = target.getBoundingClientRect();
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const nextLeft =
-    scrollRoot.scrollLeft +
-    (cellRect.left - rootRect.left) -
-    rootRect.width * 0.12;
-
-  scrollRoot.scrollTo({
-    left: Math.max(0, nextLeft),
-    behavior: reduceMotion ? "auto" : "smooth",
-  });
+function monthKeyOf(ref: CalendarMonthRef) {
+  return formatCalendarMonth(ref.year, ref.month);
 }
 
-export function CalendarDateStrip({ days, selectedDate }: CalendarDateStripProps) {
+function buildRangeHref(
+  startKey: string,
+  endKey: string,
+  selectedBookingKey?: string,
+  selectedBlockKey?: string,
+) {
+  const params = new URLSearchParams({
+    month: startKey,
+    through: endKey,
+  });
+  if (selectedBookingKey) {
+    params.set("booking", selectedBookingKey);
+  } else if (selectedBlockKey) {
+    params.set("block", selectedBlockKey);
+  }
+  return `/staff/calendar?${params.toString()}`;
+}
+
+function shortMonthLabel(ref: CalendarMonthRef) {
+  return new Intl.DateTimeFormat("en", { month: "short" }).format(
+    new Date(ref.year, ref.month - 1, 1),
+  );
+}
+
+export function CalendarDateStrip({
+  monthKey,
+  throughKey,
+  selectedBookingKey,
+  selectedBlockKey,
+}: CalendarDateStripProps) {
+  const router = useRouter();
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const todayIso = getTodayIso();
-  const [pickedIso, setPickedIso] = useState(todayIso);
-  const activeIso = selectedDate || pickedIso;
+  const start = parseCalendarMonth(monthKey);
+  const end = parseCalendarMonth(throughKey);
+  const [draftStart, setDraftStart] = useState<CalendarMonthRef | null>(null);
+
+  const pickerMonths = useMemo(() => {
+    const anchor = shiftCalendarMonth(start.year, start.month, -6);
+    return listCalendarMonths(anchor, 24);
+  }, [start.month, start.year]);
+
+  const selectedKeys = useMemo(() => {
+    const span = clampCalendarMonthRange(start, end).monthCount;
+    return new Set(
+      listCalendarMonths(start, span).map((month) => monthKeyOf(month)),
+    );
+  }, [end, start]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -51,9 +78,9 @@ export function CalendarDateStrip({ days, selectedDate }: CalendarDateStripProps
       return;
     }
 
-    const focusIso = days.some((day) => day.iso === activeIso) ? activeIso : todayIso;
+    const focusKey = monthKey;
     const chip = scroller.querySelector<HTMLElement>(
-      `[data-date-strip-day="${CSS.escape(focusIso)}"]`,
+      `[data-month-range="${CSS.escape(focusKey)}"]`,
     );
     if (!chip) {
       return;
@@ -64,52 +91,84 @@ export function CalendarDateStrip({ days, selectedDate }: CalendarDateStripProps
     const nextLeft =
       scroller.scrollLeft +
       (chipRect.left - scrollerRect.left) -
-      scrollerRect.width * 0.35;
+      scrollerRect.width * 0.2;
 
     scroller.scrollTo({ left: Math.max(0, nextLeft), behavior: "auto" });
-  }, [activeIso, days, todayIso]);
+  }, [monthKey, throughKey]);
 
-  if (days.length === 0) {
-    return null;
+  function applyRange(nextStart: CalendarMonthRef, nextEnd: CalendarMonthRef) {
+    const clamped = clampCalendarMonthRange(nextStart, nextEnd);
+    const startKey = monthKeyOf(clamped.start);
+    const endKey = monthKeyOf(clamped.end);
+    router.push(
+      buildRangeHref(startKey, endKey, selectedBookingKey, selectedBlockKey),
+    );
   }
 
+  function onMonthClick(month: CalendarMonthRef) {
+    if (!draftStart) {
+      setDraftStart(month);
+      return;
+    }
+
+    applyRange(draftStart, month);
+    setDraftStart(null);
+  }
+
+  const draftKey = draftStart ? monthKeyOf(draftStart) : null;
+  const hint = draftStart
+    ? `Choose an end month (up to ${STAFF_TIMELINE_MAX_MONTHS} months from ${formatCalendarMonthLabel(draftStart.year, draftStart.month)}).`
+    : `Select a start and end month — up to ${STAFF_TIMELINE_MAX_MONTHS} months at a time.`;
+
   return (
-    <div className="calendar-date-strip" role="region" aria-label="Jump to date">
+    <div className="calendar-date-strip" role="region" aria-label="Month range">
+      <div className="calendar-date-strip__header">
+        <p className="calendar-date-strip__hint">{hint}</p>
+        {draftStart ? (
+          <button
+            className="calendar-date-strip__cancel"
+            onClick={() => setDraftStart(null)}
+            type="button"
+          >
+            Cancel
+          </button>
+        ) : null}
+      </div>
       <div className="calendar-date-strip__scroller" ref={scrollerRef}>
-        {days.map((day) => {
-          const isToday = day.iso === todayIso;
-          const isActive = day.iso === activeIso;
-          const weekday = new Intl.DateTimeFormat("en", { weekday: "short" }).format(
-            day.date,
-          );
-          const label = new Intl.DateTimeFormat("en", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          }).format(day.date);
+        {pickerMonths.map((month) => {
+          const key = monthKeyOf(month);
+          const inSelection = selectedKeys.has(key);
+          const isDraft = draftKey === key;
+          const isRangeStart = key === monthKey;
+          const isRangeEnd = key === throughKey;
+          const label = formatCalendarMonthLabel(month.year, month.month);
 
           return (
             <button
-              aria-current={isActive ? "date" : undefined}
-              aria-label={`Show ${label}`}
+              aria-label={
+                draftStart
+                  ? `Set range end to ${label}`
+                  : `Start range at ${label}`
+              }
+              aria-pressed={inSelection || isDraft}
               className={[
-                "calendar-date-strip__day",
-                isToday ? "calendar-date-strip__day--today" : "",
-                isActive ? "calendar-date-strip__day--active" : "",
-                !day.inCurrentMonth ? "calendar-date-strip__day--muted" : "",
+                "calendar-date-strip__month",
+                inSelection ? "calendar-date-strip__month--selected" : "",
+                isDraft ? "calendar-date-strip__month--draft" : "",
+                isRangeStart ? "calendar-date-strip__month--start" : "",
+                isRangeEnd ? "calendar-date-strip__month--end" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
-              data-date-strip-day={day.iso}
-              key={day.iso}
-              onClick={() => {
-                setPickedIso(day.iso);
-                scrollTimelineToDay(day.iso);
-              }}
+              data-month-range={key}
+              key={key}
+              onClick={() => onMonthClick(month)}
               type="button"
             >
-              <span className="calendar-date-strip__weekday">{weekday}</span>
-              <span className="calendar-date-strip__num">{day.date.getDate()}</span>
+              <span className="calendar-date-strip__month-name">
+                {shortMonthLabel(month)}
+              </span>
+              <span className="calendar-date-strip__month-year">{month.year}</span>
             </button>
           );
         })}

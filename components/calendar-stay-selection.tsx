@@ -36,17 +36,20 @@ function readStayKeysFromLocation() {
 
 function writeStayUrl({
   monthKey,
+  throughKey,
   bookingKey,
   blockKey,
   mode,
 }: {
   monthKey: string;
+  throughKey?: string;
   bookingKey?: string;
   blockKey?: string;
   mode: "push" | "replace";
 }) {
   const params = new URLSearchParams(window.location.search);
   params.set("month", monthKey);
+  params.set("through", throughKey || monthKey);
   params.delete("room");
   params.delete("date");
   params.delete("mode");
@@ -72,6 +75,7 @@ function writeStayUrl({
 
 type CalendarStaySelectionProviderProps = {
   monthKey: string;
+  throughKey?: string;
   initialBookingKey?: string;
   initialBlockKey?: string;
   children: ReactNode;
@@ -79,6 +83,7 @@ type CalendarStaySelectionProviderProps = {
 
 export function CalendarStaySelectionProvider({
   monthKey,
+  throughKey,
   initialBookingKey = "",
   initialBlockKey = "",
   children,
@@ -101,25 +106,25 @@ export function CalendarStaySelectionProvider({
     (key: string) => {
       setBookingKey(key);
       setBlockKey("");
-      writeStayUrl({ monthKey, bookingKey: key, mode: "push" });
+      writeStayUrl({ monthKey, throughKey, bookingKey: key, mode: "push" });
     },
-    [monthKey],
+    [monthKey, throughKey],
   );
 
   const selectBlock = useCallback(
     (key: string) => {
       setBlockKey(key);
       setBookingKey("");
-      writeStayUrl({ monthKey, blockKey: key, mode: "push" });
+      writeStayUrl({ monthKey, throughKey, blockKey: key, mode: "push" });
     },
-    [monthKey],
+    [monthKey, throughKey],
   );
 
   const close = useCallback(() => {
     setBookingKey("");
     setBlockKey("");
-    writeStayUrl({ monthKey, mode: "push" });
-  }, [monthKey]);
+    writeStayUrl({ monthKey, throughKey, mode: "push" });
+  }, [monthKey, throughKey]);
 
   const value = useMemo(
     () => ({

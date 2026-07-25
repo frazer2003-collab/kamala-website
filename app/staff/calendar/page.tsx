@@ -10,11 +10,10 @@ import { StaffShell } from "@/components/staff-shell";
 import {
   buildCalendarDays,
   buildStaffTimelineDays,
-  formatCalendarMonth,
-  formatCalendarMonthLabel,
+  formatCalendarMonthRangeLabel,
   isPastCalendarDate,
-  monthOverlapsBooking,
-  parseCalendarMonth,
+  parseStaffTimelineRange,
+  rangeOverlapsBooking,
   bookingOccupiesDay,
 } from "@/lib/calendar";
 import { getCalendarMonthStats } from "@/lib/calendar-timeline";
@@ -64,6 +63,7 @@ export default async function StaffCalendarPage({
 }: {
   searchParams: Promise<{
     month?: string;
+    through?: string;
     booking?: string;
     block?: string;
     room?: string;
@@ -87,6 +87,7 @@ export default async function StaffCalendarPage({
 
   const {
     month: monthParam,
+    through: throughParam,
     booking: selectedBookingId,
     block: selectedBlockId,
     room: selectedRoomId,
@@ -105,33 +106,102 @@ export default async function StaffCalendarPage({
     "ical-error": icalError,
     "ical-warning": icalWarning,
   } = await searchParams;
-  const { year, month } = parseCalendarMonth(monthParam);
-  const monthKey = formatCalendarMonth(year, month);
+  const timelineRange = parseStaffTimelineRange(monthParam, throughParam);
+  const { year, month } = timelineRange.start;
+  const monthKey = timelineRange.monthKey;
+  const throughKey = timelineRange.throughKey;
   const statsCalendarDays = buildCalendarDays(year, month);
-  const calendarDays = buildStaffTimelineDays(year, month);
+  const calendarDays = buildStaffTimelineDays(year, month, {
+    through: timelineRange.end,
+  });
   const [
-    confirmedBookings,
-    calendarBlockData,
-    dayInventory,
-    dayRates,
+    confirmedBookingsParts,
+    calendarBlockParts,
+    dayInventoryParts,
+    dayRatesParts,
     rooms,
     settings,
     promotions,
     roomUnitsResult,
   ] = await Promise.all([
-    getConfirmedBookings({ year, month }),
-    getStaffCalendarBlocks({ year, month }),
-    getRoomDayInventoryForMonth({ year, month }),
-    getRoomDayRatesForMonth({ year, month }),
+    Promise.all(
+      timelineRange.months.map((entry) =>
+        getConfirmedBookings({ year: entry.year, month: entry.month }),
+      ),
+    ),
+    Promise.all(
+      timelineRange.months.map((entry) =>
+        getStaffCalendarBlocks({ year: entry.year, month: entry.month }),
+      ),
+    ),
+    Promise.all(
+      timelineRange.months.map((entry) =>
+        getRoomDayInventoryForMonth({ year: entry.year, month: entry.month }),
+      ),
+    ),
+    Promise.all(
+      timelineRange.months.map((entry) =>
+        getRoomDayRatesForMonth({ year: entry.year, month: entry.month }),
+      ),
+    ),
     getStaffRooms(),
     getPropertySettings(),
     getStaffRoomPromotions(),
     getStaffRoomUnits(),
   ]);
+
+  const confirmedBookings = {
+    bookings: Array.from(
+      new Map(
+        confirmedBookingsParts
+          .flatMap((part) => part.bookings)
+          .map((booking) => [getStaffBookingKey(booking), booking] as const),
+      ).values(),
+    ),
+    source: confirmedBookingsParts.every((part) => part.source === "supabase")
+      ? ("supabase" as const)
+      : confirmedBookingsParts[0]?.source ?? ("sample" as const),
+    error: confirmedBookingsParts.find((part) => part.error)?.error ?? null,
+  };
+  const calendarBlockData = {
+    monthBlocks: Array.from(
+      new Map(
+        calendarBlockParts
+          .flatMap((part) => part.monthBlocks)
+          .map((block) => [getStaffRoomBlockKey(block), block] as const),
+      ).values(),
+    ),
+    channelBlocks: Array.from(
+      new Map(
+        calendarBlockParts
+          .flatMap((part) => part.channelBlocks)
+          .map((block) => [getStaffRoomBlockKey(block), block] as const),
+      ).values(),
+    ),
+    source: calendarBlockParts.every((part) => part.source === "supabase")
+      ? ("supabase" as const)
+      : calendarBlockParts[0]?.source ?? ("sample" as const),
+    error: calendarBlockParts.find((part) => part.error)?.error ?? null,
+  };
+  const dayInventory = {
+    entries: dayInventoryParts.flatMap((part) => part.entries),
+    source: dayInventoryParts.every((part) => part.source === "supabase")
+      ? ("supabase" as const)
+      : dayInventoryParts[0]?.source ?? ("sample" as const),
+    error: dayInventoryParts.find((part) => part.error)?.error ?? null,
+  };
+  const dayRates = {
+    entries: dayRatesParts.flatMap((part) => part.entries),
+    source: dayRatesParts.every((part) => part.source === "supabase")
+      ? ("supabase" as const)
+      : dayRatesParts[0]?.source ?? ("sample" as const),
+    error: dayRatesParts.find((part) => part.error)?.error ?? null,
+  };
+
   const roomUnits = roomUnitsResult.units;
   const allAssignmentBookings = attachRoomNumbers(confirmedBookings.bookings, roomUnits);
   const calendarBookings = allAssignmentBookings.filter((booking) =>
-    monthOverlapsBooking(booking, year, month),
+    rangeOverlapsBooking(booking, timelineRange.start, timelineRange.end),
   );
   const calendarBlocks = attachRoomNumbers(calendarBlockData.monthBlocks, roomUnits);
   const allAssignmentChannels = attachRoomNumbers(calendarBlockData.channelBlocks, roomUnits);
@@ -180,7 +250,10 @@ export default async function StaffCalendarPage({
   const canManageRates = canManage && dayRates.source === "supabase";
   const selectedKey = selected ? getStaffBookingKey(selected) : "";
   const selectedBlockKey = selectedBlock ? getStaffRoomBlockKey(selectedBlock) : "";
-  const flashParams = new URLSearchParams({ month: monthKey });
+  const flashParams = new URLSearchParams({
+    month: monthKey,
+    through: throughKey,
+  });
   if (error) {
     flashParams.set("error", error);
   }
@@ -204,7 +277,7 @@ export default async function StaffCalendarPage({
   }
   // Keep flash messages when closing the dialog; drop booking/block/room/date so the panel closes.
   const closeHref = `/staff/calendar?${flashParams.toString()}`;
-  const dismissFlashHref = `/staff/calendar?month=${monthKey}`;
+  const dismissFlashHref = `/staff/calendar?month=${monthKey}&through=${throughKey}`;
   const overlapMessage =
     error === "overlap"
       ? formatOverlapErrorMessage(parseOverlapDays(overlap))
@@ -272,7 +345,7 @@ export default async function StaffCalendarPage({
             )
             .map((booking) => ({
               key: getStaffBookingKey(booking),
-              href: `/staff/calendar?month=${monthKey}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
+              href: `/staff/calendar?month=${monthKey}&through=${throughKey}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
               label: booking.guest,
               sublabel: booking.roomNumber
                 ? `Room ${booking.roomNumber} · direct`
@@ -290,7 +363,7 @@ export default async function StaffCalendarPage({
             )
             .map((block) => ({
               key: block.databaseId ?? block.id,
-              href: `/staff/calendar?month=${monthKey}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
+              href: `/staff/calendar?month=${monthKey}&through=${throughKey}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
               label: block.guestName || block.channelLabel || "Channel stay",
               sublabel: block.roomNumber
                 ? `Room ${block.roomNumber} · ${block.channelLabel ?? "channel"}`
@@ -482,23 +555,30 @@ export default async function StaffCalendarPage({
         ) : null}
 
         <CalendarStaySelectionProvider
-          key={monthKey}
+          key={`${monthKey}:${throughKey}`}
           initialBlockKey={selectedBlockKey}
           initialBookingKey={selectedKey}
           monthKey={monthKey}
+          throughKey={throughKey}
         >
           <div className="calendar-board calendar-board--timeline">
             <StaffCalendarToolbar
               calendarColors={settings.calendarColors}
               canSyncOta={canManage}
               monthKey={monthKey}
+              throughKey={throughKey}
               selectedBlockKey={selectedBlockKey || undefined}
               selectedBookingKey={selectedKey || undefined}
               stats={monthStats}
               unassignedCount={unassignedCount}
             />
 
-            <CalendarDateStrip days={calendarDays} selectedDate={selectedDate} />
+            <CalendarDateStrip
+              monthKey={monthKey}
+              selectedBlockKey={selectedBlockKey || undefined}
+              selectedBookingKey={selectedKey || undefined}
+              throughKey={throughKey}
+            />
 
             <StaffTimelineCalendar
               blocks={calendarBlocks}
@@ -510,7 +590,11 @@ export default async function StaffCalendarPage({
               inventoryLookup={inventoryLookup}
               rateLookup={rateLookup}
               monthKey={monthKey}
-              monthLabel={formatCalendarMonthLabel(year, month)}
+              throughKey={throughKey}
+              monthLabel={formatCalendarMonthRangeLabel(
+                timelineRange.start,
+                timelineRange.end,
+              )}
               occupancies={unitOccupancies}
               promotions={promotions}
               roomUnits={roomUnits}
