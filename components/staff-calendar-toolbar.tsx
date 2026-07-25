@@ -50,11 +50,12 @@ export function StaffCalendarToolbar({
   toIso,
   stats,
   unassignedCount,
-  calendarColors,
+  calendarColors: _calendarColors,
   canSyncOta = false,
   selectedBookingKey,
   selectedBlockKey,
 }: StaffCalendarToolbarProps) {
+  void _calendarColors;
   const today = new Date();
   const currentMonthKey = formatCalendarMonth(today.getFullYear(), today.getMonth() + 1);
 
@@ -106,7 +107,7 @@ export function StaffCalendarToolbar({
 
       <details className="staff-calendar-toolbar__legend-details">
         <summary>Legend</summary>
-        <div className="staff-calendar-toolbar__legend" aria-label="Status colors">
+        <div className="staff-calendar-toolbar__legend" aria-label="Calendar legend">
           <span className="extranet-status-mark extranet-status-mark--bookable" aria-hidden="true">
             O
           </span>
@@ -127,20 +128,19 @@ export function StaffCalendarToolbar({
           </span>
           Overbooked
           <span
-            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--booking"
-            style={{ background: calendarColors.booking }}
+            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--guest-a"
+            aria-hidden="true"
           />
-          Reservation
+          <span
+            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--guest-b"
+            aria-hidden="true"
+          />
+          Guest color
           <span
             className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--needs-room"
             aria-hidden="true"
           />
           Needs room #
-          <span
-            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--channel"
-            aria-hidden="true"
-          />
-          Channel
           <span className="staff-calendar-toolbar__mark" aria-hidden="true">
             *
           </span>

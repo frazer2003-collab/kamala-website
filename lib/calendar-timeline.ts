@@ -8,7 +8,7 @@ import { getStaffBookingKey } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
 import { getStaffRoomBlockKey, isChannelReservation } from "@/lib/room-blocks";
-import { STAY_STATUS_LABELS } from "@/lib/stay-status";
+import { normalizeGuestColorKey } from "@/lib/booking-bar-colors";
 
 export type TimelineBar = {
   key: string;
@@ -16,7 +16,8 @@ export type TimelineBar = {
   kind: "booking" | "block" | "channel";
   label: string;
   sublabel: string;
-  stayStatus: "expected" | "checked-in" | "checked-out" | "blocked";
+  /** Normalized guest name used for stable bar coloring. */
+  colorKey: string;
   startCol: number;
   span: number;
   lane: number;
@@ -142,8 +143,8 @@ export function buildRoomTimelineBars({
         ? "Needs room #"
         : booking.roomNumber
           ? `Room ${booking.roomNumber}`
-          : STAY_STATUS_LABELS[booking.stayStatus],
-      stayStatus: booking.stayStatus,
+          : "Direct",
+      colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
       compact: range.span < 2,
       needsRoom,
@@ -176,7 +177,7 @@ export function buildRoomTimelineBars({
         : reservation.roomNumber
           ? `Room ${reservation.roomNumber}`
           : channel,
-      stayStatus: "blocked",
+      colorKey: normalizeGuestColorKey(label),
       showLabel: true,
       compact: range.span < 2,
       needsRoom,
@@ -223,10 +224,8 @@ export function buildUnitTimelineBars({
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
       label: booking.guest,
-      sublabel: otherType
-        ? `${otherType} · ${STAY_STATUS_LABELS[booking.stayStatus]}`
-        : STAY_STATUS_LABELS[booking.stayStatus],
-      stayStatus: booking.stayStatus,
+      sublabel: otherType ? otherType : "Direct",
+      colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
       compact: range.span < 2,
       ...range,
@@ -257,7 +256,7 @@ export function buildUnitTimelineBars({
       kind: "channel",
       label,
       sublabel: otherType ? `${otherType} · ${channel}` : channel,
-      stayStatus: "blocked",
+      colorKey: normalizeGuestColorKey(label),
       showLabel: true,
       compact: range.span < 2,
       ...range,

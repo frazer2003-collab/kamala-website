@@ -17,7 +17,6 @@ import {
   type StaffRoomBlock,
 } from "@/lib/room-blocks";
 import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
-import { STAY_STATUS_LABELS } from "@/lib/stay-status";
 
 type CalendarStayDialogsProps = {
   monthKey: string;
@@ -37,18 +36,6 @@ type CalendarStayDialogsProps = {
   rateOverrides: Record<string, number>;
   formError?: string | null;
 };
-
-function getStayStatusClass(stayStatus: string) {
-  if (stayStatus === "checked-in") {
-    return "staff-status--confirmed";
-  }
-
-  if (stayStatus === "checked-out") {
-    return "staff-status--declined";
-  }
-
-  return "staff-status--awaiting";
-}
 
 export function CalendarStayDialogs({
   monthKey,
@@ -107,10 +94,6 @@ export function CalendarStayDialogs({
         >
           <div className="reservation-detail__top">
             <span>{selectedBooking.id}</span>
-            <div className={`staff-status ${getStayStatusClass(selectedBooking.stayStatus)}`}>
-              <span aria-hidden="true" />
-              {STAY_STATUS_LABELS[selectedBooking.stayStatus]}
-            </div>
           </div>
           <dl className="detail-list">
             <div>
