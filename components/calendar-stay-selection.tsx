@@ -36,20 +36,28 @@ function readStayKeysFromLocation() {
 
 function writeStayUrl({
   monthKey,
-  throughKey,
+  fromIso,
+  toIso,
   bookingKey,
   blockKey,
   mode,
 }: {
   monthKey: string;
-  throughKey?: string;
+  fromIso?: string;
+  toIso?: string;
   bookingKey?: string;
   blockKey?: string;
   mode: "push" | "replace";
 }) {
   const params = new URLSearchParams(window.location.search);
   params.set("month", monthKey);
-  params.set("through", throughKey || monthKey);
+  if (fromIso) {
+    params.set("from", fromIso);
+  }
+  if (toIso) {
+    params.set("to", toIso);
+  }
+  params.delete("through");
   params.delete("room");
   params.delete("date");
   params.delete("mode");
@@ -75,7 +83,8 @@ function writeStayUrl({
 
 type CalendarStaySelectionProviderProps = {
   monthKey: string;
-  throughKey?: string;
+  fromIso?: string;
+  toIso?: string;
   initialBookingKey?: string;
   initialBlockKey?: string;
   children: ReactNode;
@@ -83,7 +92,8 @@ type CalendarStaySelectionProviderProps = {
 
 export function CalendarStaySelectionProvider({
   monthKey,
-  throughKey,
+  fromIso,
+  toIso,
   initialBookingKey = "",
   initialBlockKey = "",
   children,
@@ -106,25 +116,25 @@ export function CalendarStaySelectionProvider({
     (key: string) => {
       setBookingKey(key);
       setBlockKey("");
-      writeStayUrl({ monthKey, throughKey, bookingKey: key, mode: "push" });
+      writeStayUrl({ monthKey, fromIso, toIso, bookingKey: key, mode: "push" });
     },
-    [monthKey, throughKey],
+    [fromIso, monthKey, toIso],
   );
 
   const selectBlock = useCallback(
     (key: string) => {
       setBlockKey(key);
       setBookingKey("");
-      writeStayUrl({ monthKey, throughKey, blockKey: key, mode: "push" });
+      writeStayUrl({ monthKey, fromIso, toIso, blockKey: key, mode: "push" });
     },
-    [monthKey, throughKey],
+    [fromIso, monthKey, toIso],
   );
 
   const close = useCallback(() => {
     setBookingKey("");
     setBlockKey("");
-    writeStayUrl({ monthKey, throughKey, mode: "push" });
-  }, [monthKey, throughKey]);
+    writeStayUrl({ monthKey, fromIso, toIso, mode: "push" });
+  }, [fromIso, monthKey, toIso]);
 
   const value = useMemo(
     () => ({

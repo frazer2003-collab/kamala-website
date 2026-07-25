@@ -4,16 +4,16 @@ import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffOtaSyncControls } from "@/components/staff-ota-sync-controls";
 import {
+  defaultStaffTimelineSelectionRange,
   formatCalendarMonth,
-  shiftCalendarMonth,
-  STAFF_TIMELINE_DEFAULT_MONTHS,
 } from "@/lib/calendar";
 import type { CalendarMonthStats } from "@/lib/calendar-timeline";
 import type { CalendarColors } from "@/lib/calendar-colors";
 
 type StaffCalendarToolbarProps = {
   monthKey: string;
-  throughKey?: string;
+  fromIso?: string;
+  toIso?: string;
   stats: CalendarMonthStats;
   unassignedCount: number;
   calendarColors: CalendarColors;
@@ -24,13 +24,14 @@ type StaffCalendarToolbarProps = {
 
 function buildMonthHref(
   monthKey: string,
-  throughKey: string | undefined,
   selectedBookingKey?: string,
   selectedBlockKey?: string,
 ) {
+  const selection = defaultStaffTimelineSelectionRange(monthKey);
   const params = new URLSearchParams({
     month: monthKey,
-    through: throughKey || monthKey,
+    from: selection.fromIso,
+    to: selection.toIso,
   });
 
   if (selectedBookingKey) {
@@ -44,7 +45,8 @@ function buildMonthHref(
 
 export function StaffCalendarToolbar({
   monthKey,
-  throughKey = monthKey,
+  fromIso,
+  toIso,
   stats,
   unassignedCount,
   calendarColors,
@@ -54,27 +56,22 @@ export function StaffCalendarToolbar({
 }: StaffCalendarToolbarProps) {
   const today = new Date();
   const currentMonthKey = formatCalendarMonth(today.getFullYear(), today.getMonth() + 1);
-  const todayThrough = shiftCalendarMonth(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    STAFF_TIMELINE_DEFAULT_MONTHS - 1,
-  );
-  const todayThroughKey = formatCalendarMonth(todayThrough.year, todayThrough.month);
 
   return (
     <div className="staff-calendar-toolbar">
       <div className="staff-calendar-toolbar__nav">
         <h2 className="staff-calendar-toolbar__title" id="staff-calendar-month-heading">
           <StaffCalendarMonthPicker
+            fromIso={fromIso}
             monthKey={monthKey}
-            throughKey={throughKey}
             selectedBlockKey={selectedBlockKey}
             selectedBookingKey={selectedBookingKey}
+            toIso={toIso}
           />
         </h2>
         <Link
           className="staff-calendar-toolbar__today"
-          href={`${buildMonthHref(currentMonthKey, todayThroughKey, selectedBookingKey, selectedBlockKey)}#calendar-today`}
+          href={`${buildMonthHref(currentMonthKey, selectedBookingKey, selectedBlockKey)}#calendar-today`}
         >
           Jump to today
         </Link>

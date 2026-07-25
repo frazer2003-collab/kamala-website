@@ -287,7 +287,7 @@ export function getStatusCellHref(
   iso: string,
   monthKey: string,
   blocks: StaffRoomBlock[],
-  throughKey?: string,
+  range?: TimelineRangeQuery,
 ) {
   const block = getRoomBlockForDay(roomId, iso, blocks);
 
@@ -295,12 +295,12 @@ export function getStatusCellHref(
     return getTimelineBarHref(
       { kind: "block", itemKey: getStaffRoomBlockKey(block) },
       monthKey,
-      throughKey,
+      range,
     );
   }
 
   // Bookable / open days open the day choice panel — never jump straight to Close.
-  return getTimelineDayHref(roomId, iso, monthKey, throughKey);
+  return getTimelineDayHref(roomId, iso, monthKey, range);
 }
 
 export function getTimelineLaneCount(bars: TimelineBar[]) {
@@ -539,22 +539,32 @@ export function formatTimelineDayHeader(date: Date, iso: string, todayIso: strin
   };
 }
 
+export type TimelineRangeQuery = {
+  fromIso?: string;
+  toIso?: string;
+};
+
 function withTimelineRangeParams(
   params: URLSearchParams,
   monthKey: string,
-  throughKey?: string,
+  range?: TimelineRangeQuery,
 ) {
   params.set("month", monthKey);
-  params.set("through", throughKey || monthKey);
+  if (range?.fromIso) {
+    params.set("from", range.fromIso);
+  }
+  if (range?.toIso) {
+    params.set("to", range.toIso);
+  }
 }
 
 export function getTimelineBarHref(
   bar: Pick<TimelineBar, "kind" | "itemKey">,
   monthKey: string,
-  throughKey?: string,
+  range?: TimelineRangeQuery,
 ) {
   const params = new URLSearchParams();
-  withTimelineRangeParams(params, monthKey, throughKey);
+  withTimelineRangeParams(params, monthKey, range);
 
   if (bar.kind === "block" || bar.kind === "channel") {
     params.set("block", bar.itemKey);
@@ -569,10 +579,10 @@ export function getTimelineDayHref(
   roomId: string,
   iso: string,
   monthKey: string,
-  throughKey?: string,
+  range?: TimelineRangeQuery,
 ) {
   const params = new URLSearchParams();
-  withTimelineRangeParams(params, monthKey, throughKey);
+  withTimelineRangeParams(params, monthKey, range);
   params.set("room", roomId);
   params.set("date", iso);
   return `/staff/calendar?${params.toString()}`;
@@ -583,9 +593,9 @@ export function getTimelineAllotmentHref(
   roomId: string,
   iso: string,
   monthKey: string,
-  throughKey?: string,
+  range?: TimelineRangeQuery,
 ) {
-  return `${getTimelineDayHref(roomId, iso, monthKey, throughKey)}&mode=allotment`;
+  return `${getTimelineDayHref(roomId, iso, monthKey, range)}&mode=allotment`;
 }
 
 /** Open the day panel to set a temporary nightly rate override. */
@@ -593,19 +603,19 @@ export function getTimelineRateHref(
   roomId: string,
   iso: string,
   monthKey: string,
-  throughKey?: string,
+  range?: TimelineRangeQuery,
 ) {
-  return `${getTimelineDayHref(roomId, iso, monthKey, throughKey)}&mode=rate`;
+  return `${getTimelineDayHref(roomId, iso, monthKey, range)}&mode=rate`;
 }
 
 /** Bulk open/close room status (availability), not allotments. */
 export function getTimelineBulkAvailabilityHref(
   roomId: string,
   monthKey: string,
-  throughKey?: string,
+  range?: TimelineRangeQuery,
 ) {
   const params = new URLSearchParams();
-  withTimelineRangeParams(params, monthKey, throughKey);
+  withTimelineRangeParams(params, monthKey, range);
   params.set("room", roomId);
   params.set("mode", "bulk-status");
   return `/staff/calendar?${params.toString()}`;

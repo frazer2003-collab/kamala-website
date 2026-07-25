@@ -1,38 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   STAFF_TIMELINE_MAX_MONTHS,
-  clampCalendarMonthRange,
-  formatCalendarMonth,
-  formatCalendarMonthLabel,
-  listCalendarMonths,
-  parseCalendarMonth,
-  shiftCalendarMonth,
-  type CalendarMonthRef,
+  clampStaffTimelineDateRange,
+  maxStaffTimelineEndIso,
 } from "@/lib/calendar";
 
 type CalendarDateStripProps = {
-  monthKey: string;
-  throughKey: string;
+  fromIso: string;
+  toIso: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
 };
 
-function monthKeyOf(ref: CalendarMonthRef) {
-  return formatCalendarMonth(ref.year, ref.month);
-}
-
 function buildRangeHref(
-  startKey: string,
-  endKey: string,
+  fromIso: string,
+  toIso: string,
   selectedBookingKey?: string,
   selectedBlockKey?: string,
 ) {
   const params = new URLSearchParams({
-    month: startKey,
-    through: endKey,
+    from: fromIso,
+    to: toIso,
+    month: fromIso.slice(0, 7),
   });
   if (selectedBookingKey) {
     params.set("booking", selectedBookingKey);
@@ -42,137 +34,92 @@ function buildRangeHref(
   return `/staff/calendar?${params.toString()}`;
 }
 
-function shortMonthLabel(ref: CalendarMonthRef) {
-  return new Intl.DateTimeFormat("en", { month: "short" }).format(
-    new Date(ref.year, ref.month - 1, 1),
-  );
-}
-
 export function CalendarDateStrip({
-  monthKey,
-  throughKey,
+  fromIso,
+  toIso,
   selectedBookingKey,
   selectedBlockKey,
 }: CalendarDateStripProps) {
   const router = useRouter();
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const start = parseCalendarMonth(monthKey);
-  const end = parseCalendarMonth(throughKey);
-  const [draftStart, setDraftStart] = useState<CalendarMonthRef | null>(null);
-
-  const pickerMonths = useMemo(() => {
-    const anchor = shiftCalendarMonth(start.year, start.month, -6);
-    return listCalendarMonths(anchor, 24);
-  }, [start.month, start.year]);
-
-  const selectedKeys = useMemo(() => {
-    const span = clampCalendarMonthRange(start, end).monthCount;
-    return new Set(
-      listCalendarMonths(start, span).map((month) => monthKeyOf(month)),
-    );
-  }, [end, start]);
+  const [fromValue, setFromValue] = useState(fromIso);
+  const [toValue, setToValue] = useState(toIso);
 
   useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) {
+    setFromValue(fromIso);
+    setToValue(toIso);
+  }, [fromIso, toIso]);
+
+  const maxTo = maxStaffTimelineEndIso(fromValue);
+  const hint = `Choose a start and end date — up to ${STAFF_TIMELINE_MAX_MONTHS} months. Scroll the board to move through the range.`;
+
+  function applyRange(nextFrom: string, nextTo: string) {
+    if (!nextFrom || !nextTo) {
       return;
     }
-
-    const focusKey = monthKey;
-    const chip = scroller.querySelector<HTMLElement>(
-      `[data-month-range="${CSS.escape(focusKey)}"]`,
-    );
-    if (!chip) {
-      return;
-    }
-
-    const scrollerRect = scroller.getBoundingClientRect();
-    const chipRect = chip.getBoundingClientRect();
-    const nextLeft =
-      scroller.scrollLeft +
-      (chipRect.left - scrollerRect.left) -
-      scrollerRect.width * 0.2;
-
-    scroller.scrollTo({ left: Math.max(0, nextLeft), behavior: "auto" });
-  }, [monthKey, throughKey]);
-
-  function applyRange(nextStart: CalendarMonthRef, nextEnd: CalendarMonthRef) {
-    const clamped = clampCalendarMonthRange(nextStart, nextEnd);
-    const startKey = monthKeyOf(clamped.start);
-    const endKey = monthKeyOf(clamped.end);
+    const clamped = clampStaffTimelineDateRange(nextFrom, nextTo);
+    setFromValue(clamped.fromIso);
+    setToValue(clamped.toIso);
     router.push(
-      buildRangeHref(startKey, endKey, selectedBookingKey, selectedBlockKey),
+      buildRangeHref(
+        clamped.fromIso,
+        clamped.toIso,
+        selectedBookingKey,
+        selectedBlockKey,
+      ),
     );
   }
-
-  function onMonthClick(month: CalendarMonthRef) {
-    if (!draftStart) {
-      setDraftStart(month);
-      return;
-    }
-
-    applyRange(draftStart, month);
-    setDraftStart(null);
-  }
-
-  const draftKey = draftStart ? monthKeyOf(draftStart) : null;
-  const hint = draftStart
-    ? `Choose an end month (up to ${STAFF_TIMELINE_MAX_MONTHS} months from ${formatCalendarMonthLabel(draftStart.year, draftStart.month)}).`
-    : `Select a start and end month — up to ${STAFF_TIMELINE_MAX_MONTHS} months at a time.`;
 
   return (
-    <div className="calendar-date-strip" role="region" aria-label="Month range">
+    <form
+      className="calendar-date-strip"
+      onSubmit={(event) => {
+        event.preventDefault();
+        applyRange(fromValue, toValue);
+      }}
+      role="region"
+      aria-label="Date range"
+    >
       <div className="calendar-date-strip__header">
         <p className="calendar-date-strip__hint">{hint}</p>
-        {draftStart ? (
-          <button
-            className="calendar-date-strip__cancel"
-            onClick={() => setDraftStart(null)}
-            type="button"
-          >
-            Cancel
-          </button>
-        ) : null}
       </div>
-      <div className="calendar-date-strip__scroller" ref={scrollerRef}>
-        {pickerMonths.map((month) => {
-          const key = monthKeyOf(month);
-          const inSelection = selectedKeys.has(key);
-          const isDraft = draftKey === key;
-          const isRangeStart = key === monthKey;
-          const isRangeEnd = key === throughKey;
-          const label = formatCalendarMonthLabel(month.year, month.month);
-
-          return (
-            <button
-              aria-label={
-                draftStart
-                  ? `Set range end to ${label}`
-                  : `Start range at ${label}`
+      <div className="calendar-date-strip__fields">
+        <label className="calendar-date-strip__field">
+          <span className="calendar-date-strip__field-label">From</span>
+          <input
+            className="calendar-date-strip__input"
+            name="from"
+            onChange={(event) => {
+              const nextFrom = event.target.value;
+              setFromValue(nextFrom);
+              if (nextFrom && toValue && toValue < nextFrom) {
+                setToValue(nextFrom);
+              } else if (nextFrom && toValue > maxStaffTimelineEndIso(nextFrom)) {
+                setToValue(maxStaffTimelineEndIso(nextFrom));
               }
-              aria-pressed={inSelection || isDraft}
-              className={[
-                "calendar-date-strip__month",
-                inSelection ? "calendar-date-strip__month--selected" : "",
-                isDraft ? "calendar-date-strip__month--draft" : "",
-                isRangeStart ? "calendar-date-strip__month--start" : "",
-                isRangeEnd ? "calendar-date-strip__month--end" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              data-month-range={key}
-              key={key}
-              onClick={() => onMonthClick(month)}
-              type="button"
-            >
-              <span className="calendar-date-strip__month-name">
-                {shortMonthLabel(month)}
-              </span>
-              <span className="calendar-date-strip__month-year">{month.year}</span>
-            </button>
-          );
-        })}
+            }}
+            type="date"
+            value={fromValue}
+          />
+        </label>
+        <span className="calendar-date-strip__separator" aria-hidden="true">
+          –
+        </span>
+        <label className="calendar-date-strip__field">
+          <span className="calendar-date-strip__field-label">To</span>
+          <input
+            className="calendar-date-strip__input"
+            max={maxTo}
+            min={fromValue || undefined}
+            name="to"
+            onChange={(event) => setToValue(event.target.value)}
+            type="date"
+            value={toValue}
+          />
+        </label>
+        <button className="calendar-date-strip__apply" type="submit">
+          Show
+        </button>
       </div>
-    </div>
+    </form>
   );
 }

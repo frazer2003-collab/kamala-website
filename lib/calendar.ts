@@ -57,7 +57,10 @@ export function isPastCalendarDate(iso: string) {
 /** Max months the staff timeline can show in one view. */
 export const STAFF_TIMELINE_MAX_MONTHS = 3;
 
-/** Default span: anchor month plus the next two. */
+/**
+ * Default board length past the anchor month start: current month plus the
+ * next two, so staff can scroll right into months 2 and 3.
+ */
 export const STAFF_TIMELINE_DEFAULT_MONTHS = 3;
 
 export type CalendarMonthRef = {
@@ -74,6 +77,14 @@ function shiftIsoDate(iso: string, days: number) {
   const date = parseIsoToLocalDate(iso);
   date.setDate(date.getDate() + days);
   return toIsoDate(date);
+}
+
+export function isIsoDateString(value?: string): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = parseIsoToLocalDate(value);
+  return toIsoDate(date) === value;
 }
 
 /** Inclusive month count from start through end (same month → 1). */
@@ -119,28 +130,138 @@ export function clampCalendarMonthRange(
   };
 }
 
-export function parseStaffTimelineRange(
-  monthParam?: string,
-  throughParam?: string,
-  {
-    defaultMonths = STAFF_TIMELINE_DEFAULT_MONTHS,
-    maxMonths = STAFF_TIMELINE_MAX_MONTHS,
-  }: {
-    defaultMonths?: number;
-    maxMonths?: number;
-  } = {},
+/** Latest end date allowed for a from date within maxMonths. */
+export function maxStaffTimelineEndIso(
+  fromIso: string,
+  maxMonths = STAFF_TIMELINE_MAX_MONTHS,
 ) {
+  const date = parseIsoToLocalDate(fromIso);
+  date.setMonth(date.getMonth() + Math.max(1, maxMonths));
+  date.setDate(date.getDate() - 1);
+  return toIsoDate(date);
+}
+
+export function clampStaffTimelineDateRange(
+  fromIso: string,
+  toIso: string,
+  maxMonths = STAFF_TIMELINE_MAX_MONTHS,
+) {
+  const ordered =
+    fromIso <= toIso
+      ? { fromIso, toIso }
+      : { fromIso: toIso, toIso: fromIso };
+  const maxEnd = maxStaffTimelineEndIso(ordered.fromIso, maxMonths);
+  return {
+    fromIso: ordered.fromIso,
+    toIso: ordered.toIso > maxEnd ? maxEnd : ordered.toIso,
+  };
+}
+
+export function monthsOverlappingDateRange(fromIso: string, toIso: string) {
+  const start = {
+    year: Number(fromIso.slice(0, 4)),
+    month: Number(fromIso.slice(5, 7)),
+  };
+  const end = {
+    year: Number(toIso.slice(0, 4)),
+    month: Number(toIso.slice(5, 7)),
+  };
+  const monthCount = Math.max(1, calendarMonthSpan(start, end));
+  return listCalendarMonths(start, monthCount);
+}
+
+/** One-month from/to for the date inputs (default selection). */
+export function defaultStaffTimelineSelectionRange(monthParam?: string) {
   const start = parseCalendarMonth(monthParam);
-  const requestedEnd = throughParam
-    ? parseCalendarMonth(throughParam)
-    : shiftCalendarMonth(start.year, start.month, Math.max(1, defaultMonths) - 1);
-  const clamped = clampCalendarMonthRange(start, requestedEnd, maxMonths);
-  const months = listCalendarMonths(clamped.start, clamped.monthCount);
-  const monthKey = formatCalendarMonth(clamped.start.year, clamped.start.month);
-  const throughKey = formatCalendarMonth(clamped.end.year, clamped.end.month);
+  const { monthStart, monthEnd } = getCalendarMonthBounds(start.year, start.month);
+  return { fromIso: monthStart, toIso: monthEnd };
+}
+
+/** Scrollable board horizon: anchor month plus the next two. */
+export function defaultStaffTimelineDateRange(monthParam?: string) {
+  const start = parseCalendarMonth(monthParam);
+  const end = shiftCalendarMonth(
+    start.year,
+    start.month,
+    STAFF_TIMELINE_DEFAULT_MONTHS - 1,
+  );
+  const { monthStart } = getCalendarMonthBounds(start.year, start.month);
+  const { monthEnd } = getCalendarMonthBounds(end.year, end.month);
+  return { fromIso: monthStart, toIso: monthEnd };
+}
+
+/**
+ * Resolve the staff timeline date window.
+ * Prefers `from`/`to` day params for the selector; the board expands to a
+ * three-month scroll horizon from the start month so months 2 and 3 can be
+ * revealed by scrolling right.
+ */
+export function parseStaffTimelineRange({
+  month: monthParam,
+  through: throughParam,
+  from: fromParam,
+  to: toParam,
+  maxMonths = STAFF_TIMELINE_MAX_MONTHS,
+}: {
+  month?: string;
+  through?: string;
+  from?: string;
+  to?: string;
+  maxMonths?: number;
+} = {}) {
+  let fromIso: string;
+  let toIso: string;
+
+  if (isIsoDateString(fromParam) || isIsoDateString(toParam)) {
+    const fallback = defaultStaffTimelineSelectionRange(monthParam);
+    fromIso = isIsoDateString(fromParam) ? fromParam : fallback.fromIso;
+    toIso = isIsoDateString(toParam) ? toParam : fallback.toIso;
+  } else if (throughParam) {
+    const start = parseCalendarMonth(monthParam);
+    const end = parseCalendarMonth(throughParam);
+    const clampedMonths = clampCalendarMonthRange(start, end, maxMonths);
+    fromIso = getCalendarMonthBounds(
+      clampedMonths.start.year,
+      clampedMonths.start.month,
+    ).monthStart;
+    toIso = getCalendarMonthBounds(
+      clampedMonths.end.year,
+      clampedMonths.end.month,
+    ).monthEnd;
+  } else {
+    // Default selector: one month. Board still expands to +2 months below.
+    ({ fromIso, toIso } = defaultStaffTimelineSelectionRange(monthParam));
+  }
+
+  const selected = clampStaffTimelineDateRange(fromIso, toIso, maxMonths);
+  const horizon = defaultStaffTimelineDateRange(selected.fromIso.slice(0, 7));
+  const startMonthEnd = defaultStaffTimelineSelectionRange(
+    selected.fromIso.slice(0, 7),
+  ).toIso;
+  const isDefaultOneMonthSelection =
+    selected.fromIso === horizon.fromIso && selected.toIso === startMonthEnd;
+  // One-month default (and month-picker jumps) keep a 3-month scroll horizon.
+  // Custom from/to ranges use the exact selected window (still max 3 months).
+  const boardToIso = isDefaultOneMonthSelection ? horizon.toIso : selected.toIso;
+  const board = clampStaffTimelineDateRange(
+    selected.fromIso,
+    boardToIso,
+    maxMonths,
+  );
+  const months = monthsOverlappingDateRange(board.fromIso, board.toIso);
+  const start = months[0] ?? parseCalendarMonth(monthParam);
+  const end = months[months.length - 1] ?? start;
+  const monthKey = formatCalendarMonth(start.year, start.month);
+  const throughKey = formatCalendarMonth(end.year, end.month);
 
   return {
-    ...clamped,
+    fromIso: selected.fromIso,
+    toIso: selected.toIso,
+    boardFromIso: board.fromIso,
+    boardToIso: board.toIso,
+    start,
+    end,
+    monthCount: months.length,
     months,
     monthKey,
     throughKey,
@@ -157,7 +278,7 @@ export function formatCalendarMonthRangeLabel(
 
   const startLabel = new Intl.DateTimeFormat("en", {
     month: "short",
-    year: start.year === end.year ? undefined : "numeric",
+    ...(start.year === end.year ? {} : { year: "numeric" as const }),
   }).format(new Date(start.year, start.month - 1, 1));
   const endLabel = new Intl.DateTimeFormat("en", {
     month: "short",
@@ -186,28 +307,16 @@ function buildIsoDayRange(startIso: string, endIso: string): CalendarDay[] {
 }
 
 /**
- * Staff timeline day columns for one or more full calendar months
- * (max STAFF_TIMELINE_MAX_MONTHS).
+ * Staff timeline day columns for an inclusive from/to date range
+ * (clamped to STAFF_TIMELINE_MAX_MONTHS).
  */
 export function buildStaffTimelineDays(
-  year: number,
-  month: number,
-  {
-    monthCount = STAFF_TIMELINE_DEFAULT_MONTHS,
-    through,
-  }: {
-    monthCount?: number;
-    through?: CalendarMonthRef;
-  } = {},
+  fromIso: string,
+  toIso: string,
+  { maxMonths = STAFF_TIMELINE_MAX_MONTHS }: { maxMonths?: number } = {},
 ): CalendarDay[] {
-  const start = { year, month };
-  const end = through
-    ? through
-    : shiftCalendarMonth(year, month, Math.max(1, Math.floor(monthCount)) - 1);
-  const range = clampCalendarMonthRange(start, end);
-  const { monthStart } = getCalendarMonthBounds(range.start.year, range.start.month);
-  const { monthEnd } = getCalendarMonthBounds(range.end.year, range.end.month);
-  return buildIsoDayRange(monthStart, monthEnd);
+  const range = clampStaffTimelineDateRange(fromIso, toIso, maxMonths);
+  return buildIsoDayRange(range.fromIso, range.toIso);
 }
 
 export function rangeOverlapsBooking(
@@ -218,6 +327,14 @@ export function rangeOverlapsBooking(
   const { monthStart } = getCalendarMonthBounds(start.year, start.month);
   const { monthEnd } = getCalendarMonthBounds(end.year, end.month);
   return booking.arrivalDate <= monthEnd && booking.departureDate > monthStart;
+}
+
+export function dateRangeOverlapsBooking(
+  booking: { arrivalDate: string; departureDate: string },
+  fromIso: string,
+  toIso: string,
+) {
+  return booking.arrivalDate <= toIso && booking.departureDate > fromIso;
 }
 
 export function buildCalendarDays(year: number, month: number): CalendarDay[] {

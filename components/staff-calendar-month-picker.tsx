@@ -3,30 +3,31 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  calendarMonthSpan,
+  defaultStaffTimelineSelectionRange,
   formatCalendarMonth,
   formatCalendarMonthLabel,
-  formatCalendarMonthRangeLabel,
   parseCalendarMonth,
   shiftCalendarMonth,
 } from "@/lib/calendar";
 
 type StaffCalendarMonthPickerProps = {
   monthKey: string;
-  throughKey?: string;
+  fromIso?: string;
+  toIso?: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
 };
 
 function buildMonthHref(
   monthKey: string,
-  throughKey: string | undefined,
   selectedBookingKey?: string,
   selectedBlockKey?: string,
 ) {
+  const selection = defaultStaffTimelineSelectionRange(monthKey);
   const params = new URLSearchParams({
     month: monthKey,
-    through: throughKey || monthKey,
+    from: selection.fromIso,
+    to: selection.toIso,
   });
 
   if (selectedBookingKey) {
@@ -38,56 +39,32 @@ function buildMonthHref(
   return `/staff/calendar?${params.toString()}`;
 }
 
-function shiftRange(monthKey: string, throughKey: string, delta: number) {
-  const start = parseCalendarMonth(monthKey);
-  const end = parseCalendarMonth(throughKey);
-  const span = Math.max(1, calendarMonthSpan(start, end));
-  const nextStart = shiftCalendarMonth(start.year, start.month, delta);
-  const nextEnd = shiftCalendarMonth(nextStart.year, nextStart.month, span - 1);
-  return {
-    monthKey: formatCalendarMonth(nextStart.year, nextStart.month),
-    throughKey: formatCalendarMonth(nextEnd.year, nextEnd.month),
-  };
-}
-
 export function StaffCalendarMonthPicker({
   monthKey,
-  throughKey = monthKey,
   selectedBookingKey,
   selectedBlockKey,
 }: StaffCalendarMonthPickerProps) {
   const router = useRouter();
-  const start = parseCalendarMonth(monthKey);
-  const end = parseCalendarMonth(throughKey);
-  const label = formatCalendarMonthRangeLabel(start, end);
-  const prev = shiftRange(monthKey, throughKey, -1);
-  const next = shiftRange(monthKey, throughKey, 1);
-  const prevLabel = formatCalendarMonthLabel(
-    parseCalendarMonth(prev.monthKey).year,
-    parseCalendarMonth(prev.monthKey).month,
-  );
-  const nextLabel = formatCalendarMonthLabel(
-    parseCalendarMonth(next.monthKey).year,
-    parseCalendarMonth(next.monthKey).month,
-  );
-  const span = Math.max(1, calendarMonthSpan(start, end));
+  const { year, month } = parseCalendarMonth(monthKey);
+  const label = formatCalendarMonthLabel(year, month);
+  const prev = shiftCalendarMonth(year, month, -1);
+  const next = shiftCalendarMonth(year, month, 1);
+  const prevKey = formatCalendarMonth(prev.year, prev.month);
+  const nextKey = formatCalendarMonth(next.year, next.month);
+  const prevLabel = formatCalendarMonthLabel(prev.year, prev.month);
+  const nextLabel = formatCalendarMonthLabel(next.year, next.month);
 
   return (
     <div className="staff-calendar-toolbar__month-nav">
       <Link
-        aria-label={`Previous range, starting ${prevLabel}`}
+        aria-label={`Previous month, ${prevLabel}`}
         className="staff-calendar-toolbar__month-step"
-        href={buildMonthHref(
-          prev.monthKey,
-          prev.throughKey,
-          selectedBookingKey,
-          selectedBlockKey,
-        )}
+        href={buildMonthHref(prevKey, selectedBookingKey, selectedBlockKey)}
       >
         <span aria-hidden="true">‹</span>
       </Link>
       <label className="staff-calendar-toolbar__month-picker">
-        <span className="sr-only">Choose starting month and year</span>
+        <span className="sr-only">Choose month and year</span>
         <span aria-hidden="true" className="staff-calendar-toolbar__month-label">
           {label}
         </span>
@@ -98,19 +75,8 @@ export function StaffCalendarMonthPicker({
             if (!nextValue || !/^\d{4}-\d{2}$/.test(nextValue)) {
               return;
             }
-            const nextStart = parseCalendarMonth(nextValue);
-            const nextEnd = shiftCalendarMonth(
-              nextStart.year,
-              nextStart.month,
-              span - 1,
-            );
             router.push(
-              buildMonthHref(
-                formatCalendarMonth(nextStart.year, nextStart.month),
-                formatCalendarMonth(nextEnd.year, nextEnd.month),
-                selectedBookingKey,
-                selectedBlockKey,
-              ),
+              buildMonthHref(nextValue, selectedBookingKey, selectedBlockKey),
             );
           }}
           type="month"
@@ -118,14 +84,9 @@ export function StaffCalendarMonthPicker({
         />
       </label>
       <Link
-        aria-label={`Next range, starting ${nextLabel}`}
+        aria-label={`Next month, ${nextLabel}`}
         className="staff-calendar-toolbar__month-step"
-        href={buildMonthHref(
-          next.monthKey,
-          next.throughKey,
-          selectedBookingKey,
-          selectedBlockKey,
-        )}
+        href={buildMonthHref(nextKey, selectedBookingKey, selectedBlockKey)}
       >
         <span aria-hidden="true">›</span>
       </Link>
