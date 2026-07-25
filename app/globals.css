@@ -6888,7 +6888,8 @@ textarea:focus {
 .staff-extranet__dates,
 .extranet-room__grid {
   --extranet-label-width: 10.5rem;
-  --extranet-day-width: 3.35rem;
+  /* Wider day columns so stay bars can show guest names without crowding. */
+  --extranet-day-width: 4.85rem;
   display: grid;
   grid-template-columns: var(--extranet-label-width) repeat(
       var(--timeline-days),
@@ -6993,7 +6994,7 @@ textarea:focus {
   gap: var(--space-3);
   box-sizing: border-box;
   min-width: calc(
-    var(--extranet-label-width, 10.5rem) + var(--timeline-days) * var(--extranet-day-width, 3.35rem)
+    var(--extranet-label-width, 10.5rem) + var(--timeline-days) * var(--extranet-day-width, 4.85rem)
   );
   padding: 0.65rem 0.85rem;
   border-bottom: 1px solid color-mix(in srgb, var(--color-success) 22%, var(--color-border));
@@ -7259,8 +7260,8 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.75rem;
-  padding: 0.15rem;
+  min-height: 3.15rem;
+  padding: 0.2rem;
   border-right: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -7549,15 +7550,15 @@ textarea:focus {
 
 .extranet-reservations {
   /* Lane pitch keeps bars ≥24px (WCAG 2.2 AA target minimum). */
-  --extranet-lane-height: 1.65rem;
+  --extranet-lane-height: 2.2rem;
   --extranet-reservations-height: calc(
-    0.5rem + var(--lane-count, 1) * var(--extranet-lane-height)
+    0.55rem + var(--lane-count, 1) * var(--extranet-lane-height)
   );
   position: relative;
   display: grid;
   grid-template-columns: repeat(
     var(--timeline-days),
-    minmax(var(--extranet-day-width, 3.35rem), 1fr)
+    minmax(var(--extranet-day-width, 4.85rem), 1fr)
   );
   grid-template-rows: var(--extranet-reservations-height);
   align-items: stretch;
@@ -7568,7 +7569,7 @@ textarea:focus {
 }
 
 .extranet-reservations--assign {
-  --extranet-lane-height: 3.15rem;
+  --extranet-lane-height: 3.55rem;
 }
 
 .extranet-reservations__day {
@@ -7593,7 +7594,7 @@ textarea:focus {
   align-self: start;
   gap: 0.35rem;
   grid-row: 1;
-  margin-top: calc(0.15rem + var(--lane, 0) * var(--extranet-lane-height, 1.65rem));
+  margin-top: calc(0.18rem + var(--lane, 0) * var(--extranet-lane-height, 2.2rem));
   min-width: 0;
 }
 
@@ -7660,15 +7661,15 @@ textarea:focus {
   display: flex;
   align-items: center;
   align-self: start;
-  gap: 0.3rem;
+  gap: 0.35rem;
   grid-row: 1;
   box-sizing: border-box;
-  min-height: 1.5rem;
-  height: 1.5rem;
-  margin-top: calc(0.15rem + var(--lane, 0) * var(--extranet-lane-height, 1.65rem));
-  padding: 0 0.4rem;
+  min-height: 1.95rem;
+  height: 1.95rem;
+  margin-top: calc(0.18rem + var(--lane, 0) * var(--extranet-lane-height, 2.2rem));
+  padding: 0 0.55rem;
   border: 1px solid color-mix(in srgb, var(--calendar-color-booking) 55%, var(--color-border));
-  border-radius: 0.25rem;
+  border-radius: 0.3rem;
   background: var(--calendar-color-booking);
   color: var(--color-ink);
   text-decoration: none;
@@ -7677,11 +7678,11 @@ textarea:focus {
 
 @media (pointer: coarse) {
   .extranet-reservations {
-    --extranet-lane-height: 2.9rem;
+    --extranet-lane-height: 3.1rem;
   }
 
   .extranet-reservations--assign {
-    --extranet-lane-height: 3.35rem;
+    --extranet-lane-height: 3.6rem;
   }
 
   .extranet-bar {
@@ -7690,7 +7691,7 @@ textarea:focus {
   }
 
   .extranet-bar__assign select {
-    max-width: 6.5rem;
+    max-width: 7rem;
     min-height: 2.75rem;
     height: 2.75rem;
     font-size: 0.78rem;
@@ -7706,21 +7707,21 @@ textarea:focus {
 }
 
 .extranet-bar strong {
-  font-size: 0.74rem;
+  font-size: 0.82rem;
 }
 
 .extranet-bar--compact {
-  gap: 0.15rem;
-  padding: 0 0.3rem;
+  gap: 0.2rem;
+  padding: 0 0.4rem;
 }
 
 .extranet-bar--compact strong {
-  font-size: 0.66rem;
+  font-size: 0.72rem;
 }
 
 .extranet-bar span {
   color: var(--color-muted);
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   font-weight: 700;
 }
 
@@ -7871,8 +7872,8 @@ textarea:focus {
 
   .staff-extranet__dates,
   .extranet-room__grid {
-    --extranet-label-width: 7.75rem;
-    --extranet-day-width: 3.75rem;
+    --extranet-label-width: 8.25rem;
+    --extranet-day-width: 5.25rem;
   }
 
   .extranet-pill {
