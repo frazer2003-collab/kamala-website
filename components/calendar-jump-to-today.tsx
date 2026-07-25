@@ -2,9 +2,17 @@
 
 import { useEffect } from "react";
 
-/** Scrolls the timeline so today's column sits near the left after load. */
+/**
+ * When the URL hash is #calendar-today (toolbar "Jump to today"), scroll the
+ * timeline so today's column sits near the left. Initial load without the hash
+ * stays on the 1st of the month.
+ */
 export function CalendarJumpToToday() {
   useEffect(() => {
+    if (window.location.hash !== "#calendar-today") {
+      return;
+    }
+
     const today = document.querySelector<HTMLElement>(".extranet-cell--today");
     if (!today) {
       return;
@@ -20,7 +28,6 @@ export function CalendarJumpToToday() {
 
     const rootRect = scrollRoot.getBoundingClientRect();
     const cellRect = today.getBoundingClientRect();
-    // Keep a little past context to the left; put most of the viewport on upcoming days.
     const nextLeft =
       scrollRoot.scrollLeft +
       (cellRect.left - rootRect.left) -

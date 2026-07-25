@@ -997,11 +997,24 @@ export function StaffTimelineCalendar({
   const staySelection = useCalendarStaySelection();
   const activeBookingKey = staySelection?.bookingKey || selectedBookingKey;
   const activeBlockKey = staySelection?.blockKey || selectedBlockKey;
+  // Size columns so the anchor month (1st → last) fills the first screenful.
+  const fitMonthDayCount = Math.max(
+    28,
+    calendarDays.filter((day) => day.iso.startsWith(`${monthKey}-`)).length ||
+      new Date(
+        Number(monthKey.slice(0, 4)),
+        Number(monthKey.slice(5, 7)),
+        0,
+      ).getDate(),
+  );
 
   return (
     <div
       className="staff-extranet staff-extranet--full"
-      style={getCalendarColorStyleProps(calendarColors)}
+      style={{
+        ...getCalendarColorStyleProps(calendarColors),
+        ["--extranet-fit-month-days" as string]: String(fitMonthDayCount),
+      }}
     >
       <CalendarJumpToToday />
       <h2 className="sr-only">Room availability by day</h2>
