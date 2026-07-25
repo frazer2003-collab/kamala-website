@@ -8,6 +8,7 @@ import {
   getGuesthouseLocationLabel,
 } from "@/lib/home-hero-copy";
 import { getPropertyTodayIso } from "@/lib/calendar";
+import { buildGoogleMapsSearchUrl } from "@/lib/google-maps";
 import {
   refreshStaleStayDates,
 } from "@/lib/stay-dates";
@@ -160,10 +161,41 @@ export function HomeDateSearch({
     router.push(`/?${params.toString()}#rooms`);
   }
 
+  const mapsUrl = addressLine?.trim()
+    ? buildGoogleMapsSearchUrl(addressLine)
+    : null;
+
   return (
     <section className="hero-atmosphere" aria-labelledby={`${formId}-title`} id="dates">
       <div className="hero-atmosphere__copy">
-        <p className="hero-atmosphere__brand">{locationLabel}</p>
+        <p className="hero-atmosphere__brand">
+          {mapsUrl ? (
+            <a
+              className="hero-atmosphere__maps"
+              href={mapsUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <svg
+                aria-hidden="true"
+                className="hero-atmosphere__maps-pin"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path d="M8 1.5a4.5 4.5 0 0 0-4.5 4.5c0 3.15 4.5 8.5 4.5 8.5s4.5-5.35 4.5-8.5A4.5 4.5 0 0 0 8 1.5zm0 6.25a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5z" />
+              </svg>
+              <span>
+                {propertyName} on Google Maps
+                {locationLabel &&
+                locationLabel.toLowerCase() !== propertyName.toLowerCase()
+                  ? ` · ${locationLabel}`
+                  : ""}
+              </span>
+            </a>
+          ) : (
+            locationLabel
+          )}
+        </p>
 
         <h1 id={`${formId}-title`}>{headline}</h1>
 

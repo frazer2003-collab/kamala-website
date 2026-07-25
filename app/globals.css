@@ -645,9 +645,6 @@ p {
     width: min(100%, 26rem);
   }
 
-  .hero-atmosphere__brand {
-    display: none;
-  }
 }
 
 .hero-atmosphere__eyebrow {
@@ -669,6 +666,37 @@ p {
   line-height: 1.3;
   text-shadow: 0 1px 10px oklch(8% 0.035 12 / 0.35);
   text-transform: none;
+}
+
+.hero-atmosphere__maps {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 36rem;
+  color: inherit;
+  font-weight: 650;
+  line-height: 1.35;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 1px;
+  text-wrap: balance;
+}
+
+.hero-atmosphere__maps:hover,
+.hero-atmosphere__maps:focus-visible {
+  color: white;
+}
+
+.hero-atmosphere__maps:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.hero-atmosphere__maps-pin {
+  flex-shrink: 0;
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 .hero-atmosphere__copy h1 {
@@ -8950,6 +8978,15 @@ textarea:focus {
 .guest-site .hero-atmosphere__brand {
   color: oklch(90% 0.03 12);
   text-shadow: 0 1px 10px oklch(8% 0.035 12 / 0.35);
+}
+
+.guest-site .hero-atmosphere__maps {
+  color: inherit;
+}
+
+.guest-site .hero-atmosphere__maps:hover,
+.guest-site .hero-atmosphere__maps:focus-visible {
+  color: white;
 }
 
 .guest-site .hero-atmosphere__lede {
