@@ -13,6 +13,7 @@ import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
 import { StaffShell } from "@/components/staff-shell";
 import {
   buildCalendarDays,
+  buildStaffTimelineDays,
   formatCalendarMonth,
   formatCalendarMonthLabel,
   isPastCalendarDate,
@@ -124,7 +125,8 @@ export default async function StaffCalendarPage({
   } = await searchParams;
   const { year, month } = parseCalendarMonth(monthParam);
   const monthKey = formatCalendarMonth(year, month);
-  const calendarDays = buildCalendarDays(year, month);
+  const statsCalendarDays = buildCalendarDays(year, month);
+  const calendarDays = buildStaffTimelineDays(year, month);
   const [
     confirmedBookings,
     calendarBlockData,
@@ -165,7 +167,7 @@ export default async function StaffCalendarPage({
   const monthStats = getCalendarMonthStats({
     bookings: calendarBookings,
     blocks: calendarBlocks,
-    calendarDays,
+    calendarDays: statsCalendarDays,
     rooms,
   });
   const selectedFromUrl = selectedBookingId

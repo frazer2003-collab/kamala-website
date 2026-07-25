@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-/** Scrolls the timeline so today's column is in view after month load. */
+/** Scrolls the timeline so today's column sits near the left after load. */
 export function CalendarJumpToToday() {
   useEffect(() => {
     const today = document.querySelector<HTMLElement>(".extranet-cell--today");
@@ -18,18 +18,13 @@ export function CalendarJumpToToday() {
       return;
     }
 
-    // Whole month fits on desktop — only nudge vertically if needed.
-    if (window.matchMedia("(min-width: 900px)").matches) {
-      today.scrollIntoView({ block: "nearest", inline: "nearest" });
-      return;
-    }
-
     const rootRect = scrollRoot.getBoundingClientRect();
     const cellRect = today.getBoundingClientRect();
+    // Keep a little past context to the left; put most of the viewport on upcoming days.
     const nextLeft =
       scrollRoot.scrollLeft +
       (cellRect.left - rootRect.left) -
-      rootRect.width * 0.35;
+      rootRect.width * 0.12;
 
     scrollRoot.scrollTo({
       left: Math.max(0, nextLeft),

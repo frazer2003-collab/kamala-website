@@ -54,6 +54,69 @@ export function isPastCalendarDate(iso: string) {
   return iso < getTodayIso();
 }
 
+/** Past nights kept visible when the staff timeline is on the current month. */
+export const STAFF_TIMELINE_PAST_LOOKBACK_DAYS = 2;
+
+function parseIsoToLocalDate(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function shiftIsoDate(iso: string, days: number) {
+  const date = parseIsoToLocalDate(iso);
+  date.setDate(date.getDate() + days);
+  return toIsoDate(date);
+}
+
+function buildIsoDayRange(
+  startIso: string,
+  endIso: string,
+  year: number,
+  month: number,
+): CalendarDay[] {
+  const days: CalendarDay[] = [];
+  let cursor = startIso;
+
+  while (cursor <= endIso) {
+    const date = parseIsoToLocalDate(cursor);
+    days.push({
+      date,
+      iso: cursor,
+      inCurrentMonth: date.getFullYear() === year && date.getMonth() + 1 === month,
+    });
+    cursor = shiftIsoDate(cursor, 1);
+  }
+
+  return days;
+}
+
+/**
+ * Staff timeline day columns: mostly today + future.
+ * In the current month, only a short past lookback is kept so the board
+ * is not dominated by completed nights.
+ */
+export function buildStaffTimelineDays(
+  year: number,
+  month: number,
+  {
+    todayIso = getTodayIso(),
+    pastLookbackDays = STAFF_TIMELINE_PAST_LOOKBACK_DAYS,
+  }: {
+    todayIso?: string;
+    pastLookbackDays?: number;
+  } = {},
+): CalendarDay[] {
+  const { monthStart, monthEnd } = getCalendarMonthBounds(year, month);
+
+  if (todayIso < monthStart || todayIso > monthEnd) {
+    return buildIsoDayRange(monthStart, monthEnd, year, month);
+  }
+
+  const lookback = Math.max(0, Math.floor(pastLookbackDays));
+  const rangeStart = shiftIsoDate(todayIso, -lookback);
+  return buildIsoDayRange(rangeStart, monthEnd, year, month);
+}
+
 export function buildCalendarDays(year: number, month: number): CalendarDay[] {
   const firstOfMonth = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
