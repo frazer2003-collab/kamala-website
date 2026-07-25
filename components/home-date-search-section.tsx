@@ -1,7 +1,6 @@
-"use client";
-
 import { Suspense } from "react";
 import { HomeDateSearch } from "@/components/home-date-search";
+import { HomeHeroIntro } from "@/components/home-hero-intro";
 
 type HomeDateSearchSectionProps = {
   arrival?: string;
@@ -12,25 +11,39 @@ type HomeDateSearchSectionProps = {
   dateError?: boolean;
 };
 
-export function HomeDateSearchSection(props: HomeDateSearchSectionProps) {
+export function HomeDateSearchSection({
+  arrival,
+  departure,
+  propertyName,
+  propertyTagline,
+  addressLine,
+  dateError,
+}: HomeDateSearchSectionProps) {
   return (
-    <Suspense
-      fallback={
-        <section
-          aria-hidden="true"
-          className="hero-atmosphere hero-atmosphere--loading"
-          id="dates"
-        >
-          <div className="hero-atmosphere__copy">
-            <div className="hero-atmosphere__skeleton hero-atmosphere__skeleton--brand" />
-            <div className="hero-atmosphere__skeleton hero-atmosphere__skeleton--title" />
-            <div className="hero-atmosphere__skeleton hero-atmosphere__skeleton--lede" />
-          </div>
-          <div className="hero-atmosphere__skeleton hero-atmosphere__skeleton--search" />
-        </section>
-      }
+    <section
+      aria-labelledby="home-hero-title"
+      className="hero-atmosphere"
+      id="dates"
     >
-      <HomeDateSearch {...props} />
-    </Suspense>
+      <HomeHeroIntro
+        addressLine={addressLine}
+        propertyName={propertyName}
+        propertyTagline={propertyTagline}
+      />
+      <Suspense
+        fallback={
+          <div
+            aria-hidden="true"
+            className="hero-atmosphere__skeleton hero-atmosphere__skeleton--search"
+          />
+        }
+      >
+        <HomeDateSearch
+          arrival={arrival}
+          dateError={dateError}
+          departure={departure}
+        />
+      </Suspense>
+    </section>
   );
 }

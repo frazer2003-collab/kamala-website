@@ -2,13 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useState } from "react";
-import {
-  buildAtmosphereHeadline,
-  buildAtmosphereLede,
-  getGuesthouseLocationLabel,
-} from "@/lib/home-hero-copy";
 import { getPropertyTodayIso } from "@/lib/calendar";
-import { buildGoogleMapsSearchUrl } from "@/lib/google-maps";
 import {
   MAX_STAY_NIGHTS,
   MIN_STAY_NIGHTS,
@@ -18,9 +12,6 @@ import {
 type HomeDateSearchProps = {
   arrival?: string;
   departure?: string;
-  propertyName: string;
-  propertyTagline: string;
-  addressLine: string | null;
   dateError?: boolean;
 };
 
@@ -52,18 +43,6 @@ function SearchDateSegment({
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   value: string;
 }) {
-  function openPicker(input: HTMLInputElement) {
-    if (typeof input.showPicker !== "function") {
-      return;
-    }
-
-    try {
-      input.showPicker();
-    } catch {
-      // Browser may block showPicker without a user gesture.
-    }
-  }
-
   return (
     <label className="search-bar__segment" htmlFor={id}>
       <span className="search-bar__label">{label}</span>
@@ -74,25 +53,22 @@ function SearchDateSegment({
         min={min}
         name={name}
         onChange={onChange}
-        onClick={(event) => openPicker(event.currentTarget)}
         required
         type="date"
         value={value}
       />
       <span aria-hidden="true" className="search-bar__value">
-        {value ? formatSegmentDate(value) : "Pick a date"}
+        {value ? formatSegmentDate(value) : "—"}
       </span>
     </label>
   );
 }
 
+/** Client date form only — hero H1/lede are server-rendered in HomeHeroIntro. */
 export function HomeDateSearch({
   arrival,
   departure,
-  propertyName,
-  propertyTagline,
-  addressLine,
-  dateError,
+  dateError = false,
 }: HomeDateSearchProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,19 +79,6 @@ export function HomeDateSearch({
     departure ?? (arrival ? addIsoDays(arrival, 1) : addIsoDays(propertyToday, 1));
   const [arrivalValue, setArrivalValue] = useState(defaultArrival);
   const [departureValue, setDepartureValue] = useState(defaultDeparture);
-
-  const locationLabel = useMemo(
-    () => getGuesthouseLocationLabel(addressLine, propertyName),
-    [addressLine, propertyName],
-  );
-  const headline = useMemo(
-    () => buildAtmosphereHeadline(locationLabel, propertyName, addressLine),
-    [addressLine, locationLabel, propertyName],
-  );
-  const lede = useMemo(
-    () => buildAtmosphereLede(locationLabel, propertyTagline, addressLine),
-    [addressLine, locationLabel, propertyTagline],
-  );
 
   useEffect(() => {
     const refreshed = refreshStaleStayDates(arrival, departure);
@@ -163,47 +126,8 @@ export function HomeDateSearch({
     router.push(`/?${params.toString()}#rooms`);
   }
 
-  const mapsUrl = addressLine?.trim()
-    ? buildGoogleMapsSearchUrl(addressLine)
-    : null;
-
   return (
-    <section className="hero-atmosphere" aria-labelledby={`${formId}-title`} id="dates">
-      <div className="hero-atmosphere__copy">
-        <p className="hero-atmosphere__brand">
-          {mapsUrl ? (
-            <a
-              className="hero-atmosphere__maps"
-              href={mapsUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <svg
-                aria-hidden="true"
-                className="hero-atmosphere__maps-pin"
-                fill="currentColor"
-                viewBox="0 0 16 16"
-              >
-                <path d="M8 1.5a4.5 4.5 0 0 0-4.5 4.5c0 3.15 4.5 8.5 4.5 8.5s4.5-5.35 4.5-8.5A4.5 4.5 0 0 0 8 1.5zm0 6.25a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5z" />
-              </svg>
-              <span>
-                {propertyName} on Google Maps
-                {locationLabel &&
-                locationLabel.toLowerCase() !== propertyName.toLowerCase()
-                  ? ` · ${locationLabel}`
-                  : ""}
-              </span>
-            </a>
-          ) : (
-            locationLabel
-          )}
-        </p>
-
-        <h1 id={`${formId}-title`}>{headline}</h1>
-
-        <p className="hero-atmosphere__lede">{lede}</p>
-      </div>
-
+    <>
       <form
         aria-label="Check availability for your stay"
         className="search-bar search-bar--atmosphere hero-atmosphere__search"
@@ -239,6 +163,6 @@ export function HomeDateSearch({
           {MAX_STAY_NIGHTS} nights, starting from today.
         </p>
       ) : null}
-    </section>
+    </>
   );
 }
