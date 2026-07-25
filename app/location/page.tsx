@@ -12,6 +12,7 @@ import { getPropertySettings } from "@/lib/property-settings";
 import {
   buildThaPhaeMetaDescription,
   isThaPhaeSeoContext,
+  THA_PHAE_GATE_GEO,
   THA_PHAE_PRIMARY_TITLE,
 } from "@/lib/tha-phae-seo";
 import { getGuesthouseLocationLabel } from "@/lib/home-hero-copy";
@@ -89,6 +90,7 @@ export default async function LocationPage() {
         <PropertyLocation
           addressLine={settings.addressLine}
           contactPhone={settings.contactPhone}
+          coordinates={nearThaPhae ? THA_PHAE_GATE_GEO : null}
           showMap
         />
         {nearThaPhae ? (
