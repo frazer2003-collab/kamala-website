@@ -18,6 +18,7 @@ import {
   calculateStayQuote,
   type RoomPromotionRate,
 } from "@/lib/pricing";
+import { CalendarRangeFields } from "@/components/calendar-range-fields";
 import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS } from "@/lib/stay-dates";
 
 type CalendarWalkInFormProps = {
@@ -26,6 +27,8 @@ type CalendarWalkInFormProps = {
   roomRate: number;
   date: string;
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   dayHref: string;
   canManage: boolean;
   currency: PropertyCurrency;
@@ -73,6 +76,8 @@ export function CalendarWalkInForm({
   roomRate,
   date,
   monthKey,
+  fromIso,
+  toIso,
   dayHref,
   canManage,
   currency,
@@ -174,7 +179,7 @@ export function CalendarWalkInForm({
       ) : null}
       <form action={formAction} className="calendar-manage-form">
         <StaffFormBusyBridge />
-        <input name="month" type="hidden" value={monthKey} />
+        <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
         <input name="room-id" type="hidden" value={roomId} />
         {showEmail ? <input name="show-email" type="hidden" value="1" /> : null}
         {showTotal ? <input name="show-total" type="hidden" value="1" /> : null}

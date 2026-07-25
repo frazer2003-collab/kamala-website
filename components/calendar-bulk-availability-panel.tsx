@@ -4,12 +4,15 @@ import { StaffFormBusyBridge } from "@/components/staff-busy";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { bulkUpdateRoomAvailability } from "@/app/actions";
-import { getTodayIso } from "@/lib/calendar";
+import { CalendarRangeFields } from "@/components/calendar-range-fields";
+import { buildStaffCalendarHref, getTodayIso } from "@/lib/calendar";
 import type { Room } from "@/lib/content";
 
 type CalendarBulkAvailabilityPanelProps = {
   room: Room;
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   canManage: boolean;
   error?: string;
 };
@@ -39,12 +42,14 @@ function getErrorMessage(error?: string) {
 export function CalendarBulkAvailabilityPanel({
   room,
   monthKey,
+  fromIso,
+  toIso,
   canManage,
   error,
 }: CalendarBulkAvailabilityPanelProps) {
   const todayIso = useMemo(() => getTodayIso(), []);
   const defaultEnd = useMemo(() => addIsoDays(todayIso, 6), [todayIso]);
-  const closeHref = `/staff/calendar?month=${monthKey}`;
+  const closeHref = buildStaffCalendarHref({ month: monthKey, from: fromIso, to: toIso });
   const errorMessage = getErrorMessage(error);
   const [action, setAction] = useState<"close" | "open">("close");
 
@@ -61,7 +66,7 @@ export function CalendarBulkAvailabilityPanel({
       ) : null}
       <form action={bulkUpdateRoomAvailability} className="calendar-manage-form">
       <StaffFormBusyBridge />
-        <input name="month" type="hidden" value={monthKey} />
+        <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
         <input name="room-id" type="hidden" value={room.id} />
         <input name="availability-action" type="hidden" value={action} />
         <div className="field-pair field-pair--wide">

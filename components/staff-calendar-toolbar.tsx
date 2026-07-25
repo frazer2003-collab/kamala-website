@@ -3,6 +3,7 @@ import { syncAllRoomIcalFeedsAction } from "@/app/staff/auth-actions";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffOtaSyncControls } from "@/components/staff-ota-sync-controls";
+import { CalendarRangeFields } from "@/components/calendar-range-fields";
 import {
   defaultStaffTimelineSelectionRange,
   formatCalendarMonth,
@@ -78,7 +79,7 @@ export function StaffCalendarToolbar({
         {canSyncOta ? (
           <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
             <StaffFormBusyBridge message="Syncing channel calendars…" />
-            <input name="month" type="hidden" value={monthKey} />
+            <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
             <StaffOtaSyncControls />
           </form>
         ) : null}

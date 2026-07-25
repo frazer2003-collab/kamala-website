@@ -160,6 +160,9 @@ export default async function StaffCalendarPage({
     getStaffRoomUnits(),
   ]);
 
+  const allPartsSupabase = <T extends { source: string }>(parts: T[]) =>
+    parts.length > 0 && parts.every((part) => part.source === "supabase");
+
   const confirmedBookings = {
     bookings: Array.from(
       new Map(
@@ -168,9 +171,9 @@ export default async function StaffCalendarPage({
           .map((booking) => [getStaffBookingKey(booking), booking] as const),
       ).values(),
     ),
-    source: confirmedBookingsParts.every((part) => part.source === "supabase")
+    source: allPartsSupabase(confirmedBookingsParts)
       ? ("supabase" as const)
-      : confirmedBookingsParts[0]?.source ?? ("sample" as const),
+      : ("sample" as const),
     error: confirmedBookingsParts.find((part) => part.error)?.error ?? null,
   };
   const calendarBlockData = {
@@ -188,23 +191,23 @@ export default async function StaffCalendarPage({
           .map((block) => [getStaffRoomBlockKey(block), block] as const),
       ).values(),
     ),
-    source: calendarBlockParts.every((part) => part.source === "supabase")
+    source: allPartsSupabase(calendarBlockParts)
       ? ("supabase" as const)
-      : calendarBlockParts[0]?.source ?? ("sample" as const),
+      : ("sample" as const),
     error: calendarBlockParts.find((part) => part.error)?.error ?? null,
   };
   const dayInventory = {
     entries: dayInventoryParts.flatMap((part) => part.entries),
-    source: dayInventoryParts.every((part) => part.source === "supabase")
+    source: allPartsSupabase(dayInventoryParts)
       ? ("supabase" as const)
-      : dayInventoryParts[0]?.source ?? ("sample" as const),
+      : ("sample" as const),
     error: dayInventoryParts.find((part) => part.error)?.error ?? null,
   };
   const dayRates = {
     entries: dayRatesParts.flatMap((part) => part.entries),
-    source: dayRatesParts.every((part) => part.source === "supabase")
+    source: allPartsSupabase(dayRatesParts)
       ? ("supabase" as const)
-      : dayRatesParts[0]?.source ?? ("sample" as const),
+      : ("sample" as const),
     error: dayRatesParts.find((part) => part.error)?.error ?? null,
   };
 
@@ -623,7 +626,9 @@ export default async function StaffCalendarPage({
             canManage={canManage}
             currency={settings.currency}
             formError={panelFormError}
+            fromIso={fromIso}
             monthKey={monthKey}
+            toIso={toIso}
             occupancies={unitOccupancies}
             promotions={promotions}
             rateOverrides={Object.fromEntries(rateLookup)}
@@ -643,8 +648,10 @@ export default async function StaffCalendarPage({
             <CalendarBulkAvailabilityPanel
               canManage={canManage}
               error={error}
+              fromIso={fromIso}
               monthKey={monthKey}
               room={selectedRoom}
+              toIso={toIso}
             />
           </CalendarBookingDialog>
         ) : null}
@@ -678,6 +685,7 @@ export default async function StaffCalendarPage({
               date={selectedDate}
               dayStays={dayStays}
               error={error}
+              fromIso={fromIso}
               hasAllotmentOverride={Boolean(
                 selectedRoom &&
                   selectedDate &&
@@ -690,6 +698,7 @@ export default async function StaffCalendarPage({
               )}
               mode={mode}
               monthKey={monthKey}
+              toIso={toIso}
               overlap={overlap}
               promotions={promotions}
               rateOverrides={Object.fromEntries(rateLookup)}

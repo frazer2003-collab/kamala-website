@@ -1173,7 +1173,19 @@ export async function syncAllRoomIcalFeedsAction(formData: FormData) {
   await requireStaffCalendarWrite();
 
   const month = getValue(formData, "month");
-  const monthQuery = month && /^\d{4}-\d{2}$/.test(month) ? `month=${month}&` : "";
+  const from = getValue(formData, "from");
+  const to = getValue(formData, "to");
+  const rangeParams = new URLSearchParams();
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    rangeParams.set("month", month);
+  }
+  if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) {
+    rangeParams.set("from", from);
+  }
+  if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    rangeParams.set("to", to);
+  }
+  const monthQuery = rangeParams.toString() ? `${rangeParams.toString()}&` : "";
 
   if (!hasStaffSupabaseConfig()) {
     redirect(`/staff/calendar?${monthQuery}ical-error=${encodeURIComponent("Supabase is not configured.")}`);

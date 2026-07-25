@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildStaffCalendarHref,
   buildStaffTimelineDays,
   clampStaffTimelineDateRange,
   defaultStaffTimelineDateRange,
   defaultStaffTimelineSelectionRange,
   maxStaffTimelineEndIso,
+  monthsOverlappingDateRange,
   parseStaffTimelineRange,
 } from "./calendar";
 
@@ -19,7 +21,7 @@ describe("buildStaffTimelineDays", () => {
     assert.ok(days.every((day) => day.inCurrentMonth));
   });
 
-  it("clamps ranges longer than three months", () => {
+  it("clamps ranges longer than three calendar months", () => {
     const days = buildStaffTimelineDays("2026-07-01", "2026-12-31");
 
     assert.equal(days[0]?.iso, "2026-07-01");
@@ -55,17 +57,18 @@ describe("parseStaffTimelineRange", () => {
     assert.equal(range.monthCount, 3);
   });
 
-  it("prefers from/to day params and clamps selector length", () => {
+  it("clamps from/to to at most three calendar months", () => {
     const range = parseStaffTimelineRange({
       from: "2026-07-10",
       to: "2026-12-01",
     });
 
     assert.equal(range.fromIso, "2026-07-10");
+    assert.equal(range.toIso, "2026-09-30");
     assert.equal(range.toIso, maxStaffTimelineEndIso("2026-07-10"));
-    assert.equal(range.toIso, "2026-10-09");
+    assert.equal(monthsOverlappingDateRange(range.fromIso, range.toIso).length, 3);
     assert.equal(range.boardFromIso, "2026-07-10");
-    assert.equal(range.boardToIso, "2026-10-09");
+    assert.equal(range.boardToIso, "2026-09-30");
   });
 
   it("orders a reversed from/to before clamping", () => {
@@ -98,5 +101,20 @@ describe("clampStaffTimelineDateRange", () => {
     const range = clampStaffTimelineDateRange("2026-07-01", "2026-08-15");
 
     assert.deepEqual(range, { fromIso: "2026-07-01", toIso: "2026-08-15" });
+  });
+});
+
+describe("buildStaffCalendarHref", () => {
+  it("preserves from/to alongside month and extras", () => {
+    assert.equal(
+      buildStaffCalendarHref({
+        month: "2026-07",
+        from: "2026-07-01",
+        to: "2026-07-31",
+        booking: "abc",
+        extras: { saved: "1" },
+      }),
+      "/staff/calendar?month=2026-07&from=2026-07-01&to=2026-07-31&booking=abc&saved=1",
+    );
   });
 });

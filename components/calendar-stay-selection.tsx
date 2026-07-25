@@ -53,9 +53,13 @@ function writeStayUrl({
   params.set("month", monthKey);
   if (fromIso) {
     params.set("from", fromIso);
+  } else {
+    params.delete("from");
   }
   if (toIso) {
     params.set("to", toIso);
+  } else {
+    params.delete("to");
   }
   params.delete("through");
   params.delete("room");
@@ -100,6 +104,12 @@ export function CalendarStaySelectionProvider({
 }: CalendarStaySelectionProviderProps) {
   const [bookingKey, setBookingKey] = useState(initialBookingKey);
   const [blockKey, setBlockKey] = useState(initialBlockKey);
+
+  // Keep client selection aligned with server/searchParams after redirects.
+  useEffect(() => {
+    setBookingKey(initialBookingKey);
+    setBlockKey(initialBlockKey);
+  }, [initialBookingKey, initialBlockKey]);
 
   useEffect(() => {
     function onPopState() {

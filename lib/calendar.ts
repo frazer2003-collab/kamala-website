@@ -130,15 +130,95 @@ export function clampCalendarMonthRange(
   };
 }
 
-/** Latest end date allowed for a from date within maxMonths. */
+/**
+ * Latest end date allowed for a from date within maxMonths calendar months
+ * (inclusive). Example: from 2026-07-10 with max 3 → 2026-09-30.
+ */
 export function maxStaffTimelineEndIso(
   fromIso: string,
   maxMonths = STAFF_TIMELINE_MAX_MONTHS,
 ) {
-  const date = parseIsoToLocalDate(fromIso);
-  date.setMonth(date.getMonth() + Math.max(1, maxMonths));
-  date.setDate(date.getDate() - 1);
-  return toIsoDate(date);
+  const start = {
+    year: Number(fromIso.slice(0, 4)),
+    month: Number(fromIso.slice(5, 7)),
+  };
+  const end = shiftCalendarMonth(
+    start.year,
+    start.month,
+    Math.max(1, maxMonths) - 1,
+  );
+  return getCalendarMonthBounds(end.year, end.month).monthEnd;
+}
+
+export type StaffCalendarHrefOptions = {
+  month?: string;
+  from?: string;
+  to?: string;
+  booking?: string;
+  block?: string;
+  room?: string;
+  date?: string;
+  mode?: string;
+  extras?: Record<string, string | undefined | null>;
+};
+
+/** Build a staff calendar URL, preserving an optional from/to day range. */
+export function buildStaffCalendarHref({
+  month,
+  from,
+  to,
+  booking,
+  block,
+  room,
+  date,
+  mode,
+  extras,
+}: StaffCalendarHrefOptions) {
+  const params = new URLSearchParams();
+  if (month) {
+    params.set("month", month);
+  }
+  if (from && isIsoDateString(from)) {
+    params.set("from", from);
+  }
+  if (to && isIsoDateString(to)) {
+    params.set("to", to);
+  }
+  if (booking) {
+    params.set("booking", booking);
+  }
+  if (block) {
+    params.set("block", block);
+  }
+  if (room) {
+    params.set("room", room);
+  }
+  if (date && isIsoDateString(date)) {
+    params.set("date", date);
+  }
+  if (mode) {
+    params.set("mode", mode);
+  }
+  if (extras) {
+    for (const [key, value] of Object.entries(extras)) {
+      if (value) {
+        params.set(key, value);
+      }
+    }
+  }
+  const query = params.toString();
+  return query ? `/staff/calendar?${query}` : "/staff/calendar";
+}
+
+export function staffCalendarRangeFromFormData(formData: FormData) {
+  const monthRaw = String(formData.get("month") ?? "").trim();
+  const fromRaw = String(formData.get("from") ?? "").trim();
+  const toRaw = String(formData.get("to") ?? "").trim();
+  return {
+    month: /^\d{4}-\d{2}$/.test(monthRaw) ? monthRaw : "",
+    from: isIsoDateString(fromRaw) ? fromRaw : "",
+    to: isIsoDateString(toRaw) ? toRaw : "",
+  };
 }
 
 export function clampStaffTimelineDateRange(

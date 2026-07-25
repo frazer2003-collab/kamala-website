@@ -21,6 +21,8 @@ import { STAY_STATUS_LABELS } from "@/lib/stay-status";
 
 type CalendarStayDialogsProps = {
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   bookings: StaffBooking[];
   blocks: StaffRoomBlock[];
   /** Deep-linked stay that may sit outside the loaded month set. */
@@ -50,6 +52,8 @@ function getStayStatusClass(stayStatus: string) {
 
 export function CalendarStayDialogs({
   monthKey,
+  fromIso,
+  toIso,
   bookings,
   blocks,
   seedBooking = null,
@@ -164,7 +168,9 @@ export function CalendarStayDialogs({
             guestEmail={selectedBooking.contact}
             guestName={selectedBooking.guest}
             guestPhone={selectedBooking.phone}
+            fromIso={fromIso}
             monthKey={monthKey}
+            toIso={toIso}
             note={selectedBooking.note}
             occupancies={occupancies}
             promotions={promotions}
@@ -231,7 +237,9 @@ export function CalendarStayDialogs({
             block={selectedBlock}
             canManage={canManageBlock}
             formError={formError}
+            fromIso={fromIso}
             monthKey={monthKey}
+            toIso={toIso}
             occupancies={occupancies}
             room={rooms.find((room) => room.id === selectedBlock.roomId)}
             roomUnits={roomUnits}

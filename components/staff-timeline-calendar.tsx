@@ -787,6 +787,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                       <InlineRoomAssign
                         arrivalDate={sourceBooking.arrivalDate}
                         departureDate={sourceBooking.departureDate}
+                        fromIso={fromIso}
                         guestLabel={sourceBooking.guest}
                         kind="booking"
                         monthKey={monthKey}
@@ -794,12 +795,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                         roomId={sourceBooking.roomId}
                         roomUnits={roomUnits}
                         stayId={stayId}
+                        toIso={toIso}
                       />
                     ) : null}
                     {showInlineAssign && stayId && sourceChannel ? (
                       <InlineRoomAssign
                         arrivalDate={sourceChannel.startDate}
                         departureDate={sourceChannel.endDate}
+                        fromIso={fromIso}
                         guestLabel={
                           sourceChannel.guestName || sourceChannel.channelLabel || "Guest"
                         }
@@ -809,6 +812,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                         roomId={sourceChannel.roomId}
                         roomUnits={roomUnits}
                         stayId={stayId}
+                        toIso={toIso}
                       />
                     ) : null}
                   </div>

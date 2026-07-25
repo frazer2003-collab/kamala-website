@@ -1,4 +1,5 @@
 "use client";
+import { CalendarRangeFields } from "@/components/calendar-range-fields";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useFormStatus } from "react-dom";
@@ -13,6 +14,8 @@ type InlineRoomAssignProps = {
   arrivalDate: string;
   departureDate: string;
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
   guestLabel: string;
@@ -69,6 +72,8 @@ export function InlineRoomAssign({
   arrivalDate,
   departureDate,
   monthKey,
+  fromIso,
+  toIso,
   roomUnits,
   occupancies,
   guestLabel,
@@ -96,7 +101,7 @@ export function InlineRoomAssign({
       <StaffFormBusyBridge />
       <input name="kind" type="hidden" value={kind} />
       <input name="stay-id" type="hidden" value={stayId} />
-      <input name="month" type="hidden" value={monthKey} />
+      <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
       <input name="guest-label" type="hidden" value={guestLabel} />
       <AssignSelect available={available} guestLabel={guestLabel} stayId={stayId} />
     </form>

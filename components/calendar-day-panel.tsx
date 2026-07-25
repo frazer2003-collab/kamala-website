@@ -8,8 +8,9 @@ import {
   updateRoomDayAllotment,
   updateRoomDayRate,
 } from "@/app/actions";
+import { CalendarRangeFields } from "@/components/calendar-range-fields";
 import { CalendarWalkInForm } from "@/components/calendar-walk-in-form";
-import { getTodayIso } from "@/lib/calendar";
+import { buildStaffCalendarHref, getTodayIso } from "@/lib/calendar";
 import type { Room } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import type { RoomPromotionRate } from "@/lib/pricing";
@@ -30,6 +31,8 @@ type CalendarDayPanelProps = {
   room: Room;
   date: string;
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   mode?: string;
   canManage: boolean;
   error?: string;
@@ -110,6 +113,8 @@ export function CalendarDayPanel({
   room,
   date,
   monthKey,
+  fromIso,
+  toIso,
   mode,
   canManage,
   error,
@@ -125,7 +130,13 @@ export function CalendarDayPanel({
 }: CalendarDayPanelProps) {
   const defaultDeparture = useMemo(() => addIsoDays(date, 1), [date]);
   const todayIso = useMemo(() => getTodayIso(), []);
-  const dayHref = `/staff/calendar?month=${monthKey}&room=${encodeURIComponent(room.id)}&date=${encodeURIComponent(date)}`;
+  const dayHref = buildStaffCalendarHref({
+    month: monthKey,
+    from: fromIso,
+    to: toIso,
+    room: room.id,
+    date,
+  });
   const errorMessage = getErrorMessage(error, overlap);
 
   if (mode === "stays") {
@@ -173,7 +184,7 @@ export function CalendarDayPanel({
         ) : null}
         <form action={updateRoomDayAllotment} className="calendar-manage-form">
       <StaffFormBusyBridge />
-          <input name="month" type="hidden" value={monthKey} />
+          <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
             <label htmlFor="allotment-start-date">First night</label>
@@ -270,7 +281,7 @@ export function CalendarDayPanel({
         ) : null}
         <form action={updateRoomDayRate} className="calendar-manage-form">
       <StaffFormBusyBridge />
-          <input name="month" type="hidden" value={monthKey} />
+          <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
             <label htmlFor="rate-start-date">First night</label>
@@ -359,12 +370,14 @@ export function CalendarDayPanel({
         date={date}
         dayHref={dayHref}
         errorMessage={errorMessage}
+        fromIso={fromIso}
         monthKey={monthKey}
         promotions={promotions}
         rateOverrides={rateOverrides}
         roomId={room.id}
         roomName={room.name}
         roomRate={room.rate}
+        toIso={toIso}
       />
     );
   }
@@ -383,7 +396,7 @@ export function CalendarDayPanel({
         ) : null}
         <form action={createRoomBlock} className="calendar-manage-form">
       <StaffFormBusyBridge />
-          <input name="month" type="hidden" value={monthKey} />
+          <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
             <label htmlFor="block-start-date">Closed from</label>
