@@ -19,9 +19,6 @@ export const COURTYARD_UNIT_NUMBERS = ["113", "115", "118", "120"] as const;
 /** Deluxe (garden) door numbers — assignment / sellable inventory. */
 export const GARDEN_UNIT_NUMBERS = ["112", "114", "117", "119"] as const;
 
-/** Triple (veranda) — Airbnb iCal door 112. */
-export const VERANDA_UNIT_NUMBERS = ["112"] as const;
-
 /** Family (loft) — Airbnb iCal door 114. */
 export const LOFT_UNIT_NUMBERS = ["114"] as const;
 
@@ -34,7 +31,7 @@ const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "115": ["courtyard"],
   "118": ["courtyard"],
   "120": ["courtyard"],
-  "112": ["garden", "veranda"],
+  "112": ["garden"],
   "114": ["garden", "loft"],
   "116": ["ground"],
   "117": ["garden"],
@@ -77,9 +74,6 @@ export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
       if (roomId === "garden") {
         return (GARDEN_UNIT_NUMBERS as readonly string[]).includes(unit.number);
       }
-      if (roomId === "veranda") {
-        return (VERANDA_UNIT_NUMBERS as readonly string[]).includes(unit.number);
-      }
       if (roomId === "loft") {
         return (LOFT_UNIT_NUMBERS as readonly string[]).includes(unit.number);
       }
@@ -93,17 +87,12 @@ export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
 
 /**
  * Units shown on the staff timeline for a room type.
- * Shared physical doors stay assignable under every linked type, but the
- * calendar only lists each door once:
- * - 114 under Family (loft), not Deluxe (garden)
- * - 112 under Deluxe (garden), not Triple (veranda)
+ * Door 114 stays assignable under Deluxe, but the calendar only lists it
+ * under Family (loft) so the same physical room is not duplicated.
  */
 export function getTimelineUnitsForRoomType(units: RoomUnit[], roomId: string) {
   return getUnitsForRoomType(units, roomId).filter((unit) => {
     if (roomId === "garden" && unit.number === "114") {
-      return false;
-    }
-    if (roomId === "veranda" && unit.number === "112") {
       return false;
     }
     return true;
@@ -294,9 +283,8 @@ function withDefaultRoomIds(units: RoomUnit[]): RoomUnit[] {
     if (!(GARDEN_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
       roomIds = roomIds.filter((id) => id !== "garden");
     }
-    if (!(VERANDA_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
-      roomIds = roomIds.filter((id) => id !== "veranda");
-    }
+    // Triple (veranda) was removed — drop any leftover type links.
+    roomIds = roomIds.filter((id) => id !== "veranda");
     if (!(LOFT_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
       roomIds = roomIds.filter((id) => id !== "loft");
     }

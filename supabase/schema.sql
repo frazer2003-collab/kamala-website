@@ -55,18 +55,6 @@ values
     'garden'
   ),
   (
-    'veranda',
-    'Triple Room with Balcony',
-    'Triple',
-    900,
-    'Sleeps 3',
-    '45 m² · queen + single · balcony · garden view',
-    1,
-    'Ideal for three guests travelling together — queen and single bed configuration, private balcony with seating, and room to spread out after a day around Chiang Mai''s old city.',
-    array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'Queen and single beds', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
-    'veranda'
-  ),
-  (
     'loft',
     'Family Room with Balcony',
     'Family',

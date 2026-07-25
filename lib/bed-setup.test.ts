@@ -15,7 +15,7 @@ describe("bed setup by room", () => {
     assert.equal(roomOffersBedSetupChoice("courtyard"), true);
     assert.equal(defaultBedSetupForRoom("courtyard"), "");
 
-    for (const roomId of ["garden", "veranda", "loft", "ground"]) {
+    for (const roomId of ["garden", "loft", "ground"]) {
       assert.deepEqual(getAllowedBedSetups(roomId), []);
       assert.equal(roomOffersBedSetupChoice(roomId), false);
       assert.equal(defaultBedSetupForRoom(roomId), "");

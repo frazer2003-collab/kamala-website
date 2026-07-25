@@ -594,9 +594,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             <span className="extranet-room__units-toggle-meta">
               {typeUnits.length > 0
                 ? `${typeUnits.length} room${typeUnits.length === 1 ? "" : "s"}`
-                : room.id === "veranda"
-                  ? "See Deluxe for 112"
-                  : "No room #s"}
+                : "No room #s"}
               <span className="extranet-room__units-toggle-hint">
                 {unitsOpen ? "Hide" : "Show"}
               </span>
@@ -1013,9 +1011,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           </div>
         ) : (
           <p className="extranet-room__no-units" id={unitsPanelId}>
-            {room.id === "veranda"
-              ? "Door 112 is listed under Deluxe — same physical room."
-              : "No room numbers set up for this type yet."}
+            No room numbers set up for this type yet.
           </p>
         )
       ) : (

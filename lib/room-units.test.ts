@@ -7,21 +7,16 @@ import {
 } from "@/lib/room-units";
 
 describe("getTimelineUnitsForRoomType", () => {
-  it("keeps shared doors assignable under every linked type", () => {
+  it("keeps door 114 assignable under Deluxe and Family", () => {
     const garden = getUnitsForRoomType(SAMPLE_ROOM_UNITS, "garden").map((unit) => unit.number);
-    const veranda = getUnitsForRoomType(SAMPLE_ROOM_UNITS, "veranda").map((unit) => unit.number);
     const loft = getUnitsForRoomType(SAMPLE_ROOM_UNITS, "loft").map((unit) => unit.number);
 
     assert.deepEqual(garden, ["112", "114", "117", "119"]);
-    assert.deepEqual(veranda, ["112"]);
     assert.deepEqual(loft, ["114"]);
   });
 
-  it("hides Deluxe 114 and Triple 112 on the timeline only", () => {
+  it("hides Deluxe 114 on the timeline so Family owns that row", () => {
     const garden = getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "garden").map(
-      (unit) => unit.number,
-    );
-    const veranda = getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "veranda").map(
       (unit) => unit.number,
     );
     const loft = getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "loft").map(
@@ -29,8 +24,12 @@ describe("getTimelineUnitsForRoomType", () => {
     );
 
     assert.deepEqual(garden, ["112", "117", "119"]);
-    assert.deepEqual(veranda, []);
     assert.deepEqual(loft, ["114"]);
+  });
+
+  it("does not expose the retired Triple room type", () => {
+    assert.deepEqual(getUnitsForRoomType(SAMPLE_ROOM_UNITS, "veranda"), []);
+    assert.deepEqual(getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "veranda"), []);
   });
 
   it("leaves Superior and Family Ground Floor rows unchanged", () => {
