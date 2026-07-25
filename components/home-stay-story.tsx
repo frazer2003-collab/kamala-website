@@ -4,6 +4,7 @@ import {
   buildStayStoryHeading,
   buildStayStoryLede,
   getGuesthouseLocationLabel,
+  isNearThaPhaeGate,
 } from "@/lib/home-hero-copy";
 
 type HomeStayStoryProps = {
@@ -44,7 +45,9 @@ export function HomeStayStory({
           <p className="stay-story__details">{checkInDetails}</p>
           <p className="stay-story__link-row">
             <Link className="stay-story__gallery-link" href="/location">
-              Location near Tha Pae Gate →
+              {isNearThaPhaeGate(addressLine)
+                ? "Location near Tha Pae Gate →"
+                : "Find us on the map →"}
             </Link>
             {" · "}
             <Link className="stay-story__gallery-link" href="/gallery">
