@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarBulkAvailabilityPanel } from "@/components/calendar-bulk-availability-panel";
 import { CalendarDayPanel } from "@/components/calendar-day-panel";
 import { CalendarBookingDialog, StaffTimelineCalendar } from "@/components/staff-lazy";
-import { CalendarGridGuide } from "@/components/calendar-grid-guide";
+import { CalendarDateStrip } from "@/components/calendar-date-strip";
 import { CalendarStayDialogs } from "@/components/calendar-stay-dialogs";
 import { CalendarStaySelectionProvider } from "@/components/calendar-stay-selection";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
@@ -498,7 +498,7 @@ export default async function StaffCalendarPage({
               unassignedCount={unassignedCount}
             />
 
-            <CalendarGridGuide />
+            <CalendarDateStrip days={calendarDays} selectedDate={selectedDate} />
 
             <StaffTimelineCalendar
               blocks={calendarBlocks}

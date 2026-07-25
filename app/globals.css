@@ -6454,35 +6454,95 @@ textarea:focus {
   font-weight: 650;
 }
 
-.calendar-grid-guide {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: start;
-  justify-content: space-between;
-  gap: var(--space-3);
+.calendar-date-strip {
   margin-bottom: var(--space-3);
-  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.calendar-date-strip__scroller {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.calendar-date-strip__day {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: center;
+  gap: 0.08rem;
+  min-width: 2.85rem;
+  padding: 0.35rem 0.4rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   background: var(--color-surface-muted);
-}
-
-.calendar-grid-guide__lede {
-  margin: 0 0 var(--space-2);
   color: var(--color-ink);
-  font-size: 0.9rem;
-  font-weight: 650;
+  cursor: pointer;
+  scroll-snap-align: center;
+  transition:
+    border-color 150ms var(--ease-out-quint),
+    background-color 150ms var(--ease-out-quint);
 }
 
-.calendar-grid-guide__list {
-  margin: 0;
-  padding-left: 1.1rem;
+.calendar-date-strip__day:hover {
+  border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
+  background: var(--color-maroon-wash);
+}
+
+.calendar-date-strip__day:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+.calendar-date-strip__day--today {
+  border-color: color-mix(in srgb, var(--color-maroon) 40%, var(--color-border));
+}
+
+.calendar-date-strip__day--active {
+  background: var(--color-maroon-wash);
+  border-color: var(--color-maroon);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-maroon) 22%, transparent);
+}
+
+.calendar-date-strip__day--muted {
+  opacity: 0.62;
+}
+
+.calendar-date-strip__weekday {
   color: var(--color-muted);
-  font-size: 0.86rem;
+  font-size: 0.58rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.calendar-grid-guide__list strong {
-  color: var(--color-ink);
+.calendar-date-strip__num {
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.calendar-date-strip__day--today .calendar-date-strip__num {
+  display: grid;
+  place-items: center;
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  border-radius: 999px;
+  background: var(--color-maroon);
+  color: var(--color-surface);
+  font-size: 0.78rem;
+}
+
+.calendar-date-strip__day--active:not(.calendar-date-strip__day--today)
+  .calendar-date-strip__num {
+  color: var(--color-maroon-deep);
 }
 
 .extranet-row__hint {

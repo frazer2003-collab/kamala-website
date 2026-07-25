@@ -1000,6 +1000,7 @@ export function StaffTimelineCalendar({
                 ]
                   .filter(Boolean)
                   .join(" ")}
+                data-calendar-day={day.iso}
                 key={day.iso}
                 style={{ gridColumn: columnIndex + 2 }}
               >
