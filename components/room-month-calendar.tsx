@@ -15,7 +15,6 @@ import {
 import { getStaffBookingKey, type StaffBooking } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
 import { getStaffRoomBlockKey, type StaffRoomBlock } from "@/lib/room-blocks";
-import { STAY_STATUS_LABELS } from "@/lib/stay-status";
 
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -52,13 +51,12 @@ function getBarHref(bar: { kind: "booking" | "block"; itemKey: string }, monthKe
 function getBarLabel(bar: {
   kind: "booking" | "block";
   label: string;
-  stayStatus: string;
 }) {
   if (bar.kind === "block") {
     return `${bar.label}, closed`;
   }
 
-  return `${bar.label}, ${STAY_STATUS_LABELS[bar.stayStatus as keyof typeof STAY_STATUS_LABELS]}`;
+  return bar.label;
 }
 
 export function RoomMonthCalendar({
@@ -197,10 +195,7 @@ export function RoomMonthCalendar({
                   const isSelected =
                     (bar.kind === "booking" && selectedBookingKey === bar.itemKey) ||
                     (bar.kind === "block" && selectedBlockKey === bar.itemKey);
-                  const sublabel =
-                    bar.kind === "block"
-                      ? "Closed"
-                      : STAY_STATUS_LABELS[bar.stayStatus as keyof typeof STAY_STATUS_LABELS];
+                  const sublabel = bar.kind === "block" ? "Closed" : "Stay";
 
                   return (
                     <Link

@@ -45,6 +45,10 @@ import {
 } from "@/lib/room-units";
 import { InlineRoomAssign } from "@/components/inline-room-assign";
 import { getStaffBookingKey } from "@/lib/booking-requests";
+import {
+  assignGuestBarColors,
+  guestBarColorForName,
+} from "@/lib/booking-bar-colors";
 
 type DayMetrics = {
   iso: string;
@@ -91,17 +95,14 @@ type StaffExtranetRoomSectionProps = {
   currency: PropertyCurrency;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
+  guestColors: Map<string, string>;
 };
 
 function getBarClassName(bar: TimelineBar, isSelected: boolean) {
-  const isChannel = bar.kind === "channel";
-
   return [
     "extranet-bar",
-    isChannel ? "extranet-bar--channel" : "extranet-bar--booking",
+    "extranet-bar--guest-color",
     bar.needsRoom ? "extranet-bar--needs-room" : "",
-    !isChannel && bar.stayStatus === "checked-in" ? "extranet-bar--checked-in" : "",
-    !isChannel && bar.stayStatus === "checked-out" ? "extranet-bar--checked-out" : "",
     bar.continuesLeft ? "extranet-bar--continues-left" : "",
     bar.continuesRight ? "extranet-bar--continues-right" : "",
     bar.compact ? "extranet-bar--compact" : "",
@@ -109,6 +110,13 @@ function getBarClassName(bar: TimelineBar, isSelected: boolean) {
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+function getBarColorStyle(bar: TimelineBar, guestColors: Map<string, string>) {
+  const color = guestBarColorForName(bar.colorKey || bar.label, guestColors);
+  return {
+    ["--bar-color" as string]: color,
+  };
 }
 
 function MetricRowLabel({
@@ -233,6 +241,7 @@ function UnitReservationRow({
   monthKey,
   fromIso,
   toIso,
+  guestColors,
   selectedBookingKey,
   selectedBlockKey,
   roomShortNameById,
@@ -246,6 +255,7 @@ function UnitReservationRow({
   monthKey: string;
   fromIso?: string;
   toIso?: string;
+  guestColors: Map<string, string>;
   selectedBookingKey: string;
   selectedBlockKey: string;
   roomShortNameById: Map<string, string>;
@@ -326,6 +336,7 @@ function UnitReservationRow({
               style={{
                 gridColumn: `${bar.startCol} / span ${bar.span}`,
                 ["--lane" as string]: bar.lane,
+                ...getBarColorStyle(bar, guestColors),
               }}
             >
               {bar.showLabel ? (
@@ -364,6 +375,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   currency,
   roomUnits,
   occupancies,
+  guestColors,
 }: StaffExtranetRoomSectionProps) {
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
@@ -605,7 +617,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             {needsAssignment ? (
               <>
                 {unassignedCount} stay{unassignedCount === 1 ? "" : "s"} still need a room number.
-                Assign on the yellow-dashed bars.
+                Assign on the dashed bars.
               </>
             ) : null}
           </p>
@@ -763,6 +775,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                     style={{
                       gridColumn: `${bar.startCol} / span ${bar.span}`,
                       ["--lane" as string]: bar.lane,
+                      ...getBarColorStyle(bar, guestColors),
                     }}
                   >
                     <CalendarStayBarLink
@@ -933,6 +946,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
               channelReservations={allChannelReservations}
               currentRoomId={room.id}
               dayMetrics={dayMetrics}
+              guestColors={guestColors}
               key={unit.id}
               monthKey={monthKey}
               fromIso={fromIso}
@@ -1011,6 +1025,19 @@ export function StaffTimelineCalendar({
         0,
       ).getDate(),
   );
+  const guestColors = useMemo(() => {
+    const names: string[] = [];
+    for (const booking of bookings) {
+      names.push(booking.guest);
+    }
+    for (const block of blocks) {
+      if (!isChannelReservation(block)) {
+        continue;
+      }
+      names.push(block.guestName.trim() || block.channelLabel || "Channel");
+    }
+    return assignGuestBarColors(names);
+  }, [bookings, blocks]);
 
   return (
     <div
@@ -1058,6 +1085,7 @@ export function StaffTimelineCalendar({
             bookings={bookings}
             calendarDays={calendarDays}
             canManage={canManage}
+            guestColors={guestColors}
             inventoryLookup={inventoryLookup}
             key={room.id}
             monthKey={monthKey}

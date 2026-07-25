@@ -227,25 +227,7 @@ export function CalendarBookingPanel({
         {needsOverbookConfirm ? (
           <input name="overbook-confirm" type="hidden" value="1" />
         ) : null}
-        <div className="field-pair">
-          <label htmlFor={`calendar-stay-status-${bookingKey}`}>Check-in status</label>
-          <select
-            disabled={!canManage || savePending}
-            id={`calendar-stay-status-${bookingKey}`}
-            name="stay-status"
-            onChange={(event) =>
-              setFields((current) => ({
-                ...current,
-                stayStatus: event.target.value as StayStatus,
-              }))
-            }
-            value={fields.stayStatus}
-          >
-            <option value="expected">Expected</option>
-            <option value="checked-in">Checked in</option>
-            <option value="checked-out">Checked out</option>
-          </select>
-        </div>
+        <input name="stay-status" type="hidden" value={fields.stayStatus} />
         <div className="field-pair">
           <label htmlFor={`calendar-room-type-${bookingKey}`}>Room type</label>
           <select

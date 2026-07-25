@@ -6614,9 +6614,20 @@ textarea:focus {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 20%, transparent);
 }
 
+.staff-calendar-toolbar__swatch--guest-a {
+  background: #c5d4e8;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 18%, transparent);
+}
+
+.staff-calendar-toolbar__swatch--guest-b {
+  background: #d4e0c8;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 18%, transparent);
+}
+
 .staff-calendar-toolbar__swatch--needs-room {
-  background: color-mix(in srgb, var(--calendar-color-booking) 55%, transparent);
+  background: color-mix(in srgb, #e8c4a8 82%, transparent);
   border-style: dashed;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 22%, transparent);
 }
 
 .staff-calendar-toolbar__swatch--channel {
@@ -7852,8 +7863,29 @@ textarea:focus {
   border-right: 0;
 }
 
+.extranet-bar--guest-color {
+  background: var(--bar-color, var(--calendar-color-booking));
+  border-color: color-mix(
+    in srgb,
+    var(--bar-color, var(--calendar-color-booking)) 55%,
+    var(--color-ink)
+  );
+}
+
+.extranet-bar--guest-color .extranet-bar__continued {
+  background: color-mix(
+    in srgb,
+    var(--bar-color, var(--calendar-color-booking)) 70%,
+    var(--color-ink)
+  );
+}
+
 .extranet-bar--needs-room {
-  background: color-mix(in srgb, var(--calendar-color-booking) 55%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--bar-color, var(--calendar-color-booking)) 82%,
+    transparent
+  );
   border-style: dashed;
 }
 
@@ -7883,34 +7915,6 @@ textarea:focus {
 
 .extranet-bar--blocked .extranet-bar__continued {
   background: color-mix(in srgb, var(--calendar-color-closed) 65%, var(--color-ink));
-}
-
-.extranet-bar--checked-in {
-  background: var(--color-success-wash);
-  border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
-}
-
-.extranet-bar--checked-out {
-  background: var(--color-surface-strong);
-  border-color: var(--color-border);
-}
-
-.extranet-bar--channel {
-  background: var(--color-maroon-wash);
-  border-color: oklch(48% 0.18 12 / 0.28);
-  color: var(--color-maroon-deep);
-}
-
-.extranet-bar--channel strong {
-  color: var(--color-maroon-deep);
-}
-
-.extranet-bar--channel span {
-  color: var(--color-maroon);
-}
-
-.extranet-bar--channel .extranet-bar__continued {
-  background: color-mix(in srgb, var(--color-maroon) 55%, var(--color-ink));
 }
 
 .extranet-bar:hover {
