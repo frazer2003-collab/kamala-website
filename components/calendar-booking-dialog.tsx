@@ -1,12 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 type CalendarBookingDialogProps = {
   open: boolean;
-  closeHref: string;
+  /** Fallback navigation close when onClose is not provided. */
+  closeHref?: string;
+  /** Instant close without a Next.js navigation. */
+  onClose?: () => void;
   title: string;
   /** Timeline bar/cell key to refocus after close (deep links + Escape). */
   focusReturnKey?: string;
@@ -58,9 +61,18 @@ function useDesktopDrawer() {
   return isDesktop;
 }
 
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function CalendarBookingDialog({
   open,
   closeHref,
+  onClose,
   title,
   focusReturnKey,
   children,
@@ -70,15 +82,19 @@ export function CalendarBookingDialog({
   const panelRef = useRef<HTMLElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const returnKeyRef = useRef(focusReturnKey);
-  const [mounted, setMounted] = useState(false);
+  const isClient = useIsClient();
   const isDesktopDrawer = useDesktopDrawer();
 
-  returnKeyRef.current = focusReturnKey;
+  function handleClose() {
+    if (onClose) {
+      onClose();
+      return;
+    }
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (closeHref) {
+      router.push(closeHref);
+    }
+  }
 
   useEffect(() => {
     if (!open) {
@@ -90,6 +106,7 @@ export function CalendarBookingDialog({
 
     const shell = document.querySelector<HTMLElement>(".staff-shell");
     const previousOverflow = document.body.style.overflow;
+    const returnKey = focusReturnKey;
     document.body.style.overflow = "hidden";
 
     // Mobile modal: inert the shell. Desktop drawer: keep the timeline visible
@@ -111,7 +128,11 @@ export function CalendarBookingDialog({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        router.push(closeHref);
+        if (onClose) {
+          onClose();
+        } else if (closeHref) {
+          router.push(closeHref);
+        }
         return;
       }
 
@@ -144,11 +165,11 @@ export function CalendarBookingDialog({
       document.body.style.overflow = previousOverflow;
       shell?.removeAttribute("inert");
       window.removeEventListener("keydown", handleKeyDown);
-      restoreCalendarFocus(previousFocusRef.current, returnKeyRef.current);
+      restoreCalendarFocus(previousFocusRef.current, returnKey);
     };
-  }, [closeHref, isDesktopDrawer, open, router]);
+  }, [closeHref, focusReturnKey, isDesktopDrawer, onClose, open, router]);
 
-  if (!open || !mounted) {
+  if (!open || !isClient) {
     return null;
   }
 
@@ -160,7 +181,7 @@ export function CalendarBookingDialog({
       <button
         aria-label="Close dialog"
         className="calendar-dialog__backdrop"
-        onClick={() => router.push(closeHref)}
+        onClick={handleClose}
         type="button"
       />
       <section
@@ -177,7 +198,7 @@ export function CalendarBookingDialog({
           </h2>
           <button
             className="button button--quiet calendar-dialog__close"
-            onClick={() => router.push(closeHref)}
+            onClick={handleClose}
             type="button"
           >
             Close

@@ -3,6 +3,8 @@
 import { memo, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { CalendarJumpToToday } from "@/components/calendar-jump-to-today";
+import { CalendarStayBarLink } from "@/components/calendar-stay-bar-link";
+import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import {
   buildRoomTimelineBars,
   buildUnitTimelineBars,
@@ -307,12 +309,13 @@ function UnitReservationRow({
               : selectedBlockKey === bar.itemKey;
 
           return (
-            <Link
-              aria-label={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
+            <CalendarStayBarLink
+              ariaLabel={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
               className={getBarClassName(bar, isSelected)}
-              data-calendar-focus={bar.itemKey}
               href={getTimelineBarHref(bar, monthKey)}
+              itemKey={bar.itemKey}
               key={bar.key}
+              kind={bar.kind === "booking" ? "booking" : "block"}
               style={{
                 gridColumn: `${bar.startCol} / span ${bar.span}`,
                 ["--lane" as string]: bar.lane,
@@ -326,7 +329,7 @@ function UnitReservationRow({
               ) : (
                 <span className="extranet-bar__continued" aria-hidden="true" />
               )}
-            </Link>
+            </CalendarStayBarLink>
           );
         })}
       </div>
@@ -744,11 +747,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                       ["--lane" as string]: bar.lane,
                     }}
                   >
-                    <Link
-                      aria-label={`${bar.label}, ${sublabel}`}
-                      className={[getBarClassName(bar, isSelected), "extranet-bar__open"].join(" ")}
-                      data-calendar-focus={bar.itemKey}
+                    <CalendarStayBarLink
+                      ariaLabel={`${bar.label}, ${sublabel}`}
+                      className={[getBarClassName(bar, isSelected), "extranet-bar__open"].join(
+                        " ",
+                      )}
                       href={detailHref}
+                      itemKey={bar.itemKey}
+                      kind={bar.kind === "booking" ? "booking" : "block"}
                     >
                       {bar.showLabel ? (
                         <>
@@ -758,7 +764,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                       ) : (
                         <span className="extranet-bar__continued" aria-hidden="true" />
                       )}
-                    </Link>
+                    </CalendarStayBarLink>
                     {showInlineAssign && stayId && sourceBooking ? (
                       <InlineRoomAssign
                         arrivalDate={sourceBooking.arrivalDate}
@@ -964,6 +970,9 @@ export function StaffTimelineCalendar({
 }: StaffTimelineCalendarProps) {
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
+  const staySelection = useCalendarStaySelection();
+  const activeBookingKey = staySelection?.bookingKey || selectedBookingKey;
+  const activeBlockKey = staySelection?.blockKey || selectedBlockKey;
 
   return (
     <div
@@ -1016,8 +1025,8 @@ export function StaffTimelineCalendar({
             roomUnits={roomUnits}
             rooms={rooms}
             occupancies={occupancies}
-            selectedBlockKey={selectedBlockKey}
-            selectedBookingKey={selectedBookingKey}
+            selectedBlockKey={activeBlockKey}
+            selectedBookingKey={activeBookingKey}
             selectedDate={selectedDate}
             selectedRoomId={selectedRoomId}
             currency={currency}
