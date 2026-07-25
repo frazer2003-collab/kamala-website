@@ -44,6 +44,9 @@ import {
 import { InlineRoomAssign } from "@/components/inline-room-assign";
 import { getStaffBookingKey } from "@/lib/booking-requests";
 
+/** Timeline is only rendered in room-board view; keep deep links there. */
+const TIMELINE_VIEW = "board" as const;
+
 type DayMetrics = {
   iso: string;
   columnIndex: number;
@@ -311,7 +314,7 @@ function UnitReservationRow({
               aria-label={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
               className={getBarClassName(bar, isSelected)}
               data-calendar-focus={bar.itemKey}
-              href={getTimelineBarHref(bar, monthKey)}
+              href={getTimelineBarHref(bar, monthKey, TIMELINE_VIEW)}
               key={bar.key}
               style={{
                 gridColumn: `${bar.startCol} / span ${bar.span}`,
@@ -443,7 +446,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         promotions,
         rateLookup,
       );
-      const dayHref = getTimelineDayHref(room.id, day.iso, monthKey);
+      const dayHref = getTimelineDayHref(room.id, day.iso, monthKey, TIMELINE_VIEW);
 
       return {
         iso: day.iso,
@@ -463,18 +466,24 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           ? undefined
           : saleStatus === "sold-out"
             ? dayHref
-            : getStatusCellHref(room.id, day.iso, monthKey, manualClosures),
+            : getStatusCellHref(
+                room.id,
+                day.iso,
+                monthKey,
+                manualClosures,
+                TIMELINE_VIEW,
+              ),
         // Day actions panel only — never deep-link into a booking/block detail.
         bookedHref: isPast ? undefined : dayHref,
         allotmentHref: isPast
           ? undefined
           : canManage
-            ? getTimelineAllotmentHref(room.id, day.iso, monthKey)
+            ? getTimelineAllotmentHref(room.id, day.iso, monthKey, TIMELINE_VIEW)
             : dayHref,
         rateHref: isPast
           ? undefined
           : canManage
-            ? getTimelineRateHref(room.id, day.iso, monthKey)
+            ? getTimelineRateHref(room.id, day.iso, monthKey, TIMELINE_VIEW)
             : dayHref,
         isSelected,
         rate: rateDetails.rate,
@@ -561,7 +570,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           {firstFutureDay && canManage ? (
             <Link
               className="extranet-room__bulk"
-              href={getTimelineBulkAvailabilityHref(room.id, monthKey)}
+              href={getTimelineBulkAvailabilityHref(room.id, monthKey, TIMELINE_VIEW)}
             >
               Close dates
             </Link>
@@ -728,7 +737,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                   sourceBooking?.databaseId ?? sourceChannel?.databaseId ?? null;
                 const showInlineAssign =
                   canManage && Boolean(stayId) && bar.needsRoom && bar.showLabel;
-                const detailHref = getTimelineBarHref(bar, monthKey);
+                const detailHref = getTimelineBarHref(bar, monthKey, TIMELINE_VIEW);
 
                 return (
                   <div

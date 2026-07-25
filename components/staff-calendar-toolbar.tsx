@@ -7,6 +7,8 @@ import { formatCalendarMonth } from "@/lib/calendar";
 import type { CalendarMonthStats } from "@/lib/calendar-timeline";
 import type { CalendarColors } from "@/lib/calendar-colors";
 
+export type StaffCalendarView = "overview" | "board";
+
 type StaffCalendarToolbarProps = {
   monthKey: string;
   stats: CalendarMonthStats;
@@ -15,14 +17,25 @@ type StaffCalendarToolbarProps = {
   canSyncOta?: boolean;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
+  view?: StaffCalendarView;
 };
 
-function buildMonthHref(
-  monthKey: string,
-  selectedBookingKey?: string,
-  selectedBlockKey?: string,
-) {
+function buildCalendarHref({
+  monthKey,
+  view,
+  selectedBookingKey,
+  selectedBlockKey,
+}: {
+  monthKey: string;
+  view?: StaffCalendarView;
+  selectedBookingKey?: string;
+  selectedBlockKey?: string;
+}) {
   const params = new URLSearchParams({ month: monthKey });
+
+  if (view === "board") {
+    params.set("view", "board");
+  }
 
   if (selectedBookingKey) {
     params.set("booking", selectedBookingKey);
@@ -41,9 +54,28 @@ export function StaffCalendarToolbar({
   canSyncOta = false,
   selectedBookingKey,
   selectedBlockKey,
+  view = "overview",
 }: StaffCalendarToolbarProps) {
   const today = new Date();
   const currentMonthKey = formatCalendarMonth(today.getFullYear(), today.getMonth() + 1);
+  const overviewHref = buildCalendarHref({
+    monthKey,
+    view: "overview",
+    selectedBookingKey,
+    selectedBlockKey,
+  });
+  const boardHref = buildCalendarHref({
+    monthKey,
+    view: "board",
+    selectedBookingKey,
+    selectedBlockKey,
+  });
+  const todayHref = `${buildCalendarHref({
+    monthKey: currentMonthKey,
+    view,
+    selectedBookingKey,
+    selectedBlockKey,
+  })}#calendar-today`;
 
   return (
     <div className="staff-calendar-toolbar">
@@ -53,18 +85,41 @@ export function StaffCalendarToolbar({
             monthKey={monthKey}
             selectedBlockKey={selectedBlockKey}
             selectedBookingKey={selectedBookingKey}
+            view={view}
           />
         </h2>
-        <Link
-          className="staff-calendar-toolbar__today"
-          href={`${buildMonthHref(currentMonthKey, selectedBookingKey, selectedBlockKey)}#calendar-today`}
+        <div
+          aria-label="Calendar view"
+          className="staff-calendar-toolbar__density"
+          role="group"
         >
+          <Link
+            aria-current={view === "overview" ? "page" : undefined}
+            className={`staff-calendar-toolbar__density-btn${
+              view === "overview" ? " staff-calendar-toolbar__density-btn--active" : ""
+            }`}
+            href={overviewHref}
+          >
+            Overview
+          </Link>
+          <Link
+            aria-current={view === "board" ? "page" : undefined}
+            className={`staff-calendar-toolbar__density-btn${
+              view === "board" ? " staff-calendar-toolbar__density-btn--active" : ""
+            }`}
+            href={boardHref}
+          >
+            Room board
+          </Link>
+        </div>
+        <Link className="staff-calendar-toolbar__today" href={todayHref}>
           Jump to today
         </Link>
         {canSyncOta ? (
           <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
             <StaffFormBusyBridge message="Syncing channel calendars…" />
             <input name="month" type="hidden" value={monthKey} />
+            {view === "board" ? <input name="view" type="hidden" value="board" /> : null}
             <StaffOtaSyncControls />
           </form>
         ) : null}
@@ -91,46 +146,71 @@ export function StaffCalendarToolbar({
 
       <details className="staff-calendar-toolbar__legend-details">
         <summary>Legend</summary>
-        <div className="staff-calendar-toolbar__legend" aria-label="Status colors">
-          <span className="extranet-status-mark extranet-status-mark--bookable" aria-hidden="true">
-            O
-          </span>
-          Open
-          <span className="extranet-status-mark extranet-status-mark--closed" aria-hidden="true">
-            ×
-          </span>
-          Closed
-          <span className="extranet-status-mark extranet-status-mark--sold-out" aria-hidden="true">
-            F
-          </span>
-          Full
-          <span
-            className="extranet-status-mark extranet-status-mark--overbooked"
-            aria-hidden="true"
-          >
-            !
-          </span>
-          Overbooked
-          <span
-            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--booking"
-            style={{ background: calendarColors.booking }}
-          />
-          Reservation
-          <span
-            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--needs-room"
-            aria-hidden="true"
-          />
-          Needs room #
-          <span
-            className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--channel"
-            aria-hidden="true"
-          />
-          Channel
-          <span className="staff-calendar-toolbar__mark" aria-hidden="true">
-            *
-          </span>
-          Temp allotment
-        </div>
+        {view === "overview" ? (
+          <div className="staff-calendar-toolbar__legend" aria-label="Overview day colors">
+            <span
+              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--empty"
+              aria-hidden="true"
+            />
+            Free
+            <span
+              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--light"
+              aria-hidden="true"
+            />
+            Some booked
+            <span
+              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--medium"
+              aria-hidden="true"
+            />
+            Busier
+            <span
+              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--full"
+              aria-hidden="true"
+            />
+            Full
+          </div>
+        ) : (
+          <div className="staff-calendar-toolbar__legend" aria-label="Status colors">
+            <span className="extranet-status-mark extranet-status-mark--bookable" aria-hidden="true">
+              O
+            </span>
+            Open
+            <span className="extranet-status-mark extranet-status-mark--closed" aria-hidden="true">
+              ×
+            </span>
+            Closed
+            <span className="extranet-status-mark extranet-status-mark--sold-out" aria-hidden="true">
+              F
+            </span>
+            Full
+            <span
+              className="extranet-status-mark extranet-status-mark--overbooked"
+              aria-hidden="true"
+            >
+              !
+            </span>
+            Overbooked
+            <span
+              className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--booking"
+              style={{ background: calendarColors.booking }}
+            />
+            Reservation
+            <span
+              className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--needs-room"
+              aria-hidden="true"
+            />
+            Needs room #
+            <span
+              className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--channel"
+              aria-hidden="true"
+            />
+            Channel
+            <span className="staff-calendar-toolbar__mark" aria-hidden="true">
+              *
+            </span>
+            Temp allotment
+          </div>
+        )}
       </details>
     </div>
   );

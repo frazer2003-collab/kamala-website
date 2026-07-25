@@ -3,6 +3,7 @@ import { CalendarBlockPanel } from "@/components/calendar-block-panel";
 import { CalendarBookingPanel } from "@/components/calendar-booking-panel";
 import { CalendarBulkAvailabilityPanel } from "@/components/calendar-bulk-availability-panel";
 import { CalendarDayPanel } from "@/components/calendar-day-panel";
+import { CalendarPropertyDayPanel } from "@/components/calendar-property-day-panel";
 import {
   BookingChat,
   CalendarBookingDialog,
@@ -10,16 +11,23 @@ import {
 } from "@/components/staff-lazy";
 import { CalendarGridGuide } from "@/components/calendar-grid-guide";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
+import {
+  buildMosaicMonths,
+  StaffMonthMosaic,
+} from "@/components/staff-month-mosaic";
 import { StaffShell } from "@/components/staff-shell";
 import {
   buildCalendarDays,
   formatCalendarMonth,
   formatCalendarMonthLabel,
-  isPastCalendarDate,
   monthOverlapsBooking,
   parseCalendarMonth,
   bookingOccupiesDay,
 } from "@/lib/calendar";
+import {
+  buildDayOccupancyMap,
+  getPropertyCapacity,
+} from "@/lib/calendar-day-counts";
 import { getCalendarMonthStats } from "@/lib/calendar-timeline";
 import {
   getConfirmedBookingById,
@@ -31,6 +39,7 @@ import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS } from "@/lib/stay-dates";
 import {
   getRoomBlockById,
   getStaffCalendarBlocks,
+  getStaffRoomBlockKey,
   isChannelReservation,
 } from "@/lib/room-blocks";
 import {
@@ -64,6 +73,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const MOSAIC_MONTH_COUNT = 3;
+
 function getStayStatusClass(stayStatus: string) {
   if (stayStatus === "checked-in") {
     return "staff-status--confirmed";
@@ -81,6 +92,7 @@ export default async function StaffCalendarPage({
 }: {
   searchParams: Promise<{
     month?: string;
+    view?: string;
     booking?: string;
     block?: string;
     room?: string;
@@ -104,6 +116,7 @@ export default async function StaffCalendarPage({
 
   const {
     month: monthParam,
+    view: viewParam,
     booking: selectedBookingId,
     block: selectedBlockId,
     room: selectedRoomId,
@@ -122,6 +135,7 @@ export default async function StaffCalendarPage({
     "ical-error": icalError,
     "ical-warning": icalWarning,
   } = await searchParams;
+  const calendarView = viewParam === "board" ? "board" : "overview";
   const { year, month } = parseCalendarMonth(monthParam);
   const monthKey = formatCalendarMonth(year, month);
   const calendarDays = buildCalendarDays(year, month);
@@ -135,8 +149,8 @@ export default async function StaffCalendarPage({
     promotions,
     roomUnitsResult,
   ] = await Promise.all([
-    getConfirmedBookings({ year, month }),
-    getStaffCalendarBlocks({ year, month }),
+    getConfirmedBookings({ year, month, monthCount: MOSAIC_MONTH_COUNT }),
+    getStaffCalendarBlocks({ year, month, monthCount: MOSAIC_MONTH_COUNT }),
     getRoomDayInventoryForMonth({ year, month }),
     getRoomDayRatesForMonth({ year, month }),
     getStaffRooms(),
@@ -146,10 +160,18 @@ export default async function StaffCalendarPage({
   ]);
   const roomUnits = roomUnitsResult.units;
   const allAssignmentBookings = attachRoomNumbers(confirmedBookings.bookings, roomUnits);
+  const spanBookings = allAssignmentBookings;
   const calendarBookings = allAssignmentBookings.filter((booking) =>
     monthOverlapsBooking(booking, year, month),
   );
-  const calendarBlocks = attachRoomNumbers(calendarBlockData.monthBlocks, roomUnits);
+  const spanBlocks = attachRoomNumbers(calendarBlockData.monthBlocks, roomUnits);
+  const calendarBlocks = spanBlocks.filter((block) =>
+    monthOverlapsBooking(
+      { arrivalDate: block.startDate, departureDate: block.endDate },
+      year,
+      month,
+    ),
+  );
   const allAssignmentChannels = attachRoomNumbers(calendarBlockData.channelBlocks, roomUnits);
   const unitOccupancies = [
     ...allAssignmentBookings.map(occupancyFromBooking),
@@ -199,6 +221,9 @@ export default async function StaffCalendarPage({
   const selectedKey = selected ? getStaffBookingKey(selected) : "";
   const selectedBlockKey = selectedBlock?.databaseId ?? "";
   const flashParams = new URLSearchParams({ month: monthKey });
+  if (calendarView === "board") {
+    flashParams.set("view", "board");
+  }
   if (error) {
     flashParams.set("error", error);
   }
@@ -222,7 +247,20 @@ export default async function StaffCalendarPage({
   }
   // Keep flash messages when closing the dialog; drop booking/block/room/date so the panel closes.
   const closeHref = `/staff/calendar?${flashParams.toString()}`;
-  const dismissFlashHref = `/staff/calendar?month=${monthKey}`;
+  const dismissFlashHref =
+    calendarView === "board"
+      ? `/staff/calendar?month=${monthKey}&view=board`
+      : `/staff/calendar?month=${monthKey}`;
+  const mosaicMonths = buildMosaicMonths(year, month, MOSAIC_MONTH_COUNT);
+  const mosaicDays = mosaicMonths.flatMap((mosaicMonth) => mosaicMonth.days);
+  const channelStaysForCounts = spanBlocks.filter(isChannelReservation);
+  const propertyCapacity = getPropertyCapacity(rooms);
+  const occupancyByIso = buildDayOccupancyMap({
+    calendarDays: mosaicDays,
+    capacity: propertyCapacity,
+    bookings: spanBookings,
+    channelStays: channelStaysForCounts,
+  });
   const overlapMessage =
     error === "overlap"
       ? formatOverlapErrorMessage(parseOverlapDays(overlap))
@@ -271,18 +309,25 @@ export default async function StaffCalendarPage({
 
     return base;
   })();
+  const viewQuery = calendarView === "board" ? "&view=board" : "";
   const dayDialogOpen = Boolean(
     selectedRoom &&
       selectedDate &&
       !selected &&
       !selectedBlock &&
-      mode !== "bulk-status" &&
-      !isPastCalendarDate(selectedDate),
+      mode !== "bulk-status",
+  );
+  const propertyDayDialogOpen = Boolean(
+    selectedDate &&
+      !selectedRoom &&
+      !selected &&
+      !selectedBlock &&
+      mode !== "bulk-status",
   );
   const dayStays =
     selectedRoom && selectedDate
       ? [
-          ...calendarBookings
+          ...spanBookings
             .filter(
               (booking) =>
                 booking.roomId === selectedRoom.id &&
@@ -290,13 +335,13 @@ export default async function StaffCalendarPage({
             )
             .map((booking) => ({
               key: getStaffBookingKey(booking),
-              href: `/staff/calendar?month=${monthKey}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
+              href: `/staff/calendar?month=${monthKey}${viewQuery}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
               label: booking.guest,
               sublabel: booking.roomNumber
                 ? `Room ${booking.roomNumber} · direct`
                 : "Needs room # · direct",
             })),
-          ...calendarBlocks
+          ...spanBlocks
             .filter(
               (block) =>
                 block.roomId === selectedRoom.id &&
@@ -308,7 +353,7 @@ export default async function StaffCalendarPage({
             )
             .map((block) => ({
               key: block.databaseId ?? block.id,
-              href: `/staff/calendar?month=${monthKey}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
+              href: `/staff/calendar?month=${monthKey}${viewQuery}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
               label: block.guestName || block.channelLabel || "Channel stay",
               sublabel: block.roomNumber
                 ? `Room ${block.roomNumber} · ${block.channelLabel ?? "channel"}`
@@ -316,11 +361,76 @@ export default async function StaffCalendarPage({
             })),
         ]
       : [];
+  const propertyDayStays =
+    selectedDate && propertyDayDialogOpen
+      ? [
+          ...spanBookings
+            .filter((booking) => bookingOccupiesDay(booking, selectedDate))
+            .map((booking) => ({
+              key: getStaffBookingKey(booking),
+              href: `/staff/calendar?month=${monthKey}${viewQuery}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
+              label: booking.guest,
+              sublabel: booking.roomNumber
+                ? `Room ${booking.roomNumber} · direct`
+                : "Needs room # · direct",
+              roomName: booking.room,
+            })),
+          ...channelStaysForCounts
+            .filter((block) =>
+              bookingOccupiesDay(
+                { arrivalDate: block.startDate, departureDate: block.endDate },
+                selectedDate,
+              ),
+            )
+            .map((block) => ({
+              key: getStaffRoomBlockKey(block),
+              href: `/staff/calendar?month=${monthKey}${viewQuery}&block=${encodeURIComponent(getStaffRoomBlockKey(block))}`,
+              label: block.guestName || block.channelLabel || "Channel stay",
+              sublabel: block.roomNumber
+                ? `Room ${block.roomNumber} · ${block.channelLabel ?? "channel"}`
+                : `Needs room # · ${block.channelLabel ?? "channel"}`,
+              roomName:
+                rooms.find((room) => room.id === block.roomId)?.name ?? "Room",
+            })),
+        ]
+      : [];
+  const propertyDayRooms =
+    selectedDate && propertyDayDialogOpen
+      ? rooms.map((room) => {
+          const stayCount = propertyDayStays.filter((stay) => {
+            const booking = spanBookings.find(
+              (item) => getStaffBookingKey(item) === stay.key,
+            );
+            if (booking) {
+              return booking.roomId === room.id;
+            }
+            const block = channelStaysForCounts.find(
+              (item) => getStaffRoomBlockKey(item) === stay.key,
+            );
+            return block?.roomId === room.id;
+          }).length;
+
+          return {
+            id: room.id,
+            name: room.name,
+            shortName: room.shortName,
+            stayCount,
+            href: `/staff/calendar?month=${monthKey}${viewQuery}&room=${encodeURIComponent(room.id)}&date=${encodeURIComponent(selectedDate)}`,
+          };
+        })
+      : [];
+  const propertyDaySummary = selectedDate
+    ? occupancyByIso.get(selectedDate)
+    : undefined;
   const bulkStatusDialogOpen = Boolean(
     selectedRoom && mode === "bulk-status" && !selected && !selectedBlock,
   );
   const dialogOpen = Boolean(
-    selected || selectedBlock || dayDialogOpen || bulkStatusDialogOpen,
+    selected ||
+      selectedBlock ||
+      dayDialogOpen ||
+      propertyDayDialogOpen ||
+      bulkStatusDialogOpen,
   );
   // One live region only: page flash when no dialog; panel alert when a dialog is open.
   const pageFormError = dialogOpen ? null : formErrorMessage;
@@ -499,7 +609,13 @@ export default async function StaffCalendarPage({
           </p>
         ) : null}
 
-        <div className="calendar-board calendar-board--timeline">
+        <div
+          className={`calendar-board${
+            calendarView === "board"
+              ? " calendar-board--timeline"
+              : " calendar-board--mosaic"
+          }`}
+        >
           <StaffCalendarToolbar
             calendarColors={settings.calendarColors}
             canSyncOta={canManage}
@@ -508,30 +624,40 @@ export default async function StaffCalendarPage({
             selectedBookingKey={selectedKey || undefined}
             stats={monthStats}
             unassignedCount={unassignedCount}
+            view={calendarView}
           />
 
-          <CalendarGridGuide />
+          <CalendarGridGuide variant={calendarView === "board" ? "board" : "overview"} />
 
-          <StaffTimelineCalendar
-            blocks={calendarBlocks}
-            bookings={calendarBookings}
-            calendarColors={settings.calendarColors}
-            calendarDays={calendarDays}
-            canManage={canManage}
-            currency={settings.currency}
-            inventoryLookup={inventoryLookup}
-            rateLookup={rateLookup}
-            monthKey={monthKey}
-            monthLabel={formatCalendarMonthLabel(year, month)}
-            occupancies={unitOccupancies}
-            promotions={promotions}
-            roomUnits={roomUnits}
-            rooms={rooms}
-            selectedBlockKey={selectedBlockKey}
-            selectedBookingKey={selectedKey}
-            selectedDate={selectedDate}
-            selectedRoomId={selectedRoom?.id}
-          />
+          {calendarView === "board" ? (
+            <StaffTimelineCalendar
+              blocks={calendarBlocks}
+              bookings={calendarBookings}
+              calendarColors={settings.calendarColors}
+              calendarDays={calendarDays}
+              canManage={canManage}
+              currency={settings.currency}
+              inventoryLookup={inventoryLookup}
+              rateLookup={rateLookup}
+              monthKey={monthKey}
+              monthLabel={formatCalendarMonthLabel(year, month)}
+              occupancies={unitOccupancies}
+              promotions={promotions}
+              roomUnits={roomUnits}
+              rooms={rooms}
+              selectedBlockKey={selectedBlockKey}
+              selectedBookingKey={selectedKey}
+              selectedDate={selectedDate}
+              selectedRoomId={selectedRoom?.id}
+            />
+          ) : (
+            <StaffMonthMosaic
+              anchorMonthKey={monthKey}
+              months={mosaicMonths}
+              occupancyByIso={occupancyByIso}
+              selectedDate={selectedDate}
+            />
+          )}
         </div>
 
         {selected ? (
@@ -690,6 +816,24 @@ export default async function StaffCalendarPage({
               error={error}
               monthKey={monthKey}
               room={selectedRoom}
+            />
+          </CalendarBookingDialog>
+        ) : null}
+
+        {propertyDayDialogOpen && selectedDate ? (
+          <CalendarBookingDialog
+            closeHref={closeHref}
+            open
+            title={selectedDate}
+          >
+            <CalendarPropertyDayPanel
+              boardHref={`/staff/calendar?month=${monthKey}&view=board&date=${encodeURIComponent(selectedDate)}`}
+              bookingCount={propertyDaySummary?.bookingCount ?? propertyDayStays.length}
+              capacity={propertyCapacity}
+              date={selectedDate}
+              monthKey={monthKey}
+              rooms={propertyDayRooms}
+              stays={propertyDayStays}
             />
           </CalendarBookingDialog>
         ) : null}

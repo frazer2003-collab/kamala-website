@@ -8,19 +8,26 @@ import {
   parseCalendarMonth,
   shiftCalendarMonth,
 } from "@/lib/calendar";
+import type { StaffCalendarView } from "@/components/staff-calendar-toolbar";
 
 type StaffCalendarMonthPickerProps = {
   monthKey: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
+  view?: StaffCalendarView;
 };
 
 function buildMonthHref(
   monthKey: string,
   selectedBookingKey?: string,
   selectedBlockKey?: string,
+  view?: StaffCalendarView,
 ) {
   const params = new URLSearchParams({ month: monthKey });
+
+  if (view === "board") {
+    params.set("view", "board");
+  }
 
   if (selectedBookingKey) {
     params.set("booking", selectedBookingKey);
@@ -35,6 +42,7 @@ export function StaffCalendarMonthPicker({
   monthKey,
   selectedBookingKey,
   selectedBlockKey,
+  view = "overview",
 }: StaffCalendarMonthPickerProps) {
   const router = useRouter();
   const { year, month } = parseCalendarMonth(monthKey);
@@ -51,7 +59,7 @@ export function StaffCalendarMonthPicker({
       <Link
         aria-label={`Previous month, ${prevLabel}`}
         className="staff-calendar-toolbar__month-step"
-        href={buildMonthHref(prevKey, selectedBookingKey, selectedBlockKey)}
+        href={buildMonthHref(prevKey, selectedBookingKey, selectedBlockKey, view)}
       >
         <span aria-hidden="true">‹</span>
       </Link>
@@ -68,7 +76,7 @@ export function StaffCalendarMonthPicker({
               return;
             }
             router.push(
-              buildMonthHref(nextValue, selectedBookingKey, selectedBlockKey),
+              buildMonthHref(nextValue, selectedBookingKey, selectedBlockKey, view),
             );
           }}
           type="month"
@@ -78,7 +86,7 @@ export function StaffCalendarMonthPicker({
       <Link
         aria-label={`Next month, ${nextLabel}`}
         className="staff-calendar-toolbar__month-step"
-        href={buildMonthHref(nextKey, selectedBookingKey, selectedBlockKey)}
+        href={buildMonthHref(nextKey, selectedBookingKey, selectedBlockKey, view)}
       >
         <span aria-hidden="true">›</span>
       </Link>

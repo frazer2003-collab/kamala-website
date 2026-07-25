@@ -287,6 +287,7 @@ export function getStatusCellHref(
   iso: string,
   monthKey: string,
   blocks: StaffRoomBlock[],
+  view?: "overview" | "board",
 ) {
   const block = getRoomBlockForDay(roomId, iso, blocks);
 
@@ -294,11 +295,12 @@ export function getStatusCellHref(
     return getTimelineBarHref(
       { kind: "block", itemKey: getStaffRoomBlockKey(block) },
       monthKey,
+      view,
     );
   }
 
   // Bookable / open days open the day choice panel — never jump straight to Close.
-  return getTimelineDayHref(roomId, iso, monthKey);
+  return getTimelineDayHref(roomId, iso, monthKey, view);
 }
 
 export function getTimelineLaneCount(bars: TimelineBar[]) {
@@ -533,32 +535,72 @@ export function formatTimelineDayHeader(date: Date, iso: string, todayIso: strin
   };
 }
 
+function withCalendarView(href: string, view?: "overview" | "board") {
+  if (view !== "board") {
+    return href;
+  }
+
+  return href.includes("?") ? `${href}&view=board` : `${href}?view=board`;
+}
+
 export function getTimelineBarHref(
   bar: Pick<TimelineBar, "kind" | "itemKey">,
   monthKey: string,
+  view?: "overview" | "board",
 ) {
   if (bar.kind === "block" || bar.kind === "channel") {
-    return `/staff/calendar?month=${monthKey}&block=${encodeURIComponent(bar.itemKey)}`;
+    return withCalendarView(
+      `/staff/calendar?month=${monthKey}&block=${encodeURIComponent(bar.itemKey)}`,
+      view,
+    );
   }
 
-  return `/staff/calendar?month=${monthKey}&booking=${encodeURIComponent(bar.itemKey)}`;
+  return withCalendarView(
+    `/staff/calendar?month=${monthKey}&booking=${encodeURIComponent(bar.itemKey)}`,
+    view,
+  );
 }
 
-export function getTimelineDayHref(roomId: string, iso: string, monthKey: string) {
-  return `/staff/calendar?month=${monthKey}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(iso)}`;
+export function getTimelineDayHref(
+  roomId: string,
+  iso: string,
+  monthKey: string,
+  view?: "overview" | "board",
+) {
+  return withCalendarView(
+    `/staff/calendar?month=${monthKey}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(iso)}`,
+    view,
+  );
 }
 
 /** Open the day panel to set a temporary rooms-to-sell override. */
-export function getTimelineAllotmentHref(roomId: string, iso: string, monthKey: string) {
-  return `${getTimelineDayHref(roomId, iso, monthKey)}&mode=allotment`;
+export function getTimelineAllotmentHref(
+  roomId: string,
+  iso: string,
+  monthKey: string,
+  view?: "overview" | "board",
+) {
+  return `${getTimelineDayHref(roomId, iso, monthKey, view)}&mode=allotment`;
 }
 
 /** Open the day panel to set a temporary nightly rate override. */
-export function getTimelineRateHref(roomId: string, iso: string, monthKey: string) {
-  return `${getTimelineDayHref(roomId, iso, monthKey)}&mode=rate`;
+export function getTimelineRateHref(
+  roomId: string,
+  iso: string,
+  monthKey: string,
+  view?: "overview" | "board",
+) {
+  return `${getTimelineDayHref(roomId, iso, monthKey, view)}&mode=rate`;
 }
 
 /** Bulk open/close room status (availability), not allotments. */
-export function getTimelineBulkAvailabilityHref(roomId: string, monthKey: string) {
-  return `/staff/calendar?month=${monthKey}&room=${encodeURIComponent(roomId)}&mode=bulk-status`;
+export function getTimelineBulkAvailabilityHref(
+  roomId: string,
+  monthKey: string,
+  view?: "overview" | "board",
+) {
+  return withCalendarView(
+    `/staff/calendar?month=${monthKey}&room=${encodeURIComponent(roomId)}&mode=bulk-status`,
+    view,
+  );
 }

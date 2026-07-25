@@ -1,6 +1,10 @@
 import { type Booking, type BookingStatus } from "@/lib/content";
 import { parseBedSetup } from "@/lib/bed-setup";
-import { getCalendarMonthBounds, monthOverlapsBooking } from "@/lib/calendar";
+import {
+  getCalendarMonthBounds,
+  getCalendarSpanBounds,
+  monthOverlapsBooking,
+} from "@/lib/calendar";
 import {
   createStaffSupabaseClient,
   hasStaffSupabaseConfig,
@@ -225,7 +229,12 @@ export async function getStaffBookingById(bookingId: string) {
   }
 }
 
-export async function getConfirmedBookings(month?: { year: number; month: number }) {
+export async function getConfirmedBookings(month?: {
+  year: number;
+  month: number;
+  /** When > 1, load stays overlapping this many months from the start month. */
+  monthCount?: number;
+}) {
   if (!hasStaffSupabaseConfig()) {
     return {
       bookings: [],
@@ -243,8 +252,13 @@ export async function getConfirmedBookings(month?: { year: number; month: number
       .order("arrival_date", { ascending: true });
 
     if (month) {
-      const { monthStart, monthEnd } = getCalendarMonthBounds(month.year, month.month);
-      query = query.lte("arrival_date", monthEnd).gt("departure_date", monthStart);
+      const monthCount = month.monthCount && month.monthCount > 1 ? month.monthCount : 1;
+      const { rangeStart, rangeEnd } = getCalendarSpanBounds(
+        month.year,
+        month.month,
+        monthCount,
+      );
+      query = query.lte("arrival_date", rangeEnd).gt("departure_date", rangeStart);
     } else {
       query = query.limit(300);
     }

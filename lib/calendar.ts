@@ -422,3 +422,20 @@ export function getCalendarMonthBounds(year: number, month: number) {
   const monthEnd = `${formatCalendarMonth(year, month)}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
   return { monthStart, monthEnd };
 }
+
+/** Inclusive calendar span of `monthCount` months starting at the given month. */
+export function getCalendarSpanBounds(
+  year: number,
+  month: number,
+  monthCount: number,
+) {
+  const count = Math.max(1, Math.floor(monthCount));
+  const months = Array.from({ length: count }, (_, index) =>
+    shiftCalendarMonth(year, month, index),
+  );
+  const last = months[months.length - 1]!;
+  const { monthStart: rangeStart } = getCalendarMonthBounds(year, month);
+  const { monthEnd: rangeEnd } = getCalendarMonthBounds(last.year, last.month);
+
+  return { rangeStart, rangeEnd, months };
+}

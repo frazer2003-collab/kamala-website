@@ -1,4 +1,4 @@
-import { getCalendarMonthBounds } from "@/lib/calendar";
+import { getCalendarSpanBounds } from "@/lib/calendar";
 import {
   createStaffSupabaseClient,
   hasStaffSupabaseConfig,
@@ -94,7 +94,12 @@ async function getChannelLabelMap(
 }
 
 /** Month blocks + all channel reservations in one round-trip (shared label/unit maps). */
-export async function getStaffCalendarBlocks(month: { year: number; month: number }) {
+export async function getStaffCalendarBlocks(month: {
+  year: number;
+  month: number;
+  /** When > 1, load blocks overlapping this many months from the start month. */
+  monthCount?: number;
+}) {
   if (!hasStaffSupabaseConfig()) {
     return {
       monthBlocks: [] as StaffRoomBlock[],
@@ -106,15 +111,20 @@ export async function getStaffCalendarBlocks(month: { year: number; month: numbe
 
   try {
     const supabase = createStaffSupabaseClient();
-    const { monthStart, monthEnd } = getCalendarMonthBounds(month.year, month.month);
+    const monthCount = month.monthCount && month.monthCount > 1 ? month.monthCount : 1;
+    const { rangeStart, rangeEnd } = getCalendarSpanBounds(
+      month.year,
+      month.month,
+      monthCount,
+    );
     const [channelLabelById, unitMap, monthResult, channelResult] = await Promise.all([
       getChannelLabelMap(supabase),
       getBlockRoomUnitMap(supabase),
       supabase
         .from("room_blocks")
         .select("*")
-        .lte("start_date", monthEnd)
-        .gt("end_date", monthStart)
+        .lte("start_date", rangeEnd)
+        .gt("end_date", rangeStart)
         .order("start_date", { ascending: true }),
       supabase
         .from("room_blocks")
