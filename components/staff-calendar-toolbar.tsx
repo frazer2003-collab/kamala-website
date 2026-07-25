@@ -147,27 +147,24 @@ export function StaffCalendarToolbar({
       <details className="staff-calendar-toolbar__legend-details">
         <summary>Legend</summary>
         {view === "overview" ? (
-          <div className="staff-calendar-toolbar__legend" aria-label="Overview day colors">
+          <div className="staff-calendar-toolbar__legend" aria-label="Overview booking marks">
             <span
-              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--empty"
+              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--booking"
+              aria-hidden="true"
+              style={{ background: calendarColors.booking }}
+            />
+            Direct stay
+            <span
+              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--channel"
               aria-hidden="true"
             />
-            Free
-            <span
-              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--light"
-              aria-hidden="true"
-            />
-            Some booked
-            <span
-              className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--medium"
-              aria-hidden="true"
-            />
-            Busier
+            Channel stay
             <span
               className="staff-calendar-toolbar__swatch staff-month-mosaic__legend-swatch staff-month-mosaic__legend-swatch--full"
               aria-hidden="true"
+              style={{ background: calendarColors.soldOut }}
             />
-            Full
+            Full day
           </div>
         ) : (
           <div className="staff-calendar-toolbar__legend" aria-label="Status colors">

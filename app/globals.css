@@ -6160,99 +6160,134 @@ textarea:focus {
 
 .staff-month-mosaic {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-3);
   grid-template-columns: 1fr;
+  align-items: start;
 }
 
-@media (min-width: 960px) {
+@media (min-width: 900px) {
   .staff-month-mosaic {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-4);
-    align-items: start;
+    grid-template-columns: minmax(0, 1.55fr) minmax(14rem, 0.9fr);
   }
 }
 
-@media (min-width: 720px) and (max-width: 959px) {
-  .staff-month-mosaic {
+.staff-month-mosaic__side {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) and (max-width: 899px) {
+  .staff-month-mosaic__side {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 .staff-month-mosaic__month {
   min-width: 0;
-  padding: var(--space-3);
+  padding: 0.65rem 0.75rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
 
 .staff-month-mosaic__month-title {
-  margin: 0 0 var(--space-3);
-  font-size: var(--text-title, 0.92rem);
+  margin: 0 0 0.45rem;
+  font-size: 0.86rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--color-ink);
 }
 
-.staff-month-mosaic__weekdays,
-.staff-month-mosaic__grid {
+.staff-month-mosaic__weekdays {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.28rem;
+  gap: 0.12rem;
+  margin-bottom: 0.2rem;
 }
 
 .staff-month-mosaic__weekday {
-  padding: 0.15rem 0;
+  padding: 0.1rem 0;
   text-align: center;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
   color: var(--color-soft);
 }
 
+.staff-month-mosaic__weeks {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.staff-month-mosaic__week {
+  --lane-count: 0;
+  --day-head: 1.35rem;
+  --bar-h: 1.05rem;
+  --bar-gap: 0.12rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows:
+    var(--day-head)
+    minmax(
+      0,
+      calc(
+        (var(--bar-h) * var(--lane-count)) +
+          (var(--bar-gap) * max(var(--lane-count) - 1, 0))
+      )
+    );
+  gap: 0.1rem 0.12rem;
+}
+
+.staff-month-mosaic__month--side .staff-month-mosaic__week {
+  --day-head: 1.15rem;
+  --bar-h: 0.42rem;
+}
+
 .staff-month-mosaic__cell {
   display: flex;
-  flex-direction: column;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.2rem;
-  min-height: 3.4rem;
-  padding: 0.35rem 0.4rem;
+  gap: 0.15rem;
+  grid-row: 1;
+  min-height: var(--day-head);
+  padding: 0.12rem 0.2rem;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: 0.35rem;
   text-decoration: none;
   color: inherit;
+  background: transparent;
   transition:
     border-color 160ms var(--ease-out-quint),
     background-color 160ms var(--ease-out-quint);
 }
 
 .staff-month-mosaic__cell--spacer {
-  min-height: 3.4rem;
   pointer-events: none;
 }
 
-.staff-month-mosaic__cell--empty {
-  background: var(--color-surface-muted);
-}
-
-.staff-month-mosaic__cell--light {
-  background: var(--color-maroon-wash);
-}
-
-.staff-month-mosaic__cell--medium {
-  background: color-mix(in oklab, var(--color-maroon-wash) 70%, var(--calendar-color-booking, #fef08a));
+.staff-month-mosaic__cell--has-stays {
+  background: color-mix(in oklab, var(--calendar-color-booking, #ebe0c8) 35%, transparent);
 }
 
 .staff-month-mosaic__cell--full {
-  background: var(--calendar-color-sold-out, #fdba74);
+  background: color-mix(in oklab, var(--calendar-color-sold-out, #e6d0bc) 55%, transparent);
 }
 
 .staff-month-mosaic__cell:hover {
   border-color: var(--color-maroon);
+  background: var(--color-maroon-wash);
 }
 
-.staff-month-mosaic__cell--today {
-  box-shadow: inset 0 0 0 1.5px var(--color-maroon);
+.staff-month-mosaic__cell--today .staff-month-mosaic__date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: var(--color-maroon);
+  color: var(--color-surface);
 }
 
 .staff-month-mosaic__cell--selected {
@@ -6262,56 +6297,114 @@ textarea:focus {
 
 .staff-month-mosaic__cell:focus-visible {
   outline: 2px solid var(--color-maroon);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .staff-month-mosaic__date {
-  font-size: 0.84rem;
+  font-size: 0.72rem;
   font-weight: 750;
-  line-height: 1.1;
+  line-height: 1.2;
   color: var(--color-ink);
 }
 
-.staff-month-mosaic__count {
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.2;
+.staff-month-mosaic__month--side .staff-month-mosaic__date {
+  font-size: 0.66rem;
+}
+
+.staff-month-mosaic__count-chip {
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1;
   color: var(--color-muted);
 }
 
-.staff-month-mosaic__cell--empty .staff-month-mosaic__count {
-  color: var(--color-soft);
+.staff-month-mosaic__bar {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  grid-row: 2;
+  align-self: start;
+  height: var(--bar-h);
+  margin-top: calc(var(--lane) * (var(--bar-h) + var(--bar-gap)));
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--color-ink);
+  overflow: hidden;
+  transition:
+    filter 160ms var(--ease-out-quint),
+    box-shadow 160ms var(--ease-out-quint);
 }
 
-.staff-month-mosaic__cell--full .staff-month-mosaic__count {
-  color: var(--color-warning-ink, oklch(38% 0.11 65));
+.staff-month-mosaic__bar--booking {
+  background: var(--calendar-color-booking, #ebe0c8);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-ink) 12%, transparent);
 }
 
-.staff-month-mosaic__full-mark {
+.staff-month-mosaic__bar--channel {
+  background: var(--color-maroon-wash);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-maroon) 28%, transparent);
+}
+
+.staff-month-mosaic__bar--continues-left {
+  border-top-left-radius: 0.2rem;
+  border-bottom-left-radius: 0.2rem;
+  margin-left: -0.06rem;
+  padding-left: 0.25rem;
+}
+
+.staff-month-mosaic__bar--continues-right {
+  border-top-right-radius: 0.2rem;
+  border-bottom-right-radius: 0.2rem;
+  margin-right: -0.06rem;
+}
+
+.staff-month-mosaic__bar:hover,
+.staff-month-mosaic__bar--selected {
+  filter: brightness(0.97);
+  box-shadow:
+    inset 0 0 0 1px var(--color-maroon),
+    0 0 0 1px var(--color-maroon-wash);
+}
+
+.staff-month-mosaic__bar:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 1px;
+}
+
+.staff-month-mosaic__bar-label {
+  font-size: 0.62rem;
   font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staff-month-mosaic__bar-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .staff-month-mosaic__legend-swatch {
   width: 0.85rem;
-  height: 0.85rem;
-  border-radius: 0.2rem;
+  height: 0.55rem;
+  border-radius: 999px;
   border: 1px solid var(--color-border);
 }
 
-.staff-month-mosaic__legend-swatch--empty {
-  background: var(--color-surface-muted);
+.staff-month-mosaic__legend-swatch--booking {
+  background: var(--calendar-color-booking, #ebe0c8);
 }
 
-.staff-month-mosaic__legend-swatch--light {
+.staff-month-mosaic__legend-swatch--channel {
   background: var(--color-maroon-wash);
-}
-
-.staff-month-mosaic__legend-swatch--medium {
-  background: color-mix(in oklab, var(--color-maroon-wash) 70%, var(--calendar-color-booking, #fef08a));
+  border-color: color-mix(in oklab, var(--color-maroon) 28%, var(--color-border));
 }
 
 .staff-month-mosaic__legend-swatch--full {
-  background: var(--calendar-color-sold-out, #fdba74);
+  background: var(--calendar-color-sold-out, #e6d0bc);
 }
 
 .calendar-property-day {

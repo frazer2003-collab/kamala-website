@@ -47,8 +47,9 @@ export function CalendarGridGuide({ variant = "board" }: CalendarGridGuideProps)
       <div className="calendar-grid-guide__body">
         {variant === "overview" ? (
           <p className="calendar-grid-guide__lede">
-            Scan months at a glance. Each day shows how many bookings overnight —
-            click a date to open stays and room actions.
+            Stays stretch across their nights like Airbnb. Click a bar for the
+            guest, or a date for that day’s count and room actions. Side months
+            stay compact for looking ahead.
           </p>
         ) : (
           <>

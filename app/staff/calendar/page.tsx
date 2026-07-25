@@ -653,8 +653,13 @@ export default async function StaffCalendarPage({
           ) : (
             <StaffMonthMosaic
               anchorMonthKey={monthKey}
+              bookings={spanBookings}
+              calendarColors={settings.calendarColors}
+              channelStays={channelStaysForCounts}
               months={mosaicMonths}
               occupancyByIso={occupancyByIso}
+              selectedBlockKey={selectedBlockKey || undefined}
+              selectedBookingKey={selectedKey || undefined}
               selectedDate={selectedDate}
             />
           )}
