@@ -7223,6 +7223,87 @@ textarea:focus {
   box-shadow: 0.75rem 0 0.5rem -0.25rem var(--extranet-room-band);
 }
 
+.extranet-room__units-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.extranet-room__units-toggle:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.extranet-room__units-toggle-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.extranet-room__units-toggle-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.extranet-room__units-toggle-hint {
+  color: var(--color-maroon-deep);
+  font-weight: 800;
+}
+
+.extranet-room__units-toggle-hint::before {
+  content: "·";
+  margin-right: 0.35rem;
+  color: var(--color-soft);
+  font-weight: 650;
+}
+
+.extranet-room__units-toggle[aria-expanded="true"] .extranet-room__units-toggle-hint::after,
+.extranet-room__units-toggle[aria-expanded="false"] .extranet-room__units-toggle-hint::after {
+  content: "";
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: 0.2rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  translate: 0 -0.1rem;
+}
+
+.extranet-room__units-toggle[aria-expanded="true"] .extranet-room__units-toggle-hint::after {
+  transform: rotate(-135deg);
+  translate: 0 0.1rem;
+}
+
+.extranet-room__units-collapsed {
+  position: sticky;
+  left: 0;
+  width: max-content;
+  max-width: min(22rem, 85vw);
+  margin: 0;
+  padding: 0.45rem 0.85rem 0.65rem;
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
 .extranet-room__title h2,
 .extranet-room__title h3 {
   margin: 0;
@@ -8107,6 +8188,18 @@ textarea:focus {
     border: none;
     border-radius: 0;
     box-shadow: -0.5rem 0 0.45rem -0.2rem var(--extranet-room-band);
+  }
+
+  .extranet-room__units-toggle-meta {
+    width: 100%;
+  }
+
+  .extranet-room__units-collapsed {
+    /* Keep the hint under the sticky type header while scrolling days. */
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--color-surface);
   }
 
   .extranet-room__inventory-toggle {

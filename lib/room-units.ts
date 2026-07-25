@@ -91,6 +91,25 @@ export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
     .sort((left, right) => left.sortOrder - right.sortOrder || left.number.localeCompare(right.number));
 }
 
+/**
+ * Units shown on the staff timeline for a room type.
+ * Shared physical doors stay assignable under every linked type, but the
+ * calendar only lists each door once:
+ * - 114 under Family (loft), not Deluxe (garden)
+ * - 112 under Deluxe (garden), not Triple (veranda)
+ */
+export function getTimelineUnitsForRoomType(units: RoomUnit[], roomId: string) {
+  return getUnitsForRoomType(units, roomId).filter((unit) => {
+    if (roomId === "garden" && unit.number === "114") {
+      return false;
+    }
+    if (roomId === "veranda" && unit.number === "112") {
+      return false;
+    }
+    return true;
+  });
+}
+
 export function getRoomUnitById(units: RoomUnit[], unitId: string | null | undefined) {
   if (!unitId) {
     return null;
