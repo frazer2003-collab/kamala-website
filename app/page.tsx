@@ -10,6 +10,7 @@ import { HomeStayStory } from "@/components/home-stay-story";
 import { SiteFooter } from "@/components/site-footer";
 import { isLocale } from "@/lib/i18n";
 import { HomeStickyDates } from "@/components/home-sticky-dates";
+import { HomeHashScroll } from "@/components/home-hash-scroll";
 import { HomePageJsonLd } from "@/components/home-page-json-ld";
 import { resolveHeroImageUrl } from "@/lib/home-hero-media";
 import { buildHomePageJsonLd, buildHomePageMetadata, buildHomePageWebSiteJsonLd } from "@/lib/home-seo";
@@ -109,6 +110,7 @@ export default async function Home({
         </div>
       </HomeHeroShell>
 
+      <HomeHashScroll />
       <HomeStickyDates
         arrival={stayDates?.arrival}
         departure={stayDates?.departure}

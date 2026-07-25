@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { PropertyLocation } from "@/components/property-location";
 import { SiteFooter } from "@/components/site-footer";
@@ -142,12 +141,10 @@ export default async function LocationPage() {
       ) : null}
 
       <div className="guest-page__actions">
-        <Link className="button button--primary" href="/#rooms">
+        {/* Native anchor so cross-page #rooms hash scrolls reliably to the rooms section. */}
+        <a className="button button--primary" href="/#rooms">
           See rooms
-        </Link>
-        <Link className="button button--secondary" href="/#booking">
-          Book a stay
-        </Link>
+        </a>
       </div>
 
       <SiteFooter settings={settings} />
