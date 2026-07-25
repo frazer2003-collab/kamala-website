@@ -1,5 +1,6 @@
 "use client";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
+import { CalendarRangeFields } from "@/components/calendar-range-fields";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import {
@@ -29,6 +30,8 @@ type CalendarBookingPanelProps = {
   bookingKey: string;
   databaseId: string;
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   canManage: boolean;
   /** Confirmed stays only — awaiting reservations are declined from the inbox. */
   canCancelStay?: boolean;
@@ -67,6 +70,8 @@ export function CalendarBookingPanel({
   bookingKey,
   databaseId,
   monthKey,
+  fromIso,
+  toIso,
   canManage,
   canCancelStay = true,
   guestName,
@@ -218,7 +223,7 @@ export function CalendarBookingPanel({
       ) : null}
       <form action={formAction} className="calendar-manage-form">
         <StaffFormBusyBridge />
-        <input name="month" type="hidden" value={monthKey} />
+        <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
         {needsOverbookConfirm ? (
           <input name="overbook-confirm" type="hidden" value="1" />
         ) : null}
@@ -459,6 +464,7 @@ export function CalendarBookingPanel({
             <div className="calendar-cancel-confirm__actions">
               <form action={cancelAction}>
                 <StaffFormBusyBridge />
+                <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
                 <button className="button button--danger" disabled={!canManage} type="submit">
                   Yes, cancel stay
                 </button>

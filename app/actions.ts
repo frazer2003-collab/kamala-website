@@ -23,7 +23,27 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getRoomForBooking, getStaffRooms } from "@/lib/rooms";
 import { resolveRoomTypeChange } from "@/lib/room-type-change";
-import { isPastCalendarDate } from "@/lib/calendar";
+import {
+  buildStaffCalendarHref,
+  isPastCalendarDate,
+  staffCalendarRangeFromFormData,
+  type StaffCalendarHrefOptions,
+} from "@/lib/calendar";
+
+function calendarHrefFromFormData(
+  formData: FormData,
+  options: Omit<StaffCalendarHrefOptions, "month" | "from" | "to"> & {
+    month?: string;
+  } = {},
+) {
+  const range = staffCalendarRangeFromFormData(formData);
+  return buildStaffCalendarHref({
+    ...options,
+    month: range.month || options.month,
+    from: range.from,
+    to: range.to,
+  });
+}
 import { addIsoDays, eachIsoDayInclusive } from "@/lib/room-day-inventory";
 import {
   buildRateLookup,
@@ -1030,11 +1050,14 @@ export async function updateConfirmedBooking(
     (booking?.status === "awaiting" && Boolean(booking.deposit_paid_at));
 
   if (!bookingId || !booking || !isAssignableCalendarStay || booking.id !== bookingId) {
-    redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
+    redirect(calendarHrefFromFormData(formData, { month }));
   }
 
   const bookingMonth = month || booking.arrival_date.slice(0, 7);
-  const bookingHref = `/staff/calendar?month=${bookingMonth}&booking=${encodeURIComponent(bookingId)}`;
+  const bookingHref = calendarHrefFromFormData(formData, {
+    month: bookingMonth,
+    booking: bookingId,
+  });
   const requestedRoomId = getValue(formData, "room-id");
   const staffRooms = await getStaffRooms();
   const typeChange = resolveRoomTypeChange({
@@ -1219,7 +1242,12 @@ export async function updateConfirmedBooking(
   }
 
   revalidatePath("/staff/calendar");
-  redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
+  redirect(
+    calendarHrefFromFormData(formData, {
+      month: arrival.slice(0, 7),
+      extras: { saved: "1" },
+    }),
+  );
 }
 
 export async function updateInboxBookingRoomType(formData: FormData) {
@@ -1286,17 +1314,17 @@ export async function assignStayRoomUnit(formData: FormData) {
   const roomUnitId = getValue(formData, "room-unit-id");
   const guestLabel = getValue(formData, "guest-label");
   const monthKey = month || new Date().toISOString().slice(0, 7);
-  const fallbackHref = `/staff/calendar?month=${monthKey}`;
+  const fallbackHref = calendarHrefFromFormData(formData, { month: monthKey });
 
-  const assignedRedirect = (guest: string, unitNumber: string) => {
-    const params = new URLSearchParams({
+  const assignedRedirect = (guest: string, unitNumber: string) =>
+    calendarHrefFromFormData(formData, {
       month: monthKey,
-      saved: "room-assigned",
-      assignGuest: guest.slice(0, 80),
-      assignUnit: unitNumber,
+      extras: {
+        saved: "room-assigned",
+        assignGuest: guest.slice(0, 80),
+        assignUnit: unitNumber,
+      },
     });
-    return `/staff/calendar?${params.toString()}`;
-  };
 
   if (!stayId || !roomUnitId || (kind !== "booking" && kind !== "channel")) {
     redirect(fallbackHref);
@@ -1477,14 +1505,14 @@ export async function declineBookingRequest(formData: FormData) {
 export async function cancelConfirmedBooking(
   bookingId: string,
   month: string,
-  _formData: FormData,
+  formData: FormData,
 ) {
   await requireStaffCalendarWrite();
 
   const booking = await getBookingForStaff(bookingId);
 
   if (!bookingId || !booking || booking.status !== "confirmed" || booking.id !== bookingId) {
-    redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
+    redirect(calendarHrefFromFormData(formData, { month }));
   }
 
   const supabase = createStaffSupabaseClient();
@@ -1501,7 +1529,7 @@ export async function cancelConfirmedBooking(
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
-  redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
+  redirect(calendarHrefFromFormData(formData, { month }));
 }
 
 const walkInEmailFallback = "walk-in@kamala.local";
@@ -1705,7 +1733,11 @@ export async function createWalkInBooking(
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
   redirect(
-    `/staff/calendar?month=${arrival.slice(0, 7)}&booking=${encodeURIComponent(data.id)}&created=walk-in`,
+    calendarHrefFromFormData(formData, {
+      month: arrival.slice(0, 7),
+      booking: data.id,
+      extras: { created: "walk-in" },
+    }),
   );
 }
 
@@ -1723,12 +1755,18 @@ export async function createRoomBlock(formData: FormData) {
   const departureDate = parseDate(endDate);
 
   if (!room || !arrivalDate || !departureDate || departureDate <= arrivalDate) {
-    redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
+    redirect(calendarHrefFromFormData(formData, { month }));
   }
 
   if (isPastCalendarDate(startDate)) {
     redirect(
-      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(startDate)}&mode=block&error=past-date`,
+      calendarHrefFromFormData(formData, {
+        month,
+        room: roomId,
+        date: startDate,
+        mode: "block",
+        extras: { error: "past-date" },
+      }),
     );
   }
 
@@ -1747,13 +1785,23 @@ export async function createRoomBlock(formData: FormData) {
 
   if (error || !data) {
     redirect(
-      `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(startDate)}&mode=block&error=save-failed`,
+      calendarHrefFromFormData(formData, {
+        month,
+        room: roomId,
+        date: startDate,
+        mode: "block",
+        extras: { error: "save-failed" },
+      }),
     );
   }
 
   revalidatePath("/staff/calendar");
   redirect(
-    `/staff/calendar?month=${startDate.slice(0, 7)}&block=${encodeURIComponent(data.id)}&created=block`,
+    calendarHrefFromFormData(formData, {
+      month: startDate.slice(0, 7),
+      block: data.id,
+      extras: { created: "block" },
+    }),
   );
 }
 
@@ -1765,9 +1813,7 @@ export async function updateChannelReservation(
   await requireStaffCalendarWrite();
 
   const monthKey = month || "";
-  const fallbackHref = monthKey
-    ? `/staff/calendar?month=${monthKey}`
-    : "/staff/calendar";
+  const fallbackHref = calendarHrefFromFormData(formData, { month: monthKey });
 
   if (!blockId) {
     redirect(fallbackHref);
@@ -1784,7 +1830,10 @@ export async function updateChannelReservation(
     redirect(fallbackHref);
   }
 
-  const blockHref = `/staff/calendar?month=${monthKey}&block=${encodeURIComponent(blockId)}`;
+  const blockHref = calendarHrefFromFormData(formData, {
+    month: monthKey,
+    block: blockId,
+  });
 
   const guestName = getValue(formData, "guest-name");
   const guestPhone = getValue(formData, "guest-phone");
@@ -1904,7 +1953,12 @@ export async function updateChannelReservation(
     }
 
     revalidatePath("/staff/calendar");
-    redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
+    redirect(
+      calendarHrefFromFormData(formData, {
+        month: arrival.slice(0, 7),
+        extras: { saved: "1" },
+      }),
+    );
   }
 
   // RPC missing → fall back to direct update (needs a fresh schema cache).
@@ -1925,7 +1979,12 @@ export async function updateChannelReservation(
 
     if (!saveError) {
       revalidatePath("/staff/calendar");
-      redirect(`/staff/calendar?month=${arrival.slice(0, 7)}&saved=1`);
+      redirect(
+        calendarHrefFromFormData(formData, {
+          month: arrival.slice(0, 7),
+          extras: { saved: "1" },
+        }),
+      );
     }
 
     const classified = classifyRoomUnitSaveError(saveError.message);
@@ -1957,18 +2016,18 @@ export async function updateChannelReservation(
   redirect(appendCalendarError(blockHref, "save-failed", rpcError.message));
 }
 
-export async function removeRoomBlock(blockId: string, month: string, _formData: FormData) {
+export async function removeRoomBlock(blockId: string, month: string, formData: FormData) {
   await requireStaffCalendarWrite();
 
   if (!blockId) {
-    redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
+    redirect(calendarHrefFromFormData(formData, { month }));
   }
 
   const supabase = createStaffSupabaseClient();
   await supabase.from("room_blocks").delete().eq("id", blockId);
 
   revalidatePath("/staff/calendar");
-  redirect(month ? `/staff/calendar?month=${month}` : "/staff/calendar");
+  redirect(calendarHrefFromFormData(formData, { month }));
 }
 
 export async function bulkUpdateRoomAvailability(formData: FormData) {
@@ -1985,9 +2044,11 @@ export async function bulkUpdateRoomAvailability(formData: FormData) {
   const start = parseDate(startDate);
   const endInclusive = parseDate(endDateInclusive);
 
-  const bulkStatusHref = month
-    ? `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&mode=bulk-status`
-    : "/staff/calendar";
+  const bulkStatusHref = calendarHrefFromFormData(formData, {
+    month,
+    room: roomId,
+    mode: "bulk-status",
+  });
 
   if (
     !room ||
@@ -2020,7 +2081,12 @@ export async function bulkUpdateRoomAvailability(formData: FormData) {
     }
 
     revalidatePath("/staff/calendar");
-    redirect(`/staff/calendar?month=${month}&saved=bulk-status`);
+    redirect(
+    calendarHrefFromFormData(formData, {
+      month,
+      extras: { saved: "bulk-status" },
+    }),
+  );
   }
 
   const { data: overlappingBlocks, error: loadError } = await supabase
@@ -2082,7 +2148,12 @@ export async function bulkUpdateRoomAvailability(formData: FormData) {
   }
 
   revalidatePath("/staff/calendar");
-  redirect(`/staff/calendar?month=${month}&saved=bulk-status`);
+  redirect(
+    calendarHrefFromFormData(formData, {
+      month,
+      extras: { saved: "bulk-status" },
+    }),
+  );
 }
 
 export async function updateRoomDayAllotment(formData: FormData) {
@@ -2098,9 +2169,12 @@ export async function updateRoomDayAllotment(formData: FormData) {
   const start = parseDate(startDate);
   const endInclusive = parseDate(endDateInclusive);
 
-  const allotmentHref = month
-    ? `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(startDate || "")}&mode=allotment`
-    : "/staff/calendar";
+  const allotmentHref = calendarHrefFromFormData(formData, {
+    month,
+    room: roomId,
+    date: startDate || undefined,
+    mode: "allotment",
+  });
 
   if (!room || !start || !endInclusive || endInclusive < start) {
     redirect(`${allotmentHref}&error=invalid-dates`);
@@ -2132,7 +2206,12 @@ export async function updateRoomDayAllotment(formData: FormData) {
     revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
     revalidatePath("/");
     revalidatePath("/staff/calendar");
-    redirect(`/staff/calendar?month=${month}&saved=allotment-reset`);
+    redirect(
+    calendarHrefFromFormData(formData, {
+      month,
+      extras: { saved: "allotment-reset" },
+    }),
+  );
   }
 
   if (!Number.isFinite(roomsToSellRaw) || roomsToSellRaw < 0) {
@@ -2157,7 +2236,12 @@ export async function updateRoomDayAllotment(formData: FormData) {
   revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
   revalidatePath("/");
   revalidatePath("/staff/calendar");
-  redirect(`/staff/calendar?month=${month}&saved=allotment`);
+  redirect(
+    calendarHrefFromFormData(formData, {
+      month,
+      extras: { saved: "allotment" },
+    }),
+  );
 }
 
 export async function updateRoomDayRate(formData: FormData) {
@@ -2173,9 +2257,12 @@ export async function updateRoomDayRate(formData: FormData) {
   const start = parseDate(startDate);
   const endInclusive = parseDate(endDateInclusive);
 
-  const rateHref = month
-    ? `/staff/calendar?month=${month}&room=${encodeURIComponent(roomId)}&date=${encodeURIComponent(startDate || "")}&mode=rate`
-    : "/staff/calendar";
+  const rateHref = calendarHrefFromFormData(formData, {
+    month,
+    room: roomId,
+    date: startDate || undefined,
+    mode: "rate",
+  });
 
   if (!room || !start || !endInclusive || endInclusive < start) {
     redirect(`${rateHref}&error=invalid-dates`);
@@ -2207,7 +2294,12 @@ export async function updateRoomDayRate(formData: FormData) {
     revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
     revalidatePath("/");
     revalidatePath("/staff/calendar");
-    redirect(`/staff/calendar?month=${month}&saved=rate-reset`);
+    redirect(
+    calendarHrefFromFormData(formData, {
+      month,
+      extras: { saved: "rate-reset" },
+    }),
+  );
   }
 
   if (!Number.isFinite(nightlyRateRaw) || nightlyRateRaw < 0) {
@@ -2231,5 +2323,10 @@ export async function updateRoomDayRate(formData: FormData) {
   revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
   revalidatePath("/");
   revalidatePath("/staff/calendar");
-  redirect(`/staff/calendar?month=${month}&saved=rate`);
+  redirect(
+    calendarHrefFromFormData(formData, {
+      month,
+      extras: { saved: "rate" },
+    }),
+  );
 }

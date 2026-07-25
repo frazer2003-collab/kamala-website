@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  defaultStaffTimelineSelectionRange,
   formatCalendarMonth,
   formatCalendarMonthLabel,
   parseCalendarMonth,
@@ -11,6 +12,8 @@ import {
 
 type StaffCalendarMonthPickerProps = {
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
 };
@@ -20,7 +23,12 @@ function buildMonthHref(
   selectedBookingKey?: string,
   selectedBlockKey?: string,
 ) {
-  const params = new URLSearchParams({ month: monthKey });
+  const selection = defaultStaffTimelineSelectionRange(monthKey);
+  const params = new URLSearchParams({
+    month: monthKey,
+    from: selection.fromIso,
+    to: selection.toIso,
+  });
 
   if (selectedBookingKey) {
     params.set("booking", selectedBookingKey);

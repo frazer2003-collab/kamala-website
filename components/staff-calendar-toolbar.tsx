@@ -3,12 +3,18 @@ import { syncAllRoomIcalFeedsAction } from "@/app/staff/auth-actions";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffOtaSyncControls } from "@/components/staff-ota-sync-controls";
-import { formatCalendarMonth } from "@/lib/calendar";
+import { CalendarRangeFields } from "@/components/calendar-range-fields";
+import {
+  defaultStaffTimelineSelectionRange,
+  formatCalendarMonth,
+} from "@/lib/calendar";
 import type { CalendarMonthStats } from "@/lib/calendar-timeline";
 import type { CalendarColors } from "@/lib/calendar-colors";
 
 type StaffCalendarToolbarProps = {
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   stats: CalendarMonthStats;
   unassignedCount: number;
   calendarColors: CalendarColors;
@@ -22,7 +28,12 @@ function buildMonthHref(
   selectedBookingKey?: string,
   selectedBlockKey?: string,
 ) {
-  const params = new URLSearchParams({ month: monthKey });
+  const selection = defaultStaffTimelineSelectionRange(monthKey);
+  const params = new URLSearchParams({
+    month: monthKey,
+    from: selection.fromIso,
+    to: selection.toIso,
+  });
 
   if (selectedBookingKey) {
     params.set("booking", selectedBookingKey);
@@ -35,6 +46,8 @@ function buildMonthHref(
 
 export function StaffCalendarToolbar({
   monthKey,
+  fromIso,
+  toIso,
   stats,
   unassignedCount,
   calendarColors,
@@ -50,9 +63,11 @@ export function StaffCalendarToolbar({
       <div className="staff-calendar-toolbar__nav">
         <h2 className="staff-calendar-toolbar__title" id="staff-calendar-month-heading">
           <StaffCalendarMonthPicker
+            fromIso={fromIso}
             monthKey={monthKey}
             selectedBlockKey={selectedBlockKey}
             selectedBookingKey={selectedBookingKey}
+            toIso={toIso}
           />
         </h2>
         <Link
@@ -64,7 +79,7 @@ export function StaffCalendarToolbar({
         {canSyncOta ? (
           <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
             <StaffFormBusyBridge message="Syncing channel calendars…" />
-            <input name="month" type="hidden" value={monthKey} />
+            <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
             <StaffOtaSyncControls />
           </form>
         ) : null}

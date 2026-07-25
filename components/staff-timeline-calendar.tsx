@@ -3,6 +3,8 @@
 import { memo, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { CalendarJumpToToday } from "@/components/calendar-jump-to-today";
+import { CalendarStayBarLink } from "@/components/calendar-stay-bar-link";
+import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import {
   buildRoomTimelineBars,
   buildUnitTimelineBars,
@@ -79,6 +81,8 @@ type StaffExtranetRoomSectionProps = {
   rateLookup: Map<string, number>;
   promotions: RoomPromotionRate[];
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   canManage: boolean;
   selectedBookingKey: string;
   selectedBlockKey: string;
@@ -227,6 +231,8 @@ function UnitReservationRow({
   calendarDays,
   dayMetrics,
   monthKey,
+  fromIso,
+  toIso,
   selectedBookingKey,
   selectedBlockKey,
   roomShortNameById,
@@ -238,12 +244,15 @@ function UnitReservationRow({
   calendarDays: CalendarDay[];
   dayMetrics: DayMetrics[];
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   selectedBookingKey: string;
   selectedBlockKey: string;
   roomShortNameById: Map<string, string>;
   currentRoomId: string;
 }) {
   const dayCount = calendarDays.length;
+  const rangeQuery = { fromIso, toIso };
   // Match by door only — room_id can lag after staff type moves / sync, and a
   // stay pinned to this door must still render on this row.
   const unitBookings = useMemo(
@@ -307,12 +316,13 @@ function UnitReservationRow({
               : selectedBlockKey === bar.itemKey;
 
           return (
-            <Link
-              aria-label={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
+            <CalendarStayBarLink
+              ariaLabel={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
               className={getBarClassName(bar, isSelected)}
-              data-calendar-focus={bar.itemKey}
-              href={getTimelineBarHref(bar, monthKey)}
+              href={getTimelineBarHref(bar, monthKey, rangeQuery)}
+              itemKey={bar.itemKey}
               key={bar.key}
+              kind={bar.kind === "booking" ? "booking" : "block"}
               style={{
                 gridColumn: `${bar.startCol} / span ${bar.span}`,
                 ["--lane" as string]: bar.lane,
@@ -326,7 +336,7 @@ function UnitReservationRow({
               ) : (
                 <span className="extranet-bar__continued" aria-hidden="true" />
               )}
-            </Link>
+            </CalendarStayBarLink>
           );
         })}
       </div>
@@ -344,6 +354,8 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   rateLookup,
   promotions,
   monthKey,
+  fromIso,
+  toIso,
   canManage,
   selectedBookingKey,
   selectedBlockKey,
@@ -355,6 +367,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
 }: StaffExtranetRoomSectionProps) {
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
+  const rangeQuery = { fromIso, toIso };
 
   const roomBookings = useMemo(
     () => bookings.filter((booking) => booking.roomId === room.id),
@@ -443,7 +456,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         promotions,
         rateLookup,
       );
-      const dayHref = getTimelineDayHref(room.id, day.iso, monthKey);
+      const dayHref = getTimelineDayHref(room.id, day.iso, monthKey, rangeQuery);
 
       return {
         iso: day.iso,
@@ -463,18 +476,24 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           ? undefined
           : saleStatus === "sold-out"
             ? dayHref
-            : getStatusCellHref(room.id, day.iso, monthKey, manualClosures),
+            : getStatusCellHref(
+                room.id,
+                day.iso,
+                monthKey,
+                manualClosures,
+                rangeQuery,
+              ),
         // Day actions panel only — never deep-link into a booking/block detail.
         bookedHref: isPast ? undefined : dayHref,
         allotmentHref: isPast
           ? undefined
           : canManage
-            ? getTimelineAllotmentHref(room.id, day.iso, monthKey)
+            ? getTimelineAllotmentHref(room.id, day.iso, monthKey, rangeQuery)
             : dayHref,
         rateHref: isPast
           ? undefined
           : canManage
-            ? getTimelineRateHref(room.id, day.iso, monthKey)
+            ? getTimelineRateHref(room.id, day.iso, monthKey, rangeQuery)
             : dayHref,
         isSelected,
         rate: rateDetails.rate,
@@ -491,6 +510,8 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     rateLookup,
     manualClosures,
     monthKey,
+    fromIso,
+    toIso,
     promotions,
     room,
     roomBookings,
@@ -561,7 +582,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           {firstFutureDay && canManage ? (
             <Link
               className="extranet-room__bulk"
-              href={getTimelineBulkAvailabilityHref(room.id, monthKey)}
+              href={getTimelineBulkAvailabilityHref(room.id, monthKey, rangeQuery)}
             >
               Close dates
             </Link>
@@ -728,7 +749,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                   sourceBooking?.databaseId ?? sourceChannel?.databaseId ?? null;
                 const showInlineAssign =
                   canManage && Boolean(stayId) && bar.needsRoom && bar.showLabel;
-                const detailHref = getTimelineBarHref(bar, monthKey);
+                const detailHref = getTimelineBarHref(bar, monthKey, rangeQuery);
 
                 return (
                   <div
@@ -744,11 +765,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                       ["--lane" as string]: bar.lane,
                     }}
                   >
-                    <Link
-                      aria-label={`${bar.label}, ${sublabel}`}
-                      className={[getBarClassName(bar, isSelected), "extranet-bar__open"].join(" ")}
-                      data-calendar-focus={bar.itemKey}
+                    <CalendarStayBarLink
+                      ariaLabel={`${bar.label}, ${sublabel}`}
+                      className={[getBarClassName(bar, isSelected), "extranet-bar__open"].join(
+                        " ",
+                      )}
                       href={detailHref}
+                      itemKey={bar.itemKey}
+                      kind={bar.kind === "booking" ? "booking" : "block"}
                     >
                       {bar.showLabel ? (
                         <>
@@ -758,11 +782,12 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                       ) : (
                         <span className="extranet-bar__continued" aria-hidden="true" />
                       )}
-                    </Link>
+                    </CalendarStayBarLink>
                     {showInlineAssign && stayId && sourceBooking ? (
                       <InlineRoomAssign
                         arrivalDate={sourceBooking.arrivalDate}
                         departureDate={sourceBooking.departureDate}
+                        fromIso={fromIso}
                         guestLabel={sourceBooking.guest}
                         kind="booking"
                         monthKey={monthKey}
@@ -770,12 +795,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                         roomId={sourceBooking.roomId}
                         roomUnits={roomUnits}
                         stayId={stayId}
+                        toIso={toIso}
                       />
                     ) : null}
                     {showInlineAssign && stayId && sourceChannel ? (
                       <InlineRoomAssign
                         arrivalDate={sourceChannel.startDate}
                         departureDate={sourceChannel.endDate}
+                        fromIso={fromIso}
                         guestLabel={
                           sourceChannel.guestName || sourceChannel.channelLabel || "Guest"
                         }
@@ -785,6 +812,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                         roomId={sourceChannel.roomId}
                         roomUnits={roomUnits}
                         stayId={stayId}
+                        toIso={toIso}
                       />
                     ) : null}
                   </div>
@@ -907,6 +935,8 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
               dayMetrics={dayMetrics}
               key={unit.id}
               monthKey={monthKey}
+              fromIso={fromIso}
+              toIso={toIso}
               roomShortNameById={roomShortNameById}
               selectedBlockKey={selectedBlockKey}
               selectedBookingKey={selectedBookingKey}
@@ -931,6 +961,8 @@ type StaffTimelineCalendarProps = {
   rateLookup: Map<string, number>;
   promotions: RoomPromotionRate[];
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   monthLabel: string;
   canManage: boolean;
   selectedBookingKey: string;
@@ -952,6 +984,8 @@ export function StaffTimelineCalendar({
   rateLookup,
   promotions,
   monthKey,
+  fromIso,
+  toIso,
   monthLabel,
   canManage,
   selectedBookingKey,
@@ -964,11 +998,27 @@ export function StaffTimelineCalendar({
 }: StaffTimelineCalendarProps) {
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
+  const staySelection = useCalendarStaySelection();
+  const activeBookingKey = staySelection?.bookingKey || selectedBookingKey;
+  const activeBlockKey = staySelection?.blockKey || selectedBlockKey;
+  // Size columns so the anchor month (1st → last) fills the first screenful.
+  const fitMonthDayCount = Math.max(
+    28,
+    calendarDays.filter((day) => day.iso.startsWith(`${monthKey}-`)).length ||
+      new Date(
+        Number(monthKey.slice(0, 4)),
+        Number(monthKey.slice(5, 7)),
+        0,
+      ).getDate(),
+  );
 
   return (
     <div
       className="staff-extranet staff-extranet--full"
-      style={getCalendarColorStyleProps(calendarColors)}
+      style={{
+        ...getCalendarColorStyleProps(calendarColors),
+        ["--extranet-fit-month-days" as string]: String(fitMonthDayCount),
+      }}
     >
       <CalendarJumpToToday />
       <h2 className="sr-only">Room availability by day</h2>
@@ -991,6 +1041,7 @@ export function StaffTimelineCalendar({
                 ]
                   .filter(Boolean)
                   .join(" ")}
+                data-calendar-day={day.iso}
                 key={day.iso}
                 style={{ gridColumn: columnIndex + 2 }}
               >
@@ -1010,14 +1061,16 @@ export function StaffTimelineCalendar({
             inventoryLookup={inventoryLookup}
             key={room.id}
             monthKey={monthKey}
+            fromIso={fromIso}
+            toIso={toIso}
             promotions={promotions}
             rateLookup={rateLookup}
             room={room}
             roomUnits={roomUnits}
             rooms={rooms}
             occupancies={occupancies}
-            selectedBlockKey={selectedBlockKey}
-            selectedBookingKey={selectedBookingKey}
+            selectedBlockKey={activeBlockKey}
+            selectedBookingKey={activeBookingKey}
             selectedDate={selectedDate}
             selectedRoomId={selectedRoomId}
             currency={currency}

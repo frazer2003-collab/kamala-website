@@ -6454,35 +6454,107 @@ textarea:focus {
   font-weight: 650;
 }
 
-.calendar-grid-guide {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: start;
-  justify-content: space-between;
-  gap: var(--space-3);
+.calendar-date-strip {
   margin-bottom: var(--space-3);
-  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface-muted);
+  background: var(--color-surface);
+  overflow: hidden;
 }
 
-.calendar-grid-guide__lede {
-  margin: 0 0 var(--space-2);
+.calendar-date-strip__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.5rem 0.75rem 0;
+}
+
+.calendar-date-strip__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.calendar-date-strip__fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.55rem 0.65rem;
+  padding: 0.45rem 0.75rem 0.7rem;
+}
+
+.calendar-date-strip__field {
+  display: grid;
+  gap: 0.2rem;
+  min-width: min(11rem, 100%);
+}
+
+.calendar-date-strip__field-label {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.calendar-date-strip__input {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
   color: var(--color-ink);
-  font-size: 0.9rem;
+  font: inherit;
+  font-size: 0.88rem;
   font-weight: 650;
 }
 
-.calendar-grid-guide__list {
-  margin: 0;
-  padding-left: 1.1rem;
-  color: var(--color-muted);
-  font-size: 0.86rem;
+.calendar-date-strip__input:hover {
+  border-color: color-mix(in srgb, var(--color-maroon) 30%, var(--color-border));
 }
 
-.calendar-grid-guide__list strong {
-  color: var(--color-ink);
+.calendar-date-strip__input:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+.calendar-date-strip__separator {
+  display: none;
+  color: var(--color-muted);
+  font-weight: 700;
+  padding-bottom: 0.55rem;
+}
+
+.calendar-date-strip__apply {
+  min-height: 2.35rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--color-maroon);
+  border-radius: var(--radius-sm);
+  background: var(--color-maroon);
+  color: var(--color-surface);
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.calendar-date-strip__apply:hover {
+  background: var(--color-maroon-deep);
+  border-color: var(--color-maroon-deep);
+}
+
+.calendar-date-strip__apply:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .calendar-date-strip__separator {
+    display: inline;
+  }
 }
 
 .extranet-row__hint {
@@ -6877,6 +6949,13 @@ textarea:focus {
 
 .staff-extranet__scroll {
   --extranet-dates-sticky-offset: 3.15rem;
+  --extranet-label-width: 9.25rem;
+  --extranet-day-gap: 0.14rem;
+  /* Fit the anchor month (1st → last) in the visible scrollport; extra months scroll. */
+  --extranet-fit-days: var(--extranet-fit-month-days, 31);
+  /* Size day columns against this scrollport so month 1 fills the screen. */
+  container-type: inline-size;
+  container-name: extranet-scroll;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
@@ -6885,17 +6964,31 @@ textarea:focus {
   overscroll-behavior: contain;
 }
 
+/* Descendants of the scrollport resolve 100cqi against its width. */
+.staff-extranet__scroll > .staff-extranet__dates,
+.staff-extranet__scroll > .extranet-room {
+  --extranet-day-width: max(
+    1.55rem,
+    calc(
+      (
+          100cqi - var(--extranet-label-width) -
+            (var(--extranet-fit-days) * var(--extranet-day-gap))
+        ) / var(--extranet-fit-days)
+    )
+  );
+}
+
 .staff-extranet__dates,
 .extranet-room__grid {
-  --extranet-label-width: 10.5rem;
-  --extranet-day-width: 3.35rem;
   display: grid;
+  column-gap: var(--extranet-day-gap);
   grid-template-columns: var(--extranet-label-width) repeat(
       var(--timeline-days),
-      minmax(var(--extranet-day-width), 1fr)
+      var(--extranet-day-width)
     );
   min-width: calc(
-    var(--extranet-label-width) + var(--timeline-days) * var(--extranet-day-width)
+    var(--extranet-label-width) +
+      var(--timeline-days) * (var(--extranet-day-width) + var(--extranet-day-gap))
   );
 }
 
@@ -6905,6 +6998,7 @@ textarea:focus {
   z-index: 5;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-muted);
+  padding-bottom: 0.2rem;
 }
 
 .staff-extranet__month {
@@ -6926,30 +7020,35 @@ textarea:focus {
 .staff-extranet__dayhead {
   display: grid;
   justify-items: center;
-  gap: 0;
-  padding: 0.4rem 0.1rem;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-surface-muted);
+  align-content: center;
+  gap: 0.02rem;
+  min-height: 2.55rem;
+  margin-top: 0.2rem;
+  padding: 0.28rem 0.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: 0 1px 0 oklch(22% 0.025 12 / 0.03);
 }
 
 .staff-extranet__dayhead--weekend {
-  border-right-width: 2px;
-  border-right-color: var(--color-border);
-  background: color-mix(in srgb, var(--color-surface-muted) 82%, var(--color-maroon-wash));
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-maroon-wash));
+  border-color: color-mix(in srgb, var(--color-border) 70%, var(--color-maroon-wash));
 }
 
 .staff-extranet__dayhead--today {
   background: var(--color-maroon-wash);
-  box-shadow: inset 0 -2px 0 var(--color-maroon);
+  border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-maroon) 25%, transparent);
 }
 
 .staff-extranet__dayhead--muted {
-  opacity: 0.45;
+  opacity: 0.55;
 }
 
 .staff-extranet__weekday {
   color: var(--color-muted);
-  font-size: 0.62rem;
+  font-size: 0.56rem;
   font-weight: 750;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -6963,19 +7062,19 @@ textarea:focus {
 
 .staff-extranet__daynum {
   color: var(--color-ink);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 750;
 }
 
 .staff-extranet__dayhead--today .staff-extranet__daynum {
   display: grid;
   place-items: center;
-  min-width: 1.4rem;
-  min-height: 1.4rem;
+  min-width: 1.25rem;
+  min-height: 1.25rem;
   border-radius: 999px;
   background: var(--color-maroon);
   color: white;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
 }
 
 .extranet-room {
@@ -6993,7 +7092,9 @@ textarea:focus {
   gap: var(--space-3);
   box-sizing: border-box;
   min-width: calc(
-    var(--extranet-label-width, 10.5rem) + var(--timeline-days) * var(--extranet-day-width, 3.35rem)
+    var(--extranet-label-width, 9.25rem) +
+      var(--timeline-days) *
+      (var(--extranet-day-width, 2.55rem) + var(--extranet-day-gap, 0.14rem))
   );
   padding: 0.65rem 0.85rem;
   border-bottom: 1px solid color-mix(in srgb, var(--color-success) 22%, var(--color-border));
@@ -7259,11 +7360,13 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.75rem;
+  min-height: 2.65rem;
+  margin: 0.12rem 0;
   padding: 0.15rem;
-  border-right: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
+  box-shadow: 0 1px 0 oklch(22% 0.025 12 / 0.03);
   text-decoration: none;
   color: inherit;
 }
@@ -7274,8 +7377,8 @@ textarea:focus {
 }
 
 .extranet-cell--weekend {
-  border-right-width: 2px;
-  border-right-color: var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-maroon-wash));
+  border-color: color-mix(in srgb, var(--color-border) 75%, var(--color-maroon-wash));
 }
 
 .extranet-cell--sold-out-column {
@@ -7304,7 +7407,8 @@ textarea:focus {
 }
 
 .extranet-cell--today {
-  box-shadow: inset 2px 0 0 var(--color-maroon), inset -2px 0 0 var(--color-maroon);
+  border-color: color-mix(in srgb, var(--color-maroon) 40%, var(--color-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-maroon) 22%, transparent);
 }
 
 .extranet-cell:is(a):not([aria-disabled="true"]):hover {
@@ -7549,15 +7653,16 @@ textarea:focus {
 
 .extranet-reservations {
   /* Lane pitch keeps bars ≥24px (WCAG 2.2 AA target minimum). */
-  --extranet-lane-height: 1.65rem;
+  --extranet-lane-height: 1.85rem;
   --extranet-reservations-height: calc(
-    0.5rem + var(--lane-count, 1) * var(--extranet-lane-height)
+    0.45rem + var(--lane-count, 1) * var(--extranet-lane-height)
   );
   position: relative;
   display: grid;
+  column-gap: var(--extranet-day-gap, 0.14rem);
   grid-template-columns: repeat(
     var(--timeline-days),
-    minmax(var(--extranet-day-width, 3.35rem), 1fr)
+    var(--extranet-day-width, 2.55rem)
   );
   grid-template-rows: var(--extranet-reservations-height);
   align-items: stretch;
@@ -7568,7 +7673,7 @@ textarea:focus {
 }
 
 .extranet-reservations--assign {
-  --extranet-lane-height: 3.15rem;
+  --extranet-lane-height: 3.2rem;
 }
 
 .extranet-reservations__day {
@@ -7576,13 +7681,16 @@ textarea:focus {
   align-self: stretch;
   min-height: var(--extranet-reservations-height);
   height: 100%;
-  border-right: 1px solid var(--color-border);
+  margin: 0.12rem 0;
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-surface-muted) 55%, var(--color-surface));
   box-sizing: border-box;
 }
 
 .extranet-reservations__day.extranet-cell--weekend {
-  border-right-width: 2px;
-  border-right-color: var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-muted) 70%, var(--color-maroon-wash));
+  border-color: color-mix(in srgb, var(--color-border) 75%, var(--color-maroon-wash));
 }
 
 .extranet-bar-shell {
@@ -7593,7 +7701,7 @@ textarea:focus {
   align-self: start;
   gap: 0.35rem;
   grid-row: 1;
-  margin-top: calc(0.15rem + var(--lane, 0) * var(--extranet-lane-height, 1.65rem));
+  margin-top: calc(0.2rem + var(--lane, 0) * var(--extranet-lane-height, 1.85rem));
   min-width: 0;
 }
 
@@ -7660,15 +7768,15 @@ textarea:focus {
   display: flex;
   align-items: center;
   align-self: start;
-  gap: 0.3rem;
+  gap: 0.25rem;
   grid-row: 1;
   box-sizing: border-box;
-  min-height: 1.5rem;
-  height: 1.5rem;
-  margin-top: calc(0.15rem + var(--lane, 0) * var(--extranet-lane-height, 1.65rem));
-  padding: 0 0.4rem;
+  min-height: 1.55rem;
+  height: 1.55rem;
+  margin-top: calc(0.2rem + var(--lane, 0) * var(--extranet-lane-height, 1.85rem));
+  padding: 0 0.35rem;
   border: 1px solid color-mix(in srgb, var(--calendar-color-booking) 55%, var(--color-border));
-  border-radius: 0.25rem;
+  border-radius: 999px;
   background: var(--calendar-color-booking);
   color: var(--color-ink);
   text-decoration: none;
@@ -7706,21 +7814,21 @@ textarea:focus {
 }
 
 .extranet-bar strong {
-  font-size: 0.74rem;
+  font-size: 0.7rem;
 }
 
 .extranet-bar--compact {
-  gap: 0.15rem;
-  padding: 0 0.3rem;
+  gap: 0.12rem;
+  padding: 0 0.28rem;
 }
 
 .extranet-bar--compact strong {
-  font-size: 0.66rem;
+  font-size: 0.64rem;
 }
 
 .extranet-bar span {
   color: var(--color-muted);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
 }
 
@@ -7869,10 +7977,9 @@ textarea:focus {
     display: none;
   }
 
-  .staff-extranet__dates,
-  .extranet-room__grid {
-    --extranet-label-width: 7.75rem;
-    --extranet-day-width: 3.75rem;
+  .staff-extranet__scroll {
+    --extranet-label-width: 7.25rem;
+    --extranet-day-gap: 0.12rem;
   }
 
   .extranet-pill {
@@ -7931,39 +8038,17 @@ textarea:focus {
   }
 }
 
-/* Desktop/tablet: fit the full month width — vertical scroll only. */
+/* Desktop/tablet timeline (non-extranet): fit width — vertical scroll only. */
 @media (min-width: 900px) {
-  .staff-extranet,
   .staff-timeline {
     width: 100%;
     min-width: 0;
   }
 
-  .staff-extranet__scroll,
   .staff-timeline__scroll {
     overflow-x: hidden;
     overflow-y: auto;
     min-width: 0;
-  }
-
-  .staff-extranet__dates,
-  .extranet-room__grid {
-    width: 100%;
-    min-width: 0;
-    --extranet-day-width: 0px;
-    grid-template-columns: var(--extranet-label-width) repeat(
-        var(--timeline-days),
-        minmax(0, 1fr)
-      );
-  }
-
-  .extranet-room__header {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .extranet-reservations {
-    grid-template-columns: repeat(var(--timeline-days), minmax(0, 1fr));
   }
 
   .staff-timeline__grid {
@@ -7978,6 +8063,18 @@ textarea:focus {
 
   .staff-timeline__track {
     grid-template-columns: repeat(var(--timeline-days), minmax(0, 1fr));
+  }
+
+  /* Extranet keeps horizontal scroll: month 1 fills the screen; months 2–3 scroll in. */
+  .staff-extranet {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .staff-extranet__scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    min-width: 0;
   }
 
   .staff-extranet__daynum {

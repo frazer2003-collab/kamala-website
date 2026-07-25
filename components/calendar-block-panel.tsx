@@ -7,11 +7,14 @@ import type { StaffRoomBlock } from "@/lib/room-blocks";
 import type { Room } from "@/lib/content";
 import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
 import { getRoomUnitById, getUnitOptionsForStay } from "@/lib/room-units";
+import { CalendarRangeFields } from "@/components/calendar-range-fields";
 
 type CalendarBlockPanelProps = {
   block: StaffRoomBlock;
   room: Room | undefined;
   monthKey: string;
+  fromIso?: string;
+  toIso?: string;
   canManage: boolean;
   rooms: Array<{ id: string; name: string }>;
   roomUnits: RoomUnit[];
@@ -34,6 +37,8 @@ export function CalendarBlockPanel({
   block,
   room,
   monthKey,
+  fromIso,
+  toIso,
   canManage,
   rooms,
   roomUnits,
@@ -151,6 +156,7 @@ export function CalendarBlockPanel({
             </p>
           ) : null}
           <form action={saveChannelAction} className="calendar-manage-form">
+            <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
       <StaffFormBusyBridge />
             <div className="field-pair field-pair--wide">
               <label htmlFor={`channel-guest-name-${fieldPrefix}`}>Guest name</label>
@@ -321,6 +327,7 @@ export function CalendarBlockPanel({
               </p>
               <div className="calendar-cancel-confirm__actions">
                 <form action={removeAction}>
+                  <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
       <StaffFormBusyBridge />
                   <button
                     className="button button--primary"

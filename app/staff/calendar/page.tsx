@@ -1,23 +1,19 @@
 import Link from "next/link";
-import { CalendarBlockPanel } from "@/components/calendar-block-panel";
-import { CalendarBookingPanel } from "@/components/calendar-booking-panel";
 import { CalendarBulkAvailabilityPanel } from "@/components/calendar-bulk-availability-panel";
 import { CalendarDayPanel } from "@/components/calendar-day-panel";
-import {
-  BookingChat,
-  CalendarBookingDialog,
-  StaffTimelineCalendar,
-} from "@/components/staff-lazy";
-import { CalendarGridGuide } from "@/components/calendar-grid-guide";
+import { CalendarBookingDialog, StaffTimelineCalendar } from "@/components/staff-lazy";
+import { CalendarDateStrip } from "@/components/calendar-date-strip";
+import { CalendarStayDialogs } from "@/components/calendar-stay-dialogs";
+import { CalendarStaySelectionProvider } from "@/components/calendar-stay-selection";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
 import { StaffShell } from "@/components/staff-shell";
 import {
   buildCalendarDays,
-  formatCalendarMonth,
+  buildStaffTimelineDays,
   formatCalendarMonthLabel,
   isPastCalendarDate,
-  monthOverlapsBooking,
-  parseCalendarMonth,
+  parseStaffTimelineRange,
+  dateRangeOverlapsBooking,
   bookingOccupiesDay,
 } from "@/lib/calendar";
 import { getCalendarMonthStats } from "@/lib/calendar-timeline";
@@ -26,11 +22,11 @@ import {
   getConfirmedBookings,
   getStaffBookingKey,
 } from "@/lib/booking-requests";
-import { formatBedSetup } from "@/lib/bed-setup";
 import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS } from "@/lib/stay-dates";
 import {
   getRoomBlockById,
   getStaffCalendarBlocks,
+  getStaffRoomBlockKey,
   isChannelReservation,
 } from "@/lib/room-blocks";
 import {
@@ -42,7 +38,6 @@ import {
   getRoomDayRatesForMonth,
 } from "@/lib/room-day-rates";
 import { getNightlyRateDetails } from "@/lib/pricing";
-import { formatMoneySuffix } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
@@ -56,7 +51,6 @@ import {
   requireStaffSessionDetails,
   staffCanWriteCalendar,
 } from "@/lib/staff-auth";
-import { STAY_STATUS_LABELS } from "@/lib/stay-status";
 import {
   formatOverlapErrorMessage,
   parseOverlapDays,
@@ -64,23 +58,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function getStayStatusClass(stayStatus: string) {
-  if (stayStatus === "checked-in") {
-    return "staff-status--confirmed";
-  }
-
-  if (stayStatus === "checked-out") {
-    return "staff-status--declined";
-  }
-
-  return "staff-status--awaiting";
-}
-
 export default async function StaffCalendarPage({
   searchParams,
 }: {
   searchParams: Promise<{
     month?: string;
+    through?: string;
+    from?: string;
+    to?: string;
     booking?: string;
     block?: string;
     room?: string;
@@ -104,6 +89,9 @@ export default async function StaffCalendarPage({
 
   const {
     month: monthParam,
+    through: throughParam,
+    from: fromParam,
+    to: toParam,
     booking: selectedBookingId,
     block: selectedBlockId,
     room: selectedRoomId,
@@ -122,32 +110,111 @@ export default async function StaffCalendarPage({
     "ical-error": icalError,
     "ical-warning": icalWarning,
   } = await searchParams;
-  const { year, month } = parseCalendarMonth(monthParam);
-  const monthKey = formatCalendarMonth(year, month);
-  const calendarDays = buildCalendarDays(year, month);
+  const timelineRange = parseStaffTimelineRange({
+    month: monthParam,
+    through: throughParam,
+    from: fromParam,
+    to: toParam,
+  });
+  const { year, month } = timelineRange.start;
+  const monthKey = timelineRange.monthKey;
+  const fromIso = timelineRange.fromIso;
+  const toIso = timelineRange.toIso;
+  const boardFromIso = timelineRange.boardFromIso;
+  const boardToIso = timelineRange.boardToIso;
+  const statsCalendarDays = buildCalendarDays(year, month);
+  const calendarDays = buildStaffTimelineDays(boardFromIso, boardToIso);
   const [
-    confirmedBookings,
-    calendarBlockData,
-    dayInventory,
-    dayRates,
+    confirmedBookingsParts,
+    calendarBlockParts,
+    dayInventoryParts,
+    dayRatesParts,
     rooms,
     settings,
     promotions,
     roomUnitsResult,
   ] = await Promise.all([
-    getConfirmedBookings({ year, month }),
-    getStaffCalendarBlocks({ year, month }),
-    getRoomDayInventoryForMonth({ year, month }),
-    getRoomDayRatesForMonth({ year, month }),
+    Promise.all(
+      timelineRange.months.map((entry) =>
+        getConfirmedBookings({ year: entry.year, month: entry.month }),
+      ),
+    ),
+    Promise.all(
+      timelineRange.months.map((entry) =>
+        getStaffCalendarBlocks({ year: entry.year, month: entry.month }),
+      ),
+    ),
+    Promise.all(
+      timelineRange.months.map((entry) =>
+        getRoomDayInventoryForMonth({ year: entry.year, month: entry.month }),
+      ),
+    ),
+    Promise.all(
+      timelineRange.months.map((entry) =>
+        getRoomDayRatesForMonth({ year: entry.year, month: entry.month }),
+      ),
+    ),
     getStaffRooms(),
     getPropertySettings(),
     getStaffRoomPromotions(),
     getStaffRoomUnits(),
   ]);
+
+  const allPartsSupabase = <T extends { source: string }>(parts: T[]) =>
+    parts.length > 0 && parts.every((part) => part.source === "supabase");
+
+  const confirmedBookings = {
+    bookings: Array.from(
+      new Map(
+        confirmedBookingsParts
+          .flatMap((part) => part.bookings)
+          .map((booking) => [getStaffBookingKey(booking), booking] as const),
+      ).values(),
+    ),
+    source: allPartsSupabase(confirmedBookingsParts)
+      ? ("supabase" as const)
+      : ("sample" as const),
+    error: confirmedBookingsParts.find((part) => part.error)?.error ?? null,
+  };
+  const calendarBlockData = {
+    monthBlocks: Array.from(
+      new Map(
+        calendarBlockParts
+          .flatMap((part) => part.monthBlocks)
+          .map((block) => [getStaffRoomBlockKey(block), block] as const),
+      ).values(),
+    ),
+    channelBlocks: Array.from(
+      new Map(
+        calendarBlockParts
+          .flatMap((part) => part.channelBlocks)
+          .map((block) => [getStaffRoomBlockKey(block), block] as const),
+      ).values(),
+    ),
+    source: allPartsSupabase(calendarBlockParts)
+      ? ("supabase" as const)
+      : ("sample" as const),
+    error: calendarBlockParts.find((part) => part.error)?.error ?? null,
+  };
+  const dayInventory = {
+    entries: dayInventoryParts.flatMap((part) => part.entries),
+    source: allPartsSupabase(dayInventoryParts)
+      ? ("supabase" as const)
+      : ("sample" as const),
+    error: dayInventoryParts.find((part) => part.error)?.error ?? null,
+  };
+  const dayRates = {
+    entries: dayRatesParts.flatMap((part) => part.entries),
+    source: allPartsSupabase(dayRatesParts)
+      ? ("supabase" as const)
+      : ("sample" as const),
+    error: dayRatesParts.find((part) => part.error)?.error ?? null,
+  };
+
   const roomUnits = roomUnitsResult.units;
   const allAssignmentBookings = attachRoomNumbers(confirmedBookings.bookings, roomUnits);
   const calendarBookings = allAssignmentBookings.filter((booking) =>
-    monthOverlapsBooking(booking, year, month),
+    dateRangeOverlapsBooking(booking, boardFromIso, boardToIso),
   );
   const calendarBlocks = attachRoomNumbers(calendarBlockData.monthBlocks, roomUnits);
   const allAssignmentChannels = attachRoomNumbers(calendarBlockData.channelBlocks, roomUnits);
@@ -165,7 +232,7 @@ export default async function StaffCalendarPage({
   const monthStats = getCalendarMonthStats({
     bookings: calendarBookings,
     blocks: calendarBlocks,
-    calendarDays,
+    calendarDays: statsCalendarDays,
     rooms,
   });
   const selectedFromUrl = selectedBookingId
@@ -194,11 +261,13 @@ export default async function StaffCalendarPage({
     calendarBlockData.source === "supabase" &&
     dayInventory.source === "supabase";
   const canManageRates = canManage && dayRates.source === "supabase";
-  const canManageSelected = canManage && Boolean(selected?.databaseId);
-  const canManageBlock = canManage && Boolean(selectedBlock?.databaseId);
   const selectedKey = selected ? getStaffBookingKey(selected) : "";
-  const selectedBlockKey = selectedBlock?.databaseId ?? "";
-  const flashParams = new URLSearchParams({ month: monthKey });
+  const selectedBlockKey = selectedBlock ? getStaffRoomBlockKey(selectedBlock) : "";
+  const flashParams = new URLSearchParams({
+    month: monthKey,
+    from: fromIso,
+    to: toIso,
+  });
   if (error) {
     flashParams.set("error", error);
   }
@@ -222,7 +291,7 @@ export default async function StaffCalendarPage({
   }
   // Keep flash messages when closing the dialog; drop booking/block/room/date so the panel closes.
   const closeHref = `/staff/calendar?${flashParams.toString()}`;
-  const dismissFlashHref = `/staff/calendar?month=${monthKey}`;
+  const dismissFlashHref = `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}`;
   const overlapMessage =
     error === "overlap"
       ? formatOverlapErrorMessage(parseOverlapDays(overlap))
@@ -290,7 +359,7 @@ export default async function StaffCalendarPage({
             )
             .map((booking) => ({
               key: getStaffBookingKey(booking),
-              href: `/staff/calendar?month=${monthKey}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
+              href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
               label: booking.guest,
               sublabel: booking.roomNumber
                 ? `Room ${booking.roomNumber} · direct`
@@ -308,7 +377,7 @@ export default async function StaffCalendarPage({
             )
             .map((block) => ({
               key: block.databaseId ?? block.id,
-              href: `/staff/calendar?month=${monthKey}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
+              href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
               label: block.guestName || block.channelLabel || "Channel stay",
               sublabel: block.roomNumber
                 ? `Room ${block.roomNumber} · ${block.channelLabel ?? "channel"}`
@@ -499,185 +568,76 @@ export default async function StaffCalendarPage({
           </p>
         ) : null}
 
-        <div className="calendar-board calendar-board--timeline">
-          <StaffCalendarToolbar
-            calendarColors={settings.calendarColors}
-            canSyncOta={canManage}
-            monthKey={monthKey}
-            selectedBlockKey={selectedBlockKey || undefined}
-            selectedBookingKey={selectedKey || undefined}
-            stats={monthStats}
-            unassignedCount={unassignedCount}
-          />
+        <CalendarStaySelectionProvider
+          key={`${monthKey}:${fromIso}:${toIso}`}
+          initialBlockKey={selectedBlockKey}
+          initialBookingKey={selectedKey}
+          monthKey={monthKey}
+          fromIso={fromIso}
+          toIso={toIso}
+        >
+          <div className="calendar-board calendar-board--timeline">
+            <StaffCalendarToolbar
+              calendarColors={settings.calendarColors}
+              canSyncOta={canManage}
+              fromIso={fromIso}
+              monthKey={monthKey}
+              selectedBlockKey={selectedBlockKey || undefined}
+              selectedBookingKey={selectedKey || undefined}
+              stats={monthStats}
+              toIso={toIso}
+              unassignedCount={unassignedCount}
+            />
 
-          <CalendarGridGuide />
+            <CalendarDateStrip
+              fromIso={fromIso}
+              selectedBlockKey={selectedBlockKey || undefined}
+              selectedBookingKey={selectedKey || undefined}
+              toIso={toIso}
+            />
 
-          <StaffTimelineCalendar
+            <StaffTimelineCalendar
+              blocks={calendarBlocks}
+              bookings={calendarBookings}
+              calendarColors={settings.calendarColors}
+              calendarDays={calendarDays}
+              canManage={canManage}
+              currency={settings.currency}
+              inventoryLookup={inventoryLookup}
+              rateLookup={rateLookup}
+              monthKey={monthKey}
+              fromIso={fromIso}
+              toIso={toIso}
+              monthLabel={formatCalendarMonthLabel(year, month)}
+              occupancies={unitOccupancies}
+              promotions={promotions}
+              roomUnits={roomUnits}
+              rooms={rooms}
+              selectedBlockKey={selectedBlockKey}
+              selectedBookingKey={selectedKey}
+              selectedDate={selectedDate}
+              selectedRoomId={selectedRoom?.id}
+            />
+          </div>
+
+          <CalendarStayDialogs
             blocks={calendarBlocks}
             bookings={calendarBookings}
-            calendarColors={settings.calendarColors}
-            calendarDays={calendarDays}
             canManage={canManage}
             currency={settings.currency}
-            inventoryLookup={inventoryLookup}
-            rateLookup={rateLookup}
+            formError={panelFormError}
+            fromIso={fromIso}
             monthKey={monthKey}
-            monthLabel={formatCalendarMonthLabel(year, month)}
+            toIso={toIso}
             occupancies={unitOccupancies}
             promotions={promotions}
+            rateOverrides={Object.fromEntries(rateLookup)}
             roomUnits={roomUnits}
             rooms={rooms}
-            selectedBlockKey={selectedBlockKey}
-            selectedBookingKey={selectedKey}
-            selectedDate={selectedDate}
-            selectedRoomId={selectedRoom?.id}
+            seedBlock={selectedBlock}
+            seedBooking={selected}
           />
-        </div>
-
-        {selected ? (
-          <CalendarBookingDialog
-            closeHref={closeHref}
-            focusReturnKey={selectedKey || undefined}
-            open
-            title={selected.guest}
-          >
-              <div className="reservation-detail__top">
-                <span>{selected.id}</span>
-                <div className={`staff-status ${getStayStatusClass(selected.stayStatus)}`}>
-                  <span aria-hidden="true" />
-                  {STAY_STATUS_LABELS[selected.stayStatus]}
-                </div>
-              </div>
-              <dl className="detail-list">
-                <div>
-                  <dt>Room</dt>
-                  <dd>
-                    {selected.room}
-                    {selected.roomNumber ? ` · #${selected.roomNumber}` : " · Unassigned"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Requested</dt>
-                  <dd>{selected.requestedAt}</dd>
-                </div>
-                <div>
-                  <dt>Paid in full</dt>
-                  <dd>
-                    {selected.depositPaid
-                      ? formatMoneySuffix(selected.depositAmount, settings.currency)
-                      : "Not received"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Current total</dt>
-                  <dd>
-                    {formatMoneySuffix(selected.estimatedTotal, settings.currency)} ·{" "}
-                    {selected.nights} nights
-                  </dd>
-                </div>
-                {selected.bedSetup ? (
-                  <div>
-                    <dt>Bed setup</dt>
-                    <dd>{formatBedSetup(selected.bedSetup)} requested</dd>
-                  </div>
-                ) : null}
-              </dl>
-
-              <CalendarBookingPanel
-                key={selectedKey}
-                arrivalDate={selected.arrivalDate}
-                bookingKey={selectedKey}
-                canCancelStay={selected.status === "confirmed"}
-                canManage={
-                  canManageSelected &&
-                  (selected.status === "confirmed" ||
-                    (selected.status === "awaiting" && selected.depositPaid))
-                }
-                databaseId={selected.databaseId ?? ""}
-                departureDate={selected.departureDate}
-                guestEmail={selected.contact}
-                guestName={selected.guest}
-                guestPhone={selected.phone}
-                monthKey={monthKey}
-                note={selected.note}
-                occupancies={unitOccupancies}
-                roomId={selected.roomId}
-                rooms={rooms.map((room) => ({
-                  id: room.id,
-                  name: room.name,
-                  rate: room.rate,
-                }))}
-                roomUnitId={selected.roomUnitId}
-                roomUnits={roomUnits}
-                depositPaid={selected.depositPaid}
-                estimatedTotal={selected.estimatedTotal}
-                currency={settings.currency}
-                promotions={promotions}
-                rateOverrides={Object.fromEntries(rateLookup)}
-                formError={panelFormError}
-                staffNote={selected.staffNote}
-                stayStatus={selected.stayStatus}
-              />
-
-              <p className="detail-help">
-                {selected.status === "awaiting" ? (
-                  <>
-                    This stay is reserved by payment. You can still assign a room
-                    number here (including for past dates). Confirm the request
-                    from the inbox when ready.
-                  </>
-                ) : (
-                  <>
-                    Assign a room number so the stay appears on the room-number
-                    rows — this still works after the stay dates have passed.
-                    Saving updates guest details, dates, assignment, and stay
-                    total. Changing dates does not change the stay total unless
-                    you edit it or leave it blank to use the usual rate for the
-                    new dates. To remove the stay, use Cancel stay — you will be
-                    asked to confirm.
-                  </>
-                )}
-              </p>
-
-              {selected.databaseId ? (
-                <details className="staff-request-chat staff-request-chat--collapsible">
-                  <summary className="staff-request-chat__title">Conversation</summary>
-                  <BookingChat
-                    bookingId={selected.databaseId}
-                    disabled={!canManageSelected}
-                    guestLabel={selected.guest}
-                    readOnly={selected.status === "declined"}
-                    showHeading={false}
-                    variant="staff"
-                  />
-                </details>
-              ) : null}
-          </CalendarBookingDialog>
-        ) : null}
-
-        {selectedBlock ? (
-          <CalendarBookingDialog
-            closeHref={closeHref}
-            focusReturnKey={selectedBlockKey || undefined}
-            open
-            title={
-              selectedBlock.channelLabel
-                ? `${selectedBlock.channelLabel} reservation`
-                : (selectedBlock.reason ?? "Room closure")
-            }
-          >
-            <CalendarBlockPanel
-              block={selectedBlock}
-              canManage={canManageBlock}
-              formError={panelFormError}
-              monthKey={monthKey}
-              occupancies={unitOccupancies}
-              room={rooms.find((room) => room.id === selectedBlock.roomId)}
-              rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
-              roomUnits={roomUnits}
-            />
-          </CalendarBookingDialog>
-        ) : null}
+        </CalendarStaySelectionProvider>
 
         {bulkStatusDialogOpen && selectedRoom ? (
           <CalendarBookingDialog
@@ -688,8 +648,10 @@ export default async function StaffCalendarPage({
             <CalendarBulkAvailabilityPanel
               canManage={canManage}
               error={error}
+              fromIso={fromIso}
               monthKey={monthKey}
               room={selectedRoom}
+              toIso={toIso}
             />
           </CalendarBookingDialog>
         ) : null}
@@ -723,6 +685,7 @@ export default async function StaffCalendarPage({
               date={selectedDate}
               dayStays={dayStays}
               error={error}
+              fromIso={fromIso}
               hasAllotmentOverride={Boolean(
                 selectedRoom &&
                   selectedDate &&
@@ -735,6 +698,7 @@ export default async function StaffCalendarPage({
               )}
               mode={mode}
               monthKey={monthKey}
+              toIso={toIso}
               overlap={overlap}
               promotions={promotions}
               rateOverrides={Object.fromEntries(rateLookup)}
