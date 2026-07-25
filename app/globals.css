@@ -2584,6 +2584,11 @@ p {
   padding-block: clamp(var(--space-10), 5vw, var(--space-16));
 }
 
+#rooms,
+.home-body > .section--listings {
+  scroll-margin-top: 1.25rem;
+}
+
 .home-body > .section--listings {
   padding-top: clamp(var(--space-8), 4vw, var(--space-12));
   padding-bottom: clamp(var(--space-12), 6vw, var(--space-20));
