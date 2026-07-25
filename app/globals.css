@@ -2587,9 +2587,6 @@ p {
 #rooms,
 .home-body > .section--listings {
   scroll-margin-top: 1.25rem;
-}
-
-.home-body > .section--listings {
   padding-top: clamp(var(--space-8), 4vw, var(--space-12));
   padding-bottom: clamp(var(--space-12), 6vw, var(--space-20));
   overflow-x: clip;
