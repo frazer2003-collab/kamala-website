@@ -27,6 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s · ${propertyName}`,
     },
     description,
+    themeColor: "#7a2f36",
     openGraph: {
       title: defaultTitle,
       description,

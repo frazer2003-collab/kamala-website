@@ -3,6 +3,7 @@ import { getMetadataBase } from "@/lib/site-metadata";
 
 const PUBLIC_PATHS = [
   { path: "/", changeFrequency: "weekly" as const, priority: 1 },
+  { path: "/location", changeFrequency: "monthly" as const, priority: 0.9 },
   { path: "/gallery", changeFrequency: "monthly" as const, priority: 0.8 },
   { path: "/tours", changeFrequency: "monthly" as const, priority: 0.7 },
   { path: "/privacy", changeFrequency: "yearly" as const, priority: 0.3 },

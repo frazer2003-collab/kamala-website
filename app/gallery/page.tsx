@@ -11,10 +11,10 @@ export const revalidate = 120;
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
   const description = settings.showRoomPhotosOnGallery
-    ? `Photos of ${settings.propertyName} — rooms, the guesthouse, garden, and surroundings.`
-    : `Photos of ${settings.propertyName} — the guesthouse, garden, and surroundings.`;
+    ? `Photos of ${settings.propertyName} near Tha Pae Gate — rooms, garden, and the guesthouse.`
+    : `Photos of ${settings.propertyName} near Tha Pae Gate — garden and common areas.`;
   return {
-    title: `Gallery · ${settings.propertyName}`,
+    title: "Gallery",
     description,
   };
 }
@@ -35,8 +35,8 @@ export default async function GalleryPage() {
         <h1>A look around {settings.propertyName}.</h1>
         <p>
           {showRooms
-            ? "Room photos first, then the guesthouse, garden, and common areas."
-            : "The guesthouse, garden, and common areas."}
+            ? "Room photos first, then the guesthouse, garden, and common areas near Tha Pae Gate, Chiang Mai."
+            : "The guesthouse, garden, and common areas near Tha Pae Gate, Chiang Mai."}
         </p>
       </div>
 

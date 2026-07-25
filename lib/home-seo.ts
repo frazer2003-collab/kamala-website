@@ -9,21 +9,23 @@ import { getMetadataBase } from "@/lib/site-metadata";
 import type { PropertySettings } from "@/lib/property-settings";
 import {
   buildGoogleMapsSearchUrl,
+  buildThaPhaeMetaDescription,
   isThaPhaeSeoContext,
   THA_PHAE_GATE_GEO,
+  THA_PHAE_PRIMARY_TITLE,
+  THA_PHAE_SEO_KEYWORDS,
   toSchemaTime,
 } from "@/lib/tha-phae-seo";
 
-const SEO_KEYWORDS = [
-  "guesthouses near Tha Phae Gate Chiang Mai",
-  "guesthouse near Tha Phae Gate Chiang Mai",
-  "guesthouses near Tha Phae Gate",
-  "accommodation near Tha Phae Gate Chiang Mai",
-  "hotel near Tha Phae Gate Chiang Mai",
-  "Chiang Mai Old City guesthouse",
-  "boutique guesthouse Chiang Mai Old City",
-  "book guesthouse Chiang Mai",
-] as const;
+function looksLikeStreetPart(part: string): boolean {
+  return /^\d/.test(part) || /\b(soi|road|rd\.?|street|st\.?|lane|ave\.?)\b/i.test(part);
+}
+
+function looksLikeVenueName(part: string): boolean {
+  return /\b(guest\s*house|guesthouse|boutique|hotel|resort|hostel|villa)\b/i.test(
+    part,
+  );
+}
 
 function parseAddressParts(addressLine: string | null) {
   if (!addressLine?.trim()) {
@@ -32,9 +34,15 @@ function parseAddressParts(addressLine: string | null) {
 
   const parts = addressLine.split(",").map((part) => part.trim()).filter(Boolean);
   const postalMatch = addressLine.match(/\b(\d{5})\b/);
+  const streetAddress =
+    parts.find((part) => looksLikeStreetPart(part) && !looksLikeVenueName(part)) ??
+    parts.find((part) => looksLikeStreetPart(part)) ??
+    parts.find((part) => !looksLikeVenueName(part)) ??
+    parts[0] ??
+    addressLine;
 
   return {
-    streetAddress: parts[0] ?? addressLine,
+    streetAddress,
     addressLocality: "Chiang Mai",
     addressRegion: "Chiang Mai",
     postalCode: postalMatch?.[1] ?? "50100",
@@ -47,7 +55,7 @@ export function buildHomePageTitle(settings: PropertySettings): string {
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
 
   if (isThaPhaeSeoContext(locationLabel, addressLine)) {
-    return `${propertyName} — Guesthouse Near Tha Phae Gate, Chiang Mai`;
+    return THA_PHAE_PRIMARY_TITLE;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -62,7 +70,7 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
 
   if (isThaPhaeSeoContext(locationLabel, addressLine)) {
-    return `Book ${propertyName}, a friendly cozy guesthouse across from the Sunday Walking Street — Tha Phae Gate is a two-minute walk. Feel at home near Chiang Mai Old City’s best-known spots.`;
+    return buildThaPhaeMetaDescription(propertyName);
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -79,7 +87,7 @@ function buildOpenGraphImageAlt(settings: PropertySettings): string {
   );
 
   if (isThaPhaeSeoContext(locationLabel, settings.addressLine)) {
-    return `${settings.propertyName} garden guesthouse near Tha Phae Gate, Chiang Mai`;
+    return `${settings.propertyName} — Chiang Mai guesthouses near Tha Pae Gate`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -89,12 +97,22 @@ function buildOpenGraphImageAlt(settings: PropertySettings): string {
   return `${settings.propertyName} garden guesthouse in ${locationLabel}`;
 }
 
+function buildSameAsProfiles(settings: PropertySettings) {
+  return [settings.lineUrl, settings.whatsappUrl].filter(
+    (url): url is string => Boolean(url?.trim()),
+  );
+}
+
 export function buildHomePageMetadata(settings: PropertySettings): Metadata {
   const title = buildHomePageTitle(settings);
   const description = buildHomePageDescription(settings);
   const metadataBase = getMetadataBase();
   const heroImage = resolveHeroImageUrl(settings.heroImageUrl);
   const canonicalPath = "/";
+  const nearThaPhae = isThaPhaeSeoContext(
+    getGuesthouseLocationLabel(settings.addressLine, settings.propertyName),
+    settings.addressLine,
+  );
 
   const openGraphImages = heroImage
     ? [
@@ -110,9 +128,11 @@ export function buildHomePageMetadata(settings: PropertySettings): Metadata {
     : undefined;
 
   return {
-    title,
+    title: {
+      absolute: title,
+    },
     description,
-    keywords: [...SEO_KEYWORDS],
+    keywords: nearThaPhae ? [...THA_PHAE_SEO_KEYWORDS] : undefined,
     alternates: metadataBase
       ? {
           canonical: new URL(canonicalPath, metadataBase).toString(),
@@ -142,6 +162,9 @@ export function buildHomePageMetadata(settings: PropertySettings): Metadata {
         "max-image-preview": "large",
         "max-snippet": -1,
       },
+    },
+    other: {
+      "theme-color": "#7a2f36",
     },
   };
 }
@@ -175,6 +198,7 @@ export function buildHomePageJsonLd(
         ? `${siteUrl}${heroImage}`
         : heroImage
       : undefined;
+  const sameAs = buildSameAsProfiles(settings);
 
   const rates = rooms.map((room) => room.rate).filter((rate) => rate > 0);
   const minRate = rates.length > 0 ? Math.min(...rates) : null;
@@ -193,12 +217,13 @@ export function buildHomePageJsonLd(
 
   return {
     "@context": "https://schema.org",
-    "@type": "LodgingBusiness",
+    "@type": ["LodgingBusiness", "Organization"],
     "@id": siteUrl ? `${siteUrl}/#lodging` : undefined,
     name: propertyName,
     description,
     url: siteUrl,
     image: imageUrl,
+    logo: imageUrl,
     telephone: contactPhone ?? undefined,
     email: contactEmail ?? undefined,
     priceRange,
@@ -219,6 +244,7 @@ export function buildHomePageJsonLd(
       addressLine?.trim() && nearThaPhae
         ? buildGoogleMapsSearchUrl(addressLine)
         : undefined,
+    sameAs: sameAs.length > 0 ? sameAs : undefined,
     openingHoursSpecification:
       checkInOpens && checkInCloses
         ? [
@@ -249,7 +275,13 @@ export function buildHomePageJsonLd(
       { "@type": "LocationFeatureSpecification", name: "Garden", value: true },
     ],
     knowsAbout: nearThaPhae
-      ? ["Tha Phae Gate", "Chiang Mai Old City"]
+      ? [
+          "Tha Pae Gate",
+          "Tha Phae Gate",
+          "Thapae Gate",
+          "Chiang Mai Old City",
+          "Sunday Walking Street",
+        ]
       : isChiangMaiLocation(locationLabel)
         ? ["Chiang Mai Old City"]
         : undefined,
@@ -285,5 +317,38 @@ export function buildHomePageWebSiteJsonLd(
     publisher: {
       "@id": `${siteUrl}/#lodging`,
     },
+  };
+}
+
+export function buildLocationPageFaqJsonLd(propertyName: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "Are there Chiang Mai guesthouses near Tha Pae Gate?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `Yes. ${propertyName} is a Chiang Mai guesthouse near Tha Pae Gate (also spelled Tha Phae / Thapae), about a two-minute walk from the Old City gate on Tha Phae Road Soi 6.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How far is Kamala's Boutique Guesthouse from Tha Pae Gate?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Tha Pae Gate is about 100 metres away — roughly a two-minute walk from the guesthouse entrance.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Is the Sunday Walking Street close by?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. The guesthouse sits just across from the Sunday Walking Street route, so evening market walks start almost at the door.",
+        },
+      },
+    ],
   };
 }

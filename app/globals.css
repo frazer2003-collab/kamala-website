@@ -1563,6 +1563,62 @@ p {
   border-top: 1px solid var(--color-border);
 }
 
+.location-page__details,
+.location-page__faq {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0 0 clamp(var(--space-8), 6vw, var(--space-10));
+  max-width: 48rem;
+}
+
+.location-page__details h2,
+.location-page__faq h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+}
+
+.location-page__facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+  color: var(--color-ink);
+}
+
+.location-page__facts li {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  line-height: 1.45;
+}
+
+.location-page__faq-list {
+  margin: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.location-page__faq-list > div {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.location-page__faq-list dt {
+  margin: 0 0 0.35rem;
+  font-weight: 750;
+}
+
+.location-page__faq-list dd {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
 .gallery-page__intro {
   max-width: none;
   margin: 0;

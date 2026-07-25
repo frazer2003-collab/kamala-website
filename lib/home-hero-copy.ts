@@ -1,7 +1,11 @@
 import {
+  THA_PHAE_ABOUT_HEADING,
   THA_PHAE_BOOKING_HEADING,
   THA_PHAE_PRIMARY_HEADLINE,
   THA_PHAE_ROOMS_HEADING,
+  buildThaPhaeHeroLede,
+  buildThaPhaeStayStoryLede,
+  isThaPhaeSeoContext,
 } from "@/lib/tha-phae-seo";
 
 function looksLikeStreetPart(part: string): boolean {
@@ -71,7 +75,7 @@ export function isChiangMaiLocation(locationLabel: string): boolean {
 }
 
 export function isNearThaPhaeGate(addressLine: string | null): boolean {
-  return /tha\s*phae/i.test(addressLine ?? "");
+  return /tha\s*ph?ae/i.test(addressLine ?? "");
 }
 
 export function buildRoomsSectionHeading(
@@ -143,7 +147,7 @@ export function buildAtmosphereLede(
   }
 
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return "A friendly, cozy guesthouse where travellers meet, share stories, and feel at home — just across from the Sunday Walking Street, with Tha Phae Gate a two-minute walk away.";
+    return buildThaPhaeHeroLede();
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -158,7 +162,7 @@ export function buildStayStoryHeading(
   addressLine: string | null = null,
 ): string {
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return "A cozy guesthouse by Tha Phae Gate";
+    return THA_PHAE_ABOUT_HEADING;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -174,7 +178,7 @@ export function buildStayStoryLede(
   addressLine: string | null,
 ): string {
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return `${propertyName} is a friendly, cozy guesthouse — a hub for travellers to exchange stories in an easy, welcoming atmosphere. Feel at home here. We sit just across the street from the Sunday Walking Street, with Tha Phae Gate about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market, one of the city’s best-known evening spots, are about six minutes away.`;
+    return buildThaPhaeStayStoryLede(propertyName);
   }
 
   const atmosphereLine = buildStayStoryAtmosphereLine(locationLabel);
@@ -199,8 +203,9 @@ export function buildMetadataNearbyNote(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return isNearThaPhaeGate(addressLine)
-      ? "Near Tha Phae Gate and Chiang Mai Old City."
+    return isThaPhaeSeoContext(locationLabel, addressLine) ||
+      isNearThaPhaeGate(addressLine)
+      ? "Near Tha Pae Gate and Chiang Mai Old City."
       : "In Chiang Mai Old City.";
   }
 
