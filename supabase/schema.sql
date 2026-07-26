@@ -111,6 +111,10 @@ create table if not exists public.booking_requests (
   ),
   deposit_amount integer check (deposit_amount is null or deposit_amount >= 0),
   deposit_paid_at timestamptz,
+  booking_source text check (
+    booking_source is null
+    or booking_source in ('walk-in', 'airbnb', 'expedia', 'booking')
+  ),
   stripe_checkout_session_id text,
   stripe_payment_intent_id text,
   bank_transfer_claimed_at timestamptz,

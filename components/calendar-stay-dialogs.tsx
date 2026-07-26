@@ -6,6 +6,7 @@ import { CalendarBookingPanel } from "@/components/calendar-booking-panel";
 import { BookingChat } from "@/components/staff-lazy";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import { formatBedSetup } from "@/lib/bed-setup";
+import { formatBookingSource } from "@/lib/booking-source";
 import type { StaffBooking } from "@/lib/booking-requests";
 import { getStaffBookingKey } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
@@ -94,8 +95,18 @@ export function CalendarStayDialogs({
         >
           <div className="reservation-detail__top">
             <span>{selectedBooking.id}</span>
+            <div
+              className={`staff-status ${
+                selectedBooking.depositPaid
+                  ? "staff-status--confirmed"
+                  : "staff-status--awaiting"
+              }`}
+            >
+              <span aria-hidden="true" />
+              {selectedBooking.depositPaid ? "Paid" : "Unpaid"}
+            </div>
           </div>
-          <dl className="detail-list">
+          <dl className="detail-list detail-list--stay-meta">
             <div>
               <dt>Room</dt>
               <dd>
@@ -106,11 +117,13 @@ export function CalendarStayDialogs({
               </dd>
             </div>
             <div>
-              <dt>Requested</dt>
-              <dd>{selectedBooking.requestedAt}</dd>
+              <dt>Source</dt>
+              <dd>
+                {formatBookingSource(selectedBooking.bookingSource ?? "walk-in")}
+              </dd>
             </div>
             <div>
-              <dt>Paid in full</dt>
+              <dt>Paid</dt>
               <dd>
                 {selectedBooking.depositPaid
                   ? formatMoneySuffix(selectedBooking.depositAmount, currency)
@@ -118,7 +131,7 @@ export function CalendarStayDialogs({
               </dd>
             </div>
             <div>
-              <dt>Current total</dt>
+              <dt>Stay total</dt>
               <dd>
                 {formatMoneySuffix(selectedBooking.estimatedTotal, currency)} ·{" "}
                 {selectedBooking.nights} nights
@@ -136,6 +149,7 @@ export function CalendarStayDialogs({
             key={selectedKey}
             arrivalDate={selectedBooking.arrivalDate}
             bookingKey={selectedKey}
+            bookingSource={selectedBooking.bookingSource}
             canCancelStay={selectedBooking.status === "confirmed"}
             canManage={
               canManageSelected &&
@@ -181,10 +195,10 @@ export function CalendarStayDialogs({
               <>
                 Assign a room number so the stay appears on the room-number rows —
                 this still works after the stay dates have passed. Saving updates
-                guest details, dates, assignment, and stay total. Changing dates does
-                not change the stay total unless you edit it or leave it blank to use
-                the usual rate for the new dates. To remove the stay, use Cancel stay
-                — you will be asked to confirm.
+                guest details, dates, source, payment, assignment, and stay total.
+                Changing dates does not change the stay total unless you edit it or
+                leave it blank to use the usual rate for the new dates. To remove the
+                stay, use Cancel stay — you will be asked to confirm.
               </>
             )}
           </p>

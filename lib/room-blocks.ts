@@ -1,3 +1,8 @@
+import {
+  inferBookingSourceFromChannelLabel,
+  parseBookingSource,
+  type BookingSource,
+} from "@/lib/booking-source";
 import { getCalendarMonthBounds } from "@/lib/calendar";
 import {
   createStaffSupabaseClient,
@@ -16,6 +21,8 @@ export type StaffRoomBlock = {
   guestName: string;
   guestEmail: string;
   guestPhone: string;
+  /** Staff override, or inferred from channel label when unset. */
+  bookingSource: BookingSource | null;
   icalFeedId: string | null;
   channelLabel: string | null;
   roomUnitId: string | null;
@@ -28,6 +35,10 @@ function mapRoomBlock(
   roomUnitIdOverride?: string | null,
 ): StaffRoomBlock {
   const icalFeedId = row.ical_feed_id ?? null;
+  const channelLabel = icalFeedId
+    ? (channelLabelById?.get(icalFeedId) ?? "Channel")
+    : null;
+  const staffSource = parseBookingSource(row.staff_booking_source);
 
   return {
     id: row.id.slice(0, 8).toUpperCase(),
@@ -40,8 +51,9 @@ function mapRoomBlock(
     guestName: row.guest_name ?? "",
     guestEmail: row.guest_email ?? "",
     guestPhone: row.guest_phone ?? "",
+    bookingSource: staffSource ?? inferBookingSourceFromChannelLabel(channelLabel),
     icalFeedId,
-    channelLabel: icalFeedId ? (channelLabelById?.get(icalFeedId) ?? "Channel") : null,
+    channelLabel,
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
     roomNumber: null,
   };

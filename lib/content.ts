@@ -1,4 +1,5 @@
 import type { BedSetup } from "@/lib/bed-setup";
+import type { BookingSource } from "@/lib/booking-source";
 
 export type Tour = {
   id: string;
@@ -56,6 +57,8 @@ export type Booking = {
   estimatedTotal: number;
   depositAmount: number;
   depositPaid: boolean;
+  /** Staff channel label: walk-in, airbnb, expedia, booking. */
+  bookingSource: BookingSource | null;
   stayStatus: StayStatus;
   staffNote: string;
   /** Physical door number assignment; null until staff assigns. */

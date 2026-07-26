@@ -41,6 +41,7 @@ export type BookingRequestRow = {
     | "declined";
   deposit_amount: number | null;
   deposit_paid_at: string | null;
+  booking_source?: string | null;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   bank_transfer_claimed_at: string | null;
@@ -84,6 +85,7 @@ export type RoomBlockRow = {
   guest_name: string | null;
   guest_email: string | null;
   guest_phone: string | null;
+  staff_booking_source?: string | null;
   ical_feed_id: string | null;
   ical_uid: string | null;
   room_unit_id: string | null;

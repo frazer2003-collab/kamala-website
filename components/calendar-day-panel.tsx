@@ -67,11 +67,11 @@ function getErrorMessage(error?: string, overlap?: string) {
   }
 
   if (error === "past-date") {
-    return "Walk-ins, closures, and allotment changes can only start from today onward.";
+    return "New bookings, closures, and allotment changes can only start from today onward.";
   }
 
   if (error === "invalid-name") {
-    return "Enter the guest name before saving the walk-in.";
+    return "Enter the guest name before saving the booking.";
   }
 
   if (error === "invalid-phone") {
@@ -159,7 +159,7 @@ export function CalendarDayPanel({
         )}
         <div className="calendar-day-panel__choices">
           <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-            <strong>Walk-in booking</strong>
+            <strong>New booking</strong>
             <span>Add another confirmed stay on this room type for tonight.</span>
           </Link>
         </div>
@@ -314,9 +314,11 @@ export function CalendarDayPanel({
               defaultValue={currentRate}
               disabled={!canManage}
               id="rate-nightly-rate"
+              inputMode="decimal"
               min={0}
               name="nightly-rate"
               required
+              step="any"
               type="number"
             />
             <span className="field-help">
@@ -485,7 +487,7 @@ export function CalendarDayPanel({
       ) : null}
       <div className="calendar-day-panel__choices">
         <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-          <strong>Walk-in booking</strong>
+          <strong>New booking</strong>
           <span>Add a confirmed stay directly from the front desk.</span>
         </Link>
         <Link className="calendar-day-choice" href={`${dayHref}&mode=allotment`}>

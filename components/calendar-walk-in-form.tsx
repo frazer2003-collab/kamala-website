@@ -6,11 +6,13 @@ import {
   createWalkInBooking,
   type WalkInBookingState,
 } from "@/app/actions";
+import { BookingSourceField } from "@/components/booking-source-field";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 import {
   OVERBOOK_SAVE_ANYWAY_HINT,
   staffCapacityErrorMessage,
 } from "@/lib/booking-overbook";
+import type { BookingSource } from "@/lib/booking-source";
 import { getTodayIso } from "@/lib/calendar";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
@@ -49,9 +51,9 @@ function addIsoDays(iso: string, days: number) {
 function walkInErrorCopy(code?: string) {
   switch (code) {
     case "past-date":
-      return "Walk-ins can only start from today onward.";
+      return "New bookings can only start from today onward.";
     case "invalid-name":
-      return "Enter the guest name before saving the walk-in.";
+      return "Enter the guest name before saving the booking.";
     case "invalid-phone":
       return "Enter a valid phone number with at least 7 digits, or leave phone blank.";
     case "invalid-email":
@@ -60,6 +62,8 @@ function walkInErrorCopy(code?: string) {
       return `Choose a valid date range (${MIN_STAY_NIGHTS}–${MAX_STAY_NIGHTS} nights).`;
     case "invalid-custom-total":
       return "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates.";
+    case "invalid-source":
+      return "Choose a booking source.";
     case "capacity-verify-failed":
     case "overbook":
       return staffCapacityErrorMessage(code);
@@ -97,6 +101,8 @@ export function CalendarWalkInForm({
         departure: addIsoDays(date, 1),
         staffNote: "",
         customTotal: "",
+        bookingSource: "walk-in",
+        depositPaid: false,
         showEmail: false,
         showTotal: false,
       },
@@ -111,6 +117,8 @@ export function CalendarWalkInForm({
   const [guestEmail, setGuestEmail] = useState("");
   const [staffNote, setStaffNote] = useState("");
   const [customTotal, setCustomTotal] = useState("");
+  const [bookingSource, setBookingSource] = useState<BookingSource>("walk-in");
+  const [depositPaid, setDepositPaid] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showTotal, setShowTotal] = useState(false);
 
@@ -125,6 +133,10 @@ export function CalendarWalkInForm({
     setDeparture(state.values.departure);
     setStaffNote(state.values.staffNote);
     setCustomTotal(state.values.customTotal);
+    setBookingSource(
+      (state.values.bookingSource as BookingSource | "") || "walk-in",
+    );
+    setDepositPaid(state.values.depositPaid);
     setShowEmail(state.values.showEmail || Boolean(state.values.guestEmail));
     setShowTotal(state.values.showTotal || Boolean(state.values.customTotal));
   }, [state]);
@@ -164,7 +176,7 @@ export function CalendarWalkInForm({
   return (
     <>
       <p className="calendar-day-panel__intro">
-        Add a confirmed walk-in for <strong>{roomName}</strong>, starting{" "}
+        Add a confirmed booking for <strong>{roomName}</strong>, starting{" "}
         {new Intl.DateTimeFormat("en", {
           month: "short",
           day: "numeric",
@@ -291,18 +303,18 @@ export function CalendarWalkInForm({
               aria-invalid={totalInvalid || undefined}
               disabled={!canManage || pending}
               id="walk-in-custom-total"
-              inputMode="numeric"
+              inputMode="decimal"
               min={0}
               name="custom-total"
               onChange={(event) => setCustomTotal(event.target.value)}
               placeholder={quote.nights > 0 ? String(quote.total) : undefined}
-              step={1}
+              step="any"
               type="number"
               value={customTotal}
             />
             <span className="field-help" id={totalHelpId}>
               Leave blank to use the usual rate
-              {quoteLabel ? ` (${quoteLabel})` : ""}.
+              {quoteLabel ? ` (${quoteLabel})` : ""}. Zero is allowed.
             </span>
           </div>
         ) : (
@@ -317,6 +329,29 @@ export function CalendarWalkInForm({
             </button>
           </div>
         )}
+
+        <div className="calendar-ops-row">
+          <BookingSourceField
+            disabled={!canManage || pending}
+            id="walk-in-booking-source"
+            onChange={setBookingSource}
+            value={bookingSource}
+          />
+          <div className="field-pair field-pair--check">
+            <label htmlFor="walk-in-deposit-paid">
+              <input
+                checked={depositPaid}
+                disabled={!canManage || pending}
+                id="walk-in-deposit-paid"
+                name="deposit-paid"
+                onChange={(event) => setDepositPaid(event.target.checked)}
+                type="checkbox"
+                value="1"
+              />
+              Paid
+            </label>
+          </div>
+        </div>
 
         <div className="field-pair field-pair--wide">
           <label htmlFor="walk-in-note">Staff note</label>
@@ -340,13 +375,13 @@ export function CalendarWalkInForm({
                 : "Save anyway"
               : pending
                 ? "Saving…"
-                : "Save walk-in"}
+                : "Save booking"}
           </button>
         </div>
       </form>
       {!canManage ? (
         <p className="detail-help">
-          Connect the site to save walk-ins from the calendar.
+          Connect the site to save bookings from the calendar.
         </p>
       ) : null}
     </>

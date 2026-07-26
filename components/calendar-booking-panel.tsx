@@ -1,5 +1,6 @@
 "use client";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
+import { BookingSourceField } from "@/components/booking-source-field";
 import { CalendarRangeFields } from "@/components/calendar-range-fields";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
@@ -8,6 +9,7 @@ import {
   updateConfirmedBooking,
   type UpdateConfirmedBookingState,
 } from "@/app/actions";
+import type { BookingSource } from "@/lib/booking-source";
 import type { StayStatus } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
@@ -49,6 +51,7 @@ type CalendarBookingPanelProps = {
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
   depositPaid: boolean;
+  bookingSource: BookingSource | null;
   estimatedTotal: number;
   currency: PropertyCurrency;
   promotions: RoomPromotionRate[];
@@ -88,6 +91,7 @@ export function CalendarBookingPanel({
   roomUnits,
   occupancies,
   depositPaid,
+  bookingSource,
   estimatedTotal,
   currency,
   promotions,
@@ -107,6 +111,8 @@ export function CalendarBookingPanel({
     roomId,
     roomUnitId: roomUnitId ?? "",
     estimatedTotal: String(estimatedTotal),
+    bookingSource: bookingSource ?? "walk-in",
+    depositPaid,
   });
 
   useEffect(() => {
@@ -122,6 +128,8 @@ export function CalendarBookingPanel({
       roomId,
       roomUnitId: roomUnitId ?? "",
       estimatedTotal: String(estimatedTotal),
+      bookingSource: bookingSource ?? "walk-in",
+      depositPaid,
     });
   }, [
     bookingKey,
@@ -135,6 +143,8 @@ export function CalendarBookingPanel({
     roomId,
     roomUnitId,
     estimatedTotal,
+    bookingSource,
+    depositPaid,
   ]);
 
   const saveAction = useMemo(
@@ -310,7 +320,7 @@ export function CalendarBookingPanel({
             aria-describedby={[stayTotalHelpId, formErrorId].filter(Boolean).join(" ") || undefined}
             disabled={!canManage}
             id={`calendar-stay-total-${bookingKey}`}
-            inputMode="numeric"
+            inputMode="decimal"
             min={0}
             name="custom-total"
             onChange={(event) =>
@@ -320,7 +330,7 @@ export function CalendarBookingPanel({
               }))
             }
             placeholder={quote ? String(quote.total) : undefined}
-            step={1}
+            step="any"
             type="number"
             value={fields.estimatedTotal}
           />
@@ -330,8 +340,8 @@ export function CalendarBookingPanel({
                 Usual rate for these dates: <strong>{quoteLabel}</strong>.{" "}
               </>
             ) : null}
-            Leave blank to use that usual rate. Changing dates does not change the
-            saved total unless you edit or clear this field.
+            Leave blank to use that usual rate. Zero is allowed. Changing dates does
+            not change the saved total unless you edit or clear this field.
           </span>
           {canManage && quote && quote.nights > 0 ? (
             <button
@@ -347,6 +357,39 @@ export function CalendarBookingPanel({
               Use usual rate
             </button>
           ) : null}
+        </div>
+        <div className="calendar-ops-row">
+          <BookingSourceField
+            disabled={!canManage}
+            id={`calendar-booking-source-${bookingKey}`}
+            onChange={(value) =>
+              setFields((current) => ({ ...current, bookingSource: value }))
+            }
+            value={fields.bookingSource}
+          />
+          <div className="field-pair field-pair--check">
+            <label htmlFor={`calendar-deposit-paid-${bookingKey}`}>
+              <input
+                checked={fields.depositPaid}
+                disabled={!canManage}
+                id={`calendar-deposit-paid-${bookingKey}`}
+                name="deposit-paid"
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    depositPaid: event.target.checked,
+                  }))
+                }
+                type="checkbox"
+                value="1"
+              />
+              Paid
+            </label>
+            <span className="field-help">
+              Mark when payment is received. Clearing removes the paid stamp
+              without issuing Stripe refunds.
+            </span>
+          </div>
         </div>
         <div className="field-pair field-pair--wide">
           <label htmlFor={`calendar-guest-name-${bookingKey}`}>Guest name</label>

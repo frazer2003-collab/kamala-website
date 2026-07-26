@@ -502,6 +502,7 @@ type PreservedChannelFields = {
   guest_email: string | null;
   guest_phone: string | null;
   staff_note: string | null;
+  staff_booking_source: string | null;
 };
 
 type PreviousChannelBlockRow = {
@@ -516,6 +517,7 @@ type PreviousChannelBlockRow = {
   guest_email: string | null;
   guest_phone: string | null;
   staff_note: string | null;
+  staff_booking_source?: string | null;
 };
 
 /**
@@ -573,7 +575,7 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
     const { data: previousBlocks, error: previousError } = await supabase
       .from("room_blocks")
       .select(
-        "room_id, start_date, end_date, reason, ical_feed_id, ical_uid, room_unit_id, guest_name, guest_email, guest_phone, staff_note",
+        "room_id, start_date, end_date, reason, ical_feed_id, ical_uid, room_unit_id, guest_name, guest_email, guest_phone, staff_note, staff_booking_source",
       )
       .eq("ical_feed_id", feed.id);
 
@@ -615,6 +617,7 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
         guest_email: block.guest_email ?? null,
         guest_phone: block.guest_phone ?? null,
         staff_note: block.staff_note ?? null,
+        staff_booking_source: block.staff_booking_source ?? null,
       });
     }
 
@@ -646,6 +649,7 @@ export async function syncRoomIcalFeed(feedId: string): Promise<RoomIcalSyncResu
           guest_email: preserved?.guest_email ?? null,
           guest_phone: preserved?.guest_phone ?? null,
           staff_note: preserved?.staff_note ?? `Imported from ${feed.label}`,
+          staff_booking_source: preserved?.staff_booking_source ?? null,
         };
       });
 

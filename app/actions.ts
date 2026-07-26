@@ -8,7 +8,12 @@ import {
   recordStaffChatMessage,
   seedGuestNoteMessage,
 } from "@/lib/booking-chat";
-import { formatMoneySuffix, getStripeCurrencyCode } from "@/lib/currency";
+import { parseBookingSource } from "@/lib/booking-source";
+import {
+  formatMoneySuffix,
+  getStripeCurrencyCode,
+  parseMoneyAmount,
+} from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
 import { checkStayCapacity, hasCapacityForStay } from "@/lib/booking-capacity";
@@ -1157,8 +1162,8 @@ export async function updateConfirmedBooking(
   const customTotalRaw = getValue(formData, "custom-total").trim();
   let estimatedTotal: number;
   if (customTotalRaw) {
-    const customTotal = Number.parseInt(customTotalRaw, 10);
-    if (!Number.isFinite(customTotal) || customTotal < 0) {
+    const customTotal = parseMoneyAmount(customTotalRaw);
+    if (customTotal === null) {
       redirect(`${bookingHref}&error=invalid-custom-total`);
     }
     estimatedTotal = customTotal;
@@ -1167,6 +1172,20 @@ export async function updateConfirmedBooking(
       await quoteRoomStay(typeChange.roomId, nextRoom.rate, arrival, departure)
     ).total;
   }
+
+  const bookingSourceRaw = getValue(formData, "booking-source");
+  const bookingSource = parseBookingSource(bookingSourceRaw);
+  if (bookingSourceRaw && !bookingSource) {
+    redirect(`${bookingHref}&error=invalid-source`);
+  }
+
+  const wantPaid = getValue(formData, "deposit-paid") === "1";
+  const depositPaidAt = wantPaid
+    ? booking.deposit_paid_at ?? new Date().toISOString()
+    : null;
+  const depositAmount = wantPaid
+    ? booking.deposit_amount ?? estimatedTotal
+    : booking.deposit_amount;
 
   const overbookStaffNote =
     !capacity.ok && overbookConfirmed
@@ -1189,6 +1208,9 @@ export async function updateConfirmedBooking(
       departure_date: departure,
       nights,
       estimated_total: estimatedTotal,
+      booking_source: bookingSource,
+      deposit_paid_at: depositPaidAt,
+      deposit_amount: depositAmount,
       staff_note: nextStaffNote,
       stay_status: stayStatus,
       ...(typeChange.roomIdChanged
@@ -1560,6 +1582,8 @@ export type WalkInBookingState = {
     departure: string;
     staffNote: string;
     customTotal: string;
+    bookingSource: string;
+    depositPaid: boolean;
     showEmail: boolean;
     showTotal: boolean;
   };
@@ -1576,6 +1600,8 @@ function walkInValuesFromForm(formData: FormData, fallbackArrival: string) {
     departure: getValue(formData, "departure"),
     staffNote: getValue(formData, "staff-note"),
     customTotal,
+    bookingSource: getValue(formData, "booking-source") || "walk-in",
+    depositPaid: getValue(formData, "deposit-paid") === "1",
     showEmail: Boolean(guestEmail) || getValue(formData, "show-email") === "1",
     showTotal: Boolean(customTotal) || getValue(formData, "show-total") === "1",
   };
@@ -1645,8 +1671,8 @@ export async function createWalkInBooking(
   const customTotalRaw = getValue(formData, "custom-total").trim();
   let estimatedTotal: number;
   if (customTotalRaw) {
-    const customTotal = Number.parseInt(customTotalRaw, 10);
-    if (!Number.isFinite(customTotal) || customTotal < 0) {
+    const customTotal = parseMoneyAmount(customTotalRaw);
+    if (customTotal === null) {
       return walkInError("invalid-custom-total", formData, arrival);
     }
     estimatedTotal = customTotal;
@@ -1654,6 +1680,15 @@ export async function createWalkInBooking(
     const quote = await quoteRoomStay(room.id, room.rate, arrival, departure);
     estimatedTotal = quote.total;
   }
+
+  const bookingSourceRaw = getValue(formData, "booking-source") || "walk-in";
+  const bookingSource = parseBookingSource(bookingSourceRaw);
+  if (!bookingSource) {
+    return walkInError("invalid-source", formData, arrival);
+  }
+
+  const depositPaid = getValue(formData, "deposit-paid") === "1";
+  const paidAt = depositPaid ? new Date().toISOString() : null;
 
   const capacity = await checkStayCapacity(
     room.id,
@@ -1684,10 +1719,13 @@ export async function createWalkInBooking(
       departure_date: departure,
       nights,
       estimated_total: estimatedTotal,
-      note: "Walk-in booking",
+      booking_source: bookingSource,
+      note: "New booking",
       staff_note: staffNote || null,
       status: "confirmed",
       stay_status: "checked-in",
+      deposit_amount: depositPaid ? estimatedTotal : null,
+      deposit_paid_at: paidAt,
       conversation_token: randomUUID(),
     })
     .select("id, conversation_token")
@@ -1841,6 +1879,11 @@ export async function updateChannelReservation(
   const arrival = getValue(formData, "arrival");
   const departure = getValue(formData, "departure");
   const staffNote = getValue(formData, "staff-note");
+  const bookingSourceRaw = getValue(formData, "booking-source");
+  const bookingSource = parseBookingSource(bookingSourceRaw);
+  if (bookingSourceRaw && !bookingSource) {
+    redirect(`${blockHref}&error=invalid-source`);
+  }
   const roomUnitIdRaw = getValue(formData, "room-unit-id");
   const roomUnitId = roomUnitIdRaw || null;
   const requestedRoomId = getValue(formData, "room-id");
@@ -1938,18 +1981,21 @@ export async function updateChannelReservation(
   });
 
   if (!rpcError) {
-    if (typeChange.roomIdChanged) {
-      const { error: roomTypeError } = await supabase
-        .from("room_blocks")
-        .update({
-          room_id: typeChange.roomId,
-          room_unit_id: null,
-        })
-        .eq("id", blockId);
+    const { error: sourceError } = await supabase
+      .from("room_blocks")
+      .update({
+        staff_booking_source: bookingSource,
+        ...(typeChange.roomIdChanged
+          ? {
+              room_id: typeChange.roomId,
+              room_unit_id: null,
+            }
+          : {}),
+      })
+      .eq("id", blockId);
 
-      if (roomTypeError) {
-        redirect(appendCalendarError(blockHref, "save-failed", roomTypeError.message));
-      }
+    if (sourceError) {
+      redirect(appendCalendarError(blockHref, "save-failed", sourceError.message));
     }
 
     revalidatePath("/staff/calendar");
@@ -1972,6 +2018,7 @@ export async function updateChannelReservation(
         start_date: arrival,
         end_date: departure,
         staff_note: staffNote || null,
+        staff_booking_source: bookingSource,
         room_id: typeChange.roomId,
         room_unit_id: effectiveRoomUnitId,
       })
@@ -2252,7 +2299,7 @@ export async function updateRoomDayRate(formData: FormData) {
   const startDate = getValue(formData, "start-date");
   const endDateInclusive = getValue(formData, "end-date");
   const action = getValue(formData, "rate-action");
-  const nightlyRateRaw = Number.parseInt(getValue(formData, "nightly-rate"), 10);
+  const nightlyRate = parseMoneyAmount(getValue(formData, "nightly-rate"));
   const room = await getRoomForBooking(roomId);
   const start = parseDate(startDate);
   const endInclusive = parseDate(endDateInclusive);
@@ -2302,14 +2349,14 @@ export async function updateRoomDayRate(formData: FormData) {
   );
   }
 
-  if (!Number.isFinite(nightlyRateRaw) || nightlyRateRaw < 0) {
+  if (nightlyRate === null) {
     redirect(`${rateHref}&error=invalid-rate`);
   }
 
   const rows = days.map((date) => ({
     room_id: room.id,
     date,
-    nightly_rate: nightlyRateRaw,
+    nightly_rate: nightlyRate,
   }));
 
   const { error } = await supabase.from("room_day_rates").upsert(rows, {

@@ -45,3 +45,22 @@ export function formatMoneyCompactSuffix(
 export function getStripeCurrencyCode(currency: PropertyCurrency) {
   return currency;
 }
+
+/**
+ * Parse a staff-entered money amount. Accepts whole and decimal strings
+ * (including `0` / `0.00`); stores as a non-negative integer currency unit.
+ * Empty input returns null so callers can fall back to a quoted rate.
+ */
+export function parseMoneyAmount(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || value < 0) {
+    return null;
+  }
+
+  return Math.round(value);
+}

@@ -23,6 +23,7 @@ const bankClaimRow: BookingRequestRow = {
   status: "awaiting",
   deposit_amount: 1400,
   deposit_paid_at: null,
+  booking_source: "walk-in",
   stripe_checkout_session_id: null,
   stripe_payment_intent_id: null,
   bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z",
@@ -39,6 +40,7 @@ describe("staff booking requests", () => {
 
     assert.equal(booking.depositPaid, false);
     assert.equal(booking.bankTransferClaimed, true);
+    assert.equal(booking.bookingSource, "walk-in");
   });
 
   it("keeps an unpaid bank transfer claim in the pending inbox", () => {
