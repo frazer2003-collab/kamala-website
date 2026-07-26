@@ -34,6 +34,10 @@ import {
 } from "@/lib/calendar";
 import type { StaffBooking } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
+import {
+  normalizeStaffCalendarQuery,
+  stayMatchesStaffCalendarQuery,
+} from "@/lib/staff-calendar-search";
 import { formatMoneyCompactSuffix, type PropertyCurrency } from "@/lib/currency";
 import {
   getNightlyRateDetails,
@@ -102,9 +106,32 @@ type StaffExtranetRoomSectionProps = {
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
   guestColors: Map<string, string>;
+  searchQuery: string;
 };
 
-function getBarClassName(bar: TimelineBar, isSelected: boolean) {
+function getBarSearchState(
+  query: string,
+  bar: TimelineBar,
+  unitNumber?: string,
+): "idle" | "match" | "dim" {
+  if (!normalizeStaffCalendarQuery(query)) {
+    return "idle";
+  }
+  const matches = stayMatchesStaffCalendarQuery(query, [
+    bar.label,
+    bar.sublabel,
+    bar.colorKey,
+    unitNumber,
+    unitNumber ? `Room ${unitNumber}` : null,
+  ]);
+  return matches ? "match" : "dim";
+}
+
+function getBarClassName(
+  bar: TimelineBar,
+  isSelected: boolean,
+  searchState: "idle" | "match" | "dim" = "idle",
+) {
   return [
     "extranet-bar",
     "extranet-bar--guest-color",
@@ -113,6 +140,8 @@ function getBarClassName(bar: TimelineBar, isSelected: boolean) {
     bar.continuesRight ? "extranet-bar--continues-right" : "",
     bar.compact ? "extranet-bar--compact" : "",
     isSelected ? "extranet-bar--selected" : "",
+    searchState === "match" ? "extranet-bar--search-match" : "",
+    searchState === "dim" ? "extranet-bar--search-dim" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -255,6 +284,7 @@ function UnitReservationRow({
   selectedBlockKey,
   roomShortNameById,
   currentRoomId,
+  searchQuery,
 }: {
   unit: RoomUnit;
   bookings: StaffBooking[];
@@ -269,6 +299,7 @@ function UnitReservationRow({
   selectedBlockKey: string;
   roomShortNameById: Map<string, string>;
   currentRoomId: string;
+  searchQuery: string;
 }) {
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
@@ -333,11 +364,12 @@ function UnitReservationRow({
             bar.kind === "booking"
               ? selectedBookingKey === bar.itemKey
               : selectedBlockKey === bar.itemKey;
+          const searchState = getBarSearchState(searchQuery, bar, unit.number);
 
           return (
             <CalendarStayBarLink
               ariaLabel={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
-              className={getBarClassName(bar, isSelected)}
+              className={getBarClassName(bar, isSelected, searchState)}
               href={getTimelineBarHref(bar, monthKey, rangeQuery)}
               itemKey={bar.itemKey}
               key={bar.key}
@@ -385,6 +417,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   roomUnits,
   occupancies,
   guestColors,
+  searchQuery,
 }: StaffExtranetRoomSectionProps) {
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
@@ -646,7 +679,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 Overbooked on {overbookedDays.length} night
                 {overbookedDays.length === 1 ? "" : "s"}
                 {firstOverbookIso ? ` (from ${firstOverbookIso})` : ""}. More stays than rooms to
-                sell — open Room details, check status marks, and move or reassign stays.
+                sell — open a stay to change its room type or door number.
               </>
             ) : null}
             {hasOverbook && needsAssignment ? " " : null}
@@ -713,6 +746,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                   bar.kind === "booking"
                     ? selectedBookingKey === bar.itemKey
                     : selectedBlockKey === bar.itemKey;
+                const searchState = getBarSearchState(searchQuery, bar);
                 const sublabel = bar.sublabel;
                 const sourceBooking =
                   bar.kind === "booking"
@@ -750,9 +784,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                   >
                     <CalendarStayBarLink
                       ariaLabel={`${bar.label}, ${sublabel}`}
-                      className={[getBarClassName(bar, isSelected), "extranet-bar__open"].join(
-                        " ",
-                      )}
+                      className={[
+                        getBarClassName(bar, isSelected, searchState),
+                        "extranet-bar__open",
+                      ].join(" ")}
                       href={detailHref}
                       itemKey={bar.itemKey}
                       kind={bar.kind === "booking" ? "booking" : "block"}
@@ -828,6 +863,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 fromIso={fromIso}
                 toIso={toIso}
                 roomShortNameById={roomShortNameById}
+                searchQuery={searchQuery}
                 selectedBlockKey={selectedBlockKey}
                 selectedBookingKey={selectedBookingKey}
                 unit={unit}
@@ -1037,6 +1073,7 @@ type StaffTimelineCalendarProps = {
   currency: PropertyCurrency;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
+  searchQuery?: string;
 };
 
 export function StaffTimelineCalendar({
@@ -1060,6 +1097,7 @@ export function StaffTimelineCalendar({
   currency,
   roomUnits,
   occupancies,
+  searchQuery = "",
 }: StaffTimelineCalendarProps) {
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
@@ -1151,9 +1189,32 @@ export function StaffTimelineCalendar({
     };
   }, [calendarDays, monthLabel]);
 
+  useEffect(() => {
+    if (!normalizeStaffCalendarQuery(searchQuery)) {
+      return;
+    }
+    const root = scrollRef.current;
+    if (!root) {
+      return;
+    }
+    const match = root.querySelector<HTMLElement>(".extranet-bar--search-match");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    match?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+  }, [searchQuery, bookings, blocks]);
+
   return (
     <div
-      className="staff-extranet staff-extranet--full"
+      className={[
+        "staff-extranet",
+        "staff-extranet--full",
+        normalizeStaffCalendarQuery(searchQuery) ? "staff-extranet--searching" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{
         ...getCalendarColorStyleProps(calendarColors),
         ["--extranet-fit-month-days" as string]: String(fitMonthDayCount),
@@ -1216,6 +1277,7 @@ export function StaffTimelineCalendar({
             roomUnits={roomUnits}
             rooms={rooms}
             occupancies={occupancies}
+            searchQuery={searchQuery}
             selectedBlockKey={activeBlockKey}
             selectedBookingKey={activeBookingKey}
             selectedDate={selectedDate}

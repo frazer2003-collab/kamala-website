@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 
 type StaffCalendarAttentionProps = {
@@ -9,6 +8,10 @@ type StaffCalendarAttentionProps = {
   monthKey: string;
   fromIso: string;
   toIso: string;
+  query: string;
+  onQueryChange: (value: string) => void;
+  matchCount: number | null;
+  firstNeedRoomId?: string;
 };
 
 function boardHref(
@@ -32,16 +35,18 @@ export function StaffCalendarAttention({
   monthKey,
   fromIso,
   toIso,
+  query,
+  onQueryChange,
+  matchCount,
+  firstNeedRoomId,
 }: StaffCalendarAttentionProps) {
-  const [query, setQuery] = useState("");
-  const normalized = query.trim().toLowerCase();
-
-  const hint = useMemo(() => {
-    if (!normalized) {
-      return "Find a guest on the tape with browser find (⌘F / Ctrl+F), or open Prepare for arrivals.";
-    }
-    return `Looking for “${query.trim()}” — use browser find on the Desk tape, or switch to Prepare.`;
-  }, [normalized, query]);
+  const needRoomHash = firstNeedRoomId ? `need-room-${firstNeedRoomId}` : "need-room";
+  const hint =
+    matchCount === null
+      ? "Type a guest name or room number to highlight matching stays on the tape."
+      : matchCount === 0
+        ? `No stays match “${query.trim()}”.`
+        : `${matchCount} stay${matchCount === 1 ? "" : "s"} match “${query.trim()}”.`;
 
   return (
     <div className="staff-calendar-attention">
@@ -53,7 +58,7 @@ export function StaffCalendarAttention({
           ]
             .filter(Boolean)
             .join(" ")}
-          href={boardHref(monthKey, fromIso, toIso, "need-room")}
+          href={boardHref(monthKey, fromIso, toIso, needRoomHash)}
         >
           {unassignedCount} need room #
         </Link>
@@ -66,7 +71,7 @@ export function StaffCalendarAttention({
             view: "prepare",
           }).toString()}`}
         >
-          {arrivingCount} arriving
+          {arrivingCount} arriving soon
         </Link>
         <Link
           className="staff-calendar-attention__chip"
@@ -84,14 +89,22 @@ export function StaffCalendarAttention({
       <label className="staff-calendar-attention__search">
         <span className="sr-only">Find guest or room</span>
         <input
+          aria-controls="staff-calendar-search-status"
           autoComplete="off"
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Find guest or room #"
           type="search"
           value={query}
         />
       </label>
-      <p className="staff-calendar-attention__hint">{hint}</p>
+      <p
+        aria-live="polite"
+        className="staff-calendar-attention__hint"
+        id="staff-calendar-search-status"
+        role="status"
+      >
+        {hint}
+      </p>
     </div>
   );
 }

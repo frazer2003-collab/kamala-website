@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { CalendarBulkAvailabilityPanel } from "@/components/calendar-bulk-availability-panel";
 import { CalendarDayPanel } from "@/components/calendar-day-panel";
-import { CalendarBookingDialog, StaffTimelineCalendar } from "@/components/staff-lazy";
-import { CalendarDateStrip } from "@/components/calendar-date-strip";
+import { CalendarBookingDialog } from "@/components/staff-lazy";
 import { CalendarStayDialogs } from "@/components/calendar-stay-dialogs";
 import { CalendarStaySelectionProvider } from "@/components/calendar-stay-selection";
-import { StaffCalendarAttention } from "@/components/staff-calendar-attention";
+import { StaffCalendarDesk } from "@/components/staff-calendar-desk";
 import { StaffCalendarPreparePanel } from "@/components/staff-calendar-prepare-panel";
 import { StaffCalendarSellPanel } from "@/components/staff-calendar-sell-panel";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
@@ -14,6 +13,7 @@ import {
   StaffCalendarViewNav,
 } from "@/components/staff-calendar-view-nav";
 import { StaffShell } from "@/components/staff-shell";
+import { countPrepareHorizonArrivals } from "@/lib/staff-calendar-search";
 import {
   buildCalendarDays,
   buildStaffTimelineDays,
@@ -239,6 +239,23 @@ export default async function StaffCalendarPage({
     calendarBlocks.filter(
       (block) => isChannelReservation(block) && !block.roomUnitId,
     ).length;
+  const prepareArrivingCount = countPrepareHorizonArrivals(
+    calendarBookings,
+    calendarBlocks,
+  );
+  const firstNeedRoomId =
+    rooms.find(
+      (room) =>
+        calendarBookings.some(
+          (booking) => booking.roomId === room.id && !booking.roomUnitId,
+        ) ||
+        calendarBlocks.some(
+          (block) =>
+            isChannelReservation(block) &&
+            block.roomId === room.id &&
+            !block.roomUnitId,
+        ),
+    )?.id ?? undefined;
   const monthStats = getCalendarMonthStats({
     bookings: calendarBookings,
     blocks: calendarBlocks,
@@ -427,7 +444,7 @@ export default async function StaffCalendarPage({
                 ? "Rooms to prepare before arrivals."
                 : calendarView === "sell"
                   ? "Open nights you can still sell."
-                  : "Door tape chart — move stays, assign room numbers, take walk-ins."}
+                  : "Door tape chart — assign room numbers, open a stay to reassign, take walk-ins."}
             </p>
           </div>
           <Link className="staff-header__quiet-link" href="/staff">
@@ -622,6 +639,7 @@ export default async function StaffCalendarPage({
               calendarColors={settings.calendarColors}
               canSyncOta={canManage}
               fromIso={fromIso}
+              hideActionStats={calendarView === "desk"}
               monthKey={monthKey}
               selectedBlockKey={selectedBlockKey || undefined}
               selectedBookingKey={selectedKey || undefined}
@@ -631,50 +649,31 @@ export default async function StaffCalendarPage({
             />
 
             {calendarView === "desk" ? (
-              <>
-                <StaffCalendarAttention
-                  arrivingCount={monthStats.arriving}
-                  fromIso={fromIso}
-                  monthKey={monthKey}
-                  toIso={toIso}
-                  unassignedCount={unassignedCount}
-                />
-
-                <details className="calendar-date-strip-details">
-                  <summary>Date range</summary>
-                  <CalendarDateStrip
-                    fromIso={fromIso}
-                    selectedBlockKey={selectedBlockKey || undefined}
-                    selectedBookingKey={selectedKey || undefined}
-                    toIso={toIso}
-                  />
-                </details>
-
-                <div className="staff-calendar-tape" id="need-room">
-                  <StaffTimelineCalendar
-                    blocks={calendarBlocks}
-                    bookings={calendarBookings}
-                    calendarColors={settings.calendarColors}
-                    calendarDays={calendarDays}
-                    canManage={canManage}
-                    currency={settings.currency}
-                    inventoryLookup={inventoryLookup}
-                    rateLookup={rateLookup}
-                    monthKey={monthKey}
-                    fromIso={fromIso}
-                    toIso={toIso}
-                    monthLabel={formatCalendarMonthLabel(year, month)}
-                    occupancies={unitOccupancies}
-                    promotions={promotions}
-                    roomUnits={roomUnits}
-                    rooms={rooms}
-                    selectedBlockKey={selectedBlockKey}
-                    selectedBookingKey={selectedKey}
-                    selectedDate={selectedDate}
-                    selectedRoomId={selectedRoom?.id}
-                  />
-                </div>
-              </>
+              <StaffCalendarDesk
+                arrivingCount={prepareArrivingCount}
+                blocks={calendarBlocks}
+                bookings={calendarBookings}
+                calendarColors={settings.calendarColors}
+                calendarDays={calendarDays}
+                canManage={canManage}
+                currency={settings.currency}
+                firstNeedRoomId={firstNeedRoomId}
+                fromIso={fromIso}
+                inventoryLookup={inventoryLookup}
+                monthKey={monthKey}
+                monthLabel={formatCalendarMonthLabel(year, month)}
+                occupancies={unitOccupancies}
+                promotions={promotions}
+                rateLookup={rateLookup}
+                roomUnits={roomUnits}
+                rooms={rooms}
+                selectedBlockKey={selectedBlockKey || undefined}
+                selectedBookingKey={selectedKey || undefined}
+                selectedDate={selectedDate}
+                selectedRoomId={selectedRoom?.id}
+                toIso={toIso}
+                unassignedCount={unassignedCount}
+              />
             ) : null}
 
             {calendarView === "prepare" ? (

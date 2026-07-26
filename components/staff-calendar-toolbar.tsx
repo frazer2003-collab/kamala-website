@@ -21,6 +21,8 @@ type StaffCalendarToolbarProps = {
   canSyncOta?: boolean;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
+  /** When true, hide need-room / arriving stats (Desk attention strip owns them). */
+  hideActionStats?: boolean;
 };
 
 function buildMonthHref(
@@ -54,6 +56,7 @@ export function StaffCalendarToolbar({
   canSyncOta = false,
   selectedBookingKey,
   selectedBlockKey,
+  hideActionStats = false,
 }: StaffCalendarToolbarProps) {
   void _calendarColors;
   const today = new Date();
@@ -93,16 +96,20 @@ export function StaffCalendarToolbar({
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
           <strong>{stats.departed}</strong> departed
         </span>
-        <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
-          <strong>{stats.arriving}</strong> arriving
-        </span>
-        <span
-          className={`staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary${
-            unassignedCount > 0 ? " staff-calendar-toolbar__stat--urgent" : ""
-          }`}
-        >
-          <strong>{unassignedCount}</strong> need room #
-        </span>
+        {hideActionStats ? null : (
+          <>
+            <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
+              <strong>{stats.arriving}</strong> arriving later this month
+            </span>
+            <span
+              className={`staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary${
+                unassignedCount > 0 ? " staff-calendar-toolbar__stat--urgent" : ""
+              }`}
+            >
+              <strong>{unassignedCount}</strong> need room #
+            </span>
+          </>
+        )}
       </div>
 
       <details className="staff-calendar-toolbar__legend-details">
