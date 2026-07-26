@@ -53,7 +53,6 @@ import {
   type RoomUnit,
   type UnitOccupancy,
 } from "@/lib/room-units";
-import { InlineRoomAssign } from "@/components/inline-room-assign";
 import {
   StaffCalendarTapeDndProvider,
   useStaffCalendarTapeDnd,
@@ -779,17 +778,12 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           id={`need-room-${room.id}`}
           style={{ ["--timeline-days" as string]: dayCount }}
         >
-            <MetricRowLabel hint="Drag a stay onto a door row, or pick a room # on the bar">
+            <MetricRowLabel hint="Drag a stay onto a door row below to assign a room number">
               Needs room #
               <span className="extranet-row__meta">{unassignedCount} waiting</span>
             </MetricRowLabel>
             <div
-              className={[
-                "extranet-reservations",
-                canManage ? "extranet-reservations--assign" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+              className="extranet-reservations"
               style={{
                 ["--lane-count" as string]: laneCount,
                 gridColumn: `2 / span ${dayCount}`,
@@ -834,8 +828,6 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                     : null;
                 const stayId =
                   sourceBooking?.databaseId ?? sourceChannel?.databaseId ?? null;
-                const showInlineAssign =
-                  canManage && Boolean(stayId) && bar.needsRoom && bar.showLabel;
                 const detailHref = getTimelineBarHref(bar, monthKey, rangeQuery);
                 const moveKind: StaffTapeMovePayload["kind"] | null = sourceBooking
                   ? "booking"
@@ -862,76 +854,36 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                     : null;
 
                 return (
-                  <div
+                  <CalendarStayBarLink
+                    ariaLabel={`${bar.label}, ${sublabel}`}
                     className={[
-                      "extranet-bar-shell",
-                      showInlineAssign ? "extranet-bar-shell--assign" : "",
-                      movePayload ? "extranet-bar-shell--draggable" : "",
+                      getBarClassName(bar, isSelected, searchState),
+                      movePayload ? "extranet-bar--draggable" : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
+                    href={detailHref}
+                    itemKey={bar.itemKey}
                     key={bar.key}
+                    kind={bar.kind === "booking" ? "booking" : "block"}
+                    movePayload={movePayload}
+                    onMoveDragEnd={tapeDnd?.endDrag}
+                    onMoveDragStart={tapeDnd?.beginDrag}
                     style={{
                       gridColumn: `${bar.startCol} / span ${bar.span}`,
                       ["--lane" as string]: bar.lane,
                       ...getBarColorStyle(bar, guestColors),
                     }}
                   >
-                    <CalendarStayBarLink
-                      ariaLabel={`${bar.label}, ${sublabel}`}
-                      className={[
-                        getBarClassName(bar, isSelected, searchState),
-                        "extranet-bar__open",
-                      ].join(" ")}
-                      href={detailHref}
-                      itemKey={bar.itemKey}
-                      kind={bar.kind === "booking" ? "booking" : "block"}
-                      movePayload={movePayload}
-                      onMoveDragEnd={tapeDnd?.endDrag}
-                      onMoveDragStart={tapeDnd?.beginDrag}
-                    >
-                      {bar.showLabel ? (
-                        <>
-                          <strong>{bar.label}</strong>
-                          {bar.compact ? null : <span>{sublabel}</span>}
-                        </>
-                      ) : (
-                        <span className="extranet-bar__continued" aria-hidden="true" />
-                      )}
-                    </CalendarStayBarLink>
-                    {showInlineAssign && stayId && sourceBooking ? (
-                      <InlineRoomAssign
-                        arrivalDate={sourceBooking.arrivalDate}
-                        departureDate={sourceBooking.departureDate}
-                        fromIso={fromIso}
-                        guestLabel={sourceBooking.guest}
-                        kind="booking"
-                        monthKey={monthKey}
-                        occupancies={occupancies}
-                        roomId={sourceBooking.roomId}
-                        roomUnits={roomUnits}
-                        stayId={stayId}
-                        toIso={toIso}
-                      />
-                    ) : null}
-                    {showInlineAssign && stayId && sourceChannel ? (
-                      <InlineRoomAssign
-                        arrivalDate={sourceChannel.startDate}
-                        departureDate={sourceChannel.endDate}
-                        fromIso={fromIso}
-                        guestLabel={
-                          sourceChannel.guestName || sourceChannel.channelLabel || "Guest"
-                        }
-                        kind="channel"
-                        monthKey={monthKey}
-                        occupancies={occupancies}
-                        roomId={sourceChannel.roomId}
-                        roomUnits={roomUnits}
-                        stayId={stayId}
-                        toIso={toIso}
-                      />
-                    ) : null}
-                  </div>
+                    {bar.showLabel ? (
+                      <>
+                        <strong>{bar.label}</strong>
+                        {bar.compact ? null : <span>{sublabel}</span>}
+                      </>
+                    ) : (
+                      <span className="extranet-bar__continued" aria-hidden="true" />
+                    )}
+                  </CalendarStayBarLink>
                 );
               })}
             </div>
