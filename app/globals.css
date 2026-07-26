@@ -3438,6 +3438,25 @@ p {
   background: var(--color-danger);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .booking-row--urgent .staff-status--needs-reply span {
+    animation: staff-status-pulse 1.8s var(--ease-out-quint) infinite;
+  }
+}
+
+@keyframes staff-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+}
+
 .staff-status--new {
   background: var(--color-maroon-wash);
   color: var(--color-maroon-deep);
@@ -5313,6 +5332,16 @@ textarea:focus {
   background: var(--color-surface);
 }
 
+.booking-list__filter--urgent:not(.booking-list__filter--active) {
+  color: var(--color-danger);
+}
+
+.booking-list__filter--urgent.booking-list__filter--active {
+  border-color: color-mix(in oklab, var(--color-danger) 35%, var(--color-border));
+  color: var(--color-danger);
+  background: var(--color-danger-wash);
+}
+
 .booking-list__filter:focus-visible {
   outline: 2px solid var(--color-maroon);
   outline-offset: 2px;
@@ -5330,7 +5359,7 @@ textarea:focus {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-4);
-  align-items: center;
+  align-items: start;
   padding: var(--space-4) var(--space-5);
   color: inherit;
   text-decoration: none;
@@ -5341,7 +5370,16 @@ textarea:focus {
 }
 
 .booking-row--urgent .booking-row__link {
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-danger) 28%, transparent);
+  box-shadow: inset 3px 0 0 var(--color-danger);
+  background: color-mix(in oklab, var(--color-danger-wash) 55%, var(--color-surface));
+}
+
+.booking-row--urgent.booking-row--selected .booking-row__link {
+  background: color-mix(in oklab, var(--color-danger-wash) 70%, var(--color-surface-muted));
+}
+
+.booking-row--archived .booking-row__link {
+  opacity: 0.72;
 }
 
 .booking-row__link:focus-visible {
@@ -5349,14 +5387,49 @@ textarea:focus {
   outline-offset: -2px;
 }
 
+.booking-row__main {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
 .booking-row strong,
 .booking-row span {
   display: block;
 }
 
+.booking-row strong {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
 .booking-row span {
   color: var(--color-muted);
   font-size: 0.92rem;
+}
+
+.booking-row__preview {
+  color: var(--color-ink) !important;
+  font-size: 0.9rem !important;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.booking-row--urgent .booking-row__preview {
+  font-weight: 750;
+}
+
+.booking-row__meta {
+  font-size: 0.78rem !important;
+  font-weight: 650;
+}
+
+.booking-row .staff-status {
+  margin-top: 0.15rem;
+  justify-self: end;
 }
 
 .reservation-detail__back {
@@ -5387,16 +5460,18 @@ textarea:focus {
 
 .booking-closed {
   border-top: 1px solid var(--color-border);
-  background: var(--color-surface-muted);
+  background: color-mix(in oklab, var(--color-surface-muted) 70%, transparent);
 }
 
 .booking-closed > summary {
   cursor: pointer;
   list-style: none;
-  padding: var(--space-3) var(--space-5);
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--color-muted);
+  padding: var(--space-2) var(--space-5);
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--color-soft);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 .booking-closed > summary::-webkit-details-marker {
@@ -5406,6 +5481,20 @@ textarea:focus {
 .booking-closed > summary span {
   display: inline;
   font-weight: 650;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.booking-closed__hint {
+  margin: 0;
+  padding: 0 var(--space-5) var(--space-2);
+  color: var(--color-soft);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.booking-rows--archived {
+  border-top: 1px solid var(--color-border);
 }
 
 .staff-empty-state {
@@ -5494,6 +5583,58 @@ textarea:focus {
   background: var(--color-maroon-wash);
 }
 
+.staff-request-urgency {
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--color-danger);
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.staff-request-money {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.staff-request-money span {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.staff-request-money p {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.staff-request-money--warning {
+  border-color: color-mix(in oklab, var(--color-warning) 45%, var(--color-border));
+  background: var(--color-warning-wash);
+}
+
+.staff-request-money--warning span {
+  color: var(--color-warning-ink);
+}
+
+.staff-request-money--ok {
+  border-color: color-mix(in oklab, var(--color-success) 35%, var(--color-border));
+  background: var(--color-success-wash);
+}
+
+.staff-request-money--ok span {
+  color: var(--color-success);
+}
+
+.staff-request-money--muted span {
+  color: var(--color-muted);
+}
+
 .staff-decide {
   display: grid;
   gap: var(--space-3);
@@ -5501,6 +5642,14 @@ textarea:focus {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface-muted);
+}
+
+.staff-decide--quiet {
+  background: var(--color-surface);
+}
+
+.staff-decide--prereq {
+  border-style: dashed;
 }
 
 .staff-decide--confirming {
@@ -5542,12 +5691,45 @@ textarea:focus {
   gap: var(--space-2);
 }
 
+.staff-decide__gates {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.staff-decide__gate {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.staff-decide__gate input {
+  margin-top: 0.2rem;
+  accent-color: var(--color-maroon);
+}
+
 .staff-request-chat {
-  margin-top: var(--space-4);
+  margin-top: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   overflow: hidden;
+}
+
+.staff-request-chat--priority {
+  border-color: color-mix(in oklab, var(--color-danger) 35%, var(--color-border));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-danger) 12%, transparent);
+}
+
+.staff-request-chat--priority .staff-request-chat__title {
+  background: color-mix(in oklab, var(--color-danger-wash) 70%, var(--color-surface-muted));
+  color: var(--color-danger);
 }
 
 .staff-request-chat__title {

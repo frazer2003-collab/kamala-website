@@ -7,6 +7,7 @@ import {
 import { getAppBaseUrl } from "@/lib/stripe";
 import {
   createStaffSupabaseClient,
+  hasStaffSupabaseConfig,
   type BookingMessageRow,
   type BookingRequestRow,
 } from "@/lib/supabase";
@@ -17,6 +18,110 @@ export type ChatMessage = {
   body: string;
   createdAt: string;
 };
+
+export type InboxMessagePreview = {
+  bookingRequestId: string;
+  sender: BookingMessageRow["sender"];
+  bodyPreview: string;
+  createdAt: string;
+  ageLabel: string;
+};
+
+const INBOX_PREVIEW_MAX_CHARS = 72;
+
+export function truncateInboxPreview(
+  body: string,
+  maxChars = INBOX_PREVIEW_MAX_CHARS,
+) {
+  const oneLine = body.replace(/\s+/g, " ").trim();
+  if (!oneLine) {
+    return "";
+  }
+
+  if (oneLine.length <= maxChars) {
+    return oneLine;
+  }
+
+  return `${oneLine.slice(0, Math.max(1, maxChars - 1)).trimEnd()}…`;
+}
+
+export function formatInboxMessageAge(createdAt: string, nowMs = Date.now()) {
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) {
+    return "Recently";
+  }
+
+  const minutes = Math.max(1, Math.round((nowMs - created.getTime()) / 60000));
+
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  const days = Math.round(hours / 24);
+  if (days < 7) {
+    return `${days}d ago`;
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+  }).format(created);
+}
+
+export function pickLatestMessagePreviews(
+  rows: Array<{
+    booking_request_id: string;
+    sender: BookingMessageRow["sender"];
+    body: string;
+    created_at: string;
+  }>,
+  nowMs = Date.now(),
+) {
+  const previews = new Map<string, InboxMessagePreview>();
+
+  for (const row of rows) {
+    if (previews.has(row.booking_request_id)) {
+      continue;
+    }
+
+    previews.set(row.booking_request_id, {
+      bookingRequestId: row.booking_request_id,
+      sender: row.sender,
+      bodyPreview: truncateInboxPreview(row.body),
+      createdAt: row.created_at,
+      ageLabel: formatInboxMessageAge(row.created_at, nowMs),
+    });
+  }
+
+  return previews;
+}
+
+/** Latest message snippet per booking for the staff inbox list. */
+export async function getInboxMessagePreviews(bookingIds: string[]) {
+  const uniqueIds = [...new Set(bookingIds.filter(Boolean))];
+  if (uniqueIds.length === 0 || !hasStaffSupabaseConfig()) {
+    return new Map<string, InboxMessagePreview>();
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data, error } = await supabase
+    .from("booking_messages")
+    .select("booking_request_id, sender, body, created_at")
+    .in("booking_request_id", uniqueIds)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(uniqueIds.length * 8, 400));
+
+  if (error || !data) {
+    return new Map<string, InboxMessagePreview>();
+  }
+
+  return pickLatestMessagePreviews(data);
+}
 
 export type GuestChatContext = {
   guestName: string;

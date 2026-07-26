@@ -4,6 +4,10 @@ import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form"
 import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
 import { StaffShell } from "@/components/staff-shell";
 import {
+  getInboxMessagePreviews,
+  type InboxMessagePreview,
+} from "@/lib/booking-chat";
+import {
   getStaffBookingKey,
   getDeclinedBookings,
   getStaffBookingById,
@@ -99,12 +103,94 @@ function buildStaffHref(options: {
   return query ? `/staff?${query}` : "/staff";
 }
 
-function sortInboxBookings(bookings: StaffBooking[]) {
+function previewSortKey(
+  booking: StaffBooking,
+  previews: Map<string, InboxMessagePreview>,
+) {
+  const id = booking.databaseId;
+  if (!id) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const preview = previews.get(id);
+  if (!preview) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const time = Date.parse(preview.createdAt);
+  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+}
+
+function sortInboxBookings(
+  bookings: StaffBooking[],
+  previews: Map<string, InboxMessagePreview>,
+) {
   return [...bookings].sort((left, right) => {
     const leftRank = STATUS_SORT[left.status] ?? 9;
     const rightRank = STATUS_SORT[right.status] ?? 9;
-    return leftRank - rightRank;
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    // Oldest unanswered thread first — the phone that has been ringing longest.
+    return previewSortKey(left, previews) - previewSortKey(right, previews);
   });
+}
+
+function getRowSecondaryLine(
+  booking: StaffBooking,
+  preview: InboxMessagePreview | undefined,
+) {
+  if (preview?.bodyPreview) {
+    const who = preview.sender === "guest" ? "Guest" : "You";
+    return `${who}: ${preview.bodyPreview}`;
+  }
+
+  if (booking.status === "needs-reply") {
+    return "Guest is waiting for a reply";
+  }
+
+  if (booking.note.trim()) {
+    return booking.note.replace(/\s+/g, " ").trim();
+  }
+
+  return `${booking.room} · ${booking.dates}`;
+}
+
+function getMoneyState(booking: StaffBooking) {
+  if (isPaidOverbookNote(booking.staffNote)) {
+    return {
+      tone: "warning" as const,
+      title: "Paid — dates still need sorting",
+      body: "This guest paid, but these dates look full. Reply with other dates or a room, then confirm only after that is settled.",
+    };
+  }
+
+  if (booking.bankTransferClaimed && !booking.depositPaid) {
+    return {
+      tone: "warning" as const,
+      title: "Bank transfer to verify",
+      body: "The guest reported a transfer. Check your bank app, then confirm or decline.",
+    };
+  }
+
+  if (booking.depositPaid) {
+    return {
+      tone: "ok" as const,
+      title: "Payment received",
+      body: "Full stay payment is on record.",
+    };
+  }
+
+  if (booking.status === "new" || booking.status === "awaiting") {
+    return {
+      tone: "muted" as const,
+      title: "Payment not received",
+      body: "No card payment or verified transfer yet.",
+    };
+  }
+
+  return null;
 }
 
 export default async function StaffBookingsPage({
@@ -139,7 +225,15 @@ export default async function StaffBookingsPage({
     getStaffRooms(),
   ]);
 
-  const sortedOpen = sortInboxBookings(staffBookings.bookings);
+  const previewIds = [
+    ...staffBookings.bookings,
+    ...declinedBookings.bookings,
+  ]
+    .map((booking) => booking.databaseId)
+    .filter((id): id is string => Boolean(id));
+  const messagePreviews = await getInboxMessagePreviews(previewIds);
+
+  const sortedOpen = sortInboxBookings(staffBookings.bookings, messagePreviews);
   const visibleOpen =
     inboxFilter === "all"
       ? sortedOpen
@@ -173,6 +267,8 @@ export default async function StaffBookingsPage({
   const canManageSelected =
     Boolean(selected?.databaseId) && selected?.status !== "declined";
   const isClosedConversation = selected?.status === "declined";
+  const selectedNeedsReply = selected?.status === "needs-reply";
+  const selectedMoney = selected ? getMoneyState(selected) : null;
   const newRequestCount = staffBookings.bookings.filter(
     (booking) => booking.status === "new",
   ).length;
@@ -194,10 +290,10 @@ export default async function StaffBookingsPage({
           : null;
 
   const filterTabs: { id: InboxFilter; label: string; count: number }[] = [
-    { id: "all", label: "All", count: staffBookings.bookings.length },
     { id: "needs-reply", label: "Need reply", count: needsReplyCount },
     { id: "new", label: "New", count: newRequestCount },
     { id: "awaiting", label: "Payment", count: awaitingCount },
+    { id: "all", label: "All open", count: staffBookings.bookings.length },
   ];
 
   return (
@@ -209,6 +305,43 @@ export default async function StaffBookingsPage({
             <p>
               {staffBookings.bookings.length === 0 ? (
                 "No open requests. Confirmed stays live on the calendar."
+              ) : needsReplyCount > 0 ? (
+                <>
+                  <Link
+                    href={buildStaffHref({
+                      filter: "needs-reply",
+                      view: "inbox",
+                    })}
+                  >
+                    {needsReplyCount} waiting for a reply
+                  </Link>
+                  {newRequestCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "new",
+                          view: "inbox",
+                        })}
+                      >
+                        {newRequestCount} new
+                      </Link>
+                    </>
+                  ) : null}
+                  {awaitingCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "awaiting",
+                          view: "inbox",
+                        })}
+                      >
+                        {awaitingCount} payment review
+                      </Link>
+                    </>
+                  ) : null}
+                </>
               ) : (
                 <>
                   <Link
@@ -226,19 +359,6 @@ export default async function StaffBookingsPage({
                         })}
                       >
                         {newRequestCount} new
-                      </Link>
-                    </>
-                  ) : null}
-                  {needsReplyCount > 0 ? (
-                    <>
-                      {" · "}
-                      <Link
-                        href={buildStaffHref({
-                          filter: "needs-reply",
-                          view: "inbox",
-                        })}
-                      >
-                        {needsReplyCount} need reply
                       </Link>
                     </>
                   ) : null}
@@ -315,6 +435,10 @@ export default async function StaffBookingsPage({
                       aria-current={isActive ? "page" : undefined}
                       className={`booking-list__filter${
                         isActive ? " booking-list__filter--active" : ""
+                      }${
+                        tab.id === "needs-reply" && tab.count > 0
+                          ? " booking-list__filter--urgent"
+                          : ""
                       }`}
                       href={buildStaffHref({
                         filter: tab.id,
@@ -339,23 +463,26 @@ export default async function StaffBookingsPage({
                     filter: inboxFilter,
                   })}#detail-title`;
                   const isSelected = selectedKey === bookingKey;
+                  const preview = booking.databaseId
+                    ? messagePreviews.get(booking.databaseId)
+                    : undefined;
+                  const secondary = getRowSecondaryLine(booking, preview);
+                  const isUrgent = booking.status === "needs-reply";
 
                   return (
                     <article
                       className={`booking-row${
                         isSelected ? " booking-row--selected" : ""
-                      }${
-                        booking.status === "needs-reply"
-                          ? " booking-row--urgent"
-                          : ""
-                      }`}
+                      }${isUrgent ? " booking-row--urgent" : ""}`}
                       key={bookingKey}
                     >
                       <Link className="booking-row__link" href={bookingHref}>
-                        <div>
+                        <div className="booking-row__main">
                           <strong>{booking.guest}</strong>
-                          <span>
+                          <span className="booking-row__preview">{secondary}</span>
+                          <span className="booking-row__meta">
                             {booking.room} · {booking.dates}
+                            {preview ? ` · ${preview.ageLabel}` : ` · ${booking.requestedAt}`}
                           </span>
                         </div>
                         <div
@@ -395,10 +522,14 @@ export default async function StaffBookingsPage({
             {declinedBookings.bookings.length > 0 ? (
               <details className="booking-closed">
                 <summary>
-                  Closed conversations{" "}
+                  Closed archive{" "}
                   <span>({declinedBookings.bookings.length})</span>
                 </summary>
-                <div className="booking-rows">
+                <p className="booking-closed__hint">
+                  Declined requests kept for reference — not part of the live
+                  inbox.
+                </p>
+                <div className="booking-rows booking-rows--archived">
                   {declinedBookings.bookings.map((booking) => {
                     const bookingKey = getStaffBookingKey(booking);
                     const bookingHref = `${buildStaffHref({
@@ -406,19 +537,24 @@ export default async function StaffBookingsPage({
                       filter: inboxFilter,
                     })}#detail-title`;
                     const isSelected = selectedKey === bookingKey;
+                    const preview = booking.databaseId
+                      ? messagePreviews.get(booking.databaseId)
+                      : undefined;
 
                     return (
                       <article
-                        className={`booking-row${
+                        className={`booking-row booking-row--archived${
                           isSelected ? " booking-row--selected" : ""
                         }`}
                         key={bookingKey}
                       >
                         <Link className="booking-row__link" href={bookingHref}>
-                          <div>
+                          <div className="booking-row__main">
                             <strong>{booking.guest}</strong>
-                            <span>
-                              {booking.room} · {booking.dates}
+                            <span className="booking-row__preview">
+                              {preview?.bodyPreview
+                                ? preview.bodyPreview
+                                : `${booking.room} · ${booking.dates}`}
                             </span>
                           </div>
                           <div className="staff-status staff-status--declined">
@@ -457,30 +593,23 @@ export default async function StaffBookingsPage({
                 </div>
               </div>
               <h2 id="detail-title">{selected.guest}</h2>
-
-              {isPaidOverbookNote(selected.staffNote) ? (
-                <p className="form-message form-message--warning" role="status">
-                  This guest paid, but these dates look full. Email or call them
-                  to offer other dates or a room, then confirm only after that is
-                  settled.
+              {selectedNeedsReply ? (
+                <p className="staff-request-urgency" role="status">
+                  Waiting for your reply — answer in the conversation, then
+                  close the request when ready.
                 </p>
               ) : null}
 
-              {selected.note ? (
-                <div className="guest-note guest-note--priority">
-                  <span>Guest note</span>
-                  <p>{selected.note}</p>
-                </div>
-              ) : (
-                <div className="guest-note">
-                  <span>Guest note</span>
-                  <p>No guest note added.</p>
-                </div>
-              )}
-
               {selected.databaseId ? (
-                <div className="staff-request-chat">
-                  <h3 className="staff-request-chat__title">Conversation</h3>
+                <div
+                  className={`staff-request-chat${
+                    selectedNeedsReply ? " staff-request-chat--priority" : ""
+                  }`}
+                  id="booking-chat"
+                >
+                  <h3 className="staff-request-chat__title">
+                    {selectedNeedsReply ? "Conversation — reply needed" : "Conversation"}
+                  </h3>
                   <BookingChat
                     bookingId={selected.databaseId}
                     disabled={!canManageSelected}
@@ -495,6 +624,23 @@ export default async function StaffBookingsPage({
                   Conversation appears on live requests once Supabase is
                   connected.
                 </p>
+              ) : null}
+
+              {selectedMoney ? (
+                <div
+                  className={`staff-request-money staff-request-money--${selectedMoney.tone}`}
+                  role="status"
+                >
+                  <span>{selectedMoney.title}</span>
+                  <p>{selectedMoney.body}</p>
+                </div>
+              ) : null}
+
+              {selected.note ? (
+                <div className="guest-note">
+                  <span>Original guest note</span>
+                  <p>{selected.note}</p>
+                </div>
               ) : null}
 
               <div className="reservation-detail__groups">
@@ -573,13 +719,14 @@ export default async function StaffBookingsPage({
                   bankTransferClaimed={selected.bankTransferClaimed}
                   guestEmail={selected.contact}
                   guestName={selected.guest}
+                  needsReply={selectedNeedsReply}
                   paidOverbooked={isPaidOverbookNote(selected.staffNote)}
                   practiceMode={isPracticeMode}
                 />
               ) : (
                 <p className="detail-help">
-                  This request is closed. Conversation history stays available
-                  above.
+                  This request is in the closed archive. Conversation history
+                  stays available above.
                 </p>
               )}
             </aside>
@@ -592,8 +739,8 @@ export default async function StaffBookingsPage({
               </h2>
               <p>
                 {preferInboxView
-                  ? "Choose a guest from the inbox to review stay details and decide."
-                  : "Once a guest sends the form, their dates, room, contact, and note appear here."}
+                  ? "Choose a guest from the inbox to reply and review the stay."
+                  : "Once a guest sends the form, their message and stay details appear here."}
               </p>
             </aside>
           )}
