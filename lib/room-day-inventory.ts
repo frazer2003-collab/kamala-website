@@ -82,7 +82,7 @@ export async function getRoomDayInventoryForMonth(month: { year: number; month: 
       return {
         entries: [] as RoomDayInventory[],
         source: "sample" as const,
-        error: "Could not load day inventory. Run supabase/migrate-room-day-inventory.sql.",
+        error: "Could not load day inventory. Run supabase/schema.sql.",
       };
     }
 

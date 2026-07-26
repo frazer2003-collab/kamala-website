@@ -40,33 +40,14 @@ After swapping keys: redeploy (or restart `npm run dev`), and confirm property c
 
 5. **Airbnb sync every 5 minutes** — the repo includes `.github/workflows/sync-airbnb-ical.yml`. In GitHub → Settings → Secrets, add the same `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` as on Vercel. The workflow calls `GET /api/cron/sync-ical?channel=airbnb` on a schedule. (Vercel Hobby only allows daily built-in crons; GitHub Actions is what hits every 5 minutes.)
 
-## 2. Run database migrations
+## 2. Run the database schema
 
-In the Supabase SQL editor, run these files in order (skip any already applied):
+In the Supabase SQL editor:
 
-1. `supabase/schema.sql` (fresh install) **or** run individual migrations if upgrading
-2. `supabase/migrate-guest-phone.sql`
-3. `supabase/migrate-stay-status.sql`
-4. `supabase/migrate-room-blocks.sql`
-5. `supabase/migrate-stripe-deposit.sql`
-6. `supabase/migrate-staff-emails.sql`
-6b. `supabase/migrate-staff-calendar-access.sql` (calendar read vs read & write on staff emails)
-7. `supabase/migrate-room-promotions.sql`
-8. `supabase/migrate-booking-chat.sql`
-9. `supabase/migrate-property-settings.sql`
-10. `supabase/migrate-room-sort-order.sql`
-11. `supabase/migrate-calendar-colors.sql`
-12. `supabase/migrate-room-gallery.sql`
-13. `supabase/migrate-room-photo-storage.sql`
-14. `supabase/migrate-property-gallery.sql`
-15. `supabase/migrate-hero-image.sql`
-16. `supabase/migrate-room-ical.sql` (OTA calendar sync, if used)
-17. `supabase/migrate-hide-ical-export-token.sql` (hide calendar export tokens from public API)
-18. `supabase/migrate-room-unit-ical.sql` (Airbnb per room-number export/import)
-19. `supabase/migrate-superior-four-units.sql` (Superior rooms: 113, 115, 118, 120 only)
-20. `supabase/migrate-deluxe-four-units.sql` (Deluxe doors 112/114/117/119; Airbnb 114→Family)
-21. `supabase/migrate-remove-triple-veranda.sql` (removes Triple; door 112 stays under Deluxe)
-22. `supabase/migrate-family-ground-116.sql` (Family Room Ground Floor + door 116)
+1. Run `supabase/schema.sql` once (complete current schema, room catalog, door numbers, RPCs, storage buckets)
+2. Optionally run `supabase/seed-chiangmai-tours.sql` for starter tour cards
+
+Historical one-off upgrade scripts live in `supabase/archive/` — only needed for very old databases. See `supabase/README.md`.
 
 Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airbnb per door number, Booking.com and Expedia per room type. Airbnb feeds also refresh automatically every ~5 minutes when the GitHub Actions cron + `CRON_SECRET` are configured. You can still use **Sync OTA bookings** on the staff calendar anytime; Booking.com / Expedia stay manual unless you call `?channel=all`.
 
@@ -90,7 +71,7 @@ Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airb
 ## 5. Pre-launch checks
 
 - [ ] Run `npm run build` locally or in CI before deploying
-- [ ] All migrations through `migrate-room-sort-order.sql` are applied in Supabase
+- [ ] `supabase/schema.sql` has been applied in Supabase
 - [ ] Browser tab title shows your property name from Settings (not the default "Kamala")
 - [ ] Room rates, photos, policies, and LINE/WhatsApp links are filled in under Settings and Rooms
 - [ ] Stripe PromptPay enabled for the live account; webhook URL uses production domain

@@ -164,14 +164,14 @@ function classifyRoomUnitSaveError(message: string): {
   if (/column ['"]?room_unit_id['"]? .* does not exist|room_blocks\.room_unit_id/i.test(message)) {
     return {
       code: "room-unit-setup",
-      detail: "Column room_blocks.room_unit_id is missing. Run migrate-room-block-units.sql, then NOTIFY pgrst, 'reload schema';",
+      detail: "Column room_blocks.room_unit_id is missing. Run supabase/schema.sql, then NOTIFY pgrst, 'reload schema';",
     };
   }
 
   if (/foreign key|not present in table ['"]?room_units['"]?/i.test(message)) {
     return {
       code: "invalid-room-number",
-      detail: "That door number is not in room_units. Re-run migrate-room-units.sql to seed numbers.",
+      detail: "That door number is not in room_units. Re-run supabase/schema.sql to seed numbers.",
     };
   }
 
@@ -1245,7 +1245,7 @@ export async function updateConfirmedBooking(
             bookingHref,
             classified.code === "room-unit-cache" ? "room-unit-rpc" : classified.code,
             classified.code === "room-unit-cache"
-              ? "Run supabase/migrate-room-unit-rpc.sql in the SQL editor, then try again."
+              ? "Run supabase/schema.sql in the SQL editor, then try again."
               : classified.detail,
           ),
         );
@@ -2040,7 +2040,7 @@ export async function updateChannelReservation(
         blockHref,
         classified.code === "room-unit-cache" ? "room-unit-rpc" : classified.code,
         classified.code === "room-unit-cache"
-          ? "Run supabase/migrate-room-unit-rpc.sql in the SQL editor (same project as your app), then try again."
+          ? "Run supabase/schema.sql in the SQL editor (same project as your app), then try again."
           : classified.detail,
       ),
     );

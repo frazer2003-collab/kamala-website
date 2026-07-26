@@ -56,7 +56,7 @@ export async function getStaffNotificationEmails(): Promise<StaffNotificationEma
     .order("created_at", { ascending: true });
 
   if (error || !data) {
-    // Older DBs before migrate-staff-calendar-access.sql
+    // Older DBs before calendar_access existed on staff emails
     const fallback = await supabase
       .from("staff_notification_emails")
       .select("id, email, label, created_at")

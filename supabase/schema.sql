@@ -1,4 +1,12 @@
+-- Kamala greenfield schema (complete current product).
+-- Fresh install: run this file once in the Supabase SQL editor.
+-- Historical one-off upgrades live in supabase/archive/.
+
 create extension if not exists pgcrypto;
+
+-- ---------------------------------------------------------------------------
+-- Rooms
+-- ---------------------------------------------------------------------------
 
 create table if not exists public.rooms (
   id text primary key,
@@ -14,8 +22,12 @@ create table if not exists public.rooms (
   image_url text,
   gallery_urls text[] not null default '{}',
   sort_order integer not null default 0,
+  ical_export_token uuid not null default gen_random_uuid(),
   updated_at timestamptz not null default now()
 );
+
+create index if not exists rooms_sort_order_idx
+  on public.rooms (sort_order, id);
 
 insert into public.rooms (
   id,
@@ -27,7 +39,8 @@ insert into public.rooms (
   available_count,
   summary,
   amenities,
-  tone
+  tone,
+  sort_order
 )
 values
   (
@@ -40,7 +53,8 @@ values
     4,
     'A comfortable room a minute from Tha Phae Gate, with blackout curtains, work desk, safe, and a private bathroom with shower and bidet. Flexible king or twin setup for couples or friends.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'King or twin beds', 'Cable TV', 'Safe', 'Desk', 'Breakfast included'],
-    'courtyard'
+    'courtyard',
+    10
   ),
   (
     'garden',
@@ -52,7 +66,8 @@ values
     4,
     'More space for longer stays — 45 m² with a private balcony over the guesthouse garden, seating for two, refrigerator, and en-suite bathroom. Quiet room facing greenery above the old city.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'King bed', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
-    'garden'
+    'garden',
+    20
   ),
   (
     'loft',
@@ -64,7 +79,8 @@ values
     1,
     'The largest room in the house — 70 m² with four single beds, private balcony, and space for a family stay steps from Tha Phae Gate and the Sunday walking street.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'Four single beds', 'Private balcony', 'Refrigerator', 'Cable TV', 'Safe', 'Breakfast included'],
-    'attic'
+    'attic',
+    30
   ),
   (
     'ground',
@@ -76,7 +92,8 @@ values
     1,
     'A ground-floor family room with space for four guests, private bathroom, and easy access without stairs — practical for families with young children or guests who prefer not to climb.',
     array['Air conditioning', 'Free Wi-Fi', 'Private bathroom', 'Family bedding', 'Cable TV', 'Safe', 'Breakfast included'],
-    'attic'
+    'attic',
+    40
   )
 on conflict (id) do update
 set
@@ -88,13 +105,85 @@ set
   summary = excluded.summary,
   amenities = excluded.amenities,
   tone = excluded.tone,
-  available_count = excluded.available_count;
+  available_count = excluded.available_count,
+  sort_order = excluded.sort_order;
+
+-- ---------------------------------------------------------------------------
+-- Door numbers (physical units)
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.room_units (
+  id uuid primary key default gen_random_uuid(),
+  number text not null unique,
+  sort_order integer not null default 0,
+  ical_export_token uuid not null default gen_random_uuid(),
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists room_units_ical_export_token_idx
+  on public.room_units (ical_export_token)
+  where ical_export_token is not null;
+
+create table if not exists public.room_unit_types (
+  room_unit_id uuid not null references public.room_units(id) on delete cascade,
+  room_id text not null references public.rooms(id) on delete cascade,
+  primary key (room_unit_id, room_id)
+);
+
+create index if not exists room_unit_types_room_id_idx
+  on public.room_unit_types (room_id);
+
+insert into public.room_units (number, sort_order)
+values
+  ('113', 10),
+  ('115', 20),
+  ('118', 30),
+  ('120', 40),
+  ('116', 45),
+  ('112', 50),
+  ('114', 60),
+  ('117', 70),
+  ('119', 80)
+on conflict (number) do update
+set sort_order = excluded.sort_order;
+
+-- Superior
+insert into public.room_unit_types (room_unit_id, room_id)
+select u.id, 'courtyard'
+from public.room_units u
+where u.number in ('113', '115', '118', '120')
+on conflict do nothing;
+
+-- Deluxe
+insert into public.room_unit_types (room_unit_id, room_id)
+select u.id, 'garden'
+from public.room_units u
+where u.number in ('112', '114', '117', '119')
+on conflict do nothing;
+
+-- Family (Airbnb door 114)
+insert into public.room_unit_types (room_unit_id, room_id)
+select u.id, 'loft'
+from public.room_units u
+where u.number = '114'
+on conflict do nothing;
+
+-- Family Ground Floor (door 116)
+insert into public.room_unit_types (room_unit_id, room_id)
+select u.id, 'ground'
+from public.room_units u
+where u.number = '116'
+on conflict do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Bookings
+-- ---------------------------------------------------------------------------
 
 create table if not exists public.booking_requests (
   id uuid primary key default gen_random_uuid(),
   guest_name text not null,
   guest_email text not null,
-  guest_phone text not null,
+  guest_phone text not null default '',
   room_id text not null,
   room_name text not null,
   arrival_date date not null,
@@ -119,11 +208,15 @@ create table if not exists public.booking_requests (
   stripe_payment_intent_id text,
   bank_transfer_claimed_at timestamptz,
   conversation_token text unique,
-  room_unit_id uuid,
+  room_unit_id uuid references public.room_units(id) on delete set null,
   bed_setup text check (bed_setup is null or bed_setup in ('double', 'twin')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create index if not exists booking_requests_room_unit_id_idx
+  on public.booking_requests (room_unit_id)
+  where room_unit_id is not null;
 
 create table if not exists public.booking_messages (
   id uuid primary key default gen_random_uuid(),
@@ -141,14 +234,487 @@ create unique index if not exists booking_messages_source_email_id_idx
 
 create index if not exists booking_messages_booking_created_idx
   on public.booking_messages (booking_request_id, created_at);
+
+-- ---------------------------------------------------------------------------
+-- Calendar: iCal feeds, blocks, day inventory / rates
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.room_ical_feeds (
+  id uuid primary key default gen_random_uuid(),
+  room_id text not null references public.rooms(id) on delete cascade,
+  room_unit_id uuid references public.room_units(id) on delete cascade,
+  label text not null check (length(trim(label)) > 0),
+  import_url text not null check (length(trim(import_url)) > 0),
+  last_synced_at timestamptz,
+  last_sync_error text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists room_ical_feeds_room_id_idx
+  on public.room_ical_feeds (room_id);
+
+create index if not exists room_ical_feeds_room_unit_id_idx
+  on public.room_ical_feeds (room_unit_id)
+  where room_unit_id is not null;
+
+create table if not exists public.room_blocks (
   id uuid primary key default gen_random_uuid(),
   room_id text not null references public.rooms(id) on delete cascade,
   start_date date not null,
   end_date date not null check (end_date > start_date),
   reason text,
   staff_note text,
+  guest_name text,
+  guest_email text,
+  guest_phone text,
+  staff_booking_source text check (
+    staff_booking_source is null
+    or staff_booking_source in ('walk-in', 'airbnb', 'expedia', 'booking')
+  ),
+  ical_feed_id uuid references public.room_ical_feeds(id) on delete cascade,
+  ical_uid text,
+  room_unit_id uuid references public.room_units(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+create unique index if not exists room_blocks_ical_feed_uid_idx
+  on public.room_blocks (ical_feed_id, ical_uid)
+  where ical_feed_id is not null and ical_uid is not null;
+
+create index if not exists room_blocks_room_unit_id_idx
+  on public.room_blocks (room_unit_id)
+  where room_unit_id is not null;
+
+create table if not exists public.room_day_inventory (
+  id uuid primary key default gen_random_uuid(),
+  room_id text not null references public.rooms(id) on delete cascade,
+  date date not null,
+  rooms_to_sell smallint not null check (rooms_to_sell >= 0),
+  created_at timestamptz not null default now(),
+  unique (room_id, date)
+);
+
+create index if not exists room_day_inventory_room_date_idx
+  on public.room_day_inventory (room_id, date);
+
+create table if not exists public.room_day_rates (
+  id uuid primary key default gen_random_uuid(),
+  room_id text not null references public.rooms(id) on delete cascade,
+  date date not null,
+  nightly_rate integer not null check (nightly_rate >= 0),
+  created_at timestamptz not null default now(),
+  unique (room_id, date)
+);
+
+create index if not exists room_day_rates_room_date_idx
+  on public.room_day_rates (room_id, date);
+
+-- ---------------------------------------------------------------------------
+-- Staff / property / promotions / gallery / tours
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.staff_notification_emails (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  label text,
+  calendar_access text not null default 'read_write'
+    check (calendar_access in ('read', 'read_write')),
+  created_at timestamptz not null default now(),
+  constraint staff_notification_emails_email_format
+    check (email ~* '^[^@]+@[^@]+\.[^@]+$')
+);
+
+create table if not exists public.room_promotions (
+  id uuid primary key default gen_random_uuid(),
+  room_id text not null references public.rooms(id) on delete cascade,
+  start_date date not null,
+  end_date date not null,
+  percent_off integer not null check (percent_off between 1 and 90),
+  label text,
+  created_at timestamptz not null default now(),
+  constraint room_promotions_date_range check (end_date >= start_date)
+);
+
+create index if not exists room_promotions_room_dates_idx
+  on public.room_promotions (room_id, start_date, end_date);
+
+create table if not exists public.property_settings (
+  id text primary key default 'default',
+  property_name text not null default 'Kamala''s Boutique Guesthouse',
+  property_tagline text not null default 'Chiang Mai Old City',
+  contact_email text,
+  contact_phone text,
+  address_line text,
+  check_in_from text not null default '3:00 pm',
+  check_in_until text not null default '8:00 pm',
+  quiet_hours text not null default '10:00 pm',
+  currency text not null default 'thb' check (currency in ('thb', 'usd')),
+  allow_pay_on_arrival boolean not null default false,
+  house_rules text[] not null default array[
+    'Check-in is from 3 pm to 8 pm. Later arrivals are arranged by reply.',
+    'Breakfast is included for every confirmed booking request.',
+    'Quiet hours begin at 10 pm so early guests and families can rest.'
+  ],
+  cancellation_policy text not null default 'Cancel at least 7 days before arrival for a full deposit refund. Later cancellations are reviewed case by case.',
+  privacy_policy text not null default 'We use your contact details only to manage your booking and stay. We do not sell guest data.',
+  terms_summary text not null default 'A 50% deposit reserves your room. The remaining balance is due before check-in unless staff confirm another arrangement.',
+  line_url text,
+  whatsapp_url text,
+  promptpay_id text,
+  bank_name text,
+  account_name text,
+  account_number text,
+  calendar_color_available text not null default '#bbf7d0',
+  calendar_color_closed text not null default '#fecaca',
+  calendar_color_booking text not null default '#fef08a',
+  calendar_color_sold_out text not null default '#fdba74',
+  show_room_photos_on_gallery boolean not null default true,
+  hero_image_url text,
+  hero_image_storage_path text,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.property_settings (id)
+values ('default')
+on conflict (id) do nothing;
+
+create table if not exists public.property_gallery_photos (
+  id uuid primary key default gen_random_uuid(),
+  storage_path text not null unique,
+  url text not null,
+  caption text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists property_gallery_photos_sort_order_idx
+  on public.property_gallery_photos (sort_order, created_at);
+
+create table if not exists public.tours (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (length(trim(title)) > 0),
+  summary text not null check (length(trim(summary)) > 0),
+  duration_label text,
+  price_label text,
+  image_url text,
+  image_storage_path text,
+  gallery_urls text[] not null default '{}',
+  link_url text,
+  link_label text not null default 'Enquire',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists tours_sort_order_idx
+  on public.tours (sort_order, created_at);
+
+-- ---------------------------------------------------------------------------
+-- Triggers
+-- ---------------------------------------------------------------------------
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists booking_requests_set_updated_at on public.booking_requests;
+create trigger booking_requests_set_updated_at
+before update on public.booking_requests
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists rooms_set_updated_at on public.rooms;
+create trigger rooms_set_updated_at
+before update on public.rooms
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists tours_set_updated_at on public.tours;
+create trigger tours_set_updated_at
+before update on public.tours
+for each row
+execute function public.set_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- RPCs
+-- ---------------------------------------------------------------------------
+
+create or replace function public.create_guest_booking_if_capacity(
+  p_guest_name text,
+  p_guest_email text,
+  p_guest_phone text,
+  p_room_id text,
+  p_room_name text,
+  p_arrival_date date,
+  p_departure_date date,
+  p_nights integer,
+  p_estimated_total integer,
+  p_deposit_amount integer,
+  p_note text,
+  p_conversation_token text,
+  p_available_count integer,
+  p_bed_setup text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_night date;
+  v_net integer;
+  v_rooms_to_sell integer;
+  v_closed boolean;
+  v_booking public.booking_requests%rowtype;
+  v_bed_setup text;
+begin
+  v_bed_setup := nullif(trim(lower(coalesce(p_bed_setup, ''))), '');
+  if v_bed_setup is not null and v_bed_setup not in ('double', 'twin') then
+    return jsonb_build_object('ok', false, 'reason', 'unavailable');
+  end if;
+
+  -- Only Superior (courtyard) keeps a bed preference.
+  if p_room_id is distinct from 'courtyard' then
+    v_bed_setup := null;
+  end if;
+
+  if p_arrival_date is null
+     or p_departure_date is null
+     or p_departure_date <= p_arrival_date
+     or p_nights < 1
+     or p_available_count is null
+     or p_available_count < 0 then
+    return jsonb_build_object('ok', false, 'reason', 'unavailable');
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext(p_room_id));
+
+  v_night := p_arrival_date;
+  while v_night < p_departure_date loop
+    v_closed := exists (
+      select 1
+      from public.room_blocks b
+      where b.room_id = p_room_id
+        and b.ical_feed_id is null
+        and b.start_date <= v_night
+        and b.end_date > v_night
+    );
+
+    if v_closed then
+      return jsonb_build_object('ok', false, 'reason', 'unavailable');
+    end if;
+
+    select coalesce(
+      (
+        select i.rooms_to_sell
+        from public.room_day_inventory i
+        where i.room_id = p_room_id
+          and i.date = v_night
+        limit 1
+      ),
+      p_available_count
+    )
+    into v_rooms_to_sell;
+
+    select
+      (
+        select count(*)::integer
+        from public.booking_requests br
+        where br.room_id = p_room_id
+          and br.arrival_date <= v_night
+          and br.departure_date > v_night
+          and br.status <> 'declined'
+          and (
+            br.status in ('pending_payment', 'confirmed')
+            or br.deposit_paid_at is not null
+            or br.bank_transfer_claimed_at is not null
+          )
+      )
+      +
+      (
+        select count(*)::integer
+        from public.room_blocks b
+        where b.room_id = p_room_id
+          and b.ical_feed_id is not null
+          and b.start_date <= v_night
+          and b.end_date > v_night
+      )
+    into v_net;
+
+    if v_net >= v_rooms_to_sell then
+      return jsonb_build_object('ok', false, 'reason', 'unavailable');
+    end if;
+
+    v_night := v_night + 1;
+  end loop;
+
+  insert into public.booking_requests (
+    guest_name,
+    guest_email,
+    guest_phone,
+    room_id,
+    room_name,
+    arrival_date,
+    departure_date,
+    nights,
+    estimated_total,
+    deposit_amount,
+    note,
+    status,
+    conversation_token,
+    bed_setup
+  )
+  values (
+    p_guest_name,
+    p_guest_email,
+    p_guest_phone,
+    p_room_id,
+    p_room_name,
+    p_arrival_date,
+    p_departure_date,
+    p_nights,
+    p_estimated_total,
+    p_deposit_amount,
+    nullif(trim(p_note), ''),
+    'pending_payment',
+    p_conversation_token,
+    v_bed_setup
+  )
+  returning * into v_booking;
+
+  return jsonb_build_object(
+    'ok', true,
+    'booking', to_jsonb(v_booking)
+  );
+exception
+  when others then
+    return jsonb_build_object(
+      'ok', false,
+      'reason', 'verify-failed',
+      'message', sqlerrm
+    );
+end;
+$$;
+
+create or replace function public.staff_update_channel_reservation(
+  p_block_id uuid,
+  p_guest_name text,
+  p_guest_email text,
+  p_guest_phone text,
+  p_start_date date,
+  p_end_date date,
+  p_staff_note text,
+  p_room_unit_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_room_unit_id is not null and not exists (
+    select 1 from public.room_units where id = p_room_unit_id
+  ) then
+    raise exception 'room_unit_not_found';
+  end if;
+
+  update public.room_blocks
+  set
+    guest_name = nullif(trim(p_guest_name), ''),
+    guest_email = nullif(trim(p_guest_email), ''),
+    guest_phone = nullif(trim(p_guest_phone), ''),
+    start_date = p_start_date,
+    end_date = p_end_date,
+    staff_note = nullif(trim(p_staff_note), ''),
+    room_unit_id = p_room_unit_id
+  where id = p_block_id
+    and ical_feed_id is not null;
+
+  if not found then
+    raise exception 'channel_block_not_found';
+  end if;
+end;
+$$;
+
+create or replace function public.staff_set_booking_room_unit(
+  p_booking_id uuid,
+  p_room_unit_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_room_unit_id is not null and not exists (
+    select 1 from public.room_units where id = p_room_unit_id
+  ) then
+    raise exception 'room_unit_not_found';
+  end if;
+
+  update public.booking_requests
+  set room_unit_id = p_room_unit_id
+  where id = p_booking_id
+    and (
+      status = 'confirmed'
+      or (status = 'awaiting' and deposit_paid_at is not null)
+    );
+
+  if not found then
+    raise exception 'booking_not_found';
+  end if;
+end;
+$$;
+
+create or replace function public.staff_room_block_unit_map()
+returns table (id uuid, room_unit_id uuid)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select b.id, b.room_unit_id
+  from public.room_blocks b
+  where b.room_unit_id is not null;
+$$;
+
+create or replace function public.staff_booking_room_unit_map()
+returns table (id uuid, room_unit_id uuid)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select r.id, r.room_unit_id
+  from public.booking_requests r
+  where r.room_unit_id is not null;
+$$;
+
+revoke all on function public.create_guest_booking_if_capacity(
+  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text
+) from public;
+revoke all on function public.staff_update_channel_reservation(uuid, text, text, text, date, date, text, uuid) from public;
+revoke all on function public.staff_set_booking_room_unit(uuid, uuid) from public;
+revoke all on function public.staff_room_block_unit_map() from public;
+revoke all on function public.staff_booking_room_unit_map() from public;
+
+grant execute on function public.create_guest_booking_if_capacity(
+  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text
+) to service_role;
+grant execute on function public.staff_update_channel_reservation(uuid, text, text, text, date, date, text, uuid) to service_role;
+grant execute on function public.staff_set_booking_room_unit(uuid, uuid) to service_role;
+grant execute on function public.staff_room_block_unit_map() to service_role;
+grant execute on function public.staff_booking_room_unit_map() to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Grants + RLS
+-- ---------------------------------------------------------------------------
 
 -- Public clients may read room catalog fields, but not ical_export_token.
 grant select (
@@ -172,11 +738,33 @@ grant insert on public.booking_requests to anon, authenticated;
 grant all on public.booking_requests to service_role;
 grant all on public.booking_messages to service_role;
 grant all on public.room_blocks to service_role;
+grant all on public.room_units to service_role;
+grant all on public.room_unit_types to service_role;
+grant all on public.room_ical_feeds to service_role;
+grant all on public.room_day_inventory to service_role;
+grant all on public.room_day_rates to service_role;
+grant all on public.staff_notification_emails to service_role;
+grant all on public.room_promotions to service_role;
+grant all on public.property_settings to service_role;
+grant select on public.property_gallery_photos to anon, authenticated;
+grant all on public.property_gallery_photos to service_role;
+grant select on public.tours to anon, authenticated;
+grant all on public.tours to service_role;
 
 alter table public.rooms enable row level security;
 alter table public.booking_requests enable row level security;
 alter table public.booking_messages enable row level security;
 alter table public.room_blocks enable row level security;
+alter table public.room_units enable row level security;
+alter table public.room_unit_types enable row level security;
+alter table public.room_ical_feeds enable row level security;
+alter table public.room_day_inventory enable row level security;
+alter table public.room_day_rates enable row level security;
+alter table public.staff_notification_emails enable row level security;
+alter table public.room_promotions enable row level security;
+alter table public.property_settings enable row level security;
+alter table public.property_gallery_photos enable row level security;
+alter table public.tours enable row level security;
 
 drop policy if exists "Anyone can view room availability" on public.rooms;
 create policy "Anyone can view room availability"
@@ -232,18 +820,45 @@ to service_role
 using (true)
 with check (true);
 
-create table if not exists public.staff_notification_emails (
-  id uuid primary key default gen_random_uuid(),
-  email text not null unique,
-  label text,
-  calendar_access text not null default 'read_write'
-    check (calendar_access in ('read', 'read_write')),
-  created_at timestamptz not null default now(),
-  constraint staff_notification_emails_email_format
-    check (email ~* '^[^@]+@[^@]+\.[^@]+$')
-);
+drop policy if exists "Service role can manage room units" on public.room_units;
+create policy "Service role can manage room units"
+on public.room_units
+for all
+to service_role
+using (true)
+with check (true);
 
-alter table public.staff_notification_emails enable row level security;
+drop policy if exists "Service role can manage room unit types" on public.room_unit_types;
+create policy "Service role can manage room unit types"
+on public.room_unit_types
+for all
+to service_role
+using (true)
+with check (true);
+
+drop policy if exists "Service role can manage room ical feeds" on public.room_ical_feeds;
+create policy "Service role can manage room ical feeds"
+on public.room_ical_feeds
+for all
+to service_role
+using (true)
+with check (true);
+
+drop policy if exists "Service role can manage room day inventory" on public.room_day_inventory;
+create policy "Service role can manage room day inventory"
+on public.room_day_inventory
+for all
+to service_role
+using (true)
+with check (true);
+
+drop policy if exists "Service role can manage room day rates" on public.room_day_rates;
+create policy "Service role can manage room day rates"
+on public.room_day_rates
+for all
+to service_role
+using (true)
+with check (true);
 
 drop policy if exists "Service role can manage staff notification emails" on public.staff_notification_emails;
 create policy "Service role can manage staff notification emails"
@@ -253,22 +868,6 @@ to service_role
 using (true)
 with check (true);
 
-create table if not exists public.room_promotions (
-  id uuid primary key default gen_random_uuid(),
-  room_id text not null references public.rooms(id) on delete cascade,
-  start_date date not null,
-  end_date date not null,
-  percent_off integer not null check (percent_off between 1 and 90),
-  label text,
-  created_at timestamptz not null default now(),
-  constraint room_promotions_date_range check (end_date >= start_date)
-);
-
-create index if not exists room_promotions_room_dates_idx
-  on public.room_promotions (room_id, start_date, end_date);
-
-alter table public.room_promotions enable row level security;
-
 drop policy if exists "Service role can manage room promotions" on public.room_promotions;
 create policy "Service role can manage room promotions"
 on public.room_promotions
@@ -276,46 +875,6 @@ for all
 to service_role
 using (true)
 with check (true);
-
-create table if not exists public.property_settings (
-  id text primary key default 'default',
-  property_name text not null default 'Kamala''s Boutique Guesthouse',
-  property_tagline text not null default 'Boutique Guesthouse',
-  contact_email text,
-  contact_phone text,
-  address_line text,
-  check_in_from text not null default '3:00 pm',
-  check_in_until text not null default '8:00 pm',
-  quiet_hours text not null default '10:00 pm',
-  currency text not null default 'thb' check (currency in ('thb', 'usd')),
-  allow_pay_on_arrival boolean not null default false,
-  house_rules text[] not null default array[
-    'Check-in is from 3 pm to 8 pm. Later arrivals are arranged by reply.',
-    'Breakfast is included for every confirmed booking request.',
-    'Quiet hours begin at 10 pm so early guests and families can rest.'
-  ],
-  cancellation_policy text not null default 'Cancel at least 7 days before arrival for a full deposit refund. Later cancellations are reviewed case by case.',
-  privacy_policy text not null default 'We use your contact details only to manage your booking and stay. We do not sell guest data.',
-  terms_summary text not null default 'A 50% deposit reserves your room. The remaining balance is due before check-in unless staff confirm another arrangement.',
-  line_url text,
-  whatsapp_url text,
-  promptpay_id text,
-  bank_name text,
-  account_name text,
-  account_number text,
-  calendar_color_available text not null default '#bbf7d0',
-  calendar_color_closed text not null default '#fecaca',
-  calendar_color_booking text not null default '#fef08a',
-  calendar_color_sold_out text not null default '#fdba74',
-  show_room_photos_on_gallery boolean not null default true,
-  updated_at timestamptz not null default now()
-);
-
-insert into public.property_settings (id)
-values ('default')
-on conflict (id) do nothing;
-
-alter table public.property_settings enable row level security;
 
 drop policy if exists "Service role can manage property settings" on public.property_settings;
 create policy "Service role can manage property settings"
@@ -325,26 +884,20 @@ to service_role
 using (true)
 with check (true);
 
-create table if not exists public.tours (
-  id uuid primary key default gen_random_uuid(),
-  title text not null check (length(trim(title)) > 0),
-  summary text not null check (length(trim(summary)) > 0),
-  duration_label text,
-  price_label text,
-  image_url text,
-  image_storage_path text,
-  gallery_urls text[] not null default '{}',
-  link_url text,
-  link_label text not null default 'Enquire',
-  sort_order integer not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+drop policy if exists "Anyone can view property gallery photos" on public.property_gallery_photos;
+create policy "Anyone can view property gallery photos"
+on public.property_gallery_photos
+for select
+to anon, authenticated
+using (true);
 
-create index if not exists tours_sort_order_idx
-  on public.tours (sort_order, created_at);
-
-alter table public.tours enable row level security;
+drop policy if exists "Service role can manage property gallery photos" on public.property_gallery_photos;
+create policy "Service role can manage property gallery photos"
+on public.property_gallery_photos
+for all
+to service_role
+using (true)
+with check (true);
 
 drop policy if exists "Anyone can view tours" on public.tours;
 create policy "Anyone can view tours"
@@ -361,43 +914,66 @@ to service_role
 using (true)
 with check (true);
 
-grant select on public.tours to anon, authenticated;
-grant all on public.tours to service_role;
+-- ---------------------------------------------------------------------------
+-- Storage buckets
+-- ---------------------------------------------------------------------------
 
-create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'room-photos',
+  'room-photos',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
-drop trigger if exists booking_requests_set_updated_at on public.booking_requests;
-create trigger booking_requests_set_updated_at
-before update on public.booking_requests
-for each row
-execute function public.set_updated_at();
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'property-gallery',
+  'property-gallery',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
--- Run once if upgrading from the old status-based rooms table:
--- See supabase/migrate-room-count.sql
--- Run once to add calendar management fields:
--- See supabase/migrate-stay-status.sql
--- Run once for physical room numbers + assignment:
--- See supabase/migrate-room-units.sql
--- See supabase/migrate-room-block-units.sql (OTA / channel stays)
--- Run once for bank transfer payment fields:
--- See supabase/migrate-bank-transfer-payment.sql
+drop policy if exists "Public read room photos" on storage.objects;
+create policy "Public read room photos"
+on storage.objects
+for select
+to public
+using (bucket_id = 'room-photos');
 
-drop trigger if exists rooms_set_updated_at on public.rooms;
-create trigger rooms_set_updated_at
-before update on public.rooms
-for each row
-execute function public.set_updated_at();
+drop policy if exists "Service role manages room photos" on storage.objects;
+create policy "Service role manages room photos"
+on storage.objects
+for all
+to service_role
+using (bucket_id = 'room-photos')
+with check (bucket_id = 'room-photos');
 
-drop trigger if exists tours_set_updated_at on public.tours;
-create trigger tours_set_updated_at
-before update on public.tours
-for each row
-execute function public.set_updated_at();
+drop policy if exists "Public read property gallery photos" on storage.objects;
+create policy "Public read property gallery photos"
+on storage.objects
+for select
+to public
+using (bucket_id = 'property-gallery');
+
+drop policy if exists "Service role manages property gallery photos" on storage.objects;
+create policy "Service role manages property gallery photos"
+on storage.objects
+for all
+to service_role
+using (bucket_id = 'property-gallery')
+with check (bucket_id = 'property-gallery');
+
+notify pgrst, 'reload schema';

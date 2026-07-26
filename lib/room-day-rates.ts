@@ -56,7 +56,7 @@ export async function getRoomDayRatesForMonth(month: { year: number; month: numb
       return {
         entries: [] as RoomDayRate[],
         source: "sample" as const,
-        error: "Could not load day rates. Run supabase/migrate-room-day-rates.sql.",
+        error: "Could not load day rates. Run supabase/schema.sql (includes room_day_rates).",
       };
     }
 

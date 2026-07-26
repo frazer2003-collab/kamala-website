@@ -183,14 +183,14 @@ export async function addStaffNotificationEmail(
 
     if (error.code === "42P01") {
       return {
-        error: "Run supabase/migrate-staff-emails.sql in Supabase before adding emails.",
+        error: "Run supabase/schema.sql in Supabase before adding emails.",
       };
     }
 
     if (error.message?.includes("calendar_access") || error.code === "42703") {
       return {
         error:
-          "Run supabase/migrate-staff-calendar-access.sql in Supabase before setting calendar permissions.",
+          "Run supabase/schema.sql in Supabase before setting calendar permissions.",
       };
     }
 
@@ -328,7 +328,7 @@ export async function addRoomPromotion(
   if (error) {
     if (error.code === "42P01") {
       return {
-        error: "Run supabase/migrate-room-promotions.sql in Supabase before adding discounts.",
+        error: "Run supabase/schema.sql in Supabase before adding discounts.",
       };
     }
 
@@ -338,7 +338,7 @@ export async function addRoomPromotion(
     ) {
       return {
         error:
-          "Run supabase/migrate-promotion-percent.sql in Supabase to switch promotions to percentage discounts.",
+          "Run supabase/schema.sql in Supabase to enable percentage discounts.",
       };
     }
 
@@ -423,7 +423,7 @@ export async function updatePropertySettings(
   if (error) {
     if (error.code === "42P01") {
       return {
-        error: "Run supabase/migrate-property-settings.sql in Supabase before saving property settings.",
+        error: "Run supabase/schema.sql in Supabase before saving property settings.",
       };
     }
 
@@ -905,7 +905,7 @@ export async function addTour(
 
   if (error) {
     if (error.code === "42P01") {
-      return { error: "Run supabase/migrate-tours.sql in Supabase before adding tours." };
+      return { error: "Run supabase/schema.sql in Supabase before adding tours." };
     }
 
     return { error: "Could not add this tour. Try again." };
@@ -982,7 +982,7 @@ export async function updateTour(
   if (error) {
     if (error.message?.includes("gallery_urls")) {
       return {
-        error: "Run supabase/migrate-tour-gallery.sql in Supabase before saving tour photos.",
+        error: "Run supabase/schema.sql in Supabase before saving tour photos.",
       };
     }
 
@@ -1117,13 +1117,13 @@ export async function addRoomIcalFeed(
   if (error || !data) {
     if (error?.code === "42P01") {
       return {
-        error: "Run supabase/migrate-room-ical.sql in Supabase before adding calendar feeds.",
+        error: "Run supabase/schema.sql in Supabase before adding calendar feeds.",
       };
     }
 
     if (error?.message?.includes("room_unit_id") || error?.code === "42703") {
       return {
-        error: "Run supabase/migrate-room-unit-ical.sql in Supabase for per-room Airbnb feeds.",
+        error: "Run supabase/schema.sql in Supabase for per-room Airbnb feeds.",
       };
     }
 

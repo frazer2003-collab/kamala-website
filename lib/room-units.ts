@@ -9,7 +9,7 @@ export type RoomUnit = {
   sortOrder: number;
   /** Room type ids that can use this physical unit. */
   roomIds: string[];
-  /** Per-listing Airbnb export token (null until migrate-room-unit-ical.sql). */
+  /** Per-listing Airbnb export token (null until schema room_units.ical_export_token). */
   icalExportToken: string | null;
 };
 
@@ -339,7 +339,7 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
         return {
           units: [],
           source: "sample",
-          error: "Run supabase/migrate-room-units.sql to enable room numbers.",
+          error: "Run supabase/schema.sql to enable room numbers.",
         };
       }
 
@@ -350,7 +350,7 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
       return {
         units: [],
         source: "sample",
-        error: "Run supabase/migrate-room-units.sql to enable room numbers.",
+        error: "Run supabase/schema.sql to enable room numbers.",
       };
     }
 
@@ -363,7 +363,7 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
     return {
       units: [],
       source: "sample",
-      error: "No room numbers found. Re-run supabase/migrate-room-units.sql to seed them.",
+      error: "No room numbers found. Re-run supabase/schema.sql to seed them.",
     };
   }
 
@@ -385,7 +385,7 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
     return {
       units,
       source: "supabase",
-      error: "Room-type links missing — using built-in door map. Re-run migrate-room-units.sql when you can.",
+      error: "Room-type links missing — using built-in door map. Re-run supabase/schema.sql when you can.",
     };
   }
 
