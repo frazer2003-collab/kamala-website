@@ -609,11 +609,27 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           <button
             aria-controls={`extranet-inventory-${room.id}`}
             aria-expanded={showInventory}
+            aria-label={
+              needsAssignment || hasOverbook
+                ? [
+                    showInventory ? "Hide room details" : "Room details",
+                    needsAssignment
+                      ? `${unassignedCount} stay${unassignedCount === 1 ? "" : "s"} need a room number`
+                      : null,
+                    hasOverbook
+                      ? `Overbooked on ${overbookedDays.length} night${overbookedDays.length === 1 ? "" : "s"}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(". ")
+                : undefined
+            }
             className={[
               "extranet-room__inventory-toggle",
               needsAssignment || hasOverbook
                 ? "extranet-room__inventory-toggle--attention"
                 : "",
+              hasOverbook ? "extranet-room__inventory-toggle--urgent" : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -650,37 +666,6 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           ) : null}
         </div>
       </div>
-
-      {hasOverbook || needsAssignment ? (
-        <div className="extranet-room__attention" role="status">
-          <p>
-            {hasOverbook ? (
-              <>
-                Overbooked on {overbookedDays.length} night
-                {overbookedDays.length === 1 ? "" : "s"}
-                {firstOverbookIso ? ` (from ${firstOverbookIso})` : ""}. More stays than rooms to
-                sell — open Room details, check status marks, and move or reassign stays.
-              </>
-            ) : null}
-            {hasOverbook && needsAssignment ? " " : null}
-            {needsAssignment ? (
-              <>
-                {unassignedCount} stay{unassignedCount === 1 ? "" : "s"} still need a room number.
-                Assign on the dashed bars.
-              </>
-            ) : null}
-          </p>
-          {!showInventory ? (
-            <button
-              className="button button--quiet"
-              onClick={() => setShowInventory(true)}
-              type="button"
-            >
-              Open room details
-            </button>
-          ) : null}
-        </div>
-      ) : null}
 
       {showInventory ? (
       <div
