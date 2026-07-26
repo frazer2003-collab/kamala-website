@@ -8,6 +8,11 @@ function CalendarLoadingFallback() {
       className="staff-calendar-skeleton"
     >
       <p>Loading calendar…</p>
+      <div aria-hidden="true" className="staff-calendar-skeleton__grid">
+        {Array.from({ length: 32 }, (_, index) => (
+          <div className="staff-calendar-skeleton__cell" key={index} />
+        ))}
+      </div>
     </div>
   );
 }

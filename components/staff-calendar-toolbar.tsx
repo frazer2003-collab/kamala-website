@@ -78,7 +78,11 @@ export function StaffCalendarToolbar({
           Jump to today
         </Link>
         {canSyncOta ? (
-          <form action={syncAllRoomIcalFeedsAction} className="staff-calendar-toolbar__sync">
+          <form
+            action={syncAllRoomIcalFeedsAction}
+            className="staff-calendar-toolbar__sync"
+            data-busy-message="Syncing channel calendars…"
+          >
             <StaffFormBusyBridge message="Syncing channel calendars…" />
             <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
             <StaffOtaSyncControls />
