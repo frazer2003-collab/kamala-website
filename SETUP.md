@@ -64,7 +64,8 @@ In the Supabase SQL editor, run these files in order (skip any already applied):
 17. `supabase/migrate-hide-ical-export-token.sql` (hide calendar export tokens from public API)
 18. `supabase/migrate-room-unit-ical.sql` (Airbnb per room-number export/import)
 19. `supabase/migrate-superior-four-units.sql` (Superior rooms: 113, 115, 118, 120 only)
-20. `supabase/migrate-deluxe-four-units.sql` (Deluxe doors 112/114/117/119; Airbnb 112→Triple, 114→Family)
+20. `supabase/migrate-deluxe-four-units.sql` (Deluxe doors 112/114/117/119; Airbnb 114→Family)
+21. `supabase/migrate-remove-triple-veranda.sql` (removes Triple; door 112 stays under Deluxe)
 22. `supabase/migrate-family-ground-116.sql` (Family Room Ground Floor + door 116)
 
 Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airbnb per door number, Booking.com and Expedia per room type. Airbnb feeds also refresh automatically every ~5 minutes when the GitHub Actions cron + `CRON_SECRET` are configured. You can still use **Sync OTA bookings** on the staff calendar anytime; Booking.com / Expedia stay manual unless you call `?channel=all`.

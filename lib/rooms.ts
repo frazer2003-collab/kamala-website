@@ -13,6 +13,13 @@ import {
 const PUBLIC_ROOM_COLUMNS =
   "id, name, short_name, rate, sleeps, outlook, available_count, summary, amenities, tone, image_url, gallery_urls, sort_order";
 
+/** Retired room type ids still present in older databases until migration runs. */
+const RETIRED_ROOM_IDS = new Set(["veranda"]);
+
+function withoutRetiredRooms(rooms: Room[]) {
+  return rooms.filter((room) => !RETIRED_ROOM_IDS.has(room.id));
+}
+
 /** Bundled covers when DB image_url / gallery are empty for known room ids. */
 const bundledRoomMediaById = new Map(
   fallbackRooms.map((room) => [
@@ -67,14 +74,14 @@ async function fetchPublicRooms() {
       return fallbackRooms;
     }
 
-    return data.map((row) => mapRoom(row as RoomRow));
+    return withoutRetiredRooms(data.map((row) => mapRoom(row as RoomRow)));
   } catch {
     return fallbackRooms;
   }
 }
 
 const getPublicRoomsCached = cache(
-  unstable_cache(fetchPublicRooms, ["public-rooms-v2"], {
+  unstable_cache(fetchPublicRooms, ["public-rooms-v3"], {
     revalidate: 120,
     tags: [PUBLIC_CACHE_TAGS.publicRooms],
   }),
@@ -101,13 +108,17 @@ export async function getStaffRooms() {
       return fallbackRooms;
     }
 
-    return data.map(mapRoom);
+    return withoutRetiredRooms(data.map(mapRoom));
   } catch {
     return fallbackRooms;
   }
 }
 
 export async function getRoomForBooking(roomId: string) {
+  if (RETIRED_ROOM_IDS.has(roomId)) {
+    return null;
+  }
+
   if (hasStaffSupabaseConfig()) {
     try {
       const supabase = createStaffSupabaseClient();

@@ -45,7 +45,7 @@ import {
   type StaffRoomBlock,
 } from "@/lib/room-blocks";
 import {
-  getUnitsForRoomType,
+  getTimelineUnitsForRoomType,
   type RoomUnit,
   type UnitOccupancy,
 } from "@/lib/room-units";
@@ -409,7 +409,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     [roomBlocks],
   );
   const typeUnits = useMemo(
-    () => getUnitsForRoomType(roomUnits, room.id),
+    () => getTimelineUnitsForRoomType(roomUnits, room.id),
     [roomUnits, room.id],
   );
   const roomShortNameById = useMemo(() => {
@@ -542,23 +542,66 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   const firstFutureDay = dayMetrics.find((day) => !day.isPast && day.inCurrentMonth)?.iso
     ?? dayMetrics.find((day) => !day.isPast)?.iso;
   const [showInventory, setShowInventory] = useState(false);
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
+  const [unitsOpenOverride, setUnitsOpenOverride] = useState<boolean | null>(null);
   const needsAssignment = unassignedCount > 0;
   const overbookedDays = dayMetrics.filter(
     (day) => day.inCurrentMonth && day.saleStatus === "overbooked",
   );
   const hasOverbook = overbookedDays.length > 0;
   const firstOverbookIso = overbookedDays[0]?.iso;
+  const prefersUnitsOpen =
+    !isNarrowViewport ||
+    needsAssignment ||
+    hasOverbook ||
+    selectedRoomId === room.id;
+  const unitsOpen = unitsOpenOverride ?? prefersUnitsOpen;
+  const unitsPanelId = `extranet-units-${room.id}`;
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 920px)");
+    const sync = () => {
+      setIsNarrowViewport(media.matches);
+      // Re-apply the mobile default when crossing the breakpoint.
+      setUnitsOpenOverride(null);
+    };
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   return (
-    <section aria-label={room.name} className="extranet-room">
+    <section
+      aria-label={room.name}
+      className={[
+        "extranet-room",
+        unitsOpen ? "extranet-room--units-open" : "extranet-room--units-collapsed",
+      ].join(" ")}
+    >
       <div
         className="extranet-room__header"
         style={{ ["--timeline-days" as string]: dayCount }}
       >
         <div className="extranet-room__title">
-          <h2>{room.shortName}</h2>
+          <button
+            aria-controls={unitsPanelId}
+            aria-expanded={unitsOpen}
+            className="extranet-room__units-toggle"
+            onClick={() => setUnitsOpenOverride(!unitsOpen)}
+            type="button"
+          >
+            <span className="extranet-room__units-toggle-name">{room.shortName}</span>
+            <span className="extranet-room__units-toggle-meta">
+              {typeUnits.length > 0
+                ? `${typeUnits.length} room${typeUnits.length === 1 ? "" : "s"}`
+                : "No room #s"}
+              <span className="extranet-room__units-toggle-hint">
+                {unitsOpen ? "Hide" : "Show"}
+              </span>
+            </span>
+          </button>
           <p>
-            <span className="extranet-room__fullname">{room.name}</span>
+            <span className="extranet-room__number">{room.name}</span>
             <span className="extranet-room__sleeps">{room.sleeps}</span>
           </p>
         </div>
@@ -937,35 +980,44 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       </div>
       ) : null}
 
-      {typeUnits.length > 0 ? (
-        <div
-          className="extranet-room__grid extranet-room__grid--units"
-          style={{ ["--timeline-days" as string]: dayCount }}
-        >
-          <div className="extranet-units-heading" style={{ gridColumn: "1 / -1" }}>
-            Room numbers
+      {unitsOpen ? (
+        typeUnits.length > 0 ? (
+          <div
+            className="extranet-room__grid extranet-room__grid--units"
+            id={unitsPanelId}
+            style={{ ["--timeline-days" as string]: dayCount }}
+          >
+            <div className="extranet-units-heading" style={{ gridColumn: "1 / -1" }}>
+              Room numbers
+            </div>
+            {typeUnits.map((unit) => (
+              <UnitReservationRow
+                bookings={bookings}
+                calendarDays={calendarDays}
+                channelReservations={allChannelReservations}
+                currentRoomId={room.id}
+                dayMetrics={dayMetrics}
+                guestColors={guestColors}
+                key={unit.id}
+                monthKey={monthKey}
+                fromIso={fromIso}
+                toIso={toIso}
+                roomShortNameById={roomShortNameById}
+                selectedBlockKey={selectedBlockKey}
+                selectedBookingKey={selectedBookingKey}
+                unit={unit}
+              />
+            ))}
           </div>
-          {typeUnits.map((unit) => (
-            <UnitReservationRow
-              bookings={bookings}
-              calendarDays={calendarDays}
-              channelReservations={allChannelReservations}
-              currentRoomId={room.id}
-              dayMetrics={dayMetrics}
-              guestColors={guestColors}
-              key={unit.id}
-              monthKey={monthKey}
-              fromIso={fromIso}
-              toIso={toIso}
-              roomShortNameById={roomShortNameById}
-              selectedBlockKey={selectedBlockKey}
-              selectedBookingKey={selectedBookingKey}
-              unit={unit}
-            />
-          ))}
-        </div>
+        ) : (
+          <p className="extranet-room__no-units" id={unitsPanelId}>
+            No room numbers set up for this type yet.
+          </p>
+        )
       ) : (
-        <p className="extranet-room__no-units">No room numbers set up for this type yet.</p>
+        <p className="extranet-room__units-collapsed" id={unitsPanelId}>
+          Room numbers hidden — tap {room.shortName} to align bookings with days.
+        </p>
       )}
     </section>
   );
