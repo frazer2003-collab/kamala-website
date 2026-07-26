@@ -66,7 +66,7 @@ export function StaffCalendarPreparePanel({
         booking: getStaffBookingKey(booking),
       }),
       guest: booking.guest,
-      roomLabel: roomName.get(booking.roomId) ?? booking.roomName,
+      roomLabel: roomName.get(booking.roomId) ?? booking.roomId,
       door: booking.roomNumber ? `Room ${booking.roomNumber}` : "No room # yet",
       arrival: booking.arrivalDate,
       nightsHint: `${formatDay(booking.arrivalDate)} → ${formatDay(booking.departureDate)}`,
