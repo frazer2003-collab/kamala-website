@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginStaff, type StaffLoginState } from "@/app/staff/auth-actions";
+import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 const initialState: StaffLoginState = {};
 
@@ -14,7 +15,12 @@ export function StaffLoginForm({ nextPath, configured }: StaffLoginFormProps) {
   const [state, formAction] = useActionState(loginStaff, initialState);
 
   return (
-    <form action={formAction} className="booking-form staff-login-form">
+    <form
+      action={formAction}
+      className="booking-form staff-login-form"
+      data-busy-message="Signing in…"
+    >
+      <StaffFormBusyBridge message="Signing in…" />
       <input name="next" type="hidden" value={nextPath} />
 
       {!configured ? (

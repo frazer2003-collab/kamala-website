@@ -4963,18 +4963,38 @@ textarea:focus {
 
 .staff-calendar-skeleton {
   display: grid;
-  place-items: center;
+  gap: var(--space-3);
+  align-content: start;
   min-height: 16rem;
-  padding: var(--space-8);
+  padding: var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface-muted);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--color-maroon-wash) 40%, var(--color-surface)) 0%,
+      var(--color-surface) 100%
+    );
   color: var(--color-muted);
 }
 
 .staff-calendar-skeleton p {
   margin: 0;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.staff-calendar-skeleton__grid {
+  display: grid;
+  grid-template-columns: 7rem repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  min-height: 8rem;
+}
+
+.staff-calendar-skeleton__cell {
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--color-border) 55%, var(--color-surface));
+  min-height: 1.6rem;
 }
 
 .booking-row {
@@ -6509,31 +6529,89 @@ textarea:focus {
   min-height: 2.75rem;
 }
 
+/* Immediate progress on every staff action/nav; cover waits ~500ms. */
+.staff-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  height: 3px;
+  pointer-events: none;
+  background: color-mix(in oklab, var(--color-maroon-wash) 70%, var(--color-border));
+  overflow: hidden;
+}
+
+.staff-progress__bar {
+  height: 100%;
+  width: 40%;
+  background: var(--color-maroon);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .staff-progress__bar {
+    animation: staff-progress-slide 1.1s var(--ease-out-quint) infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .staff-progress__bar {
+    width: 100%;
+    opacity: 0.85;
+  }
+}
+
+@keyframes staff-progress-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+
+html.staff-busy .staff-shell,
+html.staff-busy .staff-login-shell {
+  cursor: progress;
+}
+
+html.staff-busy .staff-shell a,
+html.staff-busy .staff-shell button,
+html.staff-busy .staff-shell input,
+html.staff-busy .staff-shell select,
+html.staff-busy .staff-shell textarea,
+html.staff-busy .staff-login-shell button,
+html.staff-busy .staff-login-shell input {
+  pointer-events: none;
+}
+
 .staff-busy-overlay {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 85;
   display: grid;
   place-items: center;
   place-content: center;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: color-mix(in oklab, var(--color-ink) 22%, transparent);
+  background: color-mix(in oklab, var(--color-canvas) 72%, oklch(22% 0.025 12 / 0.35));
   pointer-events: all;
 }
 
 .staff-busy-overlay__label {
   margin: 0;
-  color: var(--color-surface);
+  color: var(--color-ink);
   font-size: 0.95rem;
-  font-weight: 700;
-  text-shadow: 0 1px 2px color-mix(in oklab, var(--color-ink) 45%, transparent);
+  font-weight: 750;
+  text-align: center;
+  max-width: 22rem;
 }
 
 .staff-busy-overlay__spinner {
   width: 1.35rem;
   height: 1.35rem;
-  border: 2px solid color-mix(in oklab, var(--color-surface) 45%, transparent);
+  border: 2px solid color-mix(in oklab, var(--color-maroon) 25%, var(--color-border));
   border-top-color: var(--color-maroon);
   border-radius: 50%;
 }
@@ -6542,12 +6620,45 @@ textarea:focus {
   .staff-busy-overlay__spinner {
     animation: staff-busy-spin 0.7s linear infinite;
   }
+
+  .staff-busy-overlay {
+    animation: staff-busy-cover-in 180ms var(--ease-out-quint) both;
+  }
 }
 
 @keyframes staff-busy-spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes staff-busy-cover-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.staff-shell--loading .staff-nav--skeleton {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.staff-main--loading {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  padding: var(--space-6);
+}
+
+.staff-loading-copy {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 650;
 }
 
 .staff-calendar-toolbar__density {

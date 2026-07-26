@@ -16,7 +16,11 @@ function LogoutSubmit() {
 
 export function StaffLogoutForm() {
   return (
-    <form action={logoutStaff} className="staff-sidebar__logout">
+    <form
+      action={logoutStaff}
+      className="staff-sidebar__logout"
+      data-busy-message="Signing out…"
+    >
       <StaffFormBusyBridge message="Signing out…" />
       <LogoutSubmit />
     </form>

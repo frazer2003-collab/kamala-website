@@ -12,10 +12,13 @@ import {
   type ReactNode,
 } from "react";
 import { useFormStatus } from "react-dom";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatCalendarMonthLabel, parseCalendarMonth } from "@/lib/calendar";
 
 const DEFAULT_BUSY_MESSAGE = "Working…";
+/** Calm full-screen cover only after a real wait — bar shows immediately. */
+const COVER_AFTER_MS = 500;
+const NAV_SAFETY_MS = 12_000;
 
 type StaffBusyContextValue = {
   busy: boolean;
@@ -128,6 +131,13 @@ export function StaffBusyProvider({ children }: { children: ReactNode }) {
     [count, endBusy, message, startBusy, withBusy],
   );
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("staff-busy", count > 0);
+    return () => {
+      document.documentElement.classList.remove("staff-busy");
+    };
+  }, [count]);
+
   return (
     <StaffBusyContext.Provider value={value}>{children}</StaffBusyContext.Provider>
   );
@@ -135,21 +145,47 @@ export function StaffBusyProvider({ children }: { children: ReactNode }) {
 
 export function StaffBusyOverlay() {
   const { busy, message } = useStaffBusy();
+  const [showCover, setShowCover] = useState(false);
+
+  useEffect(() => {
+    if (!busy) {
+      setShowCover(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setShowCover(true);
+    }, COVER_AFTER_MS);
+    return () => window.clearTimeout(timer);
+  }, [busy]);
 
   if (!busy) {
     return null;
   }
 
   return (
-    <div
-      aria-busy="true"
-      aria-live="polite"
-      className="staff-busy-overlay"
-      role="status"
-    >
-      <span aria-hidden="true" className="staff-busy-overlay__spinner" />
-      <p className="staff-busy-overlay__label">{message}</p>
-    </div>
+    <>
+      <div
+        aria-hidden="true"
+        className="staff-progress"
+        data-cover={showCover ? "true" : "false"}
+      >
+        <div className="staff-progress__bar" />
+      </div>
+      <span className="sr-only" aria-live="polite" role="status">
+        {message}
+      </span>
+      {showCover ? (
+        <div
+          aria-busy="true"
+          aria-live="polite"
+          className="staff-busy-overlay"
+          role="status"
+        >
+          <span aria-hidden="true" className="staff-busy-overlay__spinner" />
+          <p className="staff-busy-overlay__label">{message}</p>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -191,7 +227,7 @@ function isStaffPageNavigation(anchor: HTMLAnchorElement) {
   return true;
 }
 
-/** Soft veil while Next.js navigates between staff pages / query changes. */
+/** Soft progress while Next.js navigates between staff pages / query changes. */
 function StaffNavBusyListener() {
   const { startBusy, endBusy } = useStaffBusy();
   const pathname = usePathname();
@@ -224,7 +260,7 @@ function StaffNavBusyListener() {
       }
       safetyTimerRef.current = setTimeout(() => {
         clearNavBusy();
-      }, 12_000);
+      }, NAV_SAFETY_MS);
     },
     [clearNavBusy, startBusy],
   );
@@ -274,7 +310,87 @@ function StaffNavBusyListener() {
   return null;
 }
 
-/** Mount inside any staff `<form action={…}>` to drive the global veil. */
+/**
+ * Instant progress on every staff form submit. Cleared on navigation or
+ * when a FormBusyBridge sees pending finish (via endBusy).
+ */
+function StaffFormSubmitListener() {
+  const { startBusy, endBusy } = useStaffBusy();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const holdingRef = useRef(false);
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const release = useCallback(() => {
+    if (!holdingRef.current) {
+      return;
+    }
+    holdingRef.current = false;
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
+    endBusy();
+  }, [endBusy]);
+
+  useEffect(() => {
+    release();
+  }, [pathname, search, release]);
+
+  useEffect(() => {
+    function onSubmit(event: Event) {
+      if (event.defaultPrevented) {
+        return;
+      }
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) {
+        return;
+      }
+      if (!form.closest(".staff-shell, .staff-login-shell")) {
+        return;
+      }
+      if (holdingRef.current) {
+        return;
+      }
+      holdingRef.current = true;
+      const custom = form.dataset.busyMessage?.trim();
+      startBusy(custom || "Saving…");
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
+      }
+      safetyTimerRef.current = setTimeout(() => {
+        release();
+      }, NAV_SAFETY_MS);
+    }
+
+    function onFormSettled() {
+      release();
+    }
+
+    document.addEventListener("submit", onSubmit, true);
+    document.addEventListener("staff-form-settled", onFormSettled);
+    return () => {
+      document.removeEventListener("submit", onSubmit, true);
+      document.removeEventListener("staff-form-settled", onFormSettled);
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
+      }
+      if (holdingRef.current) {
+        holdingRef.current = false;
+        endBusy();
+      }
+    };
+  }, [endBusy, release, startBusy]);
+
+  return null;
+}
+
+/**
+ * Mount inside staff `<form action={…}>`.
+ * Does not start a second busy hold (submit listener owns that).
+ * When pending clears without a navigation, notifies the submit listener.
+ */
 export function StaffFormBusyBridge({
   message = "Saving…",
 }: {
@@ -283,6 +399,7 @@ export function StaffFormBusyBridge({
   const { pending } = useFormStatus();
   const busy = useOptionalStaffBusy();
   const wasPending = useRef(false);
+  const startedLocally = useRef(false);
 
   useEffect(() => {
     if (!busy) {
@@ -290,19 +407,27 @@ export function StaffFormBusyBridge({
     }
 
     if (pending && !wasPending.current) {
-      busy.startBusy(message);
       wasPending.current = true;
+      if (!document.documentElement.classList.contains("staff-busy")) {
+        busy.startBusy(message);
+        startedLocally.current = true;
+      }
     } else if (!pending && wasPending.current) {
-      busy.endBusy();
       wasPending.current = false;
+      if (startedLocally.current) {
+        busy.endBusy();
+        startedLocally.current = false;
+      } else {
+        document.dispatchEvent(new Event("staff-form-settled"));
+      }
     }
   }, [busy, message, pending]);
 
   useEffect(() => {
     return () => {
-      if (wasPending.current && busy) {
+      if (startedLocally.current && busy) {
         busy.endBusy();
-        wasPending.current = false;
+        startedLocally.current = false;
       }
     };
   }, [busy]);
@@ -310,7 +435,7 @@ export function StaffFormBusyBridge({
   return null;
 }
 
-/** Drive the veil from `useActionState` pending or local upload flags. */
+/** Drive progress from `useActionState` pending or local upload flags. */
 export function StaffBusyEffect({
   active,
   message = "Working…",
@@ -347,12 +472,38 @@ export function StaffBusyEffect({
   return null;
 }
 
+/** Warm common staff routes so page switches feel immediate. */
+function StaffRoutePrefetch() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const routes = [
+      "/staff",
+      "/staff/calendar",
+      "/staff/promotions",
+      "/staff/gallery",
+      "/staff/settings",
+    ];
+    for (const href of routes) {
+      try {
+        router.prefetch(href);
+      } catch {
+        // Prefetch is best-effort.
+      }
+    }
+  }, [router]);
+
+  return null;
+}
+
 export function StaffBusyRoot({ children }: { children: ReactNode }) {
   return (
     <StaffBusyProvider>
       {children}
       <Suspense fallback={null}>
         <StaffNavBusyListener />
+        <StaffFormSubmitListener />
+        <StaffRoutePrefetch />
       </Suspense>
       <StaffBusyOverlay />
     </StaffBusyProvider>
