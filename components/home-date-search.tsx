@@ -64,7 +64,7 @@ function SearchDateSegment({
   );
 }
 
-/** Client date form only — hero H1/lede are server-rendered in HomeHeroIntro. */
+/** Client date form only — hero H1/lede are server-rendered above/below this form. */
 export function HomeDateSearch({
   arrival,
   departure,
