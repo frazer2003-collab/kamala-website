@@ -5,6 +5,7 @@ import { CalendarBookingDialog, StaffTimelineCalendar } from "@/components/staff
 import { CalendarDateStrip } from "@/components/calendar-date-strip";
 import { CalendarStayDialogs } from "@/components/calendar-stay-dialogs";
 import { CalendarStaySelectionProvider } from "@/components/calendar-stay-selection";
+import { StaffCalendarScrollPage } from "@/components/staff-calendar-scroll-page";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
 import { StaffShell } from "@/components/staff-shell";
 import {
@@ -577,6 +578,7 @@ export default async function StaffCalendarPage({
           toIso={toIso}
         >
           <div className="calendar-board calendar-board--timeline">
+            <StaffCalendarScrollPage />
             <StaffCalendarToolbar
               calendarColors={settings.calendarColors}
               canSyncOta={canManage}
