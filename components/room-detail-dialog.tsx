@@ -316,15 +316,25 @@ export function RoomDetailDialog({
             <>
               {priceSummary}
               <div className="room-detail-dialog__actions">
-                <BookRoomLink
-                  arrival={stayDates?.arrival}
-                  className="button button--primary"
-                  departure={stayDates?.departure}
-                  onNavigate={requestClose}
-                  roomId={room.id}
-                >
-                  Reserve
-                </BookRoomLink>
+                {stayDates?.arrival && stayDates?.departure ? (
+                  <BookRoomLink
+                    arrival={stayDates.arrival}
+                    className="button button--primary"
+                    departure={stayDates.departure}
+                    onNavigate={requestClose}
+                    roomId={room.id}
+                  >
+                    Reserve
+                  </BookRoomLink>
+                ) : (
+                  <a
+                    className="button button--primary"
+                    href="#dates"
+                    onClick={() => handleRecoveryNavigate("#dates")}
+                  >
+                    Choose dates
+                  </a>
+                )}
               </div>
             </>
           ) : (

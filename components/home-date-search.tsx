@@ -127,10 +127,14 @@ export function HomeDateSearch({
   }
 
   return (
-    <>
+    <div className="hero-atmosphere__search">
+      <p className="hero-atmosphere__host-ask" id={`${formId}-host-ask`}>
+        When do you arrive?
+      </p>
       <form
+        aria-describedby={`${formId}-host-ask`}
         aria-label="Check availability for your stay"
-        className="search-bar search-bar--atmosphere hero-atmosphere__search"
+        className="search-bar search-bar--atmosphere search-bar--host"
         onSubmit={handleSubmit}
       >
         <div className="search-bar__fields">
@@ -153,7 +157,7 @@ export function HomeDateSearch({
           />
         </div>
         <button className="search-bar__submit button button--primary" type="submit">
-          <span className="search-bar__submit-label">See available rooms</span>
+          <span className="search-bar__submit-label">See rooms for these dates</span>
         </button>
       </form>
 
@@ -163,6 +167,6 @@ export function HomeDateSearch({
           {MAX_STAY_NIGHTS} nights, starting from today.
         </p>
       ) : null}
-    </>
+    </div>
   );
 }

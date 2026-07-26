@@ -8,7 +8,10 @@ export const THA_PHAE_GATE_GEO = {
 /** Primary SERP title target (keep 30–60 chars). */
 export const THA_PHAE_PRIMARY_TITLE = "Chiang Mai Guesthouses Near Tha Pae Gate";
 
-/** On-page H1 — matches the common search phrasing, including Tha Pae spelling. */
+/**
+ * Legacy keyword headline — kept for SEO scoring helpers and docs.
+ * Visible H1 is property-led; this phrase belongs in lede / body / meta.
+ */
 export const THA_PHAE_PRIMARY_HEADLINE = "Chiang Mai guesthouses near Tha Pae Gate";
 
 export const THA_PHAE_ROOMS_HEADING = "Rooms near Tha Pae Gate";
@@ -76,7 +79,7 @@ export function buildThaPhaeMetaDescription(propertyName: string): string {
 }
 
 export function buildThaPhaeHeroLede(): string {
-  return "Looking for Chiang Mai guesthouses near Tha Pae Gate? We are a friendly, cozy stay on Tha Phae Road Soi 6 — just across from the Sunday Walking Street, with Tha Pae Gate (also spelled Tha Phae / Thapae) a two-minute walk away.";
+  return "One of the Chiang Mai guesthouses near Tha Pae Gate — a cozy stay on Tha Phae Road Soi 6, just across from the Sunday Walking Street, with Tha Pae Gate (also spelled Tha Phae / Thapae) a two-minute walk away. Pick your dates and pay to hold your room.";
 }
 
 export function buildThaPhaeStayStoryLede(propertyName: string): string {

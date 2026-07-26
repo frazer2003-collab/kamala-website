@@ -46,7 +46,7 @@ describe("Tha Pae Gate SEO copy", () => {
     assert.match(description, /Tha Phae/i);
   });
 
-  it("uses keyword-aligned H1 and hospitable body copy with spelling variants", () => {
+  it("uses a brand-led H1 with Tha Pae keyword intent in the lede", () => {
     const h1 = buildAtmosphereHeadline(
       "Chiang Mai",
       thaPhaeSettings.propertyName,
@@ -58,16 +58,26 @@ describe("Tha Pae Gate SEO copy", () => {
       thaPhaeSettings.addressLine,
     );
 
-    assert.equal(h1, THA_PHAE_PRIMARY_HEADLINE);
+    assert.equal(h1, thaPhaeSettings.propertyName);
     assert.match(lede, /Chiang Mai guesthouses near Tha Pae Gate/i);
     assert.match(lede, /Tha Phae|Thapae/i);
+    assert.match(lede, /pay to hold/i);
   });
 
   it("scores highly against the target Chiang Mai / Tha Pae query", () => {
     const title = buildHomePageTitle(thaPhaeSettings);
     const description = buildHomePageDescription(thaPhaeSettings);
-    const h1 = THA_PHAE_PRIMARY_HEADLINE;
+    const h1 = buildAtmosphereHeadline(
+      "Chiang Mai",
+      thaPhaeSettings.propertyName,
+      thaPhaeSettings.addressLine,
+    );
     const body = [
+      buildAtmosphereLede(
+        "Chiang Mai",
+        thaPhaeSettings.propertyTagline,
+        thaPhaeSettings.addressLine,
+      ),
       buildThaPhaeHeroLede(),
       buildThaPhaeStayStoryLede(thaPhaeSettings.propertyName),
     ].join(" ");
@@ -87,6 +97,7 @@ describe("Tha Pae Gate SEO copy", () => {
 
     assert.ok(result.score >= 90, `expected score >= 90, got ${result.score} (${result.grade})`);
     assert.equal(result.grade, "A");
+    assert.notEqual(h1, THA_PHAE_PRIMARY_HEADLINE);
   });
 
   it("parses a real street address for LodgingBusiness schema", () => {

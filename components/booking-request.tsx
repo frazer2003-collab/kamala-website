@@ -213,6 +213,9 @@ export function BookingRequest({
     cardTotalDue: number;
   } | null>(null);
   const [isCancelingPayment, startCancelPayment] = useTransition();
+  const [editingStay, setEditingStay] = useState(
+    () => !hasValidStayDates(initialArrival ?? "", initialDeparture ?? ""),
+  );
 
   useEffect(() => {
     if (state.status === "payment_ready" && state.payment) {
@@ -466,83 +469,31 @@ export function BookingRequest({
       ) : null}
       <form className="booking-form" action={formAction}>
         <fieldset className="booking-form__fields" disabled={Boolean(paymentStep)}>
-        <div className="field-pair">
-          <label htmlFor="guest-name">{t(locale, "guestName")}</label>
-          <input
-            id="guest-name"
-            name="guest-name"
-            type="text"
-            autoComplete="name"
-            value={fields.guestName}
-            onChange={(event) =>
-              setFields((current) => ({ ...current, guestName: event.target.value }))
-            }
-            aria-describedby={
-              state.fieldErrors?.["guest-name"] ? "guest-name-error" : undefined
-            }
-            aria-invalid={Boolean(state.fieldErrors?.["guest-name"]) || undefined}
-            required
-          />
-          {state.fieldErrors?.["guest-name"] ? (
-            <span className="field-error" id="guest-name-error">
-              {state.fieldErrors["guest-name"]}
-            </span>
-          ) : null}
-        </div>
-        <div className="field-pair">
-          <label htmlFor="guest-email">
-            {t(locale, "guestEmail")}{" "}
-            <span className="field-required">{t(locale, "required")}</span>
-          </label>
-          <input
-            id="guest-email"
-            name="guest-email"
-            type="email"
-            autoComplete="email"
-            value={fields.guestEmail}
-            onChange={(event) =>
-              setFields((current) => ({ ...current, guestEmail: event.target.value }))
-            }
-            aria-describedby={
-              state.fieldErrors?.["guest-email"] ? "guest-email-error" : undefined
-            }
-            aria-invalid={Boolean(state.fieldErrors?.["guest-email"]) || undefined}
-            required
-          />
-          {state.fieldErrors?.["guest-email"] ? (
-            <span className="field-error" id="guest-email-error">
-              {state.fieldErrors["guest-email"]}
-            </span>
-          ) : null}
-        </div>
-        <div className="field-pair">
-          <label htmlFor="guest-phone">
-            {t(locale, "guestPhone")}{" "}
-            <span className="field-required">{t(locale, "required")}</span>
-          </label>
-          <input
-            id="guest-phone"
-            name="guest-phone"
-            type="tel"
-            autoComplete="tel"
-            inputMode="tel"
-            value={fields.guestPhone}
-            onChange={(event) =>
-              setFields((current) => ({ ...current, guestPhone: event.target.value }))
-            }
-            aria-describedby={
-              state.fieldErrors?.["guest-phone"] ? "guest-phone-error" : undefined
-            }
-            aria-invalid={Boolean(state.fieldErrors?.["guest-phone"]) || undefined}
-            placeholder={t(locale, "phonePlaceholder")}
-            required
-          />
-          {state.fieldErrors?.["guest-phone"] ? (
-            <span className="field-error" id="guest-phone-error">
-              {state.fieldErrors["guest-phone"]}
-            </span>
-          ) : null}
-        </div>
+        {hasDates && !editingStay ? (
+          <div className="booking-stay-summary">
+            <div className="booking-stay-summary__copy">
+              <p className="booking-stay-summary__label">{t(locale, "stayLockedSummary")}</p>
+              <p className="booking-stay-summary__value">
+                {selectedRoom.shortName || selectedRoom.name}
+                {" · "}
+                {formatStayDate(fields.arrival, locale)} –{" "}
+                {formatStayDate(fields.departure, locale)}
+                {nights > 0 ? ` · ${nights} ${t(locale, "nights").toLowerCase()}` : null}
+              </p>
+            </div>
+            <button
+              className="button button--quiet booking-stay-summary__edit"
+              onClick={() => setEditingStay(true)}
+              type="button"
+            >
+              {t(locale, "editStay")}
+            </button>
+            <input name="arrival" type="hidden" value={fields.arrival} />
+            <input name="departure" type="hidden" value={fields.departure} />
+            <input name="room" type="hidden" value={fields.roomId} />
+          </div>
+        ) : (
+          <>
         <div className="field-pair">
           <label htmlFor="arrival">{t(locale, "arrival")}</label>
           <input
@@ -630,6 +581,96 @@ export function BookingRequest({
           ) : !roomOffersBedSetupChoice(fields.roomId) ? (
             <span className="field-help" id="bed-setup-fixed">
               {t(locale, "bedsFixedHelp")}
+            </span>
+          ) : null}
+        </div>
+        {hasDates ? (
+          <div className="field-pair field-pair--wide">
+            <button
+              className="button button--quiet"
+              onClick={() => setEditingStay(false)}
+              type="button"
+            >
+              {t(locale, "doneEditingStay")}
+            </button>
+          </div>
+        ) : null}
+          </>
+        )}
+        <div className="field-pair">
+          <label htmlFor="guest-name">{t(locale, "guestName")}</label>
+          <input
+            id="guest-name"
+            name="guest-name"
+            type="text"
+            autoComplete="name"
+            value={fields.guestName}
+            onChange={(event) =>
+              setFields((current) => ({ ...current, guestName: event.target.value }))
+            }
+            aria-describedby={
+              state.fieldErrors?.["guest-name"] ? "guest-name-error" : undefined
+            }
+            aria-invalid={Boolean(state.fieldErrors?.["guest-name"]) || undefined}
+            required
+          />
+          {state.fieldErrors?.["guest-name"] ? (
+            <span className="field-error" id="guest-name-error">
+              {state.fieldErrors["guest-name"]}
+            </span>
+          ) : null}
+        </div>
+        <div className="field-pair">
+          <label htmlFor="guest-email">
+            {t(locale, "guestEmail")}{" "}
+            <span className="field-required">{t(locale, "required")}</span>
+          </label>
+          <input
+            id="guest-email"
+            name="guest-email"
+            type="email"
+            autoComplete="email"
+            value={fields.guestEmail}
+            onChange={(event) =>
+              setFields((current) => ({ ...current, guestEmail: event.target.value }))
+            }
+            aria-describedby={
+              state.fieldErrors?.["guest-email"] ? "guest-email-error" : undefined
+            }
+            aria-invalid={Boolean(state.fieldErrors?.["guest-email"]) || undefined}
+            required
+          />
+          {state.fieldErrors?.["guest-email"] ? (
+            <span className="field-error" id="guest-email-error">
+              {state.fieldErrors["guest-email"]}
+            </span>
+          ) : null}
+        </div>
+        <div className="field-pair">
+          <label htmlFor="guest-phone">
+            {t(locale, "guestPhone")}{" "}
+            <span className="field-required">{t(locale, "required")}</span>
+          </label>
+          <input
+            id="guest-phone"
+            name="guest-phone"
+            type="tel"
+            autoComplete="tel"
+            inputMode="tel"
+            value={fields.guestPhone}
+            onChange={(event) =>
+              setFields((current) => ({ ...current, guestPhone: event.target.value }))
+            }
+            aria-describedby={
+              state.fieldErrors?.["guest-phone"] ? "guest-phone-error" : undefined
+            }
+            aria-invalid={Boolean(state.fieldErrors?.["guest-phone"]) || undefined}
+            placeholder={t(locale, "phonePlaceholder")}
+            required
+          />
+          {state.fieldErrors?.["guest-phone"] ? (
+            <span className="field-error" id="guest-phone-error">
+              {state.fieldErrors["guest-phone"]}
             </span>
           ) : null}
         </div>

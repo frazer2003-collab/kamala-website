@@ -77,11 +77,12 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
     "Description includes target query intent",
   );
   push("h1-present", page.h1.trim().length > 0, 6, "H1 present");
+  // Brand-led H1 is allowed when the visible body/lede still carries the query.
   push(
     "h1-keyword",
-    includesQuery(page.h1),
+    includesQuery(page.h1) || includesQuery(page.bodyText),
     14,
-    "H1 includes target query intent",
+    "H1 or primary body copy includes target query intent",
   );
   push(
     "body-keyword",

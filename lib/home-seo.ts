@@ -74,10 +74,10 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `Book a room at ${propertyName} in Chiang Mai Old City. Family-run guesthouse with garden rooms and included breakfast — request dates on this site and we reply to confirm.`;
+    return `Book a room at ${propertyName} in Chiang Mai Old City. Family-run guesthouse with garden rooms and included breakfast — pick dates and pay to hold your room.`;
   }
 
-  return `Book a room at ${propertyName} in ${locationLabel}. Garden rooms, breakfast included — request dates on this site and staff confirm every stay.`;
+  return `Book a room at ${propertyName} in ${locationLabel}. Garden rooms, breakfast included — pick dates and pay to hold your room.`;
 }
 
 function buildOpenGraphImageAlt(settings: PropertySettings): string {

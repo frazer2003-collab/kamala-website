@@ -14,6 +14,7 @@ type HomeHeroIntroProps = {
 /**
  * Server-rendered hero copy so the H1 is in the initial HTML for SEO crawlers
  * (not gated behind the client Suspense boundary used by the date search).
+ * Brand is the H1; Tha Pae / location SEO lives in the lede and lower page.
  */
 export function HomeHeroIntro({
   propertyName,
@@ -29,8 +30,12 @@ export function HomeHeroIntro({
 
   return (
     <div className="hero-atmosphere__copy">
-      <p className="hero-atmosphere__brand">
-        {mapsUrl ? (
+      <h1 id="home-hero-title">{headline}</h1>
+
+      <p className="hero-atmosphere__lede">{lede}</p>
+
+      {mapsUrl ? (
+        <p className="hero-atmosphere__brand">
           <a
             className="hero-atmosphere__maps"
             href={mapsUrl}
@@ -53,14 +58,10 @@ export function HomeHeroIntro({
                 : ""}
             </span>
           </a>
-        ) : (
-          locationLabel
-        )}
-      </p>
-
-      <h1 id="home-hero-title">{headline}</h1>
-
-      <p className="hero-atmosphere__lede">{lede}</p>
+        </p>
+      ) : locationLabel.toLowerCase() !== propertyName.toLowerCase() ? (
+        <p className="hero-atmosphere__brand">{locationLabel}</p>
+      ) : null}
     </div>
   );
 }

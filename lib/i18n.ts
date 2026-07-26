@@ -8,13 +8,16 @@ export function isLocale(value: string | undefined): value is Locale {
 
 const messages = {
   en: {
-    requestStay: "Request a stay",
-    requestStayTitle: "Request your stay",
+    requestStay: "Hold your stay",
+    requestStayTitle: "Hold your stay",
     completeReservation: "Complete your reservation",
     bookingIntro:
-      "Pay the full stay to reserve your room. Staff confirm every booking and email arrival details.",
+      "Pay the full stay to hold your room. Staff confirm every booking and email arrival details.",
     bookingIntroPayment:
       "Review your stay, then pay below. This covers the full stay — nothing more is due later. Staff confirm every booking and email arrival details.",
+    editStay: "Edit stay",
+    doneEditingStay: "Done",
+    stayLockedSummary: "Your stay",
     guestName: "Your name",
     guestEmail: "Email",
     guestPhone: "Phone",
@@ -126,13 +129,16 @@ const messages = {
     returnToBooking: "Return to booking form",
   },
   th: {
-    requestStay: "ขอจองที่พัก",
-    requestStayTitle: "ขอจองที่พักของคุณ",
+    requestStay: "จองที่พักของคุณ",
+    requestStayTitle: "จองที่พักของคุณ",
     completeReservation: "ชำระเงินเพื่อยืนยันการจอง",
     bookingIntro:
-      "ชำระค่าที่พักเต็มจำนวนเพื่อจองห้อง เจ้าหน้าที่จะยืนยันทุกการจองและส่งรายละเอียดการเข้าพักทางอีเมล",
+      "ชำระค่าที่พักเต็มจำนวนเพื่อถือห้อง เจ้าหน้าที่จะยืนยันทุกการจองและส่งรายละเอียดการเข้าพักทางอีเมล",
     bookingIntroPayment:
       "ตรวจสอบรายละเอียดที่พักแล้วชำระด้านล่าง ยอดนี้ครอบคลุมค่าที่พักทั้งหมด — ไม่มียอดค้างชำระภายหลัง เจ้าหน้าที่จะยืนยันทุกการจองและส่งรายละเอียดการเข้าพักทางอีเมล",
+    editStay: "แก้ไขที่พัก",
+    doneEditingStay: "เสร็จแล้ว",
+    stayLockedSummary: "ที่พักของคุณ",
     guestName: "ชื่อของคุณ",
     guestEmail: "อีเมล",
     guestPhone: "โทรศัพท์",

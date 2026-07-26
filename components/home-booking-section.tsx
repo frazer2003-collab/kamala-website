@@ -131,8 +131,9 @@ export function HomeBookingSection({
       >
         <h2 id="booking-prompt-title">{buildBookingSectionHeading(addressLine)}</h2>
         <p>
-          Set your dates above, choose a room, then select <strong>Reserve</strong>. The
-          booking form opens here — we reply within a day to confirm your stay.
+          Set your dates above, choose a room, then select <strong>Reserve</strong>. Pay
+          in full here to hold your room — we email arrival details once your stay is
+          confirmed.
         </p>
         <p className="booking-panel__payment-note">{paymentNote}</p>
       </section>

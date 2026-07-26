@@ -1,7 +1,6 @@
 import {
   THA_PHAE_ABOUT_HEADING,
   THA_PHAE_BOOKING_HEADING,
-  THA_PHAE_PRIMARY_HEADLINE,
   THA_PHAE_ROOMS_HEADING,
   buildThaPhaeHeroLede,
   buildThaPhaeStayStoryLede,
@@ -105,26 +104,11 @@ export function buildBookingSectionHeading(addressLine: string | null): string {
 export function buildAtmosphereHeadline(
   locationLabel: string,
   propertyName: string,
-  addressLine: string | null = null,
+  _addressLine: string | null = null,
 ): string {
-  const place =
-    locationLabel.toLowerCase() === propertyName.toLowerCase()
-      ? propertyName
-      : locationLabel;
-
-  if (isCoastalLocation(locationLabel)) {
-    return `Sleep under the palms in ${place}.`;
-  }
-
-  if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return THA_PHAE_PRIMARY_HEADLINE;
-  }
-
-  if (isChiangMaiLocation(locationLabel)) {
-    return `Slow mornings in ${place}.`;
-  }
-
-  return `A calm stay in ${place}.`;
+  // Brand-led H1 — property name is the hero signal. Location/SEO live in lede + meta.
+  void locationLabel;
+  return propertyName.trim() || "Welcome";
 }
 
 function isPropertyTypeTagline(tagline: string): boolean {
@@ -143,7 +127,7 @@ export function buildAtmosphereLede(
     tagline && isPropertyTypeTagline(tagline) ? tagline.toLowerCase() : "guesthouse";
 
   if (isCoastalLocation(locationLabel)) {
-    return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast, and an easy walk to the beach — book here and we reply to confirm.`;
+    return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast, and an easy walk to the beach — pick your dates and pay to hold your room.`;
   }
 
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
@@ -151,10 +135,10 @@ export function buildAtmosphereLede(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `A family-run ${typeLabel} in Chiang Mai Old City. Shaded garden rooms, included breakfast, and a short walk to temples and markets — book here and we reply to confirm.`;
+    return `A family-run ${typeLabel} in Chiang Mai Old City. Shaded garden rooms, included breakfast, and a short walk to temples and markets — pick your dates and pay to hold your room.`;
   }
 
-  return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast — book here and we reply to confirm.`;
+  return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast — pick your dates and pay to hold your room.`;
 }
 
 export function buildStayStoryHeading(
@@ -240,7 +224,7 @@ export function buildStayStoryCheckInDetails(
     ? checkInRule.trim().replace(/\.+$/, "")
     : `Check-in is from ${checkInFrom} to ${checkInUntil}`;
 
-  return `${checkInLine}. After you reserve a room, we reply by email to confirm your stay and send arrival details.`;
+  return `${checkInLine}. Pay in full to hold your room — we email arrival details once your stay is confirmed.`;
 }
 
 export function buildStayStoryAtmosphereLine(locationLabel: string): string {

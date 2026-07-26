@@ -113,7 +113,20 @@ function RoomListingCard({
 
   const priceBlock = (
     <div className="listing-card__price">
-      {price.hasPromotion ? (
+      {price.stayTotal != null ? (
+        <>
+          <strong className="listing-card__price-now">
+            {formatMoneySuffix(price.stayTotal, currency)}
+          </strong>
+          <span>for the stay</span>
+          {price.hasPromotion ? (
+            <span className="listing-card__price-off">{price.percentOff}% off</span>
+          ) : null}
+          <span className="listing-card__price-nightly">
+            {formatMoneySuffix(price.rate, currency)} / night
+          </span>
+        </>
+      ) : price.hasPromotion ? (
         <>
           <span className="listing-card__price-was">
             {formatMoneySuffix(price.baseRate, currency)}
@@ -122,28 +135,18 @@ function RoomListingCard({
             {formatMoneySuffix(price.rate, currency)}
           </strong>
           <span className="listing-card__price-off">{price.percentOff}% off</span>
+          <span>per night · set dates for stay total</span>
         </>
       ) : (
-        <strong>{formatMoneySuffix(price.rate, currency)}</strong>
+        <>
+          <strong>{formatMoneySuffix(price.rate, currency)}</strong>
+          <span>per night · set dates for stay total</span>
+        </>
       )}
-      <span>
-        {price.stayTotal != null
-          ? `${formatMoneySuffix(price.stayTotal, currency)} for the stay`
-          : "per night"}
-      </span>
     </div>
   );
 
-  const reserveControl = bookable ? (
-    <BookRoomLink
-      arrival={stayDates?.arrival}
-      className="button button--primary listing-card__reserve"
-      departure={stayDates?.departure}
-      roomId={room.id}
-    >
-      Reserve
-    </BookRoomLink>
-  ) : (
+  const reserveControl = !bookable ? (
     <button
       className="button button--secondary listing-card__reserve"
       onClick={() => onOpenDetails(room.id)}
@@ -151,6 +154,19 @@ function RoomListingCard({
     >
       View details
     </button>
+  ) : hasStayDates && stayDates ? (
+    <BookRoomLink
+      arrival={stayDates.arrival}
+      className="button button--primary listing-card__reserve"
+      departure={stayDates.departure}
+      roomId={room.id}
+    >
+      Reserve
+    </BookRoomLink>
+  ) : (
+    <a className="button button--primary listing-card__reserve" href="#dates">
+      Choose dates
+    </a>
   );
 
   if (variant === "standard") {
