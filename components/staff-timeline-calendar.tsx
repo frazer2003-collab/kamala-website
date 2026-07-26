@@ -229,7 +229,10 @@ function StatusDot({ status }: { status: DaySaleStatus }) {
       title={status === "overbooked" ? "Overbooked — needs attention" : label}
     >
       <span aria-hidden="true">{mark}</span>
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">
+        {label}
+        {status === "bookable" ? " to sell" : status === "sold-out" ? " — no rooms left" : ""}
+      </span>
     </span>
   );
 }
@@ -542,7 +545,6 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   const firstFutureDay = dayMetrics.find((day) => !day.isPast && day.inCurrentMonth)?.iso
     ?? dayMetrics.find((day) => !day.isPast)?.iso;
   const [showInventory, setShowInventory] = useState(false);
-  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const [unitsOpenOverride, setUnitsOpenOverride] = useState<boolean | null>(null);
   const needsAssignment = unassignedCount > 0;
   const overbookedDays = dayMetrics.filter(
@@ -550,25 +552,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   );
   const hasOverbook = overbookedDays.length > 0;
   const firstOverbookIso = overbookedDays[0]?.iso;
-  const prefersUnitsOpen =
-    !isNarrowViewport ||
-    needsAssignment ||
-    hasOverbook ||
-    selectedRoomId === room.id;
+  // Tape chart: door rows stay open; staff may still collapse a type.
+  const prefersUnitsOpen = true;
   const unitsOpen = unitsOpenOverride ?? prefersUnitsOpen;
   const unitsPanelId = `extranet-units-${room.id}`;
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 920px)");
-    const sync = () => {
-      setIsNarrowViewport(media.matches);
-      // Re-apply the mobile default when crossing the breakpoint.
-      setUnitsOpenOverride(null);
-    };
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
 
   return (
     <section
@@ -666,7 +653,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             {needsAssignment ? (
               <>
                 {unassignedCount} stay{unassignedCount === 1 ? "" : "s"} still need a room number.
-                Assign on the dashed bars.
+                Assign on the Needs room # tape above the door rows.
               </>
             ) : null}
           </p>
@@ -682,78 +669,12 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         </div>
       ) : null}
 
-      {showInventory ? (
-      <div
-        className="extranet-room__grid extranet-room__grid--inventory"
-        id={`extranet-inventory-${room.id}`}
-        style={{ ["--timeline-days" as string]: dayCount }}
-      >
-        <MetricRowLabel hint="Click a day to open, close, or mark sold out">
-          Room status
-        </MetricRowLabel>
-        {dayMetrics.map((day) => (
-          <DayCell
-            ariaLabel={`${room.name} status on ${day.iso}: ${getDaySaleStatusLabel(day.saleStatus)}`}
-            className={[
-              day.isPast ? "extranet-cell--past" : "",
-              day.isSelected ? "extranet-cell--selected" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            closedColumn={day.closedColumn}
-            columnIndex={day.columnIndex}
-            disabled={day.isPast}
-            href={day.statusHref}
-            key={`status-${day.iso}`}
-          >
-            <StatusDot status={day.saleStatus} />
-          </DayCell>
-        ))}
-
-        <MetricRowLabel hint="Click a day to set a temporary allotment">
-          Rooms left
-          <span className="extranet-row__meta">of {room.availableCount}</span>
-        </MetricRowLabel>
-        {dayMetrics.map((day) => (
-          <DayCell
-            ariaLabel={`${day.roomsLeft} of ${day.roomsToSell} rooms left on ${day.iso}${day.hasAllotmentOverride ? ", temporary allotment" : ""}`}
-            className={[
-              "extranet-cell--metric",
-              "extranet-cell--clickable",
-              day.hasAllotmentOverride ? "extranet-cell--allotment-override" : "",
-              day.isPast ? "extranet-cell--past" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            closedColumn={day.closedColumn}
-            columnIndex={day.columnIndex}
-            disabled={day.isPast}
-            href={day.allotmentHref}
-            key={`left-${day.iso}`}
-          >
-            <span className="extranet-metric">
-              {day.roomsLeft}
-              {day.hasAllotmentOverride ? (
-                <span
-                  aria-label="Temporary allotment"
-                  className="extranet-metric__override"
-                  title="Temporary allotment — differs from room default"
-                >
-                  *
-                </span>
-              ) : null}
-            </span>
-          </DayCell>
-        ))}
-
-        {unassignedCount > 0 ? (
-          <>
+      {unassignedCount > 0 ? (
+        <div
+          className="extranet-room__grid extranet-room__grid--need-room"
+          id={`need-room-${room.id}`}
+          style={{ ["--timeline-days" as string]: dayCount }}
+        >
             <MetricRowLabel hint="Assign a room number on the stay bar">
               Needs room #
               <span className="extranet-row__meta">{unassignedCount} waiting</span>
@@ -881,8 +802,119 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 );
               })}
             </div>
-          </>
-        ) : null}
+        </div>
+      ) : null}
+
+      {unitsOpen ? (
+        typeUnits.length > 0 ? (
+          <div
+            className="extranet-room__grid extranet-room__grid--units"
+            id={unitsPanelId}
+            style={{ ["--timeline-days" as string]: dayCount }}
+          >
+            <div className="extranet-units-heading" style={{ gridColumn: "1 / -1" }}>
+              Room numbers
+            </div>
+            {typeUnits.map((unit) => (
+              <UnitReservationRow
+                bookings={bookings}
+                calendarDays={calendarDays}
+                channelReservations={allChannelReservations}
+                currentRoomId={room.id}
+                dayMetrics={dayMetrics}
+                guestColors={guestColors}
+                key={unit.id}
+                monthKey={monthKey}
+                fromIso={fromIso}
+                toIso={toIso}
+                roomShortNameById={roomShortNameById}
+                selectedBlockKey={selectedBlockKey}
+                selectedBookingKey={selectedBookingKey}
+                unit={unit}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="extranet-room__no-units" id={unitsPanelId}>
+            No room numbers set up for this type yet.
+          </p>
+        )
+      ) : (
+        <p className="extranet-room__units-collapsed" id={unitsPanelId}>
+          Room numbers hidden — tap {room.shortName} to align bookings with days.
+        </p>
+      )}
+
+      {showInventory ? (
+      <div
+        className="extranet-room__grid extranet-room__grid--inventory"
+        id={`extranet-inventory-${room.id}`}
+        style={{ ["--timeline-days" as string]: dayCount }}
+      >
+        <MetricRowLabel hint="Click a day to open, close, or mark sold out">
+          Room status
+        </MetricRowLabel>
+        {dayMetrics.map((day) => (
+          <DayCell
+            ariaLabel={`${room.name} status on ${day.iso}: ${getDaySaleStatusLabel(day.saleStatus)}`}
+            className={[
+              day.isPast ? "extranet-cell--past" : "",
+              day.isSelected ? "extranet-cell--selected" : "",
+              !day.inCurrentMonth ? "extranet-cell--muted" : "",
+              day.isWeekend ? "extranet-cell--weekend" : "",
+              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            closedColumn={day.closedColumn}
+            columnIndex={day.columnIndex}
+            disabled={day.isPast}
+            href={day.statusHref}
+            key={`status-${day.iso}`}
+          >
+            <StatusDot status={day.saleStatus} />
+          </DayCell>
+        ))}
+
+        <MetricRowLabel hint="Click a day to set a temporary allotment">
+          Rooms left
+          <span className="extranet-row__meta">of {room.availableCount}</span>
+        </MetricRowLabel>
+        {dayMetrics.map((day) => (
+          <DayCell
+            ariaLabel={`${day.roomsLeft} of ${day.roomsToSell} rooms left on ${day.iso}${day.hasAllotmentOverride ? ", temporary allotment" : ""}`}
+            className={[
+              "extranet-cell--metric",
+              "extranet-cell--clickable",
+              day.hasAllotmentOverride ? "extranet-cell--allotment-override" : "",
+              day.isPast ? "extranet-cell--past" : "",
+              !day.inCurrentMonth ? "extranet-cell--muted" : "",
+              day.isWeekend ? "extranet-cell--weekend" : "",
+              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            closedColumn={day.closedColumn}
+            columnIndex={day.columnIndex}
+            disabled={day.isPast}
+            href={day.allotmentHref}
+            key={`left-${day.iso}`}
+          >
+            <span className="extranet-metric">
+              {day.roomsLeft}
+              {day.hasAllotmentOverride ? (
+                <span
+                  aria-label="Temporary allotment"
+                  className="extranet-metric__override"
+                  title="Temporary allotment — differs from room default"
+                >
+                  *
+                </span>
+              ) : null}
+            </span>
+          </DayCell>
+        ))}
+
 
         <MetricRowLabel className="extranet-row--inventory">Net booked</MetricRowLabel>
         {dayMetrics.map((day) => (
@@ -980,45 +1012,6 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       </div>
       ) : null}
 
-      {unitsOpen ? (
-        typeUnits.length > 0 ? (
-          <div
-            className="extranet-room__grid extranet-room__grid--units"
-            id={unitsPanelId}
-            style={{ ["--timeline-days" as string]: dayCount }}
-          >
-            <div className="extranet-units-heading" style={{ gridColumn: "1 / -1" }}>
-              Room numbers
-            </div>
-            {typeUnits.map((unit) => (
-              <UnitReservationRow
-                bookings={bookings}
-                calendarDays={calendarDays}
-                channelReservations={allChannelReservations}
-                currentRoomId={room.id}
-                dayMetrics={dayMetrics}
-                guestColors={guestColors}
-                key={unit.id}
-                monthKey={monthKey}
-                fromIso={fromIso}
-                toIso={toIso}
-                roomShortNameById={roomShortNameById}
-                selectedBlockKey={selectedBlockKey}
-                selectedBookingKey={selectedBookingKey}
-                unit={unit}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="extranet-room__no-units" id={unitsPanelId}>
-            No room numbers set up for this type yet.
-          </p>
-        )
-      ) : (
-        <p className="extranet-room__units-collapsed" id={unitsPanelId}>
-          Room numbers hidden — tap {room.shortName} to align bookings with days.
-        </p>
-      )}
     </section>
   );
 });

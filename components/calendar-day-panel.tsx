@@ -483,12 +483,18 @@ export function CalendarDayPanel({
           </div>
         </>
       ) : null}
-      <div className="calendar-day-panel__choices">
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
+      <div className="calendar-day-panel__choices calendar-day-panel__choices--primary">
+        <Link
+          className="calendar-day-choice calendar-day-choice--primary"
+          href={`${dayHref}&mode=walk-in`}
+        >
           <strong>Walk-in booking</strong>
           <span>Add a confirmed stay directly from the front desk.</span>
         </Link>
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=allotment`}>
+      </div>
+      <div className="calendar-day-panel__choices calendar-day-panel__choices--secondary">
+        <p className="calendar-day-panel__secondary-label">Inventory tools</p>
+        <Link className="calendar-day-choice calendar-day-choice--quiet" href={`${dayHref}&mode=allotment`}>
           <strong>Change allotment</strong>
           <span>
             Still for sale — limit how many rooms to sell tonight. Room settings
@@ -496,7 +502,7 @@ export function CalendarDayPanel({
             {hasAllotmentOverride ? ` · override is ${currentAllotment}` : ""}.
           </span>
         </Link>
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=rate`}>
+        <Link className="calendar-day-choice calendar-day-choice--quiet" href={`${dayHref}&mode=rate`}>
           <strong>Set temporary rate</strong>
           <span>
             Exact nightly price for selected nights (overrides default and promos).
@@ -504,7 +510,7 @@ export function CalendarDayPanel({
             {hasRateOverride ? ` · tonight is ${currentRate}` : ""}.
           </span>
         </Link>
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=block`}>
+        <Link className="calendar-day-choice calendar-day-choice--quiet" href={`${dayHref}&mode=block`}>
           <strong>Close dates</strong>
           <span>
             Not for sale — mark nights closed in the status row (not as a
@@ -516,7 +522,7 @@ export function CalendarDayPanel({
         Prefer <strong>Close</strong> when the room type should not sell.
         Prefer <strong>Allotment</strong> when it stays open but you need a
         temporary count. Prefer <strong>Rate</strong> for a one-off price.
-        Sold out means bookings already filled inventory.
+        Full means bookings already filled inventory.
       </p>
     </>
   );

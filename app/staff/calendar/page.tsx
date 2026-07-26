@@ -5,7 +5,14 @@ import { CalendarBookingDialog, StaffTimelineCalendar } from "@/components/staff
 import { CalendarDateStrip } from "@/components/calendar-date-strip";
 import { CalendarStayDialogs } from "@/components/calendar-stay-dialogs";
 import { CalendarStaySelectionProvider } from "@/components/calendar-stay-selection";
+import { StaffCalendarAttention } from "@/components/staff-calendar-attention";
+import { StaffCalendarPreparePanel } from "@/components/staff-calendar-prepare-panel";
+import { StaffCalendarSellPanel } from "@/components/staff-calendar-sell-panel";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
+import {
+  parseStaffCalendarView,
+  StaffCalendarViewNav,
+} from "@/components/staff-calendar-view-nav";
 import { StaffShell } from "@/components/staff-shell";
 import {
   buildCalendarDays,
@@ -66,6 +73,7 @@ export default async function StaffCalendarPage({
     through?: string;
     from?: string;
     to?: string;
+    view?: string;
     booking?: string;
     block?: string;
     room?: string;
@@ -92,6 +100,7 @@ export default async function StaffCalendarPage({
     through: throughParam,
     from: fromParam,
     to: toParam,
+    view: viewParam,
     booking: selectedBookingId,
     block: selectedBlockId,
     room: selectedRoomId,
@@ -110,6 +119,7 @@ export default async function StaffCalendarPage({
     "ical-error": icalError,
     "ical-warning": icalWarning,
   } = await searchParams;
+  const calendarView = parseStaffCalendarView(viewParam);
   const timelineRange = parseStaffTimelineRange({
     month: monthParam,
     through: throughParam,
@@ -268,6 +278,9 @@ export default async function StaffCalendarPage({
     from: fromIso,
     to: toIso,
   });
+  if (calendarView !== "desk") {
+    flashParams.set("view", calendarView);
+  }
   if (error) {
     flashParams.set("error", error);
   }
@@ -291,7 +304,15 @@ export default async function StaffCalendarPage({
   }
   // Keep flash messages when closing the dialog; drop booking/block/room/date so the panel closes.
   const closeHref = `/staff/calendar?${flashParams.toString()}`;
-  const dismissFlashHref = `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}`;
+  const dismissFlashParams = new URLSearchParams({
+    month: monthKey,
+    from: fromIso,
+    to: toIso,
+  });
+  if (calendarView !== "desk") {
+    dismissFlashParams.set("view", calendarView);
+  }
+  const dismissFlashHref = `/staff/calendar?${dismissFlashParams.toString()}`;
   const overlapMessage =
     error === "overlap"
       ? formatOverlapErrorMessage(parseOverlapDays(overlap))
@@ -401,11 +422,25 @@ export default async function StaffCalendarPage({
         <div className="staff-header staff-header--calendar">
           <div>
             <h1 id="calendar-title">Calendar</h1>
+            <p className="staff-header__lede">
+              {calendarView === "prepare"
+                ? "Rooms to prepare before arrivals."
+                : calendarView === "sell"
+                  ? "Open nights you can still sell."
+                  : "Door tape chart — move stays, assign room numbers, take walk-ins."}
+            </p>
           </div>
           <Link className="staff-header__quiet-link" href="/staff">
             Requests
           </Link>
         </div>
+
+        <StaffCalendarViewNav
+          fromIso={fromIso}
+          monthKey={monthKey}
+          toIso={toIso}
+          view={calendarView}
+        />
 
         {!canWriteCalendar ? (
           <p className="form-message form-message--setup" role="status">
@@ -576,7 +611,13 @@ export default async function StaffCalendarPage({
           fromIso={fromIso}
           toIso={toIso}
         >
-          <div className="calendar-board calendar-board--timeline">
+          <div
+            className={[
+              "calendar-board",
+              "calendar-board--timeline",
+              `calendar-board--view-${calendarView}`,
+            ].join(" ")}
+          >
             <StaffCalendarToolbar
               calendarColors={settings.calendarColors}
               canSyncOta={canManage}
@@ -589,35 +630,76 @@ export default async function StaffCalendarPage({
               unassignedCount={unassignedCount}
             />
 
-            <CalendarDateStrip
-              fromIso={fromIso}
-              selectedBlockKey={selectedBlockKey || undefined}
-              selectedBookingKey={selectedKey || undefined}
-              toIso={toIso}
-            />
+            {calendarView === "desk" ? (
+              <>
+                <StaffCalendarAttention
+                  arrivingCount={monthStats.arriving}
+                  fromIso={fromIso}
+                  monthKey={monthKey}
+                  toIso={toIso}
+                  unassignedCount={unassignedCount}
+                />
 
-            <StaffTimelineCalendar
-              blocks={calendarBlocks}
-              bookings={calendarBookings}
-              calendarColors={settings.calendarColors}
-              calendarDays={calendarDays}
-              canManage={canManage}
-              currency={settings.currency}
-              inventoryLookup={inventoryLookup}
-              rateLookup={rateLookup}
-              monthKey={monthKey}
-              fromIso={fromIso}
-              toIso={toIso}
-              monthLabel={formatCalendarMonthLabel(year, month)}
-              occupancies={unitOccupancies}
-              promotions={promotions}
-              roomUnits={roomUnits}
-              rooms={rooms}
-              selectedBlockKey={selectedBlockKey}
-              selectedBookingKey={selectedKey}
-              selectedDate={selectedDate}
-              selectedRoomId={selectedRoom?.id}
-            />
+                <details className="calendar-date-strip-details">
+                  <summary>Date range</summary>
+                  <CalendarDateStrip
+                    fromIso={fromIso}
+                    selectedBlockKey={selectedBlockKey || undefined}
+                    selectedBookingKey={selectedKey || undefined}
+                    toIso={toIso}
+                  />
+                </details>
+
+                <div className="staff-calendar-tape" id="need-room">
+                  <StaffTimelineCalendar
+                    blocks={calendarBlocks}
+                    bookings={calendarBookings}
+                    calendarColors={settings.calendarColors}
+                    calendarDays={calendarDays}
+                    canManage={canManage}
+                    currency={settings.currency}
+                    inventoryLookup={inventoryLookup}
+                    rateLookup={rateLookup}
+                    monthKey={monthKey}
+                    fromIso={fromIso}
+                    toIso={toIso}
+                    monthLabel={formatCalendarMonthLabel(year, month)}
+                    occupancies={unitOccupancies}
+                    promotions={promotions}
+                    roomUnits={roomUnits}
+                    rooms={rooms}
+                    selectedBlockKey={selectedBlockKey}
+                    selectedBookingKey={selectedKey}
+                    selectedDate={selectedDate}
+                    selectedRoomId={selectedRoom?.id}
+                  />
+                </div>
+              </>
+            ) : null}
+
+            {calendarView === "prepare" ? (
+              <StaffCalendarPreparePanel
+                blocks={calendarBlocks}
+                bookings={calendarBookings}
+                fromIso={fromIso}
+                monthKey={monthKey}
+                rooms={rooms}
+                toIso={toIso}
+              />
+            ) : null}
+
+            {calendarView === "sell" ? (
+              <StaffCalendarSellPanel
+                blocks={calendarBlocks}
+                bookings={calendarBookings}
+                calendarDays={calendarDays}
+                fromIso={fromIso}
+                inventoryLookup={inventoryLookup}
+                monthKey={monthKey}
+                rooms={rooms}
+                toIso={toIso}
+              />
+            ) : null}
           </div>
 
           <CalendarStayDialogs

@@ -11,5 +11,7 @@ describe("getDaySaleStatus", () => {
   it("marks exact capacity as sold out and spare capacity as bookable", () => {
     assert.equal(getDaySaleStatus("room-1", "2026-08-01", [], 2, 2), "sold-out");
     assert.equal(getDaySaleStatus("room-1", "2026-08-01", [], 2, 1), "bookable");
+    assert.equal(getDaySaleStatusLabel("sold-out"), "Full");
+    assert.equal(getDaySaleStatusLabel("bookable"), "Open");
   });
 });

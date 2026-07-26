@@ -404,14 +404,14 @@ export function getDaySaleStatusLabel(status: DaySaleStatus) {
   }
 
   if (status === "sold-out") {
-    return "Sold out";
+    return "Full";
   }
 
   if (status === "overbooked") {
     return "Overbooked";
   }
 
-  return "Bookable";
+  return "Open";
 }
 
 export function getRoomsLeftForDay(
