@@ -5133,6 +5133,66 @@ textarea:focus {
   margin: 0;
 }
 
+.field-pair--check label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.field-pair--check input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--color-maroon);
+  flex-shrink: 0;
+}
+
+.calendar-ops-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.calendar-ops-row .field-pair {
+  margin: 0;
+}
+
+.detail-list--stay-meta {
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--color-maroon-wash) 55%, var(--color-surface)) 0%,
+      var(--color-surface) 100%
+    );
+}
+
+.detail-list--stay-meta div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.reservation-detail__top .staff-status {
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reservation-detail__top .staff-status {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .calendar-ops-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .staff-stats strong a {
   color: var(--color-maroon-deep);
   font-size: 0.95rem;

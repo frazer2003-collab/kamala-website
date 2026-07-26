@@ -1,8 +1,10 @@
 "use client";
+import { BookingSourceField } from "@/components/booking-source-field";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useEffect, useMemo, useState } from "react";
 import { removeRoomBlock, updateChannelReservation } from "@/app/actions";
+import type { BookingSource } from "@/lib/booking-source";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
 import type { Room } from "@/lib/content";
 import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
@@ -61,6 +63,7 @@ export function CalendarBlockPanel({
     departureDate: block.endDate,
     roomId: block.roomId || room?.id || "",
     roomUnitId: block.roomUnitId ?? "",
+    bookingSource: (block.bookingSource ?? "") as BookingSource | "",
   });
 
   useEffect(() => {
@@ -70,6 +73,7 @@ export function CalendarBlockPanel({
       departureDate: block.endDate,
       roomId: block.roomId || room?.id || "",
       roomUnitId: block.roomUnitId ?? "",
+      bookingSource: (block.bookingSource ?? "") as BookingSource | "",
     });
   }, [
     block.databaseId,
@@ -77,6 +81,7 @@ export function CalendarBlockPanel({
     block.endDate,
     block.roomId,
     block.roomUnitId,
+    block.bookingSource,
     room?.id,
   ]);
 
@@ -295,6 +300,14 @@ export function CalendarBlockPanel({
                 </p>
               ) : null}
             </div>
+            <BookingSourceField
+              disabled={!canManage}
+              id={`channel-booking-source-${fieldPrefix}`}
+              onChange={(value) =>
+                setFields((current) => ({ ...current, bookingSource: value }))
+              }
+              value={fields.bookingSource || "walk-in"}
+            />
             <div className="field-pair field-pair--wide">
               <label htmlFor={`channel-note-${fieldPrefix}`}>Staff note</label>
               <textarea
@@ -312,8 +325,8 @@ export function CalendarBlockPanel({
 
           <p className="detail-help">
             Assign a room number so this OTA stay appears on the room-number
-            rows. Guest details and assignment are kept when the calendar syncs;
-            dates may still update from the channel.
+            rows. Guest details, source, and assignment are kept when the calendar
+            syncs; dates may still update from the channel.
           </p>
         </>
       ) : (

@@ -307,6 +307,8 @@ export default async function StaffCalendarPage({
             ? "Enter a valid nightly rate (0 or more)."
           : error === "invalid-custom-total"
             ? "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates."
+          : error === "invalid-source"
+            ? "Choose a booking source."
           : error === "invalid-name"
             ? "Enter the guest name before saving."
             : error === "invalid-phone"
@@ -466,7 +468,7 @@ export default async function StaffCalendarPage({
         ) : null}
         {created === "walk-in" ? (
           <p className="form-message form-message--success" role="status">
-            Walk-in added to the calendar and marked checked in.{" "}
+            New booking added to the calendar and marked checked in.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
