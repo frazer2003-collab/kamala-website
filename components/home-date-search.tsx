@@ -129,8 +129,9 @@ export function HomeDateSearch({
   return (
     <>
       <form
+        aria-describedby="home-dates-label"
         aria-label="Check availability for your stay"
-        className="search-bar search-bar--atmosphere hero-atmosphere__search"
+        className="search-bar search-bar--atmosphere"
         onSubmit={handleSubmit}
       >
         <div className="search-bar__fields">

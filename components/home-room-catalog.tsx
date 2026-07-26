@@ -301,6 +301,14 @@ export function HomeRoomCatalog({
               ? "Availability could not be verified — treat open rooms as provisional until you reserve."
               : buildRoomsSectionSubhead(rooms.length, addressLine)}
           </p>
+          {!hasStayDates ? (
+            <p className="section__dates-prompt">
+              <a className="section__dates-prompt-link" href="#dates">
+                Check your dates
+              </a>{" "}
+              to see which rooms are free for your stay.
+            </p>
+          ) : null}
         </div>
 
         <div className="listing-showcase">
