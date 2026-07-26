@@ -83,7 +83,7 @@ export default async function StaffSettingsPage({
         {error === "calendar-access" ? (
           <p className="form-message form-message--error" role="alert">
             Could not update calendar access. Run{" "}
-            <code>supabase/migrate-staff-calendar-access.sql</code> in Supabase if you
+            <code>supabase/schema.sql</code> in Supabase if you
             have not already.
           </p>
         ) : null}

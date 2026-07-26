@@ -141,7 +141,7 @@ export async function getStaffCalendarBlocks(month: { year: number; month: numbe
         monthBlocks: [] as StaffRoomBlock[],
         channelBlocks: [] as StaffRoomBlock[],
         source: "sample" as const,
-        error: "Could not load room blocks. Run supabase/migrate-room-blocks.sql.",
+        error: "Could not load room blocks. Run supabase/schema.sql in Supabase.",
       };
     }
 

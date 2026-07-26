@@ -35,7 +35,7 @@ export async function uploadHeroImage(file: File) {
     if (error.message.toLowerCase().includes("bucket")) {
       return {
         error:
-          "Photo storage is not set up yet. Run supabase/migrate-property-gallery.sql in Supabase.",
+          "Photo storage is not set up yet. Run supabase/schema.sql in Supabase.",
       } as const;
     }
 

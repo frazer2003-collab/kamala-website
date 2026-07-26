@@ -46,7 +46,7 @@ export async function uploadRoomPhoto(roomId: string, file: File) {
   if (error) {
     if (error.message.toLowerCase().includes("bucket")) {
       return {
-        error: "Photo storage is not set up yet. Run supabase/migrate-room-photo-storage.sql in Supabase.",
+        error: "Photo storage is not set up yet. Run supabase/schema.sql in Supabase.",
       } as const;
     }
 

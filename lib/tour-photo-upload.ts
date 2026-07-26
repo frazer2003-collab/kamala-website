@@ -35,7 +35,7 @@ export async function uploadTourPhoto(tourId: string, file: File) {
     if (error.message.toLowerCase().includes("bucket")) {
       return {
         error:
-          "Gallery storage is not set up yet. Run supabase/migrate-property-gallery.sql in Supabase.",
+          "Gallery storage is not set up yet. Run supabase/schema.sql in Supabase.",
       } as const;
     }
 
