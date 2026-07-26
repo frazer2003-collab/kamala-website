@@ -1,5 +1,4 @@
 "use client";
-import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import {
   useActionState,
@@ -40,6 +39,7 @@ type BookingChatProps = {
 );
 
 const initialActionState: ChatActionState = {};
+const NEAR_BOTTOM_PX = 80;
 
 function formatMessageTime(value: string) {
   const date = new Date(value);
@@ -83,6 +83,10 @@ function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]) {
   );
 }
 
+function isNearBottom(node: HTMLDivElement) {
+  return node.scrollHeight - node.scrollTop - node.clientHeight <= NEAR_BOTTOM_PX;
+}
+
 export function BookingChat(props: BookingChatProps) {
   const {
     disabled = false,
@@ -95,7 +99,7 @@ export function BookingChat(props: BookingChatProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
   const [guestTitle, setGuestTitle] = useState<string | null>(null);
-  const [isPolling, setIsPolling] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [sendStatus, setSendStatus] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -104,27 +108,42 @@ export function BookingChat(props: BookingChatProps) {
   const lastTimestampRef = useRef<string | null>(null);
   const lastSentAtRef = useRef<number | null>(null);
   const submittingRef = useRef(false);
+  const hydratedRef = useRef(false);
+  const stickToBottomRef = useRef(true);
+  const loadGenerationRef = useRef(0);
   const messageCountRef = useRef(0);
   const formId = useId();
   const textareaId = useId();
+  const threadId = useId();
 
   const [actionState, submitAction, isPending] = useActionState(
     props.variant === "staff" ? sendStaffChatMessage : sendGuestChatMessage,
     initialActionState,
   );
 
-  const scrollToLatest = useCallback(() => {
+  const scrollToLatest = useCallback((force = false) => {
     const node = threadRef.current;
     if (!node) {
       return;
     }
 
+    if (!force && !stickToBottomRef.current) {
+      return;
+    }
+
     node.scrollTop = node.scrollHeight;
+    stickToBottomRef.current = true;
   }, []);
 
   const refreshMessages = useCallback(
     async (initial = false) => {
-      setIsPolling(true);
+      const generation = initial
+        ? ++loadGenerationRef.current
+        : loadGenerationRef.current;
+
+      if (initial) {
+        setIsInitialLoading(true);
+      }
 
       try {
         const after = initial ? undefined : (lastTimestampRef.current ?? undefined);
@@ -133,9 +152,14 @@ export function BookingChat(props: BookingChatProps) {
             ? await loadStaffBookingMessages(props.bookingId, after)
             : await loadGuestBookingMessages(props.token, after);
 
+        if (generation !== loadGenerationRef.current) {
+          return;
+        }
+
         if (result.error) {
           if (initial) {
             setLoadError(result.error);
+            setIsInitialLoading(false);
           } else {
             setPollError("Could not refresh messages.");
           }
@@ -167,19 +191,40 @@ export function BookingChat(props: BookingChatProps) {
         } else if (initial) {
           lastTimestampRef.current = null;
         }
-      } finally {
-        setIsPolling(false);
+
+        if (initial) {
+          hydratedRef.current = true;
+          setIsInitialLoading(false);
+          queueMicrotask(() => scrollToLatest(true));
+        }
+      } catch {
+        if (generation !== loadGenerationRef.current) {
+          return;
+        }
+
+        if (initial) {
+          setLoadError("Could not load messages.");
+          setIsInitialLoading(false);
+        } else {
+          setPollError("Could not refresh messages.");
+        }
       }
     },
-    [props],
+    [props, scrollToLatest],
   );
 
   useEffect(() => {
+    loadGenerationRef.current += 1;
+    hydratedRef.current = false;
+    stickToBottomRef.current = true;
     setMessages([]);
     lastTimestampRef.current = null;
     messageCountRef.current = 0;
     setSendStatus(null);
     setPollError(null);
+    setLoadError(null);
+    setGuestTitle(null);
+    setLiveAnnouncement("");
     void refreshMessages(true);
   }, [
     props.variant,
@@ -210,16 +255,18 @@ export function BookingChat(props: BookingChatProps) {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      loadGenerationRef.current += 1;
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [refreshMessages]);
 
   useEffect(() => {
-    scrollToLatest();
-  }, [messages, scrollToLatest]);
+    if (!hydratedRef.current) {
+      messageCountRef.current = messages.length;
+      return;
+    }
 
-  useEffect(() => {
     if (messages.length > messageCountRef.current) {
       const newest = messages[messages.length - 1];
       if (newest) {
@@ -230,10 +277,11 @@ export function BookingChat(props: BookingChatProps) {
               ? guestLabel
               : "You";
         setLiveAnnouncement(`New message from ${who}`);
+        scrollToLatest(false);
       }
     }
     messageCountRef.current = messages.length;
-  }, [guestLabel, messages, props.variant]);
+  }, [guestLabel, messages, props.variant, scrollToLatest]);
 
   useEffect(() => {
     if (actionState.error) {
@@ -250,6 +298,7 @@ export function BookingChat(props: BookingChatProps) {
     submittingRef.current = false;
 
     if (actionState.message) {
+      stickToBottomRef.current = true;
       setMessages((current) => {
         const next = mergeMessages(current, [actionState.message!]);
         lastTimestampRef.current =
@@ -257,6 +306,7 @@ export function BookingChat(props: BookingChatProps) {
         return next;
       });
       setDraft("");
+      queueMicrotask(() => scrollToLatest(true));
       if (actionState.emailSent === false) {
         setSendStatus("Saved · email failed");
       } else if (props.variant === "staff" && actionState.emailSent === true) {
@@ -267,7 +317,7 @@ export function BookingChat(props: BookingChatProps) {
         setSendStatus("Saved");
       }
     }
-  }, [actionState, props.variant]);
+  }, [actionState, props.variant, scrollToLatest]);
 
   useEffect(() => {
     if (!sendStatus) {
@@ -284,6 +334,14 @@ export function BookingChat(props: BookingChatProps) {
     }
 
     return props.variant === "staff" ? guestLabel : "You";
+  }
+
+  function handleThreadScroll() {
+    const node = threadRef.current;
+    if (!node) {
+      return;
+    }
+    stickToBottomRef.current = isNearBottom(node);
   }
 
   function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
@@ -313,10 +371,10 @@ export function BookingChat(props: BookingChatProps) {
   }
 
   const syncedLabel = formatSyncTime(lastSyncedAt);
-  const statusLabel = isPolling
-    ? "Checking for new messages…"
+  const statusLabel = isInitialLoading
+    ? "Loading messages…"
     : syncedLabel
-      ? `Last checked ${syncedLabel}`
+      ? `Updated ${syncedLabel}`
       : "Updates every few seconds";
 
   const headingId =
@@ -336,9 +394,7 @@ export function BookingChat(props: BookingChatProps) {
           {showHeading ? <h3 id={headingId}>Conversation</h3> : null}
           {guestTitle ? <p className="booking-chat__meta">{guestTitle}</p> : null}
         </div>
-        <span aria-live="polite" className="booking-chat__status">
-          {statusLabel}
-        </span>
+        <span className="booking-chat__status">{statusLabel}</span>
       </div>
 
       <p className="sr-only" aria-live="polite">
@@ -373,14 +429,20 @@ export function BookingChat(props: BookingChatProps) {
 
       <div
         aria-label="Message history"
+        aria-relevant="additions"
         className="booking-chat__thread message-thread"
+        id={threadId}
+        onScroll={handleThreadScroll}
         ref={threadRef}
+        role="log"
       >
         {messages.length === 0 && !loadError ? (
           <p className="booking-chat__empty">
-            {props.variant === "staff"
-              ? "No messages yet. Send the first note and the guest will be notified by email."
-              : "No messages yet. Write Kamala a note — your message is saved with this reservation, and they will email you when they reply."}
+            {isInitialLoading
+              ? "Loading messages…"
+              : props.variant === "staff"
+                ? "No messages yet. Send the first note and the guest will be notified by email."
+                : "No messages yet. Write Kamala a note — your message is saved with this reservation, and they will email you when they reply."}
           </p>
         ) : (
           messages.map((message) => (
@@ -411,7 +473,6 @@ export function BookingChat(props: BookingChatProps) {
           id={formId}
           onSubmit={handleFormSubmit}
         >
-      <StaffFormBusyBridge />
           {props.variant === "staff" ? (
             <input name="booking-id" type="hidden" value={props.bookingId} />
           ) : (

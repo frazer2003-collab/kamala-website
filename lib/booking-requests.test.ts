@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  isCalendarBooking,
   isPendingBooking,
   mapBookingRequest,
 } from "./booking-requests";
@@ -45,5 +46,28 @@ describe("staff booking requests", () => {
 
   it("keeps an unpaid bank transfer claim in the pending inbox", () => {
     assert.equal(isPendingBooking(mapBookingRequest(bankClaimRow)), true);
+  });
+
+  it("keeps paid needs-reply stays on the calendar tape", () => {
+    const paidNeedsReply = mapBookingRequest({
+      ...bankClaimRow,
+      status: "needs-reply",
+      deposit_paid_at: "2026-07-18T08:00:00.000Z",
+      bank_transfer_claimed_at: null,
+    });
+
+    assert.equal(isCalendarBooking(paidNeedsReply), true);
+    assert.equal(isPendingBooking(paidNeedsReply), true);
+  });
+
+  it("does not put unpaid needs-reply on the calendar", () => {
+    const unpaid = mapBookingRequest({
+      ...bankClaimRow,
+      status: "needs-reply",
+      deposit_paid_at: null,
+      bank_transfer_claimed_at: null,
+    });
+
+    assert.equal(isCalendarBooking(unpaid), false);
   });
 });
