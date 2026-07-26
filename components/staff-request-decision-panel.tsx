@@ -29,6 +29,8 @@ type StaffRequestDecisionPanelProps = {
   depositAmount: number;
   currency?: PropertyCurrency;
   canManage: boolean;
+  /** Guest message waiting — reply in conversation before confirming. */
+  needsReply?: boolean;
   /** Paid stay that still needs date/room resolution with the guest. */
   paidOverbooked?: boolean;
   /** Sample inbox: full decide UI without writing to Supabase or emailing guests. */
@@ -44,6 +46,7 @@ export function StaffRequestDecisionPanel({
   depositAmount,
   currency = "thb",
   canManage,
+  needsReply = false,
   paidOverbooked = false,
   practiceMode = false,
 }: StaffRequestDecisionPanelProps) {
@@ -52,11 +55,24 @@ export function StaffRequestDecisionPanel({
   const [confirmMessage, setConfirmMessage] = useState(CONFIRM_DEFAULT);
   const [declineMessage, setDeclineMessage] = useState(DECLINE_DEFAULT);
   const [practiceResult, setPracticeResult] = useState<PracticeResult>(null);
+  const [transferVerified, setTransferVerified] = useState(false);
+  const [overbookSettled, setOverbookSettled] = useState(false);
+  const [replyHandled, setReplyHandled] = useState(false);
+
+  const needsTransferGate = bankTransferClaimed && !depositPaid;
+  const confirmBlockedByTransfer = needsTransferGate && !transferVerified;
+  const confirmBlockedByOverbook = paidOverbooked && !overbookSettled;
+  const confirmBlockedByReply = needsReply && !replyHandled;
+  const confirmBlocked =
+    confirmBlockedByTransfer ||
+    confirmBlockedByOverbook ||
+    confirmBlockedByReply;
+  const confirmIsSecondary = needsReply || needsTransferGate || paidOverbooked;
 
   if (!canManage && !practiceMode) {
     return (
-      <div className="staff-decide">
-        <h3 className="staff-decide__title">Decide</h3>
+      <div className="staff-decide staff-decide--quiet">
+        <h3 className="staff-decide__title">Close the request</h3>
         <p className="detail-help" role="status">
           This request cannot be confirmed or declined here — it is missing a
           database record. Add Supabase to manage live requests.
@@ -96,6 +112,13 @@ export function StaffRequestDecisionPanel({
   ) {
     event.preventDefault();
     setPracticeResult(result);
+  }
+
+  function openConfirm() {
+    if (confirmBlocked) {
+      return;
+    }
+    setMode("confirm");
   }
 
   if (mode === "confirm") {
@@ -224,33 +247,93 @@ export function StaffRequestDecisionPanel({
   }
 
   return (
-    <div className="staff-decide">
-      <h3 className="staff-decide__title">Decide</h3>
+    <div
+      className={`staff-decide staff-decide--quiet${
+        confirmIsSecondary ? " staff-decide--prereq" : ""
+      }`}
+    >
+      <h3 className="staff-decide__title">Close the request</h3>
       {practiceMode ? (
         <p className="staff-decide__practice-banner" role="status">
           Practice mode — walk through confirm or decline without contacting the
           guest.
         </p>
       ) : null}
-      {bankTransferClaimed && !depositPaid ? (
+      {needsReply ? (
         <p className="staff-decide__summary" role="status">
-          Guest reported a bank transfer — verify in your bank app, then confirm
-          or decline.
+          Guest is waiting on a reply in the conversation above. Answer them
+          first, then confirm when the stay is ready.
         </p>
       ) : null}
-      <p className="detail-help">
-        Confirm moves the stay to the calendar and emails the guest. Decline
-        closes the request
-        {depositPaid ? ", refunds their payment," : ""} and emails them. You will
-        review the message before it sends.
-        {paidOverbooked
-          ? " This paid stay still needs dates or a room worked out with the guest before you confirm."
-          : null}
-      </p>
+      {needsTransferGate ? (
+        <p className="staff-decide__summary" role="status">
+          Guest reported a bank transfer — verify it in your bank app before
+          confirming.
+        </p>
+      ) : null}
+      {paidOverbooked ? (
+        <p className="staff-decide__summary" role="status">
+          This paid stay still needs dates or a room worked out with the guest
+          before you confirm.
+        </p>
+      ) : null}
+      {!needsReply && !needsTransferGate && !paidOverbooked ? (
+        <p className="detail-help">
+          Confirm moves the stay to the calendar and emails the guest. Decline
+          closes the request
+          {depositPaid ? ", refunds their payment," : ""} and emails them. You
+          will review the message before it sends.
+        </p>
+      ) : (
+        <p className="detail-help">
+          Decline still closes the request
+          {depositPaid ? ", refunds their payment," : ""} and emails them when
+          you are ready.
+        </p>
+      )}
+      {needsReply || needsTransferGate || paidOverbooked ? (
+        <fieldset className="staff-decide__gates">
+          <legend className="sr-only">Before confirming</legend>
+          {needsReply ? (
+            <label className="staff-decide__gate">
+              <input
+                checked={replyHandled}
+                onChange={(event) => setReplyHandled(event.target.checked)}
+                type="checkbox"
+              />
+              <span>I replied in the conversation, or a reply is not needed</span>
+            </label>
+          ) : null}
+          {needsTransferGate ? (
+            <label className="staff-decide__gate">
+              <input
+                checked={transferVerified}
+                onChange={(event) => setTransferVerified(event.target.checked)}
+                type="checkbox"
+              />
+              <span>I verified this transfer in the bank app</span>
+            </label>
+          ) : null}
+          {paidOverbooked ? (
+            <label className="staff-decide__gate">
+              <input
+                checked={overbookSettled}
+                onChange={(event) => setOverbookSettled(event.target.checked)}
+                type="checkbox"
+              />
+              <span>Dates or room are settled with the guest</span>
+            </label>
+          ) : null}
+        </fieldset>
+      ) : null}
       <div className="staff-decide__actions">
         <button
-          className="button button--primary"
-          onClick={() => setMode("confirm")}
+          aria-disabled={confirmBlocked || undefined}
+          className={
+            confirmIsSecondary ? "button button--secondary" : "button button--primary"
+          }
+          disabled={confirmBlocked}
+          onClick={openConfirm}
           type="button"
         >
           Confirm stay…
