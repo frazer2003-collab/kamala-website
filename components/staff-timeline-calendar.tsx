@@ -291,8 +291,6 @@ function UnitReservationRow({
   currentRoomId,
   searchQuery,
   canManage,
-  roomUnits,
-  occupancies,
 }: {
   unit: RoomUnit;
   bookings: StaffBooking[];
@@ -309,8 +307,6 @@ function UnitReservationRow({
   currentRoomId: string;
   searchQuery: string;
   canManage: boolean;
-  roomUnits: RoomUnit[];
-  occupancies: UnitOccupancy[];
 }) {
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
@@ -414,6 +410,7 @@ function UnitReservationRow({
             : sourceChannel
               ? "channel"
               : null;
+          // Drag-only on door rows — no stacked "Move to #" under bars (overflows the lane).
           const movePayload: StaffTapeMovePayload | null =
             canManage && stayId && moveKind
               ? {
@@ -430,64 +427,38 @@ function UnitReservationRow({
                   currentUnitId: unit.id,
                 }
               : null;
-          const showInlineMove =
-            canManage && Boolean(stayId) && Boolean(movePayload) && bar.showLabel;
 
           return (
-            <div
+            <CalendarStayBarLink
+              ariaLabel={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
               className={[
-                "extranet-bar-shell",
-                showInlineMove ? "extranet-bar-shell--assign" : "",
-                movePayload ? "extranet-bar-shell--draggable" : "",
+                getBarClassName(bar, isSelected, searchState),
+                movePayload ? "extranet-bar--draggable" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
+              href={getTimelineBarHref(bar, monthKey, rangeQuery)}
+              itemKey={bar.itemKey}
               key={bar.key}
+              kind={bar.kind === "booking" ? "booking" : "block"}
+              movePayload={movePayload}
+              onMoveDragEnd={tapeDnd?.endDrag}
+              onMoveDragStart={tapeDnd?.beginDrag}
               style={{
                 gridColumn: `${bar.startCol} / span ${bar.span}`,
                 ["--lane" as string]: bar.lane,
                 ...getBarColorStyle(bar, guestColors),
               }}
             >
-              <CalendarStayBarLink
-                ariaLabel={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
-                className={[getBarClassName(bar, isSelected, searchState), "extranet-bar__open"].join(
-                  " ",
-                )}
-                href={getTimelineBarHref(bar, monthKey, rangeQuery)}
-                itemKey={bar.itemKey}
-                kind={bar.kind === "booking" ? "booking" : "block"}
-                movePayload={movePayload}
-                onMoveDragEnd={tapeDnd?.endDrag}
-                onMoveDragStart={tapeDnd?.beginDrag}
-              >
-                {bar.showLabel ? (
-                  <>
-                    <strong>{bar.label}</strong>
-                    {bar.compact ? null : <span>{bar.sublabel}</span>}
-                  </>
-                ) : (
-                  <span className="extranet-bar__continued" aria-hidden="true" />
-                )}
-              </CalendarStayBarLink>
-              {showInlineMove && stayId && movePayload ? (
-                <InlineRoomAssign
-                  arrivalDate={movePayload.arrivalDate}
-                  currentUnitId={unit.id}
-                  departureDate={movePayload.departureDate}
-                  fromIso={fromIso}
-                  guestLabel={movePayload.guestLabel}
-                  kind={movePayload.kind}
-                  mode="move"
-                  monthKey={monthKey}
-                  occupancies={occupancies}
-                  roomId={movePayload.roomId}
-                  roomUnits={roomUnits}
-                  stayId={stayId}
-                  toIso={toIso}
-                />
-              ) : null}
-            </div>
+              {bar.showLabel ? (
+                <>
+                  <strong>{bar.label}</strong>
+                  {bar.compact ? null : <span>{bar.sublabel}</span>}
+                </>
+              ) : (
+                <span className="extranet-bar__continued" aria-hidden="true" />
+              )}
+            </CalendarStayBarLink>
           );
         })}
       </div>
@@ -990,9 +961,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 monthKey={monthKey}
                 fromIso={fromIso}
                 toIso={toIso}
-                occupancies={occupancies}
                 roomShortNameById={roomShortNameById}
-                roomUnits={roomUnits}
                 searchQuery={searchQuery}
                 selectedBlockKey={selectedBlockKey}
                 selectedBookingKey={selectedBookingKey}
@@ -1361,8 +1330,8 @@ export function StaffTimelineCalendar({
       <CalendarJumpToToday />
       <h2 className="sr-only">Room availability by day</h2>
       <p className="sr-only">
-        Drag a stay onto a door row to assign or move it. Keyboard: use Move to # on the stay
-        bar.
+        Drag a stay onto a door row to assign or move it. Open a stay to change the door from
+        the details panel.
       </p>
       <div className="staff-extranet__scroll" id="calendar-today" ref={scrollRef}>
         <div

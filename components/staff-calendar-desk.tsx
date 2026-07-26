@@ -1,7 +1,7 @@
 /**
  * THESIS: Door tape is the desk — assign and move stays by door, not by inventory matrix.
  * OWN-WORLD: Trusted Counter — maroon sparingly, humanist sans, quiet hospitality ops density.
- * STORY: Staff see doors, find who needs a room #, drag or Move to # onto a free door, walk-in when needed.
+ * STORY: Staff see doors, find who needs a room #, drag onto a free door (or assign on Needs room #), walk-in when needed.
  * FIRST VIEWPORT: Attention → collapsed dates → need-room tape → door rows.
  * FORM: Tape Chart Desk (shape B); extend existing surface — no new visual world.
  */

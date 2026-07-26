@@ -8282,11 +8282,13 @@ textarea:focus {
   z-index: 4;
 }
 
-.extranet-bar-shell--draggable .extranet-bar__open {
+.extranet-bar-shell--draggable .extranet-bar__open,
+.extranet-bar--draggable {
   cursor: grab;
 }
 
-.extranet-bar-shell--draggable .extranet-bar__open:active {
+.extranet-bar-shell--draggable .extranet-bar__open:active,
+.extranet-bar--draggable:active {
   cursor: grabbing;
 }
 
