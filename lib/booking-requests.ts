@@ -10,8 +10,9 @@ import {
 
 export const PENDING_BOOKING_STATUSES = ["awaiting", "needs-reply", "new"] as const;
 
+/** Confirmed stays, plus paid awaiting / needs-reply (guest replied; still on the tape). */
 export const CALENDAR_BOOKING_FILTER =
-  "status.eq.confirmed,and(status.eq.awaiting,deposit_paid_at.not.is.null)";
+  "status.eq.confirmed,and(status.eq.awaiting,deposit_paid_at.not.is.null),and(status.eq.needs-reply,deposit_paid_at.not.is.null)";
 
 export type StaffBooking = Booking & {
   databaseId: string | null;
@@ -128,8 +129,15 @@ export function isPendingBooking(booking: StaffBooking) {
   );
 }
 
-function isCalendarBooking(booking: Booking) {
-  return booking.status === "confirmed" || (booking.status === "awaiting" && booking.depositPaid);
+export function isCalendarBooking(booking: Booking) {
+  if (booking.status === "confirmed") {
+    return true;
+  }
+
+  return (
+    (booking.status === "awaiting" || booking.status === "needs-reply") &&
+    booking.depositPaid
+  );
 }
 
 function isConfirmedBooking(booking: Booking) {

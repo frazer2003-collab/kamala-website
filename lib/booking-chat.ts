@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { revalidatePath } from "next/cache";
 import {
   sendGuestChatNotificationEmail,
   sendStaffChatNotificationEmail,
@@ -136,13 +135,22 @@ const CHAT_ACTIVE_STATUSES: BookingRequestRow["status"][] = [
   "needs-reply",
 ];
 
-const CHAT_GUEST_ACCESS_STATUSES: BookingRequestRow["status"][] = [
-  ...CHAT_ACTIVE_STATUSES,
+/** Statuses where a conversation token link must open for the guest. */
+export const CHAT_GUEST_ACCESS_STATUSES: BookingRequestRow["status"][] = [
+  "new",
+  "pending_payment",
+  "awaiting",
+  "confirmed",
+  "needs-reply",
   "declined",
 ];
 
 export function isChatReadOnly(status: BookingRequestRow["status"]) {
   return status === "declined";
+}
+
+export function guestCanAccessChat(status: BookingRequestRow["status"]) {
+  return CHAT_GUEST_ACCESS_STATUSES.includes(status);
 }
 
 export function getBookingRef(bookingId: string) {
@@ -354,10 +362,9 @@ export async function listBookingMessages(
 }
 
 async function markNeedsReply(booking: BookingRequestRow) {
-  if (booking.status === "confirmed" || booking.status === "needs-reply") {
-    return;
-  }
-
+  // Only awaiting → needs-reply. Confirmed stays keep status so calendar/confirm
+  // state is not rewritten when a guest messages after confirmation; staff still
+  // get email notification below.
   if (booking.status !== "awaiting") {
     return;
   }
@@ -379,12 +386,6 @@ async function markStaffReplied(booking: BookingRequestRow) {
     .from("booking_requests")
     .update({ status: "awaiting" })
     .eq("id", booking.id);
-}
-
-function revalidateChatPaths() {
-  revalidatePath("/staff");
-  revalidatePath("/staff/calendar");
-  revalidatePath("/booking/messages");
 }
 
 export async function recordGuestChatMessage({
@@ -452,8 +453,6 @@ export async function recordGuestChatMessage({
     emailSent = notify.ok;
   }
 
-  revalidateChatPaths();
-
   return {
     ok: true as const,
     message: mapChatMessage(message),
@@ -514,8 +513,6 @@ export async function recordStaffChatMessage({
     });
     emailSent = notify.ok;
   }
-
-  revalidateChatPaths();
 
   return {
     ok: true as const,

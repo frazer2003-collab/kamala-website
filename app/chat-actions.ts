@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import {
   getBookingByConversationToken,
   isChatReadOnly,
@@ -102,8 +101,7 @@ export async function sendStaffChatMessage(
     return { error: "Could not send your message. Try again." };
   }
 
-  revalidatePath("/staff");
-  revalidatePath("/staff/calendar");
+  // Do not revalidate the host page — remounting the chat island fights local state.
   return {
     message: result.message,
     emailSent: result.emailSent ?? null,
@@ -141,7 +139,7 @@ export async function sendGuestChatMessage(
     return { error: "Could not send your message. Try again." };
   }
 
-  revalidatePath("/booking/messages");
+  // Do not revalidate the host page — remounting the chat island fights local state.
   return {
     message: result.message,
     emailSent: result.emailSent ?? null,
