@@ -54,6 +54,11 @@ import {
   type UnitOccupancy,
 } from "@/lib/room-units";
 import { InlineRoomAssign } from "@/components/inline-room-assign";
+import {
+  StaffCalendarTapeDndProvider,
+  useStaffCalendarTapeDnd,
+} from "@/components/staff-calendar-tape-dnd";
+import type { StaffTapeMovePayload } from "@/lib/staff-calendar-tape-move";
 import { getStaffBookingKey } from "@/lib/booking-requests";
 import {
   assignGuestBarColors,
@@ -285,6 +290,9 @@ function UnitReservationRow({
   roomShortNameById,
   currentRoomId,
   searchQuery,
+  canManage,
+  roomUnits,
+  occupancies,
 }: {
   unit: RoomUnit;
   bookings: StaffBooking[];
@@ -300,9 +308,13 @@ function UnitReservationRow({
   roomShortNameById: Map<string, string>;
   currentRoomId: string;
   searchQuery: string;
+  canManage: boolean;
+  roomUnits: RoomUnit[];
+  occupancies: UnitOccupancy[];
 }) {
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
+  const tapeDnd = useStaffCalendarTapeDnd();
   // Match by door only — room_id can lag after staff type moves / sync, and a
   // stay pinned to this door must still render on this row.
   const unitBookings = useMemo(
@@ -326,6 +338,7 @@ function UnitReservationRow({
     [unitBookings, unitChannels, calendarDays, roomShortNameById, currentRoomId],
   );
   const laneCount = getTimelineLaneCount(bars);
+  const dropState = tapeDnd?.unitDropState(unit) ?? "idle";
 
   return (
     <>
@@ -334,9 +347,29 @@ function UnitReservationRow({
         {unit.roomIds.length > 1 ? (
           <span className="extranet-row__meta">Shared</span>
         ) : null}
+        {dropState === "active" ? (
+          <span className="extranet-row__meta extranet-row__meta--drop">Drop to move here</span>
+        ) : null}
       </MetricRowLabel>
       <div
-        className="extranet-reservations extranet-reservations--unit"
+        className={[
+          "extranet-reservations",
+          "extranet-reservations--unit",
+          dropState === "active" ? "extranet-reservations--drop-active" : "",
+          dropState === "blocked" ? "extranet-reservations--drop-blocked" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onDragOver={(event) => {
+          if (!tapeDnd?.dragging || dropState !== "active") {
+            return;
+          }
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+        }}
+        onDrop={(event) => {
+          tapeDnd?.dropOnUnit(unit, event);
+        }}
         style={{
           ["--lane-count" as string]: laneCount,
           gridColumn: `2 / span ${dayCount}`,
@@ -365,30 +398,96 @@ function UnitReservationRow({
               ? selectedBookingKey === bar.itemKey
               : selectedBlockKey === bar.itemKey;
           const searchState = getBarSearchState(searchQuery, bar, unit.number);
+          const sourceBooking =
+            bar.kind === "booking"
+              ? unitBookings.find((booking) => getStaffBookingKey(booking) === bar.itemKey)
+              : null;
+          const sourceChannel =
+            bar.kind === "channel"
+              ? unitChannels.find(
+                  (reservation) => getStaffRoomBlockKey(reservation) === bar.itemKey,
+                )
+              : null;
+          const stayId = sourceBooking?.databaseId ?? sourceChannel?.databaseId ?? null;
+          const moveKind: StaffTapeMovePayload["kind"] | null = sourceBooking
+            ? "booking"
+            : sourceChannel
+              ? "channel"
+              : null;
+          const movePayload: StaffTapeMovePayload | null =
+            canManage && stayId && moveKind
+              ? {
+                  kind: moveKind,
+                  stayId,
+                  roomId: sourceBooking?.roomId ?? sourceChannel?.roomId ?? currentRoomId,
+                  arrivalDate: sourceBooking?.arrivalDate ?? sourceChannel!.startDate,
+                  departureDate: sourceBooking?.departureDate ?? sourceChannel!.endDate,
+                  guestLabel:
+                    sourceBooking?.guest ??
+                    (sourceChannel?.guestName.trim() ||
+                      sourceChannel?.channelLabel ||
+                      "Guest"),
+                  currentUnitId: unit.id,
+                }
+              : null;
+          const showInlineMove =
+            canManage && Boolean(stayId) && Boolean(movePayload) && bar.showLabel;
 
           return (
-            <CalendarStayBarLink
-              ariaLabel={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
-              className={getBarClassName(bar, isSelected, searchState)}
-              href={getTimelineBarHref(bar, monthKey, rangeQuery)}
-              itemKey={bar.itemKey}
+            <div
+              className={[
+                "extranet-bar-shell",
+                showInlineMove ? "extranet-bar-shell--assign" : "",
+                movePayload ? "extranet-bar-shell--draggable" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               key={bar.key}
-              kind={bar.kind === "booking" ? "booking" : "block"}
               style={{
                 gridColumn: `${bar.startCol} / span ${bar.span}`,
                 ["--lane" as string]: bar.lane,
                 ...getBarColorStyle(bar, guestColors),
               }}
             >
-              {bar.showLabel ? (
-                <>
-                  <strong>{bar.label}</strong>
-                  {bar.compact ? null : <span>{bar.sublabel}</span>}
-                </>
-              ) : (
-                <span className="extranet-bar__continued" aria-hidden="true" />
-              )}
-            </CalendarStayBarLink>
+              <CalendarStayBarLink
+                ariaLabel={`Room ${unit.number}: ${bar.label}, ${bar.sublabel}`}
+                className={[getBarClassName(bar, isSelected, searchState), "extranet-bar__open"].join(
+                  " ",
+                )}
+                href={getTimelineBarHref(bar, monthKey, rangeQuery)}
+                itemKey={bar.itemKey}
+                kind={bar.kind === "booking" ? "booking" : "block"}
+                movePayload={movePayload}
+                onMoveDragEnd={tapeDnd?.endDrag}
+                onMoveDragStart={tapeDnd?.beginDrag}
+              >
+                {bar.showLabel ? (
+                  <>
+                    <strong>{bar.label}</strong>
+                    {bar.compact ? null : <span>{bar.sublabel}</span>}
+                  </>
+                ) : (
+                  <span className="extranet-bar__continued" aria-hidden="true" />
+                )}
+              </CalendarStayBarLink>
+              {showInlineMove && stayId && movePayload ? (
+                <InlineRoomAssign
+                  arrivalDate={movePayload.arrivalDate}
+                  currentUnitId={unit.id}
+                  departureDate={movePayload.departureDate}
+                  fromIso={fromIso}
+                  guestLabel={movePayload.guestLabel}
+                  kind={movePayload.kind}
+                  mode="move"
+                  monthKey={monthKey}
+                  occupancies={occupancies}
+                  roomId={movePayload.roomId}
+                  roomUnits={roomUnits}
+                  stayId={stayId}
+                  toIso={toIso}
+                />
+              ) : null}
+            </div>
           );
         })}
       </div>
@@ -422,6 +521,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
+  const tapeDnd = useStaffCalendarTapeDnd();
 
   const roomBookings = useMemo(
     () => bookings.filter((booking) => booking.roomId === room.id),
@@ -708,7 +808,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           id={`need-room-${room.id}`}
           style={{ ["--timeline-days" as string]: dayCount }}
         >
-            <MetricRowLabel hint="Assign a room number on the stay bar">
+            <MetricRowLabel hint="Drag a stay onto a door row, or pick a room # on the bar">
               Needs room #
               <span className="extranet-row__meta">{unassignedCount} waiting</span>
             </MetricRowLabel>
@@ -766,12 +866,36 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 const showInlineAssign =
                   canManage && Boolean(stayId) && bar.needsRoom && bar.showLabel;
                 const detailHref = getTimelineBarHref(bar, monthKey, rangeQuery);
+                const moveKind: StaffTapeMovePayload["kind"] | null = sourceBooking
+                  ? "booking"
+                  : sourceChannel
+                    ? "channel"
+                    : null;
+                const movePayload: StaffTapeMovePayload | null =
+                  canManage && stayId && moveKind
+                    ? {
+                        kind: moveKind,
+                        stayId,
+                        roomId: sourceBooking?.roomId ?? sourceChannel?.roomId ?? room.id,
+                        arrivalDate:
+                          sourceBooking?.arrivalDate ?? sourceChannel!.startDate,
+                        departureDate:
+                          sourceBooking?.departureDate ?? sourceChannel!.endDate,
+                        guestLabel:
+                          sourceBooking?.guest ??
+                          (sourceChannel?.guestName.trim() ||
+                            sourceChannel?.channelLabel ||
+                            "Guest"),
+                        currentUnitId: null,
+                      }
+                    : null;
 
                 return (
                   <div
                     className={[
                       "extranet-bar-shell",
                       showInlineAssign ? "extranet-bar-shell--assign" : "",
+                      movePayload ? "extranet-bar-shell--draggable" : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
@@ -791,6 +915,9 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                       href={detailHref}
                       itemKey={bar.itemKey}
                       kind={bar.kind === "booking" ? "booking" : "block"}
+                      movePayload={movePayload}
+                      onMoveDragEnd={tapeDnd?.endDrag}
+                      onMoveDragStart={tapeDnd?.beginDrag}
                     >
                       {bar.showLabel ? (
                         <>
@@ -854,6 +981,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
               <UnitReservationRow
                 bookings={bookings}
                 calendarDays={calendarDays}
+                canManage={canManage}
                 channelReservations={allChannelReservations}
                 currentRoomId={room.id}
                 dayMetrics={dayMetrics}
@@ -862,7 +990,9 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 monthKey={monthKey}
                 fromIso={fromIso}
                 toIso={toIso}
+                occupancies={occupancies}
                 roomShortNameById={roomShortNameById}
+                roomUnits={roomUnits}
                 searchQuery={searchQuery}
                 selectedBlockKey={selectedBlockKey}
                 selectedBookingKey={selectedBookingKey}
@@ -1207,6 +1337,14 @@ export function StaffTimelineCalendar({
   }, [searchQuery, bookings, blocks]);
 
   return (
+    <StaffCalendarTapeDndProvider
+      canManage={canManage}
+      fromIso={fromIso}
+      monthKey={monthKey}
+      occupancies={occupancies}
+      roomUnits={roomUnits}
+      toIso={toIso}
+    >
     <div
       className={[
         "staff-extranet",
@@ -1222,6 +1360,10 @@ export function StaffTimelineCalendar({
     >
       <CalendarJumpToToday />
       <h2 className="sr-only">Room availability by day</h2>
+      <p className="sr-only">
+        Drag a stay onto a door row to assign or move it. Keyboard: use Move to # on the stay
+        bar.
+      </p>
       <div className="staff-extranet__scroll" id="calendar-today" ref={scrollRef}>
         <div
           className="staff-extranet__dates"
@@ -1287,5 +1429,6 @@ export function StaffTimelineCalendar({
         ))}
       </div>
     </div>
+    </StaffCalendarTapeDndProvider>
   );
 }

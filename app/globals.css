@@ -8282,6 +8282,30 @@ textarea:focus {
   z-index: 4;
 }
 
+.extranet-bar-shell--draggable .extranet-bar__open {
+  cursor: grab;
+}
+
+.extranet-bar-shell--draggable .extranet-bar__open:active {
+  cursor: grabbing;
+}
+
+.extranet-reservations--drop-active {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--color-maroon-wash) 70%, transparent);
+}
+
+.extranet-reservations--drop-blocked {
+  outline: 1px dashed var(--color-border);
+  outline-offset: -2px;
+  opacity: 0.72;
+}
+
+.extranet-row__meta--drop {
+  color: var(--color-maroon-deep);
+}
+
 .extranet-bar-shell .extranet-bar {
   position: static;
   margin-top: 0;

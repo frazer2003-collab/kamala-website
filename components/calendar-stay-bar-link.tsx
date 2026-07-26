@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { MouseEvent, ReactNode } from "react";
+import { useRef, type DragEvent, type MouseEvent, type ReactNode } from "react";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
+import type { StaffTapeMovePayload } from "@/lib/staff-calendar-tape-move";
 
 type CalendarStayBarLinkProps = {
   href: string;
@@ -12,6 +13,10 @@ type CalendarStayBarLinkProps = {
   ariaLabel: string;
   style?: React.CSSProperties;
   children: ReactNode;
+  /** When set, the bar can be dragged onto a door row to assign/move. */
+  movePayload?: StaffTapeMovePayload | null;
+  onMoveDragStart?: (payload: StaffTapeMovePayload, event: DragEvent) => void;
+  onMoveDragEnd?: () => void;
 };
 
 function isModifiedClick(event: MouseEvent<HTMLAnchorElement>) {
@@ -33,8 +38,49 @@ export function CalendarStayBarLink({
   ariaLabel,
   style,
   children,
+  movePayload,
+  onMoveDragStart,
+  onMoveDragEnd,
 }: CalendarStayBarLinkProps) {
   const staySelection = useCalendarStaySelection();
+  const didDragRef = useRef(false);
+  const draggable = Boolean(movePayload && onMoveDragStart);
+
+  const dragProps = draggable
+    ? {
+        draggable: true as const,
+        onDragStart: (event: DragEvent<HTMLAnchorElement>) => {
+          if (!movePayload || !onMoveDragStart) {
+            return;
+          }
+          didDragRef.current = true;
+          onMoveDragStart(movePayload, event);
+        },
+        onDragEnd: () => {
+          onMoveDragEnd?.();
+          // Clear after the synthetic click that follows a drag in some browsers.
+          window.setTimeout(() => {
+            didDragRef.current = false;
+          }, 0);
+        },
+      }
+    : {};
+
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (didDragRef.current) {
+      event.preventDefault();
+      return;
+    }
+    if (!staySelection || isModifiedClick(event)) {
+      return;
+    }
+    event.preventDefault();
+    if (kind === "booking") {
+      staySelection.selectBooking(itemKey);
+    } else {
+      staySelection.selectBlock(itemKey);
+    }
+  };
 
   if (!staySelection) {
     return (
@@ -44,6 +90,8 @@ export function CalendarStayBarLink({
         data-calendar-focus={itemKey}
         href={href}
         style={style}
+        title={draggable ? `${ariaLabel}. Drag onto a door row to assign.` : ariaLabel}
+        {...dragProps}
       >
         {children}
       </Link>
@@ -52,23 +100,16 @@ export function CalendarStayBarLink({
 
   return (
     <a
-      aria-label={ariaLabel}
+      aria-label={
+        draggable ? `${ariaLabel}. Drag onto a door row to assign or move.` : ariaLabel
+      }
       className={className}
       data-calendar-focus={itemKey}
       href={href}
-      onClick={(event) => {
-        if (isModifiedClick(event)) {
-          return;
-        }
-
-        event.preventDefault();
-        if (kind === "booking") {
-          staySelection.selectBooking(itemKey);
-        } else {
-          staySelection.selectBlock(itemKey);
-        }
-      }}
+      onClick={handleClick}
       style={style}
+      title={draggable ? "Drag onto a door row to assign or move" : undefined}
+      {...dragProps}
     >
       {children}
     </a>

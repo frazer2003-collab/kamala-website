@@ -19,29 +19,37 @@ type InlineRoomAssignProps = {
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
   guestLabel: string;
+  /** Assign an unassigned stay, or move an already-assigned one. */
+  mode?: "assign" | "move";
+  currentUnitId?: string | null;
 };
 
 function AssignSelect({
   stayId,
   guestLabel,
   available,
+  mode,
 }: {
   stayId: string;
   guestLabel: string;
   available: { unit: RoomUnit }[];
+  mode: "assign" | "move";
 }) {
   const { pending } = useFormStatus();
+  const controlId = `inline-assign-${mode}-${stayId}`;
 
   return (
     <>
-      <label className="sr-only" htmlFor={`inline-assign-${stayId}`}>
-        Assign room number for {guestLabel}
+      <label className="sr-only" htmlFor={controlId}>
+        {mode === "move"
+          ? `Move ${guestLabel} to another room number`
+          : `Assign room number for ${guestLabel}`}
       </label>
       <select
         aria-busy={pending}
         defaultValue=""
         disabled={pending}
-        id={`inline-assign-${stayId}`}
+        id={controlId}
         name="room-unit-id"
         onChange={(event) => {
           if (!event.currentTarget.value || pending) {
@@ -52,7 +60,7 @@ function AssignSelect({
         required
       >
         <option disabled value="">
-          {pending ? "…" : "Room #"}
+          {pending ? "…" : mode === "move" ? "Move to #" : "Room #"}
         </option>
         {available.map(({ unit }) => (
           <option key={unit.id} value={unit.id}>
@@ -77,6 +85,8 @@ export function InlineRoomAssign({
   roomUnits,
   occupancies,
   guestLabel,
+  mode = "assign",
+  currentUnitId = null,
 }: InlineRoomAssignProps) {
   const options = getUnitOptionsForStay({
     units: roomUnits,
@@ -86,7 +96,9 @@ export function InlineRoomAssign({
     excludeId: stayId,
     occupancies,
   });
-  const available = options.filter((option) => option.available);
+  const available = options.filter(
+    (option) => option.available && option.unit.id !== currentUnitId,
+  );
 
   if (available.length === 0) {
     return (
@@ -97,13 +109,26 @@ export function InlineRoomAssign({
   }
 
   return (
-    <form action={assignStayRoomUnit} className="extranet-bar__assign">
+    <form
+      action={assignStayRoomUnit}
+      className={[
+        "extranet-bar__assign",
+        mode === "move" ? "extranet-bar__assign--move" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <StaffFormBusyBridge />
       <input name="kind" type="hidden" value={kind} />
       <input name="stay-id" type="hidden" value={stayId} />
       <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
       <input name="guest-label" type="hidden" value={guestLabel} />
-      <AssignSelect available={available} guestLabel={guestLabel} stayId={stayId} />
+      <AssignSelect
+        available={available}
+        guestLabel={guestLabel}
+        mode={mode}
+        stayId={stayId}
+      />
     </form>
   );
 }

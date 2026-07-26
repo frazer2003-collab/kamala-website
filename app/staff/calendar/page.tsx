@@ -444,7 +444,7 @@ export default async function StaffCalendarPage({
                 ? "Rooms to prepare before arrivals."
                 : calendarView === "sell"
                   ? "Open nights you can still sell."
-                  : "Door tape chart — assign room numbers, open a stay to reassign, take walk-ins."}
+                  : "Door tape chart — drag stays onto door rows, or use Move to #. Walk-ins from a day cell."}
             </p>
           </div>
           <Link className="staff-header__quiet-link" href="/staff">
