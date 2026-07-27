@@ -86,16 +86,16 @@ export function CalendarStayDialogs({
   const selectedBlockKey = selectedBlock ? getStaffRoomBlockKey(selectedBlock) : "";
   const canManageSelected = canManage && Boolean(selectedBooking?.databaseId);
   const canManageBlock = canManage && Boolean(selectedBlock?.databaseId);
-  const showGuestConversation =
-    selectedBooking &&
-    selectedBooking.databaseId &&
-    guestHasConversationLink(selectedBooking.contact);
+  const hasGuestEmail = Boolean(
+    selectedBooking && guestHasConversationLink(selectedBooking.contact),
+  );
   const conversationOpen =
     selectedBooking?.status === "needs-reply" ||
     Boolean(
       selectedBooking?.databaseId &&
         bookingsWithConversationMessages?.has(selectedBooking.databaseId),
-    );
+    ) ||
+    hasGuestEmail;
 
   return (
     <>
@@ -158,6 +158,37 @@ export function CalendarStayDialogs({
             ) : null}
           </dl>
 
+          {selectedBooking.databaseId ? (
+            <details
+              className={`staff-request-chat staff-request-chat--collapsible${
+                selectedBooking.status === "needs-reply"
+                  ? " staff-request-chat--priority"
+                  : ""
+              }`}
+              open={conversationOpen}
+            >
+              <summary className="staff-request-chat__title">
+                {selectedBooking.status === "needs-reply"
+                  ? "Conversation — reply needed"
+                  : "Conversation"}
+              </summary>
+              {!hasGuestEmail ? (
+                <p className="detail-help staff-request-chat__hint">
+                  No guest email on this stay yet. Save an email in the form
+                  below to notify them when you reply.
+                </p>
+              ) : null}
+              <BookingChat
+                bookingId={selectedBooking.databaseId}
+                disabled={!canManageSelected}
+                guestLabel={selectedBooking.guest}
+                readOnly={selectedBooking.status === "declined"}
+                showHeading={false}
+                variant="staff"
+              />
+            </details>
+          ) : null}
+
           <CalendarBookingPanel
             key={selectedKey}
             arrivalDate={selectedBooking.arrivalDate}
@@ -215,31 +246,6 @@ export function CalendarStayDialogs({
               </>
             )}
           </p>
-
-          {showGuestConversation ? (
-            <details
-              className={`staff-request-chat staff-request-chat--collapsible${
-                selectedBooking.status === "needs-reply"
-                  ? " staff-request-chat--priority"
-                  : ""
-              }`}
-              open={conversationOpen}
-            >
-              <summary className="staff-request-chat__title">
-                {selectedBooking.status === "needs-reply"
-                  ? "Conversation — reply needed"
-                  : "Conversation"}
-              </summary>
-              <BookingChat
-                bookingId={selectedBooking.databaseId!}
-                disabled={!canManageSelected}
-                guestLabel={selectedBooking.guest}
-                readOnly={selectedBooking.status === "declined"}
-                showHeading={false}
-                variant="staff"
-              />
-            </details>
-          ) : null}
         </CalendarBookingDialog>
       ) : null}
 

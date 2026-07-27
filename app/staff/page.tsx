@@ -588,7 +588,7 @@ export default async function StaffBookingsPage({
                 </p>
               ) : null}
 
-              {selected.databaseId && guestHasConversationLink(selected.contact) ? (
+              {selected.databaseId ? (
                 <div
                   className={`staff-request-chat${
                     selectedNeedsReply ? " staff-request-chat--priority" : ""
@@ -598,6 +598,12 @@ export default async function StaffBookingsPage({
                   <h3 className="staff-request-chat__title">
                     {selectedNeedsReply ? "Conversation — reply needed" : "Conversation"}
                   </h3>
+                  {!guestHasConversationLink(selected.contact) ? (
+                    <p className="detail-help staff-request-chat__hint">
+                      No guest email on this stay yet. Add one if you want the
+                      guest notified when you reply.
+                    </p>
+                  ) : null}
                   <BookingChat
                     bookingId={selected.databaseId}
                     disabled={!canManageSelected}

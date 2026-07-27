@@ -7227,6 +7227,11 @@ html.staff-busy .staff-login-shell input {
   padding: var(--space-4);
 }
 
+.staff-request-chat__hint {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) 0;
+}
+
 .staff-calendar-toolbar__mark {
   display: inline-flex;
   align-items: center;

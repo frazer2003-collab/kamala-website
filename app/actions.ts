@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient, type BookingRequestRow } from "@/lib/supabase";
 import { sendGuestBookingEmail, sendStaffBookingEmail } from "@/lib/email";
 import {
+  ensureConversationToken,
   getGuestChatUrl,
   guestHasConversationLink,
   recordStaffChatMessage,
@@ -1252,6 +1253,11 @@ export async function updateConfirmedBooking(
     redirect(appendCalendarError(bookingHref, "save-failed", error.message));
   }
 
+  // Former walk-ins get a conversation link once a real guest email is saved.
+  if (guestHasConversationLink(guestEmail)) {
+    await ensureConversationToken(bookingId);
+  }
+
   const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
     p_booking_id: bookingId,
     p_room_unit_id: effectiveRoomUnitId,
@@ -1293,6 +1299,7 @@ export async function updateConfirmedBooking(
   redirect(
     calendarHrefFromFormData(formData, {
       month: arrival.slice(0, 7),
+      booking: bookingId,
       extras: { saved: "1" },
     }),
   );
