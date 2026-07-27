@@ -5,6 +5,7 @@ import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-p
 import { StaffShell } from "@/components/staff-shell";
 import {
   getInboxMessagePreviews,
+  guestHasConversationLink,
   type InboxMessagePreview,
 } from "@/lib/booking-chat";
 import {
@@ -587,7 +588,7 @@ export default async function StaffBookingsPage({
                 </p>
               ) : null}
 
-              {selected.databaseId ? (
+              {selected.databaseId && guestHasConversationLink(selected.contact) ? (
                 <div
                   className={`staff-request-chat${
                     selectedNeedsReply ? " staff-request-chat--priority" : ""

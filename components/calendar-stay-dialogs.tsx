@@ -7,6 +7,7 @@ import { BookingChat } from "@/components/staff-lazy";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import { formatBedSetup } from "@/lib/bed-setup";
 import { formatBookingSource } from "@/lib/booking-source";
+import { guestHasConversationLink } from "@/lib/booking-chat";
 import type { StaffBooking } from "@/lib/booking-requests";
 import { getStaffBookingKey } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
@@ -24,6 +25,7 @@ type CalendarStayDialogsProps = {
   fromIso?: string;
   toIso?: string;
   bookings: StaffBooking[];
+  bookingsWithConversationMessages?: ReadonlySet<string>;
   blocks: StaffRoomBlock[];
   /** Deep-linked stay that may sit outside the loaded month set. */
   seedBooking?: StaffBooking | null;
@@ -43,6 +45,7 @@ export function CalendarStayDialogs({
   fromIso,
   toIso,
   bookings,
+  bookingsWithConversationMessages,
   blocks,
   seedBooking = null,
   seedBlock = null,
@@ -83,6 +86,16 @@ export function CalendarStayDialogs({
   const selectedBlockKey = selectedBlock ? getStaffRoomBlockKey(selectedBlock) : "";
   const canManageSelected = canManage && Boolean(selectedBooking?.databaseId);
   const canManageBlock = canManage && Boolean(selectedBlock?.databaseId);
+  const showGuestConversation =
+    selectedBooking &&
+    selectedBooking.databaseId &&
+    guestHasConversationLink(selectedBooking.contact);
+  const conversationOpen =
+    selectedBooking?.status === "needs-reply" ||
+    Boolean(
+      selectedBooking?.databaseId &&
+        bookingsWithConversationMessages?.has(selectedBooking.databaseId),
+    );
 
   return (
     <>
@@ -203,11 +216,22 @@ export function CalendarStayDialogs({
             )}
           </p>
 
-          {selectedBooking.databaseId ? (
-            <details className="staff-request-chat staff-request-chat--collapsible">
-              <summary className="staff-request-chat__title">Conversation</summary>
+          {showGuestConversation ? (
+            <details
+              className={`staff-request-chat staff-request-chat--collapsible${
+                selectedBooking.status === "needs-reply"
+                  ? " staff-request-chat--priority"
+                  : ""
+              }`}
+              open={conversationOpen}
+            >
+              <summary className="staff-request-chat__title">
+                {selectedBooking.status === "needs-reply"
+                  ? "Conversation — reply needed"
+                  : "Conversation"}
+              </summary>
               <BookingChat
-                bookingId={selectedBooking.databaseId}
+                bookingId={selectedBooking.databaseId!}
                 disabled={!canManageSelected}
                 guestLabel={selectedBooking.guest}
                 readOnly={selectedBooking.status === "declined"}

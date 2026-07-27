@@ -5,6 +5,7 @@ import { createStaffSupabaseClient, type BookingRequestRow } from "@/lib/supabas
 import { sendGuestBookingEmail, sendStaffBookingEmail } from "@/lib/email";
 import {
   getGuestChatUrl,
+  guestHasConversationLink,
   recordStaffChatMessage,
   seedGuestNoteMessage,
 } from "@/lib/booking-chat";
@@ -1035,18 +1036,27 @@ export async function confirmBookingRequest(formData: FormData) {
     })
     .eq("id", bookingId);
 
-  await recordStaffChatMessage({
+  const notifyResult = await recordStaffChatMessage({
     booking: { ...booking, status: "confirmed" },
     body: message,
     emailKind: "confirmation",
   });
 
+  const calendarHref = `/staff/calendar?month=${booking.arrival_date.slice(0, 7)}&booking=${encodeURIComponent(bookingId)}`;
+
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
-  redirect(
-    `/staff/calendar?month=${booking.arrival_date.slice(0, 7)}&booking=${encodeURIComponent(bookingId)}`,
-  );
+
+  if (
+    notifyResult.ok &&
+    guestHasConversationLink(booking.guest_email) &&
+    notifyResult.emailSent === false
+  ) {
+    redirect(`${calendarHref}&confirm-email=failed`);
+  }
+
+  redirect(calendarHref);
 }
 
 export type UpdateConfirmedBookingState = {
@@ -1758,7 +1768,8 @@ export async function createWalkInBooking(
       stay_status: "checked-in",
       deposit_amount: depositPaid ? estimatedTotal : null,
       deposit_paid_at: paidAt,
-      conversation_token: randomUUID(),
+      conversation_token:
+        guestEmail !== walkInEmailFallback ? randomUUID() : null,
     })
     .select("id, conversation_token")
     .single();

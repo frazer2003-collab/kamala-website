@@ -8,6 +8,7 @@ import { CalendarStaySelectionProvider } from "@/components/calendar-stay-select
 import { StaffCalendarScrollPage } from "@/components/staff-calendar-scroll-page";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
 import { StaffShell } from "@/components/staff-shell";
+import { getBookingsWithConversationMessages } from "@/lib/booking-chat";
 import {
   buildCalendarDays,
   buildStaffTimelineDays,
@@ -85,6 +86,7 @@ export default async function StaffCalendarPage({
     "ical-failed"?: string;
     "ical-error"?: string;
     "ical-warning"?: string;
+    "confirm-email"?: string;
   }>;
 }) {
   const staffSession = await requireStaffSessionDetails();
@@ -111,6 +113,7 @@ export default async function StaffCalendarPage({
     "ical-failed": icalFailed,
     "ical-error": icalError,
     "ical-warning": icalWarning,
+    "confirm-email": confirmEmail,
   } = await searchParams;
   const timelineRange = parseStaffTimelineRange({
     month: monthParam,
@@ -217,6 +220,11 @@ export default async function StaffCalendarPage({
   const allAssignmentBookings = attachRoomNumbers(confirmedBookings.bookings, roomUnits);
   const calendarBookings = allAssignmentBookings.filter((booking) =>
     dateRangeOverlapsBooking(booking, boardFromIso, boardToIso),
+  );
+  const bookingsWithConversationMessages = await getBookingsWithConversationMessages(
+    calendarBookings
+      .map((booking) => booking.databaseId)
+      .filter((id): id is string => Boolean(id)),
   );
   const calendarBlocks = attachRoomNumbers(calendarBlockData.monthBlocks, roomUnits);
   const allAssignmentChannels = attachRoomNumbers(calendarBlockData.channelBlocks, roomUnits);
@@ -491,6 +499,16 @@ export default async function StaffCalendarPage({
             </Link>
           </p>
         ) : null}
+        {confirmEmail === "failed" ? (
+          <p className="form-message form-message--error" role="alert">
+            Stay confirmed, but the guest confirmation email could not be sent.
+            Reply in the conversation so they receive your message with their
+            link.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
         {created === "block" ? (
           <p className="form-message form-message--success" role="status">
             Room closure saved.{" "}
@@ -644,6 +662,7 @@ export default async function StaffCalendarPage({
           <CalendarStayDialogs
             blocks={calendarBlocks}
             bookings={calendarBookings}
+            bookingsWithConversationMessages={bookingsWithConversationMessages}
             canManage={canManage}
             currency={settings.currency}
             formError={panelFormError}

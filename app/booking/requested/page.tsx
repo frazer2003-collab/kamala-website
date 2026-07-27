@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
-import { getGuestChatUrl } from "@/lib/booking-chat";
+import { resolveGuestConversationUrl } from "@/lib/booking-chat";
 import { getPropertySettings } from "@/lib/property-settings";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 import { isLocale, t, tReplace } from "@/lib/i18n";
@@ -24,12 +24,16 @@ export default async function BookingRequestedPage({
       const supabase = createStaffSupabaseClient();
       const { data } = await supabase
         .from("booking_requests")
-        .select("conversation_token")
+        .select("conversation_token, guest_email")
         .eq("id", bookingId)
         .maybeSingle();
 
-      if (data?.conversation_token) {
-        chatUrl = getGuestChatUrl(data.conversation_token);
+      if (data) {
+        chatUrl = await resolveGuestConversationUrl({
+          bookingId,
+          conversationToken: data.conversation_token,
+          guestEmail: data.guest_email,
+        });
       }
     } catch {
       // Booking details may not be available yet.

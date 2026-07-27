@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   guestCanAccessChat,
+  guestHasConversationLink,
   isChatReadOnly,
+  WALK_IN_GUEST_EMAIL,
 } from "./booking-chat";
 
 describe("guest chat access", () => {
@@ -18,5 +20,11 @@ describe("guest chat access", () => {
     assert.equal(guestCanAccessChat("declined"), true);
     assert.equal(isChatReadOnly("declined"), true);
     assert.equal(isChatReadOnly("awaiting"), false);
+  });
+
+  it("does not give walk-in placeholder guests a conversation link", () => {
+    assert.equal(guestHasConversationLink(WALK_IN_GUEST_EMAIL), false);
+    assert.equal(guestHasConversationLink(" Walk-In@kamala.local "), false);
+    assert.equal(guestHasConversationLink("guest@example.com"), true);
   });
 });
