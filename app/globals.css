@@ -6519,6 +6519,7 @@ textarea:focus {
 .staff-main--calendar {
   width: min(100%, calc(100vw - 18rem));
   max-width: none;
+  --staff-calendar-viewport-padding: 0.75rem;
 }
 
 @media (max-width: 920px) {
@@ -6559,6 +6560,7 @@ textarea:focus {
 .calendar-board--timeline {
   display: grid;
   gap: var(--space-3);
+  scroll-margin-top: var(--staff-calendar-viewport-padding, 0.75rem);
 }
 
 .staff-calendar-toolbar {

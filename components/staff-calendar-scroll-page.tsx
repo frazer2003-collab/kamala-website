@@ -2,25 +2,55 @@
 
 import { useEffect } from "react";
 
+const VIEWPORT_PADDING_PX = 12;
+const SETTLE_DELAYS_MS = [0, 120, 400, 900, 1600];
+
 /**
- * Scrolls the window to the bottom so the staff calendar board is fully in
- * view — chrome above the tape otherwise leaves the lower edge off-screen.
+ * On calendar load/reload, scroll past page chrome and size the tape so it
+ * fills the remaining viewport height.
  */
 export function StaffCalendarScrollPage() {
   useEffect(() => {
-    let frame = 0;
-    let timer = 0;
+    if (typeof window === "undefined") {
+      return;
+    }
 
-    const scrollToBottom = () => {
-      const top = Math.max(
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight,
-      );
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    let cancelled = false;
+    let frame = 0;
+    const timers: number[] = [];
+
+    const fitCalendarToViewport = () => {
+      if (cancelled) {
+        return;
+      }
+
+      const board = document.querySelector<HTMLElement>(".calendar-board--timeline");
+      const extranetScroll = document.querySelector<HTMLElement>(".staff-extranet__scroll");
+
+      if (!board) {
+        return;
+      }
+
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const boardTop = board.getBoundingClientRect().top + window.scrollY;
+      const targetTop = Math.max(0, boardTop - VIEWPORT_PADDING_PX);
+
       window.scrollTo({
-        top,
-        behavior: reduceMotion ? "auto" : "smooth",
+        top: targetTop,
+        behavior: reduceMotion ? "auto" : "auto",
       });
+
+      if (extranetScroll) {
+        const extranetTop = extranetScroll.getBoundingClientRect().top + window.scrollY;
+        const extranetTopInViewport = extranetTop - targetTop;
+        const available =
+          window.innerHeight - extranetTopInViewport - VIEWPORT_PADDING_PX;
+        extranetScroll.style.maxHeight = `${Math.max(18 * 16, available)}px`;
+      }
     };
 
     const schedule = () => {
@@ -28,13 +58,13 @@ export function StaffCalendarScrollPage() {
         window.cancelAnimationFrame(frame);
       }
       frame = window.requestAnimationFrame(() => {
-        frame = window.requestAnimationFrame(scrollToBottom);
+        frame = window.requestAnimationFrame(fitCalendarToViewport);
       });
     };
 
-    schedule();
-    // Dynamic calendar chunk + sticky headers settle a beat later.
-    timer = window.setTimeout(schedule, 120);
+    for (const delay of SETTLE_DELAYS_MS) {
+      timers.push(window.setTimeout(schedule, delay));
+    }
 
     const board = document.querySelector(".calendar-board--timeline, .staff-extranet");
     const observer =
@@ -45,16 +75,28 @@ export function StaffCalendarScrollPage() {
         : null;
     if (board && observer) {
       observer.observe(board);
-      // Only react to the first couple of size settles, then stop fighting the user.
-      window.setTimeout(() => observer.disconnect(), 1500);
+      timers.push(
+        window.setTimeout(() => {
+          observer.disconnect();
+        }, 2500),
+      );
     }
 
+    const onResize = () => {
+      schedule();
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+
     return () => {
+      cancelled = true;
       if (frame) {
         window.cancelAnimationFrame(frame);
       }
-      window.clearTimeout(timer);
+      for (const timer of timers) {
+        window.clearTimeout(timer);
+      }
       observer?.disconnect();
+      window.removeEventListener("resize", onResize);
     };
   }, []);
 
