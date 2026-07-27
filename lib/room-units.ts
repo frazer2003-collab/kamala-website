@@ -295,6 +295,11 @@ export function attachRoomNumbers<T extends { roomUnitId: string | null; roomNum
   }));
 }
 
+/** Repair stale DB type links using the built-in door map. */
+export function applyDefaultRoomIds(units: RoomUnit[]): RoomUnit[] {
+  return withDefaultRoomIds(units);
+}
+
 function withDefaultRoomIds(units: RoomUnit[]): RoomUnit[] {
   return units.map((unit) => {
     let roomIds = unit.roomIds.length > 0 ? unit.roomIds : (DEFAULT_UNIT_ROOM_IDS[unit.number] ?? []);
@@ -313,6 +318,10 @@ function withDefaultRoomIds(units: RoomUnit[]): RoomUnit[] {
     }
     if (!(GROUND_UNIT_NUMBERS as readonly string[]).includes(unit.number)) {
       roomIds = roomIds.filter((id) => id !== "ground");
+    }
+
+    if (roomIds.length === 0) {
+      roomIds = [...(DEFAULT_UNIT_ROOM_IDS[unit.number] ?? [])];
     }
 
     if (unit.roomIds.length > 0 && roomIds === unit.roomIds) {
@@ -396,7 +405,7 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
 
   if (typesError) {
     // Units exist; repair type links from the known door map so assignment still works.
-    const units = withDefaultRoomIds(
+    const units = applyDefaultRoomIds(
       unitRows.map((row) => ({
         id: row.id,
         number: row.number,
@@ -419,7 +428,7 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
     roomIdsByUnit.set(row.room_unit_id, list);
   }
 
-  const units = withDefaultRoomIds(
+  const units = applyDefaultRoomIds(
     unitRows.map((row) => ({
       id: row.id,
       number: row.number,

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   SAMPLE_ROOM_UNITS,
+  applyDefaultRoomIds,
   getTimelineUnitsForRoomType,
+  getTypeUnitIdSet,
   getUnitsForRoomType,
   hasAssignableUnitForStay,
   occupancyFromBooking,
@@ -43,6 +45,27 @@ describe("getTimelineUnitsForRoomType", () => {
       getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "ground").map((unit) => unit.number),
       getUnitsForRoomType(SAMPLE_ROOM_UNITS, "ground").map((unit) => unit.number),
     );
+  });
+});
+
+describe("applyDefaultRoomIds", () => {
+  it("restores Family on door 114 when the DB still only links Deluxe", () => {
+    const [unit114] = applyDefaultRoomIds([
+      {
+        id: "unit-114",
+        number: "114",
+        sortOrder: 50,
+        roomIds: ["garden"],
+        icalExportToken: null,
+      },
+    ]);
+
+    assert.deepEqual(unit114.roomIds, ["loft"]);
+    assert.deepEqual(
+      getUnitsForRoomType([unit114], "loft").map((unit) => unit.number),
+      ["114"],
+    );
+    assert.deepEqual(getTypeUnitIdSet([unit114], "loft"), new Set(["unit-114"]));
   });
 });
 
