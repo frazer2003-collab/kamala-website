@@ -35,13 +35,12 @@ export function StaffCalendarScrollPage() {
         return;
       }
 
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const boardTop = board.getBoundingClientRect().top + window.scrollY;
       const targetTop = Math.max(0, boardTop - VIEWPORT_PADDING_PX);
 
       window.scrollTo({
         top: targetTop,
-        behavior: reduceMotion ? "auto" : "auto",
+        behavior: "auto",
       });
 
       if (extranetScroll) {
