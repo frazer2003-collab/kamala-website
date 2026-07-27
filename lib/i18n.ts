@@ -103,22 +103,27 @@ const messages = {
       "You’re offline. Reconnect to continue booking and payment.",
     bankChargeLabel: "Bank charge (6%)",
     promptPayQrAlt: "PromptPay QR code for your stay",
-    bankTransferWaitingTitle: "We’re checking your transfer.",
+    bankTransferWaitingTitle: "We are checking your transfer.",
     bankTransferWaitingBody:
-      "Your room is being held while staff verify the payment. We’ll confirm your booking and send arrival details after the transfer is checked.",
+      "Your room is held while staff verify payment. We will confirm your booking and message you after the transfer is checked.",
     staySummaryDates: "Stay",
     confirmedTitle: "Your room is reserved.",
-    confirmedPendingTitle: "Payment confirmed — finishing your reservation",
-    confirmedOverbookedTitle: "Payment received — we’ll confirm shortly",
+    confirmedPendingTitle: "Payment received — finishing your reservation",
+    confirmedOverbookedTitle: "Payment received — we'll confirm shortly",
     confirmedBody:
-      "We received your full payment for {room} and reserved those dates. Staff will review the request and message you with arrival details.",
+      "We received your full payment for {room} and held those dates. Kamala will review your request and message you with arrival details.",
     confirmedPendingBody:
-      "Your payment went through. We’re setting up your reservation now. Refresh this page in a moment, or check your email — we’ll confirm as soon as it’s ready.",
+      "Your payment went through. Refresh this page in a moment, or check your email — we will add your conversation link as soon as the reservation is ready.",
     confirmedOverbookedBody:
       "We received your full payment for {room}. Our staff will check your dates and message you to confirm your stay and share arrival details. Your payment is safe.",
     confirmedChatHint:
-      "Save your private conversation link — it is the only way to message us about this booking. We also email you when there is a new message.",
-    openBookingConversation: "Open booking conversation",
+      "Save your private conversation link — it is the only way to message Kamala about this booking.",
+    requestedTitle: "We received your booking request.",
+    requestedBody:
+      "{property} will review your dates and reply with confirmation details. No card payment was taken online.",
+    requestedChatHint:
+      "You can message Kamala now — save your private conversation link from the next page.",
+    openBookingConversation: "Open your conversation",
     backToHome: "Back to home",
     cancelledTitle: "No payment was taken.",
     cancelledBody:
@@ -222,20 +227,25 @@ const messages = {
     promptPayQrAlt: "คิวอาร์โค้ดพร้อมเพย์สำหรับค่าที่พัก",
     bankTransferWaitingTitle: "เรากำลังตรวจสอบการโอนเงินของคุณ",
     bankTransferWaitingBody:
-      "เราจะกันห้องไว้ระหว่างที่เจ้าหน้าที่ตรวจสอบการชำระเงิน และจะยืนยันการจองพร้อมส่งรายละเอียดการเข้าพักหลังตรวจสอบเรียบร้อย",
+      "เราจะกันห้องไว้ระหว่างที่เจ้าหน้าที่ตรวจสอบการชำระเงิน และจะยืนยันการจองพร้อมส่งข้อความหลังตรวจสอบเรียบร้อย",
     staySummaryDates: "วันที่พัก",
     confirmedTitle: "ห้องของคุณถูกจองแล้ว",
-    confirmedPendingTitle: "ชำระเงินสำเร็จ — กำลังจัดทำการจอง",
+    confirmedPendingTitle: "ได้รับชำระเงินแล้ว — กำลังจัดทำการจอง",
     confirmedOverbookedTitle: "ได้รับชำระเงินแล้ว — เราจะยืนยันในไม่ช้า",
     confirmedBody:
-      "เราได้รับชำระเต็มจำนวนสำหรับ {room} และจองวันที่ของคุณไว้แล้ว เจ้าหน้าที่จะตรวจสอบคำขอและส่งข้อความพร้อมรายละเอียดการเข้าพัก",
+      "เราได้รับชำระเต็มจำนวนสำหรับ {room} และกันวันที่ไว้แล้ว Kamala จะตรวจสอบคำขอและส่งข้อความพร้อมรายละเอียดการเข้าพัก",
     confirmedPendingBody:
-      "การชำระเงินของคุณสำเร็จแล้ว เรากำลังจัดทำการจอง รีเฟรชหน้านี้ในอีกสักครู่ หรือตรวจสอบอีเมล — เราจะยืนยันเมื่อพร้อม",
+      "การชำระเงินของคุณสำเร็จแล้ว รีเฟรชหน้านี้ในอีกสักครู่ หรือตรวจสอบอีเมล — เราจะเพิ่มลิงก์สนทนาเมื่อการจองพร้อม",
     confirmedOverbookedBody:
       "เราได้รับชำระเต็มจำนวนสำหรับ {room} แล้ว เจ้าหน้าที่จะตรวจสอบวันที่พักและส่งข้อความยืนยันพร้อมรายละเอียดการเข้าพัก การชำระเงินของคุณปลอดภัย",
     confirmedChatHint:
-      "บันทึกลิงก์สนทนาส่วนตัวไว้ — นี่คือช่องทางเดียวสำหรับติดต่อเรื่องการจองนี้ เราจะส่งอีเมลเมื่อมีข้อความใหม่",
-    openBookingConversation: "เปิดสนทนาการจอง",
+      "บันทึกลิงก์สนทนาส่วนตัวไว้ — นี่คือช่องทางเดียวสำหรับติดต่อ Kamala เรื่องการจองนี้",
+    requestedTitle: "เราได้รับคำขอจองของคุณแล้ว",
+    requestedBody:
+      "{property} จะตรวจสอบวันที่พักและตอบกลับพร้อมรายละเอียดการยืนยัน ไม่มีการชำระด้วยบัตรออนไลน์",
+    requestedChatHint:
+      "คุณสามารถส่งข้อความถึง Kamala ได้แล้ว — บันทึกลิงก์สนทนาส่วนตัวจากหน้าถัดไป",
+    openBookingConversation: "เปิดสนทนาของคุณ",
     backToHome: "กลับหน้าแรก",
     cancelledTitle: "ไม่มีการชำระเงิน",
     cancelledBody:

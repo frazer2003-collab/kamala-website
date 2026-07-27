@@ -189,7 +189,7 @@ export async function fulfillBookingDeposit({
         guestName: booking.guest_name,
         roomName: booking.room_name,
         message:
-          "Thank you — we received payment for your stay and your room is reserved. Staff will review your request and message you here with arrival details.",
+          "Thank you — we received payment and your room is reserved.\nKamala will review your request and message you here with arrival details.",
         chatUrl: getGuestChatUrl(token),
         kind: "welcome",
       });

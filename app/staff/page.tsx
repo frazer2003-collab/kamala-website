@@ -582,8 +582,8 @@ export default async function StaffBookingsPage({
               <h2 id="detail-title">{selected.guest}</h2>
               {selectedNeedsReply ? (
                 <p className="staff-request-urgency" role="status">
-                  Waiting for your reply — answer in the conversation, then
-                  close the request when ready.
+                  Guest is waiting for a reply — answer in the conversation
+                  above, then confirm or decline when ready.
                 </p>
               ) : null}
 
@@ -711,8 +711,7 @@ export default async function StaffBookingsPage({
                 />
               ) : (
                 <p className="detail-help">
-                  This request is in the closed archive. Conversation history
-                  stays available above.
+                  This request is closed. Conversation history is read-only.
                 </p>
               )}
             </aside>

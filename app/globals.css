@@ -5907,6 +5907,18 @@ textarea:focus {
   max-width: 42rem;
 }
 
+.booking-chat-page__stay {
+  margin: 0 0 var(--space-2);
+  color: var(--color-muted);
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.booking-chat-page__intro {
+  margin: 0 0 var(--space-4);
+  max-width: 42ch;
+}
+
 .booking-chat-page__back {
   margin-top: var(--space-4);
 }

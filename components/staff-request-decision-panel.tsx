@@ -251,7 +251,7 @@ export function StaffRequestDecisionPanel({
       {needsReply ? (
         <p className="staff-decide__summary" role="status">
           Guest is waiting on a reply in the conversation above. Answer them
-          first, then confirm when the stay is ready.
+          before confirming.
         </p>
       ) : null}
       {needsTransferGate ? (

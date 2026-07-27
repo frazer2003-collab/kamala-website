@@ -441,8 +441,8 @@ export function BookingChat(props: BookingChatProps) {
             {isInitialLoading
               ? "Loading messages…"
               : props.variant === "staff"
-                ? "No messages yet. Send the first note and the guest will be notified by email."
-                : "No messages yet. Write Kamala a note — your message is saved with this reservation, and they will email you when they reply."}
+                ? "No messages yet. Send the first note; the guest is notified by email."
+                : "No messages yet. Write Kamala a note — your message stays with this reservation."}
           </p>
         ) : (
           messages.map((message) => (
@@ -463,7 +463,7 @@ export function BookingChat(props: BookingChatProps) {
       {!canCompose ? (
         <p className="booking-chat__closed">
           {readOnly
-            ? "This conversation is closed. The full history is kept on record."
+            ? "This conversation is closed. The full history stays on your booking record."
             : "Messaging is unavailable for this booking. History above stays readable."}
         </p>
       ) : (
