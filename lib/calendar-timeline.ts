@@ -370,7 +370,7 @@ export function isRoomClosedOnDay(
   );
 }
 
-export type DaySaleStatus = "closed" | "sold-out" | "bookable" | "overbooked";
+export type DaySaleStatus = "closed" | "sold-out" | "bookable" | "conflict";
 
 export function getDaySaleStatus(
   roomId: string,
@@ -386,7 +386,7 @@ export function getDaySaleStatus(
   // roomsToSell here means capacity (rooms available to sell that night).
   if (roomsToSell !== undefined && netBooked !== undefined) {
     if (netBooked > roomsToSell) {
-      return "overbooked";
+      return "conflict";
     }
     if (netBooked >= roomsToSell) {
       return "sold-out";
@@ -407,8 +407,8 @@ export function getDaySaleStatusLabel(status: DaySaleStatus) {
     return "Sold out";
   }
 
-  if (status === "overbooked") {
-    return "Overbooked";
+  if (status === "conflict") {
+    return "Conflict";
   }
 
   return "Bookable";

@@ -17,7 +17,6 @@ import {
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
 import { checkStayCapacity, hasCapacityForStay } from "@/lib/booking-capacity";
-import { overbookedByStaffNote } from "@/lib/booking-overbook";
 import {
   fulfillBookingDeposit,
   releaseBookingReservation,
@@ -1025,7 +1024,7 @@ export async function confirmBookingRequest(formData: FormData) {
 }
 
 export type UpdateConfirmedBookingState = {
-  status: "idle" | "error" | "overbook";
+  status: "idle" | "error";
   error?: string;
 };
 
@@ -1047,7 +1046,6 @@ export async function updateConfirmedBooking(
   const guestEmail = guestEmailInput || walkInEmailFallback;
   const roomUnitIdRaw = getValue(formData, "room-unit-id");
   const roomUnitId = roomUnitIdRaw || null;
-  const overbookConfirmed = getValue(formData, "overbook-confirm") === "1";
   const booking = await getBookingForStaff(bookingId);
 
   const isAssignableCalendarStay =
@@ -1126,9 +1124,7 @@ export async function updateConfirmedBooking(
     if (capacity.reason === "verify-failed") {
       return { status: "error", error: "capacity-verify-failed" };
     }
-    if (!overbookConfirmed) {
-      return { status: "overbook", error: "overbook" };
-    }
+    return { status: "error", error: "unavailable" };
   }
 
   if (effectiveRoomUnitId) {
@@ -1187,13 +1183,7 @@ export async function updateConfirmedBooking(
     ? booking.deposit_amount ?? estimatedTotal
     : booking.deposit_amount;
 
-  const overbookStaffNote =
-    !capacity.ok && overbookConfirmed
-      ? overbookedByStaffNote(new Date().toISOString().slice(0, 10))
-      : null;
-  const nextStaffNote = overbookStaffNote
-    ? [staffNote.trim(), overbookStaffNote].filter(Boolean).join("\n")
-    : staffNote || null;
+  const nextStaffNote = staffNote || null;
 
   const supabase = createStaffSupabaseClient();
 
@@ -1572,7 +1562,7 @@ function formatBookingEmailDate(iso: string) {
 }
 
 export type WalkInBookingState = {
-  status: "idle" | "error" | "overbook";
+  status: "idle" | "error";
   error?: string;
   values: {
     guestName: string;
@@ -1611,10 +1601,9 @@ function walkInError(
   error: string,
   formData: FormData,
   fallbackArrival: string,
-  status: "error" | "overbook" = "error",
 ): WalkInBookingState {
   return {
-    status,
+    status: "error",
     error,
     values: walkInValuesFromForm(formData, fallbackArrival),
   };
@@ -1634,7 +1623,6 @@ export async function createWalkInBooking(
   const arrival = getValue(formData, "arrival");
   const departure = getValue(formData, "departure");
   const staffNote = getValue(formData, "staff-note");
-  const overbookConfirmed = getValue(formData, "overbook-confirm") === "1";
   const room = await getRoomForBooking(roomId);
   const arrivalDate = parseDate(arrival);
   const departureDate = parseDate(departure);
@@ -1701,9 +1689,7 @@ export async function createWalkInBooking(
     if (capacity.reason === "verify-failed") {
       return walkInError("capacity-verify-failed", formData, arrival);
     }
-    if (!overbookConfirmed) {
-      return walkInError("overbook", formData, arrival, "overbook");
-    }
+    return walkInError("unavailable", formData, arrival);
   }
 
   const supabase = createStaffSupabaseClient();

@@ -8,10 +8,7 @@ import {
 } from "@/app/actions";
 import { BookingSourceField } from "@/components/booking-source-field";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
-import {
-  OVERBOOK_SAVE_ANYWAY_HINT,
-  staffCapacityErrorMessage,
-} from "@/lib/booking-overbook";
+import { staffCapacityErrorMessage } from "@/lib/booking-overbook";
 import type { BookingSource } from "@/lib/booking-source";
 import { getTodayIso } from "@/lib/calendar";
 import type { PropertyCurrency } from "@/lib/currency";
@@ -65,6 +62,7 @@ function walkInErrorCopy(code?: string) {
     case "invalid-source":
       return "Choose a booking source.";
     case "capacity-verify-failed":
+    case "unavailable":
     case "overbook":
       return staffCapacityErrorMessage(code);
     case "save-failed":
@@ -158,12 +156,8 @@ export function CalendarWalkInForm({
       ? `${formatMoneySuffix(quote.total, currency)} · ${quote.nights} night${quote.nights === 1 ? "" : "s"}`
       : null;
 
-  const actionError =
-    state.status === "error" || state.status === "overbook"
-      ? walkInErrorCopy(state.error)
-      : null;
+  const actionError = state.status === "error" ? walkInErrorCopy(state.error) : null;
   const displayError = actionError || errorMessage;
-  const needsOverbookConfirm = state.status === "overbook";
   const totalHelpId = "walk-in-custom-total-help";
   const emailHelpId = "walk-in-guest-email-help";
   const nameInvalid = state.error === "invalid-name";
@@ -186,7 +180,6 @@ export function CalendarWalkInForm({
       {displayError ? (
         <p className="form-message form-message--error" role="alert">
           {displayError}
-          {needsOverbookConfirm ? OVERBOOK_SAVE_ANYWAY_HINT : null}
         </p>
       ) : null}
       <form action={formAction} className="calendar-manage-form">
@@ -195,9 +188,6 @@ export function CalendarWalkInForm({
         <input name="room-id" type="hidden" value={roomId} />
         {showEmail ? <input name="show-email" type="hidden" value="1" /> : null}
         {showTotal ? <input name="show-total" type="hidden" value="1" /> : null}
-        {needsOverbookConfirm ? (
-          <input name="overbook-confirm" type="hidden" value="1" />
-        ) : null}
         <div className="field-pair">
           <label htmlFor="walk-in-guest-name">Guest name</label>
           <input
@@ -369,13 +359,7 @@ export function CalendarWalkInForm({
             Back
           </Link>
           <button className="button button--primary" disabled={!canManage || pending} type="submit">
-            {needsOverbookConfirm
-              ? pending
-                ? "Saving…"
-                : "Save anyway"
-              : pending
-                ? "Saving…"
-                : "Save booking"}
+            {pending ? "Saving…" : "Save booking"}
           </button>
         </div>
       </form>

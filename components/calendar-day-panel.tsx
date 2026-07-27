@@ -98,7 +98,7 @@ function getErrorMessage(error?: string, overlap?: string) {
     return "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates.";
   }
 
-  if (error === "overbook" || error === "capacity-verify-failed") {
+  if (error === "overbook" || error === "unavailable" || error === "capacity-verify-failed") {
     return staffCapacityErrorMessage(error);
   }
 

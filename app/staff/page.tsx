@@ -22,7 +22,6 @@ import {
   formatOverlapErrorMessage,
   parseOverlapDays,
 } from "@/lib/stay-overlap";
-import { isPaidOverbookNote } from "@/lib/booking-overbook";
 import { formatBedSetup } from "@/lib/bed-setup";
 import type { BookingStatus } from "@/lib/content";
 
@@ -57,10 +56,6 @@ function getBookingStatusCopy(booking: StaffBooking) {
     !booking.depositPaid
   ) {
     return "Transfer to verify";
-  }
-
-  if (booking.status === "awaiting" && isPaidOverbookNote(booking.staffNote)) {
-    return "Paid — needs dates";
   }
 
   return statusCopy[booking.status];
@@ -158,14 +153,6 @@ function getRowSecondaryLine(
 }
 
 function getMoneyState(booking: StaffBooking) {
-  if (isPaidOverbookNote(booking.staffNote)) {
-    return {
-      tone: "warning" as const,
-      title: "Paid — dates still need sorting",
-      body: "This guest paid, but these dates look full. Reply with other dates or a room, then confirm only after that is settled.",
-    };
-  }
-
   if (booking.bankTransferClaimed && !booking.depositPaid) {
     return {
       tone: "warning" as const,
@@ -720,7 +707,6 @@ export default async function StaffBookingsPage({
                   guestEmail={selected.contact}
                   guestName={selected.guest}
                   needsReply={selectedNeedsReply}
-                  paidOverbooked={isPaidOverbookNote(selected.staffNote)}
                   practiceMode={isPracticeMode}
                 />
               ) : (

@@ -7,15 +7,15 @@ import {
 } from "@/lib/room-units";
 
 describe("getTimelineUnitsForRoomType", () => {
-  it("keeps door 114 assignable under Deluxe and Family", () => {
+  it("assigns door 114 to Family only", () => {
     const garden = getUnitsForRoomType(SAMPLE_ROOM_UNITS, "garden").map((unit) => unit.number);
     const loft = getUnitsForRoomType(SAMPLE_ROOM_UNITS, "loft").map((unit) => unit.number);
 
-    assert.deepEqual(garden, ["112", "114", "117", "119"]);
+    assert.deepEqual(garden, ["112", "117", "119"]);
     assert.deepEqual(loft, ["114"]);
   });
 
-  it("hides Deluxe 114 on the timeline so Family owns that row", () => {
+  it("shows the same units on the timeline as assignment", () => {
     const garden = getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "garden").map(
       (unit) => unit.number,
     );
@@ -23,8 +23,8 @@ describe("getTimelineUnitsForRoomType", () => {
       (unit) => unit.number,
     );
 
-    assert.deepEqual(garden, ["112", "117", "119"]);
-    assert.deepEqual(loft, ["114"]);
+    assert.deepEqual(garden, getUnitsForRoomType(SAMPLE_ROOM_UNITS, "garden").map((unit) => unit.number));
+    assert.deepEqual(loft, getUnitsForRoomType(SAMPLE_ROOM_UNITS, "loft").map((unit) => unit.number));
   });
 
   it("does not expose the retired Triple room type", () => {

@@ -17,7 +17,7 @@ export type RoomUnit = {
 export const COURTYARD_UNIT_NUMBERS = ["113", "115", "118", "120"] as const;
 
 /** Deluxe (garden) door numbers — assignment / sellable inventory. */
-export const GARDEN_UNIT_NUMBERS = ["112", "114", "117", "119"] as const;
+export const GARDEN_UNIT_NUMBERS = ["112", "117", "119"] as const;
 
 /** Family (loft) — Airbnb iCal door 114. */
 export const LOFT_UNIT_NUMBERS = ["114"] as const;
@@ -32,7 +32,7 @@ const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "118": ["courtyard"],
   "120": ["courtyard"],
   "112": ["garden"],
-  "114": ["garden", "loft"],
+  "114": ["loft"],
   "116": ["ground"],
   "117": ["garden"],
   "119": ["garden"],
@@ -85,18 +85,9 @@ export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
     .sort((left, right) => left.sortOrder - right.sortOrder || left.number.localeCompare(right.number));
 }
 
-/**
- * Units shown on the staff timeline for a room type.
- * Door 114 stays assignable under Deluxe, but the calendar only lists it
- * under Family (loft) so the same physical room is not duplicated.
- */
+/** Units shown on the staff timeline for a room type. */
 export function getTimelineUnitsForRoomType(units: RoomUnit[], roomId: string) {
-  return getUnitsForRoomType(units, roomId).filter((unit) => {
-    if (roomId === "garden" && unit.number === "114") {
-      return false;
-    }
-    return true;
-  });
+  return getUnitsForRoomType(units, roomId);
 }
 
 export function getRoomUnitById(units: RoomUnit[], unitId: string | null | undefined) {

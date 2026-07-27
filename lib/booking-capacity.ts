@@ -387,23 +387,6 @@ export async function checkStayCapacity(
   );
 }
 
-/** After insert: fails when this stay already exceeds sellable units (overbook). */
-export async function isStayOverCapacity(
-  roomId: string,
-  arrival: string,
-  departure: string,
-  availableCount: number,
-  options?: { excludeBookingId?: string; excludeBlockId?: string },
-): Promise<StayCapacityResult> {
-  return evaluateStayCapacity(
-    roomId,
-    arrival,
-    departure,
-    availableCount,
-    options,
-    "within-limit",
-  );
-}
 
 export async function hasCapacityForStay(
   roomId: string,

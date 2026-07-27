@@ -226,7 +226,7 @@ function StatusDot({ status }: { status: DaySaleStatus }) {
         "extranet-status-mark",
         `extranet-status-mark--${status}`,
       ].join(" ")}
-      title={status === "overbooked" ? "Overbooked — needs attention" : label}
+      title={status === "conflict" ? "Conflict — needs attention" : label}
     >
       <span aria-hidden="true">{mark}</span>
       <span className="sr-only">{label}</span>
@@ -458,7 +458,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         netBooked,
       );
       const closedColumn = saleStatus === "closed";
-      const soldOutColumn = saleStatus === "sold-out" || saleStatus === "overbooked";
+      const soldOutColumn = saleStatus === "sold-out" || saleStatus === "conflict";
       const blockForDay = getRoomBlockForDay(room.id, day.iso, manualClosures);
       const isSelected =
         (selectedRoomId === room.id && selectedDate === day.iso) ||
@@ -545,15 +545,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const [unitsOpenOverride, setUnitsOpenOverride] = useState<boolean | null>(null);
   const needsAssignment = unassignedCount > 0;
-  const overbookedDays = dayMetrics.filter(
-    (day) => day.inCurrentMonth && day.saleStatus === "overbooked",
+  const conflictDays = dayMetrics.filter(
+    (day) => day.inCurrentMonth && day.saleStatus === "conflict",
   );
-  const hasOverbook = overbookedDays.length > 0;
-  const firstOverbookIso = overbookedDays[0]?.iso;
+  const hasConflict = conflictDays.length > 0;
   const prefersUnitsOpen =
     !isNarrowViewport ||
     needsAssignment ||
-    hasOverbook ||
+    hasConflict ||
     selectedRoomId === room.id;
   const unitsOpen = unitsOpenOverride ?? prefersUnitsOpen;
   const unitsPanelId = `extranet-units-${room.id}`;
@@ -610,14 +609,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             aria-controls={`extranet-inventory-${room.id}`}
             aria-expanded={showInventory}
             aria-label={
-              needsAssignment || hasOverbook
+              needsAssignment || hasConflict
                 ? [
                     showInventory ? "Hide room details" : "Room details",
                     needsAssignment
                       ? `${unassignedCount} stay${unassignedCount === 1 ? "" : "s"} need a room number`
                       : null,
-                    hasOverbook
-                      ? `Overbooked on ${overbookedDays.length} night${overbookedDays.length === 1 ? "" : "s"}`
+                    hasConflict
+                      ? `Conflict on ${conflictDays.length} night${conflictDays.length === 1 ? "" : "s"}`
                       : null,
                   ]
                     .filter(Boolean)
@@ -626,10 +625,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             }
             className={[
               "extranet-room__inventory-toggle",
-              needsAssignment || hasOverbook
+              needsAssignment || hasConflict
                 ? "extranet-room__inventory-toggle--attention"
                 : "",
-              hasOverbook ? "extranet-room__inventory-toggle--urgent" : "",
+              hasConflict ? "extranet-room__inventory-toggle--urgent" : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -644,12 +643,12 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 {unassignedCount} need room #
               </span>
             ) : null}
-            {hasOverbook ? (
+            {hasConflict ? (
               <span
                 className="extranet-room__inventory-toggle-badge extranet-room__inventory-toggle-badge--urgent"
                 title="More stays than rooms to sell — needs attention"
               >
-                Overbooked
+                Conflict
               </span>
             ) : null}
           </button>
