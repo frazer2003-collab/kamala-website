@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import Link from "next/link";
 import { BookingChat } from "@/components/booking-chat";
 import { CopyConversationLink } from "@/components/copy-conversation-link";
@@ -11,6 +12,10 @@ import {
 import { getPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
+
+export const viewport: Viewport = {
+  interactiveWidget: "resizes-content",
+};
 
 export default async function BookingMessagesPage({
   searchParams,
@@ -41,22 +46,26 @@ export default async function BookingMessagesPage({
   }
 
   return (
-    <main className="guest-site site-shell">
+    <main className="guest-site site-shell guest-site--conversation">
       <GuestTopbar settings={settings} />
-      <section className="section booking-chat-page">
-        <h1>Hello, {booking.guest_name}.</h1>
-        <p className="booking-chat-page__stay">
-          {booking.room_name} · {booking.arrival_date} to {booking.departure_date}
-        </p>
-        <p className="booking-chat-page__intro">
-          Private messages about your stay. Kamala emails you when they reply.
-        </p>
-        <CopyConversationLink url={getGuestChatUrl(token)} />
-        <BookingChat
-          readOnly={isChatReadOnly(booking.status)}
-          token={token}
-          variant="guest"
-        />
+      <section className="section booking-chat-page booking-chat-page--conversation">
+        <header className="booking-chat-page__intro-block">
+          <h1>Hello, {booking.guest_name}.</h1>
+          <p className="booking-chat-page__stay">
+            {booking.room_name} · {booking.arrival_date} to {booking.departure_date}
+          </p>
+          <p className="booking-chat-page__intro">
+            Private messages about your stay. Kamala emails you when they reply.
+          </p>
+          <CopyConversationLink url={getGuestChatUrl(token)} />
+        </header>
+        <div className="booking-chat-page__chat">
+          <BookingChat
+            readOnly={isChatReadOnly(booking.status)}
+            token={token}
+            variant="guest"
+          />
+        </div>
         <Link className="button button--secondary booking-chat-page__back" href="/">
           Back to {settings.propertyName}
         </Link>
