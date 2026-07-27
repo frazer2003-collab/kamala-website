@@ -8259,6 +8259,30 @@ html.staff-busy .staff-login-shell input {
   color: var(--color-ink);
 }
 
+.extranet-row--rooms-left {
+  padding-block: 0.18rem;
+  font-size: 0.72rem;
+}
+
+.extranet-row--rooms-left .extranet-row__meta {
+  font-size: 0.62rem;
+}
+
+.extranet-cell--rooms-left {
+  min-height: 1.85rem;
+  margin-block: 0.05rem;
+  padding-block: 0.05rem;
+}
+
+.extranet-metric--rooms-left {
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.extranet-cell--rooms-left .extranet-metric__override {
+  font-size: 0.68rem;
+}
+
 .extranet-metric__override {
   margin-left: var(--space-1);
   color: var(--color-maroon);

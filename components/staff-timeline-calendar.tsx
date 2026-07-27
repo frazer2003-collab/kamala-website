@@ -719,7 +719,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           </DayCell>
         ))}
 
-        <MetricRowLabel hint="Click a day to set a temporary allotment">
+        <MetricRowLabel
+          className="extranet-row--rooms-left"
+          hint="Click a day to set a temporary allotment"
+        >
           Rooms left
           <span className="extranet-row__meta">of {room.availableCount}</span>
         </MetricRowLabel>
@@ -729,6 +732,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             className={getInventoryDayCellClass(day, [
               "extranet-cell--metric",
               "extranet-cell--clickable",
+              "extranet-cell--rooms-left",
               day.hasAllotmentOverride ? "extranet-cell--allotment-override" : "",
             ])}
             closedColumn={day.closedColumn}
@@ -737,7 +741,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             href={day.allotmentHref}
             key={`left-${day.iso}`}
           >
-            <span className="extranet-metric">
+            <span className="extranet-metric extranet-metric--rooms-left">
               {day.roomsLeft}
               {day.hasAllotmentOverride ? (
                 <span
