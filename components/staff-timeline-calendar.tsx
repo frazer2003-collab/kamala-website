@@ -127,6 +127,19 @@ function getBarColorStyle(bar: TimelineBar, guestColors: Map<string, string>) {
   };
 }
 
+function getInventoryDayCellClass(day: DayMetrics, extra: string[] = []) {
+  return [
+    ...extra,
+    day.isToday ? "extranet-cell--today" : "",
+    day.isPast ? "extranet-cell--past" : "",
+    !day.inCurrentMonth ? "extranet-cell--muted" : "",
+    day.isWeekend ? "extranet-cell--weekend" : "",
+    day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function MetricRowLabel({
   children,
   action,
@@ -546,7 +559,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
 
   const firstFutureDay = dayMetrics.find((day) => !day.isPast && day.inCurrentMonth)?.iso
     ?? dayMetrics.find((day) => !day.isPast)?.iso;
-  const [showInventory, setShowInventory] = useState(false);
+  const [inventoryOpenOverride, setInventoryOpenOverride] = useState<boolean | null>(null);
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const [unitsOpenOverride, setUnitsOpenOverride] = useState<boolean | null>(null);
   const needsAssignment = unassignedCount > 0;
@@ -554,6 +567,8 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     (day) => day.inCurrentMonth && day.saleStatus === "conflict",
   );
   const hasConflict = conflictDays.length > 0;
+  const prefersInventoryOpen = needsAssignment || hasConflict;
+  const showInventory = inventoryOpenOverride ?? prefersInventoryOpen;
   const prefersUnitsOpen =
     !isNarrowViewport ||
     needsAssignment ||
@@ -580,7 +595,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       className={[
         "extranet-room",
         unitsOpen ? "extranet-room--units-open" : "extranet-room--units-collapsed",
-      ].join(" ")}
+        showInventory ? "extranet-room--inventory-open" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div
         className="extranet-room__header"
@@ -637,11 +655,16 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             ]
               .filter(Boolean)
               .join(" ")}
-            onClick={() => setShowInventory((open) => !open)}
+            onClick={() => setInventoryOpenOverride(!showInventory)}
+            title={
+              !showInventory && !needsAssignment && !hasConflict
+                ? "Show status, rooms left, and rates"
+                : undefined
+            }
             type="button"
           >
             <span className="extranet-room__inventory-toggle-label">
-              {showInventory ? "Hide details" : "Room details"}
+              {showInventory ? "Hide room details" : "Room details"}
             </span>
             {needsAssignment ? (
               <span className="extranet-room__inventory-toggle-badge">
@@ -683,15 +706,9 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         {dayMetrics.map((day) => (
           <DayCell
             ariaLabel={`${room.name} status on ${day.iso}: ${getDaySaleStatusLabel(day.saleStatus)}`}
-            className={[
-              day.isPast ? "extranet-cell--past" : "",
+            className={getInventoryDayCellClass(day, [
               day.isSelected ? "extranet-cell--selected" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            ])}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
             disabled={day.isPast}
@@ -709,17 +726,11 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         {dayMetrics.map((day) => (
           <DayCell
             ariaLabel={`${day.roomsLeft} of ${day.roomsToSell} rooms left on ${day.iso}${day.hasAllotmentOverride ? ", temporary allotment" : ""}`}
-            className={[
+            className={getInventoryDayCellClass(day, [
               "extranet-cell--metric",
               "extranet-cell--clickable",
               day.hasAllotmentOverride ? "extranet-cell--allotment-override" : "",
-              day.isPast ? "extranet-cell--past" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            ])}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
             disabled={day.isPast}
@@ -881,17 +892,11 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 ? `${day.netBooked} booked on ${day.iso}. Open day actions for stays or walk-in.`
                 : `No bookings on ${day.iso}. Open day actions.`
             }
-            className={[
+            className={getInventoryDayCellClass(day, [
               "extranet-cell--metric",
               "extranet-cell--clickable",
               "extranet-row--inventory",
-              day.isPast ? "extranet-cell--past" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            ])}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
             disabled={day.isPast && day.netBooked === 0}
@@ -925,19 +930,13 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                   ? `Promo rate on ${day.iso}: ${formatRate(day.rate, currency)}, ${day.percentOff}% off`
                   : `Rate on ${day.iso}: ${formatRate(day.rate, currency)}`
             }
-            className={[
+            className={getInventoryDayCellClass(day, [
               "extranet-cell--rate",
               "extranet-cell--clickable",
               "extranet-row--inventory",
               day.hasRateOverride ? "extranet-cell--rate-override" : "",
               day.percentOff > 0 ? "extranet-cell--promo" : "",
-              day.isPast ? "extranet-cell--past" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            ])}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
             disabled={day.isPast}
