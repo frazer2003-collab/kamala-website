@@ -17,7 +17,7 @@ import {
   dateRangeOverlapsBooking,
   bookingOccupiesDay,
 } from "@/lib/calendar";
-import { getCalendarMonthStats } from "@/lib/calendar-timeline";
+import { getCalendarMonthStats, countNetBookedForRoomDay } from "@/lib/calendar-timeline";
 import {
   getConfirmedBookingById,
   getConfirmedBookings,
@@ -45,6 +45,7 @@ import { getStaffRooms } from "@/lib/rooms";
 import {
   attachRoomNumbers,
   getStaffRoomUnits,
+  getTypeUnitIdSet,
   occupancyFromBooking,
   occupancyFromChannelBlock,
 } from "@/lib/room-units";
@@ -357,21 +358,14 @@ export default async function StaffCalendarPage({
           const roomsToSell =
             inventoryLookup.get(`${selectedRoom.id}:${selectedDate}`) ??
             selectedRoom.availableCount;
-          const directBooked = calendarBookings.filter(
-            (booking) =>
-              booking.roomId === selectedRoom.id &&
-              bookingOccupiesDay(booking, selectedDate),
-          ).length;
-          const channelBooked = calendarBlocks.filter(
-            (block) =>
-              isChannelReservation(block) &&
-              block.roomId === selectedRoom.id &&
-              bookingOccupiesDay(
-                { arrivalDate: block.startDate, departureDate: block.endDate },
-                selectedDate,
-              ),
-          ).length;
-          return directBooked + channelBooked >= roomsToSell;
+          const netBooked = countNetBookedForRoomDay({
+            roomId: selectedRoom.id,
+            iso: selectedDate,
+            bookings: calendarBookings,
+            channelBlocks: allAssignmentChannels.filter(isChannelReservation),
+            typeUnitIds: getTypeUnitIdSet(roomUnits, selectedRoom.id),
+          });
+          return netBooked >= roomsToSell;
         })()
       : false;
   const dayStays =

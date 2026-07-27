@@ -61,6 +61,10 @@ function staysOverlap(
   return a.arrivalDate < b.departureDate && b.arrivalDate < a.departureDate;
 }
 
+export function getTypeUnitIdSet(units: RoomUnit[], roomId: string) {
+  return new Set(getUnitsForRoomType(units, roomId).map((unit) => unit.id));
+}
+
 export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
   return units
     .filter((unit) => {

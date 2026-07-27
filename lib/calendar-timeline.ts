@@ -310,6 +310,67 @@ export function getTimelineLaneCount(bars: TimelineBar[]) {
   return Math.max(...bars.map((bar) => bar.lane)) + 1;
 }
 
+export function stayAffectsRoomInventory(
+  stay: { roomId: string; roomUnitId?: string | null },
+  roomId: string,
+  typeUnitIds: ReadonlySet<string>,
+) {
+  if (stay.roomId === roomId) {
+    return true;
+  }
+
+  return Boolean(stay.roomUnitId && typeUnitIds.has(stay.roomUnitId));
+}
+
+/** Nights booked against a room type — by type label or any of its door numbers. */
+export function countNetBookedForRoomDay({
+  roomId,
+  iso,
+  bookings,
+  channelBlocks,
+  typeUnitIds,
+}: {
+  roomId: string;
+  iso: string;
+  bookings: Array<{
+    roomId: string;
+    roomUnitId?: string | null;
+    arrivalDate: string;
+    departureDate: string;
+  }>;
+  channelBlocks: Array<{
+    roomId: string;
+    roomUnitId?: string | null;
+    startDate: string;
+    endDate: string;
+  }>;
+  typeUnitIds: ReadonlySet<string>;
+}) {
+  let count = 0;
+
+  for (const booking of bookings) {
+    if (!stayAffectsRoomInventory(booking, roomId, typeUnitIds)) {
+      continue;
+    }
+
+    if (booking.arrivalDate <= iso && booking.departureDate > iso) {
+      count += 1;
+    }
+  }
+
+  for (const block of channelBlocks) {
+    if (!stayAffectsRoomInventory(block, roomId, typeUnitIds)) {
+      continue;
+    }
+
+    if (block.startDate <= iso && block.endDate > iso) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 export function countOverlappingStaysForDay(
   iso: string,
   bookings: Array<{ arrivalDate: string; departureDate: string }>,

@@ -8,6 +8,7 @@ import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import {
   buildRoomTimelineBars,
   buildUnitTimelineBars,
+  countNetBookedForRoomDay,
   formatTimelineDayHeader,
   getDaySaleStatus,
   getDaySaleStatusLabel,
@@ -46,6 +47,7 @@ import {
 } from "@/lib/room-blocks";
 import {
   getTimelineUnitsForRoomType,
+  getTypeUnitIdSet,
   type RoomUnit,
   type UnitOccupancy,
 } from "@/lib/room-units";
@@ -412,6 +414,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     () => getTimelineUnitsForRoomType(roomUnits, room.id),
     [roomUnits, room.id],
   );
+  const typeUnitIds = useMemo(
+    () => getTypeUnitIdSet(roomUnits, room.id),
+    [roomUnits, room.id],
+  );
   const roomShortNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const entry of rooms) {
@@ -440,15 +446,13 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       const isPast = isPastCalendarDate(day.iso);
       const capacity = getRoomsToSellForDay(room, day.iso, inventoryLookup);
       const hasAllotmentOverride = inventoryLookup.has(`${room.id}:${day.iso}`);
-      const directBooked = roomBookings.filter(
-        (booking) =>
-          booking.arrivalDate <= day.iso && booking.departureDate > day.iso,
-      ).length;
-      const channelBooked = channelReservations.filter(
-        (reservation) =>
-          reservation.startDate <= day.iso && reservation.endDate > day.iso,
-      ).length;
-      const netBooked = directBooked + channelBooked;
+      const netBooked = countNetBookedForRoomDay({
+        roomId: room.id,
+        iso: day.iso,
+        bookings,
+        channelBlocks: allChannelReservations,
+        typeUnitIds,
+      });
       const roomsLeft = Math.max(0, capacity - netBooked);
       const saleStatus = getDaySaleStatus(
         room.id,
@@ -521,9 +525,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       };
     });
   }, [
+    allChannelReservations,
+    bookings,
     calendarDays,
     canManage,
-    channelReservations,
     inventoryLookup,
     rateLookup,
     manualClosures,
@@ -532,11 +537,11 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     toIso,
     promotions,
     room,
-    roomBookings,
     selectedBlockKey,
     selectedDate,
     selectedRoomId,
     todayIso,
+    typeUnitIds,
   ]);
 
   const firstFutureDay = dayMetrics.find((day) => !day.isPast && day.inCurrentMonth)?.iso
