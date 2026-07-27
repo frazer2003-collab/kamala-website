@@ -63,6 +63,7 @@ function walkInErrorCopy(code?: string) {
       return "Choose a booking source.";
     case "capacity-verify-failed":
     case "unavailable":
+    case "no-assignable-door":
     case "overbook":
       return staffCapacityErrorMessage(code);
     case "save-failed":

@@ -4,6 +4,8 @@ import {
   SAMPLE_ROOM_UNITS,
   getTimelineUnitsForRoomType,
   getUnitsForRoomType,
+  hasAssignableUnitForStay,
+  occupancyFromBooking,
 } from "@/lib/room-units";
 
 describe("getTimelineUnitsForRoomType", () => {
@@ -40,6 +42,35 @@ describe("getTimelineUnitsForRoomType", () => {
     assert.deepEqual(
       getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "ground").map((unit) => unit.number),
       getUnitsForRoomType(SAMPLE_ROOM_UNITS, "ground").map((unit) => unit.number),
+    );
+  });
+});
+
+describe("hasAssignableUnitForStay", () => {
+  it("blocks Family when door 114 is taken by any stay on that door", () => {
+    const units = SAMPLE_ROOM_UNITS;
+    const unit114 = units.find((unit) => unit.number === "114");
+    assert.ok(unit114);
+
+    const occupancies = [
+      occupancyFromBooking({
+        databaseId: "other-type",
+        roomUnitId: unit114.id,
+        arrivalDate: "2026-08-10",
+        departureDate: "2026-08-12",
+        guest: "Deluxe guest",
+      }),
+    ];
+
+    assert.equal(
+      hasAssignableUnitForStay({
+        units,
+        roomId: "loft",
+        arrivalDate: "2026-08-10",
+        departureDate: "2026-08-11",
+        occupancies,
+      }),
+      false,
     );
   });
 });

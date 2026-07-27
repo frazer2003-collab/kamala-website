@@ -220,6 +220,34 @@ export function getAssignableUnitsForStay({
   });
 }
 
+/** False when every door for this type already has an overlapping stay or channel block. */
+export function hasAssignableUnitForStay({
+  units,
+  roomId,
+  arrivalDate,
+  departureDate,
+  excludeId,
+  occupancies,
+}: {
+  units: RoomUnit[];
+  roomId: string;
+  arrivalDate: string;
+  departureDate: string;
+  excludeId?: string;
+  occupancies: UnitOccupancy[];
+}) {
+  return (
+    getAssignableUnitsForStay({
+      units,
+      roomId,
+      arrivalDate,
+      departureDate,
+      excludeId,
+      occupancies,
+    }).length > 0
+  );
+}
+
 /** Eligible doors for a type, with conflict info (for selects that show taken rooms). */
 export function getUnitOptionsForStay({
   units,

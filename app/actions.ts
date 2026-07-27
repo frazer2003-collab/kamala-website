@@ -68,6 +68,7 @@ import {
   findUnitAssignmentConflict,
   getRoomUnitById,
   getStaffRoomUnits,
+  hasAssignableUnitForStay,
   isUnitEligibleForRoom,
   occupancyFromBooking,
   occupancyFromChannelBlock,
@@ -432,6 +433,31 @@ export async function createBookingRequest(
       );
     }
 
+    return bookingErrorState(
+      "These dates are no longer available for this room.",
+      formData,
+      { room: "These dates are no longer available for this room." },
+    );
+  }
+
+  const [{ units }, confirmed, channels] = await Promise.all([
+    getStaffRoomUnits(),
+    getConfirmedBookings(),
+    getChannelReservations(),
+  ]);
+  const occupancies = [
+    ...confirmed.bookings.map(occupancyFromBooking),
+    ...channels.blocks.map(occupancyFromChannelBlock),
+  ];
+  if (
+    !hasAssignableUnitForStay({
+      units,
+      roomId: selectedRoom.id,
+      arrivalDate: arrival,
+      departureDate: departure,
+      occupancies,
+    })
+  ) {
     return bookingErrorState(
       "These dates are no longer available for this room.",
       formData,
@@ -1690,6 +1716,26 @@ export async function createWalkInBooking(
       return walkInError("capacity-verify-failed", formData, arrival);
     }
     return walkInError("unavailable", formData, arrival);
+  }
+
+  const [{ units }, confirmed, channels] = await Promise.all([
+    getStaffRoomUnits(),
+    getConfirmedBookings(),
+    getChannelReservations(),
+  ]);
+  const occupancies = [
+    ...confirmed.bookings.map(occupancyFromBooking),
+    ...channels.blocks.map(occupancyFromChannelBlock),
+  ];
+  const hasDoor = hasAssignableUnitForStay({
+    units,
+    roomId: room.id,
+    arrivalDate: arrival,
+    departureDate: departure,
+    occupancies,
+  });
+  if (!hasDoor) {
+    return walkInError("no-assignable-door", formData, arrival);
   }
 
   const supabase = createStaffSupabaseClient();

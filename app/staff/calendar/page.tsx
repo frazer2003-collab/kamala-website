@@ -351,6 +351,29 @@ export default async function StaffCalendarPage({
       mode !== "bulk-status" &&
       !isPastCalendarDate(selectedDate),
   );
+  const soldOutForSelectedNight =
+    selectedRoom && selectedDate
+      ? (() => {
+          const roomsToSell =
+            inventoryLookup.get(`${selectedRoom.id}:${selectedDate}`) ??
+            selectedRoom.availableCount;
+          const directBooked = calendarBookings.filter(
+            (booking) =>
+              booking.roomId === selectedRoom.id &&
+              bookingOccupiesDay(booking, selectedDate),
+          ).length;
+          const channelBooked = calendarBlocks.filter(
+            (block) =>
+              isChannelReservation(block) &&
+              block.roomId === selectedRoom.id &&
+              bookingOccupiesDay(
+                { arrivalDate: block.startDate, departureDate: block.endDate },
+                selectedDate,
+              ),
+          ).length;
+          return directBooked + channelBooked >= roomsToSell;
+        })()
+      : false;
   const dayStays =
     selectedRoom && selectedDate
       ? [
@@ -707,6 +730,7 @@ export default async function StaffCalendarPage({
               promotions={promotions}
               rateOverrides={Object.fromEntries(rateLookup)}
               room={selectedRoom}
+              soldOutForNight={soldOutForSelectedNight}
             />
           </CalendarBookingDialog>
         ) : null}
