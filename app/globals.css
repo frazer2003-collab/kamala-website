@@ -6519,7 +6519,45 @@ textarea:focus {
 .staff-main--calendar {
   width: min(100%, calc(100vw - 18rem));
   max-width: none;
-  --staff-calendar-viewport-padding: 0.75rem;
+}
+
+@media (min-width: 921px) {
+  .staff-shell:has(.staff-main--calendar) {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  .staff-main--calendar {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: var(--space-4);
+  }
+
+  .staff-main--calendar .calendar-board--timeline {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  .staff-main--calendar .staff-extranet--full {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .staff-main--calendar .staff-extranet__scroll {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
 }
 
 @media (max-width: 920px) {
@@ -6560,7 +6598,6 @@ textarea:focus {
 .calendar-board--timeline {
   display: grid;
   gap: var(--space-3);
-  scroll-margin-top: var(--staff-calendar-viewport-padding, 0.75rem);
 }
 
 .staff-calendar-toolbar {
