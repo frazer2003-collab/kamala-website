@@ -5,23 +5,26 @@ export const THA_PHAE_GATE_GEO = {
   longitude: 98.993,
 } as const;
 
+/** Canonical gate name for guest-facing copy. */
+export const THAE_PHAE_GATE_NAME = "Thae Phae Gate";
+
 /** Primary SERP title target (keep 30–60 chars). */
-export const THA_PHAE_PRIMARY_TITLE = "Chiang Mai Guesthouses Near Tha Pae Gate";
+export const THA_PHAE_PRIMARY_TITLE = `Chiang Mai Guesthouses Near ${THAE_PHAE_GATE_NAME}`;
 
-/** On-page H1 — matches the common search phrasing, including Tha Pae spelling. */
-export const THA_PHAE_PRIMARY_HEADLINE = "Chiang Mai guesthouses near Tha Pae Gate";
+/** On-page H1 — location-led headline for Chiang Mai / Thae Phae stays. */
+export const THA_PHAE_PRIMARY_HEADLINE = `Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}`;
 
-export const THA_PHAE_ROOMS_HEADING = "Rooms near Tha Pae Gate";
+export const THA_PHAE_ROOMS_HEADING = `Rooms near ${THAE_PHAE_GATE_NAME}`;
 
-export const THA_PHAE_BOOKING_HEADING = "Book your stay near Tha Pae Gate";
+export const THA_PHAE_BOOKING_HEADING = `Book your stay near ${THAE_PHAE_GATE_NAME}`;
 
-export const THA_PHAE_ABOUT_HEADING = "A cozy guesthouse by Tha Pae Gate";
+export const THA_PHAE_ABOUT_HEADING = `A cozy guesthouse by ${THAE_PHAE_GATE_NAME}`;
 
 export const THA_PHAE_SEO_KEYWORDS = [
   "chiangmai guesthouses near tha pae gate",
-  "Chiang Mai guesthouses near Tha Pae Gate",
-  "guesthouses near Tha Pae Gate Chiang Mai",
-  "guesthouse near Tha Pae Gate Chiang Mai",
+  `Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}`,
+  `guesthouses near ${THAE_PHAE_GATE_NAME} Chiang Mai`,
+  `guesthouse near ${THAE_PHAE_GATE_NAME} Chiang Mai`,
   "guesthouses near Tha Phae Gate Chiang Mai",
   "guesthouse near Tha Phae Gate",
   "Thapae Gate guesthouse Chiang Mai",
@@ -38,7 +41,7 @@ export function isThaPhaeSeoContext(
 ): boolean {
   return (
     locationLabel.toLowerCase().includes("chiang mai") &&
-    /tha\s*ph?ae/i.test(addressLine ?? "")
+    /thae?\s*ph?ae/i.test(addressLine ?? "")
   );
 }
 
@@ -72,13 +75,13 @@ export function normalizeTelHref(phone: string): string {
 }
 
 export function buildThaPhaeMetaDescription(propertyName: string): string {
-  return `${propertyName}: Chiang Mai guesthouses near Tha Pae Gate (Tha Phae). Two-minute walk to the Old City gate, by Sunday Walking Street.`;
+  return `${propertyName}: Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}. Two-minute walk to the Old City gate, by Sunday Walking Street.`;
 }
 
 export function buildThaPhaeHeroLede(): string {
-  return "Looking for Chiang Mai guesthouses near Tha Pae Gate? We are a friendly, cozy stay on Tha Phae Road Soi 6 — just across from the Sunday Walking Street, with Tha Pae Gate (also spelled Tha Phae / Thapae) a two-minute walk away.";
+  return `Looking for Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}? We are a friendly, cozy stay on Tha Phae Road Soi 6 — just across from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} a two-minute walk away.`;
 }
 
 export function buildThaPhaeStayStoryLede(propertyName: string): string {
-  return `${propertyName} is one of the Chiang Mai guesthouses near Tha Pae Gate that travellers choose for an easy Old City base. Feel at home here — we sit just across the street from the Sunday Walking Street, with Tha Pae Gate (Tha Phae Gate) about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market are about six minutes away.`;
+  return `${propertyName} is one of the Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME} that travellers choose for an easy Old City base. Feel at home here — we sit just across the street from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market are about six minutes away.`;
 }

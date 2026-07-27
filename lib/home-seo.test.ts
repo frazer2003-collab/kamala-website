@@ -42,11 +42,10 @@ describe("Tha Pae Gate SEO copy", () => {
       description.length >= 120 && description.length <= 155,
       `description length ${description.length}`,
     );
-    assert.match(description, /Tha Pae Gate/i);
-    assert.match(description, /Tha Phae/i);
+    assert.match(description, /Thae Phae Gate/i);
   });
 
-  it("uses keyword-aligned H1 and hospitable body copy with spelling variants", () => {
+  it("uses Thae Phae Gate in H1 and hero copy", () => {
     const h1 = buildAtmosphereHeadline(
       "Chiang Mai",
       thaPhaeSettings.propertyName,
@@ -59,8 +58,8 @@ describe("Tha Pae Gate SEO copy", () => {
     );
 
     assert.equal(h1, THA_PHAE_PRIMARY_HEADLINE);
-    assert.match(lede, /Chiang Mai guesthouses near Tha Pae Gate/i);
-    assert.match(lede, /Tha Phae|Thapae/i);
+    assert.match(lede, /Chiang Mai guesthouses near Thae Phae Gate/i);
+    assert.match(lede, /Thae Phae Gate a two-minute walk/i);
   });
 
   it("scores highly against the target Chiang Mai / Tha Pae query", () => {
@@ -93,7 +92,7 @@ describe("Tha Pae Gate SEO copy", () => {
     const jsonLd = buildHomePageJsonLd(thaPhaeSettings, [], "https://kamalaguesthouse.com");
     assert.equal(jsonLd.address?.streetAddress, "2/7 Tha Phae Rd Soi 6");
     assert.ok(Array.isArray(jsonLd.knowsAbout));
-    assert.ok(jsonLd.knowsAbout?.includes("Tha Pae Gate"));
+    assert.ok(jsonLd.knowsAbout?.includes("Thae Phae Gate"));
     assert.deepEqual(jsonLd.sameAs, [
       "https://line.me/R/ti/p/@example",
       "https://wa.me/66986494996",

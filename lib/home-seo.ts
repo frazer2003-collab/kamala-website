@@ -11,6 +11,7 @@ import {
   buildGoogleMapsSearchUrl,
   buildThaPhaeMetaDescription,
   isThaPhaeSeoContext,
+  THAE_PHAE_GATE_NAME,
   THA_PHAE_GATE_GEO,
   THA_PHAE_PRIMARY_TITLE,
   THA_PHAE_SEO_KEYWORDS,
@@ -87,7 +88,7 @@ function buildOpenGraphImageAlt(settings: PropertySettings): string {
   );
 
   if (isThaPhaeSeoContext(locationLabel, settings.addressLine)) {
-    return `${settings.propertyName} — Chiang Mai guesthouses near Tha Pae Gate`;
+    return `${settings.propertyName} — Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -276,7 +277,7 @@ export function buildHomePageJsonLd(
     ],
     knowsAbout: nearThaPhae
       ? [
-          "Tha Pae Gate",
+          THAE_PHAE_GATE_NAME,
           "Tha Phae Gate",
           "Thapae Gate",
           "Chiang Mai Old City",

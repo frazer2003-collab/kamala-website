@@ -21,6 +21,7 @@ export const TARGET_SEO_QUERY = "chiangmai guesthouses near tha pae gate";
 function normalize(text: string) {
   return text
     .toLowerCase()
+    .replace(/thae\s*phae/g, "tha pae")
     .replace(/tha\s*phae/g, "tha pae")
     .replace(/thapae/g, "tha pae")
     .replace(/chiang\s*mai/g, "chiangmai")
@@ -91,10 +92,12 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "spelling-variants",
-    /tha\s*pae/i.test(`${page.title} ${page.description} ${page.h1} ${page.bodyText}`) &&
-      /tha\s*phae/i.test(`${page.description} ${page.bodyText}`),
+    /tha\s*pae/i.test(
+      `${page.title} ${page.description} ${page.h1} ${page.bodyText} ${page.keywords.join(" ")}`,
+    ) &&
+      /thae\s*phae/i.test(`${page.title} ${page.description} ${page.h1} ${page.bodyText}`),
     6,
-    "Uses both Tha Pae and Tha Phae spellings",
+    "Uses Thae Phae Gate spelling with search-friendly Tha Pae variants",
   );
   push(
     "keywords-meta",
