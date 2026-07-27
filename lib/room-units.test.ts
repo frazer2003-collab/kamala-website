@@ -4,18 +4,20 @@ import {
   SAMPLE_ROOM_UNITS,
   getTimelineUnitsForRoomType,
   getUnitsForRoomType,
+  hasAssignableUnitForStay,
+  occupancyFromBooking,
 } from "@/lib/room-units";
 
 describe("getTimelineUnitsForRoomType", () => {
-  it("keeps door 114 assignable under Deluxe and Family", () => {
+  it("assigns door 114 to Family only", () => {
     const garden = getUnitsForRoomType(SAMPLE_ROOM_UNITS, "garden").map((unit) => unit.number);
     const loft = getUnitsForRoomType(SAMPLE_ROOM_UNITS, "loft").map((unit) => unit.number);
 
-    assert.deepEqual(garden, ["112", "114", "117", "119"]);
+    assert.deepEqual(garden, ["112", "117", "119"]);
     assert.deepEqual(loft, ["114"]);
   });
 
-  it("hides Deluxe 114 on the timeline so Family owns that row", () => {
+  it("shows the same units on the timeline as assignment", () => {
     const garden = getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "garden").map(
       (unit) => unit.number,
     );
@@ -23,8 +25,8 @@ describe("getTimelineUnitsForRoomType", () => {
       (unit) => unit.number,
     );
 
-    assert.deepEqual(garden, ["112", "117", "119"]);
-    assert.deepEqual(loft, ["114"]);
+    assert.deepEqual(garden, getUnitsForRoomType(SAMPLE_ROOM_UNITS, "garden").map((unit) => unit.number));
+    assert.deepEqual(loft, getUnitsForRoomType(SAMPLE_ROOM_UNITS, "loft").map((unit) => unit.number));
   });
 
   it("does not expose the retired Triple room type", () => {
@@ -40,6 +42,35 @@ describe("getTimelineUnitsForRoomType", () => {
     assert.deepEqual(
       getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "ground").map((unit) => unit.number),
       getUnitsForRoomType(SAMPLE_ROOM_UNITS, "ground").map((unit) => unit.number),
+    );
+  });
+});
+
+describe("hasAssignableUnitForStay", () => {
+  it("blocks Family when door 114 is taken by any stay on that door", () => {
+    const units = SAMPLE_ROOM_UNITS;
+    const unit114 = units.find((unit) => unit.number === "114");
+    assert.ok(unit114);
+
+    const occupancies = [
+      occupancyFromBooking({
+        databaseId: "other-type",
+        roomUnitId: unit114.id,
+        arrivalDate: "2026-08-10",
+        departureDate: "2026-08-12",
+        guest: "Deluxe guest",
+      }),
+    ];
+
+    assert.equal(
+      hasAssignableUnitForStay({
+        units,
+        roomId: "loft",
+        arrivalDate: "2026-08-10",
+        departureDate: "2026-08-11",
+        occupancies,
+      }),
+      false,
     );
   });
 });

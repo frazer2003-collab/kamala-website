@@ -7543,9 +7543,17 @@ html.staff-busy .staff-login-shell input {
 }
 
 .staff-extranet__dayhead--today {
-  background: var(--color-maroon-wash);
-  border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-maroon) 25%, transparent);
+  background: color-mix(in srgb, var(--color-maroon-wash) 88%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-maroon) 52%, var(--color-border));
+  box-shadow:
+    inset 3px 0 0 var(--color-maroon),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-maroon) 28%, transparent);
+}
+
+.staff-extranet__dayhead--today .staff-extranet__weekday {
+  color: var(--color-maroon-deep);
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 /* Month starts win over weekend tint so new months stay easy to spot. */
@@ -7569,10 +7577,12 @@ html.staff-busy .staff-login-shell input {
 }
 
 .staff-extranet__dayhead--month-start.staff-extranet__dayhead--today {
-  border-color: color-mix(in srgb, var(--color-maroon) 55%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-maroon) 62%, var(--color-border));
   border-left-color: var(--color-maroon-deep);
-  background: var(--color-maroon-wash);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-maroon) 28%, transparent);
+  background: color-mix(in srgb, var(--color-maroon-wash) 92%, var(--color-surface));
+  box-shadow:
+    inset 3px 0 0 var(--color-maroon-deep),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-maroon) 32%, transparent);
 }
 
 .staff-extranet__dayhead--muted {
@@ -7799,6 +7809,27 @@ html.staff-busy .staff-login-shell input {
   transform: rotate(-135deg) translateY(-0.05rem);
 }
 
+.extranet-room__inventory-toggle[aria-expanded="true"]:not(
+    .extranet-room__inventory-toggle--attention,
+    .extranet-room__inventory-toggle--urgent
+  ) {
+  border-color: color-mix(in srgb, var(--color-maroon) 50%, var(--color-border));
+  background: var(--color-maroon-wash);
+  color: var(--color-maroon-deep);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--color-maroon) 75%, transparent);
+}
+
+.extranet-room__inventory-toggle[aria-expanded="true"].extranet-room__inventory-toggle--attention,
+.extranet-room__inventory-toggle[aria-expanded="true"].extranet-room__inventory-toggle--urgent {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent),
+    inset 0 -2px 0 color-mix(in srgb, currentColor 55%, transparent);
+}
+
+.extranet-room--inventory-open .extranet-room__header {
+  border-bottom-color: color-mix(in srgb, var(--color-maroon) 18%, var(--color-border));
+}
+
 .extranet-room__inventory-toggle:hover {
   background: var(--color-maroon-wash);
   color: var(--color-maroon-deep);
@@ -7889,15 +7920,17 @@ html.staff-busy .staff-login-shell input {
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .extranet-room__inventory-toggle-badge--urgent,
-.extranet-room__inventory-toggle-badge--overbooked {
+.extranet-room__inventory-toggle-badge--conflict {
   background: color-mix(in srgb, var(--color-danger) 18%, white);
   color: var(--color-danger);
 }
 
 .extranet-room__grid--inventory {
+  border-top: 1px solid color-mix(in srgb, var(--color-maroon) 16%, var(--color-border));
   border-bottom: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-surface-muted) 35%, white);
 }
@@ -8059,8 +8092,39 @@ html.staff-busy .staff-login-shell input {
 }
 
 .extranet-cell--today {
-  border-color: color-mix(in srgb, var(--color-maroon) 40%, var(--color-border));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-maroon) 22%, transparent);
+  border-color: color-mix(in srgb, var(--color-maroon) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-maroon-wash) 72%, var(--color-surface));
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--color-maroon) 88%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-maroon) 18%, transparent);
+}
+
+.extranet-cell--today.extranet-cell--closed-column {
+  background: color-mix(
+    in srgb,
+    var(--calendar-color-closed) 58%,
+    var(--color-maroon-wash)
+  );
+}
+
+.extranet-cell--today.extranet-cell--sold-out-column {
+  background: color-mix(
+    in srgb,
+    var(--calendar-color-sold-out) 52%,
+    var(--color-maroon-wash)
+  );
+}
+
+.extranet-reservations__day.extranet-cell--today {
+  background: color-mix(in srgb, var(--color-maroon-wash) 58%, var(--color-surface));
+}
+
+.extranet-reservations__day.extranet-cell--today.extranet-cell--sold-out-column {
+  background: color-mix(
+    in srgb,
+    var(--calendar-color-sold-out) 48%,
+    var(--color-maroon-wash)
+  );
 }
 
 .extranet-cell:is(a):not([aria-disabled="true"]):hover {
@@ -8117,7 +8181,7 @@ html.staff-busy .staff-login-shell input {
   background: var(--color-danger);
 }
 
-.extranet-status-dot--overbooked {
+.extranet-status-dot--conflict {
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 18%, transparent),
     0 0 0 2px color-mix(in srgb, var(--color-danger) 35%, transparent);
@@ -8155,7 +8219,7 @@ html.staff-busy .staff-login-shell input {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 18%, transparent);
 }
 
-.extranet-status-mark--overbooked {
+.extranet-status-mark--conflict {
   background: var(--color-danger-wash);
   color: var(--color-danger);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 35%, transparent);
@@ -8167,7 +8231,7 @@ html.staff-busy .staff-login-shell input {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 16%, transparent);
 }
 
-.extranet-pill--overbooked {
+.extranet-pill--conflict {
   background: var(--color-danger-wash);
   color: var(--color-danger);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 28%, transparent);
@@ -8193,6 +8257,30 @@ html.staff-busy .staff-login-shell input {
   font-size: 0.88rem;
   font-weight: 800;
   color: var(--color-ink);
+}
+
+.extranet-row--rooms-left {
+  padding-block: 0.18rem;
+  font-size: 0.72rem;
+}
+
+.extranet-row--rooms-left .extranet-row__meta {
+  font-size: 0.62rem;
+}
+
+.extranet-cell--rooms-left {
+  min-height: 1.85rem;
+  margin-block: 0.05rem;
+  padding-block: 0.05rem;
+}
+
+.extranet-metric--rooms-left {
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.extranet-cell--rooms-left .extranet-metric__override {
+  font-size: 0.68rem;
 }
 
 .extranet-metric__override {

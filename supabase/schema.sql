@@ -154,11 +154,11 @@ from public.room_units u
 where u.number in ('113', '115', '118', '120')
 on conflict do nothing;
 
--- Deluxe
+-- Deluxe (door 114 is Family only — not shared with Deluxe)
 insert into public.room_unit_types (room_unit_id, room_id)
 select u.id, 'garden'
 from public.room_units u
-where u.number in ('112', '114', '117', '119')
+where u.number in ('112', '117', '119')
 on conflict do nothing;
 
 -- Family (Airbnb door 114)

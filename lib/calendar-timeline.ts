@@ -310,6 +310,67 @@ export function getTimelineLaneCount(bars: TimelineBar[]) {
   return Math.max(...bars.map((bar) => bar.lane)) + 1;
 }
 
+export function stayAffectsRoomInventory(
+  stay: { roomId: string; roomUnitId?: string | null },
+  roomId: string,
+  typeUnitIds: ReadonlySet<string>,
+) {
+  if (stay.roomId === roomId) {
+    return true;
+  }
+
+  return Boolean(stay.roomUnitId && typeUnitIds.has(stay.roomUnitId));
+}
+
+/** Nights booked against a room type — by type label or any of its door numbers. */
+export function countNetBookedForRoomDay({
+  roomId,
+  iso,
+  bookings,
+  channelBlocks,
+  typeUnitIds,
+}: {
+  roomId: string;
+  iso: string;
+  bookings: Array<{
+    roomId: string;
+    roomUnitId?: string | null;
+    arrivalDate: string;
+    departureDate: string;
+  }>;
+  channelBlocks: Array<{
+    roomId: string;
+    roomUnitId?: string | null;
+    startDate: string;
+    endDate: string;
+  }>;
+  typeUnitIds: ReadonlySet<string>;
+}) {
+  let count = 0;
+
+  for (const booking of bookings) {
+    if (!stayAffectsRoomInventory(booking, roomId, typeUnitIds)) {
+      continue;
+    }
+
+    if (booking.arrivalDate <= iso && booking.departureDate > iso) {
+      count += 1;
+    }
+  }
+
+  for (const block of channelBlocks) {
+    if (!stayAffectsRoomInventory(block, roomId, typeUnitIds)) {
+      continue;
+    }
+
+    if (block.startDate <= iso && block.endDate > iso) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 export function countOverlappingStaysForDay(
   iso: string,
   bookings: Array<{ arrivalDate: string; departureDate: string }>,
@@ -370,7 +431,7 @@ export function isRoomClosedOnDay(
   );
 }
 
-export type DaySaleStatus = "closed" | "sold-out" | "bookable" | "overbooked";
+export type DaySaleStatus = "closed" | "sold-out" | "bookable" | "conflict";
 
 export function getDaySaleStatus(
   roomId: string,
@@ -386,7 +447,7 @@ export function getDaySaleStatus(
   // roomsToSell here means capacity (rooms available to sell that night).
   if (roomsToSell !== undefined && netBooked !== undefined) {
     if (netBooked > roomsToSell) {
-      return "overbooked";
+      return "conflict";
     }
     if (netBooked >= roomsToSell) {
       return "sold-out";
@@ -407,8 +468,8 @@ export function getDaySaleStatusLabel(status: DaySaleStatus) {
     return "Sold out";
   }
 
-  if (status === "overbooked") {
-    return "Overbooked";
+  if (status === "conflict") {
+    return "Conflict";
   }
 
   return "Bookable";
@@ -524,8 +585,10 @@ export function getCalendarMonthStats({
 
 export function formatTimelineDayHeader(date: Date, iso: string, todayIso: string) {
   const dayNumber = date.getDate();
-  const weekday =
-    dayNumber === 1
+  const isToday = iso === todayIso;
+  const weekday = isToday
+    ? "Today"
+    : dayNumber === 1
       ? new Intl.DateTimeFormat("en", { month: "short" }).format(date)
       : new Intl.DateTimeFormat("en", { weekday: "short" }).format(date);
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -534,7 +597,7 @@ export function formatTimelineDayHeader(date: Date, iso: string, todayIso: strin
     weekday,
     dayNumber,
     isWeekend,
-    isToday: iso === todayIso,
+    isToday,
   };
 }
 

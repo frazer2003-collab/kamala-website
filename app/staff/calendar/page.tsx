@@ -17,7 +17,7 @@ import {
   dateRangeOverlapsBooking,
   bookingOccupiesDay,
 } from "@/lib/calendar";
-import { getCalendarMonthStats } from "@/lib/calendar-timeline";
+import { getCalendarMonthStats, countNetBookedForRoomDay } from "@/lib/calendar-timeline";
 import {
   getConfirmedBookingById,
   getConfirmedBookings,
@@ -45,6 +45,7 @@ import { getStaffRooms } from "@/lib/rooms";
 import {
   attachRoomNumbers,
   getStaffRoomUnits,
+  getTypeUnitIdSet,
   occupancyFromBooking,
   occupancyFromChannelBlock,
 } from "@/lib/room-units";
@@ -351,6 +352,22 @@ export default async function StaffCalendarPage({
       mode !== "bulk-status" &&
       !isPastCalendarDate(selectedDate),
   );
+  const soldOutForSelectedNight =
+    selectedRoom && selectedDate
+      ? (() => {
+          const roomsToSell =
+            inventoryLookup.get(`${selectedRoom.id}:${selectedDate}`) ??
+            selectedRoom.availableCount;
+          const netBooked = countNetBookedForRoomDay({
+            roomId: selectedRoom.id,
+            iso: selectedDate,
+            bookings: calendarBookings,
+            channelBlocks: allAssignmentChannels.filter(isChannelReservation),
+            typeUnitIds: getTypeUnitIdSet(roomUnits, selectedRoom.id),
+          });
+          return netBooked >= roomsToSell;
+        })()
+      : false;
   const dayStays =
     selectedRoom && selectedDate
       ? [
@@ -707,6 +724,7 @@ export default async function StaffCalendarPage({
               promotions={promotions}
               rateOverrides={Object.fromEntries(rateLookup)}
               room={selectedRoom}
+              soldOutForNight={soldOutForSelectedNight}
             />
           </CalendarBookingDialog>
         ) : null}

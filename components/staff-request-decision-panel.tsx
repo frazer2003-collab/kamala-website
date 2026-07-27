@@ -31,8 +31,6 @@ type StaffRequestDecisionPanelProps = {
   canManage: boolean;
   /** Guest message waiting — reply in conversation before confirming. */
   needsReply?: boolean;
-  /** Paid stay that still needs date/room resolution with the guest. */
-  paidOverbooked?: boolean;
   /** Sample inbox: full decide UI without writing to Supabase or emailing guests. */
   practiceMode?: boolean;
 };
@@ -47,7 +45,6 @@ export function StaffRequestDecisionPanel({
   currency = "thb",
   canManage,
   needsReply = false,
-  paidOverbooked = false,
   practiceMode = false,
 }: StaffRequestDecisionPanelProps) {
   const depositLabel = formatMoneySuffix(depositAmount, currency);
@@ -56,18 +53,13 @@ export function StaffRequestDecisionPanel({
   const [declineMessage, setDeclineMessage] = useState(DECLINE_DEFAULT);
   const [practiceResult, setPracticeResult] = useState<PracticeResult>(null);
   const [transferVerified, setTransferVerified] = useState(false);
-  const [overbookSettled, setOverbookSettled] = useState(false);
   const [replyHandled, setReplyHandled] = useState(false);
 
   const needsTransferGate = bankTransferClaimed && !depositPaid;
   const confirmBlockedByTransfer = needsTransferGate && !transferVerified;
-  const confirmBlockedByOverbook = paidOverbooked && !overbookSettled;
   const confirmBlockedByReply = needsReply && !replyHandled;
-  const confirmBlocked =
-    confirmBlockedByTransfer ||
-    confirmBlockedByOverbook ||
-    confirmBlockedByReply;
-  const confirmIsSecondary = needsReply || needsTransferGate || paidOverbooked;
+  const confirmBlocked = confirmBlockedByTransfer || confirmBlockedByReply;
+  const confirmIsSecondary = needsReply || needsTransferGate;
 
   if (!canManage && !practiceMode) {
     return (
@@ -138,9 +130,6 @@ export function StaffRequestDecisionPanel({
             : bankTransferClaimed
               ? " The guest reported a bank transfer; verify it before sending confirmation."
             : " No payment is on record yet."}
-          {paidOverbooked
-            ? " These dates still look full — confirm only after you have settled dates or room with the guest."
-            : null}
         </p>
         <form
           action={practiceMode ? undefined : confirmBookingRequest}
@@ -271,13 +260,7 @@ export function StaffRequestDecisionPanel({
           confirming.
         </p>
       ) : null}
-      {paidOverbooked ? (
-        <p className="staff-decide__summary" role="status">
-          This paid stay still needs dates or a room worked out with the guest
-          before you confirm.
-        </p>
-      ) : null}
-      {!needsReply && !needsTransferGate && !paidOverbooked ? (
+      {!needsReply && !needsTransferGate ? (
         <p className="detail-help">
           Confirm moves the stay to the calendar and emails the guest. Decline
           closes the request
@@ -291,7 +274,7 @@ export function StaffRequestDecisionPanel({
           you are ready.
         </p>
       )}
-      {needsReply || needsTransferGate || paidOverbooked ? (
+      {needsReply || needsTransferGate ? (
         <fieldset className="staff-decide__gates">
           <legend className="sr-only">Before confirming</legend>
           {needsReply ? (
@@ -312,16 +295,6 @@ export function StaffRequestDecisionPanel({
                 type="checkbox"
               />
               <span>I verified this transfer in the bank app</span>
-            </label>
-          ) : null}
-          {paidOverbooked ? (
-            <label className="staff-decide__gate">
-              <input
-                checked={overbookSettled}
-                onChange={(event) => setOverbookSettled(event.target.checked)}
-                type="checkbox"
-              />
-              <span>Dates or room are settled with the guest</span>
             </label>
           ) : null}
         </fieldset>

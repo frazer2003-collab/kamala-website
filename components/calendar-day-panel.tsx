@@ -45,6 +45,8 @@ type CalendarDayPanelProps = {
   promotions: RoomPromotionRate[];
   rateOverrides: Record<string, number>;
   dayStays?: DayStayLink[];
+  /** True when inventory row shows this night is full for the room type. */
+  soldOutForNight?: boolean;
 };
 
 function addIsoDays(iso: string, days: number) {
@@ -98,7 +100,7 @@ function getErrorMessage(error?: string, overlap?: string) {
     return "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates.";
   }
 
-  if (error === "overbook" || error === "capacity-verify-failed") {
+  if (error === "overbook" || error === "unavailable" || error === "no-assignable-door" || error === "capacity-verify-failed") {
     return staffCapacityErrorMessage(error);
   }
 
@@ -127,6 +129,7 @@ export function CalendarDayPanel({
   promotions,
   rateOverrides,
   dayStays = [],
+  soldOutForNight = false,
 }: CalendarDayPanelProps) {
   const defaultDeparture = useMemo(() => addIsoDays(date, 1), [date]);
   const todayIso = useMemo(() => getTodayIso(), []);
@@ -158,10 +161,18 @@ export function CalendarDayPanel({
           </div>
         )}
         <div className="calendar-day-panel__choices">
-          <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-            <strong>New booking</strong>
-            <span>Add another confirmed stay on this room type for tonight.</span>
-          </Link>
+          {soldOutForNight ? (
+            <p className="detail-help" role="status">
+              This night is full for <strong>{room.name}</strong>. Open a stay
+              above to change it, or pick a night with rooms left in the
+              inventory row.
+            </p>
+          ) : (
+            <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
+              <strong>New booking</strong>
+              <span>Add another confirmed stay on this room type for tonight.</span>
+            </Link>
+          )}
         </div>
         <p className="detail-help">
           <Link href={dayHref}>Back to day actions</Link>
@@ -486,10 +497,18 @@ export function CalendarDayPanel({
         </>
       ) : null}
       <div className="calendar-day-panel__choices">
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-          <strong>New booking</strong>
-          <span>Add a confirmed stay directly from the front desk.</span>
-        </Link>
+        {soldOutForNight ? (
+          <p className="detail-help" role="status">
+            This night is full for <strong>{room.name}</strong>. Inventory shows
+            no rooms left to sell — open a stay above, or choose a different
+            night.
+          </p>
+        ) : (
+          <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
+            <strong>New booking</strong>
+            <span>Add a confirmed stay directly from the front desk.</span>
+          </Link>
+        )}
         <Link className="calendar-day-choice" href={`${dayHref}&mode=allotment`}>
           <strong>Change allotment</strong>
           <span>

@@ -13,10 +13,7 @@ import type { BookingSource } from "@/lib/booking-source";
 import type { StayStatus } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
-import {
-  OVERBOOK_SAVE_ANYWAY_HINT,
-  staffCapacityErrorMessage,
-} from "@/lib/booking-overbook";
+import { staffCapacityErrorMessage } from "@/lib/booking-overbook";
 import {
   calculateStayQuote,
   type RoomPromotionRate,
@@ -214,11 +211,8 @@ export function CalendarBookingPanel({
   const stayTotalHelpId = `calendar-stay-total-help-${bookingKey}`;
   const emailHelpId = `calendar-guest-email-help-${bookingKey}`;
   const actionError =
-    saveState.status === "error" || saveState.status === "overbook"
-      ? staffCapacityErrorMessage(saveState.error)
-      : null;
+    saveState.status === "error" ? staffCapacityErrorMessage(saveState.error) : null;
   const displayError = actionError || formError;
-  const needsOverbookConfirm = saveState.status === "overbook";
   const formErrorId = displayError
     ? `calendar-booking-error-${bookingKey}`
     : undefined;
@@ -228,15 +222,11 @@ export function CalendarBookingPanel({
       {displayError ? (
         <p className="form-message form-message--error" id={formErrorId} role="alert">
           {displayError}
-          {needsOverbookConfirm ? OVERBOOK_SAVE_ANYWAY_HINT : null}
         </p>
       ) : null}
       <form action={formAction} className="calendar-manage-form">
         <StaffFormBusyBridge />
         <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
-        {needsOverbookConfirm ? (
-          <input name="overbook-confirm" type="hidden" value="1" />
-        ) : null}
         <input name="stay-status" type="hidden" value={fields.stayStatus} />
         <div className="field-pair">
           <label htmlFor={`calendar-room-type-${bookingKey}`}>Room type</label>
@@ -462,13 +452,7 @@ export function CalendarBookingPanel({
           disabled={!canManage || savePending}
           type="submit"
         >
-          {needsOverbookConfirm
-            ? savePending
-              ? "Saving…"
-              : "Save anyway"
-            : savePending
-              ? "Saving…"
-              : "Save changes"}
+          {savePending ? "Saving…" : "Save changes"}
         </button>
       </form>
 

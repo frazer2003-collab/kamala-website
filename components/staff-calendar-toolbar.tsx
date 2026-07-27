@@ -125,12 +125,12 @@ export function StaffCalendarToolbar({
           </span>
           Full
           <span
-            className="extranet-status-mark extranet-status-mark--overbooked"
+            className="extranet-status-mark extranet-status-mark--conflict"
             aria-hidden="true"
           >
             !
           </span>
-          Overbooked
+          Conflict
           <span
             className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--guest-a"
             aria-hidden="true"

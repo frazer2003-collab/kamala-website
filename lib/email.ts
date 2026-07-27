@@ -13,8 +13,6 @@ type StaffBookingEmail = {
   note: string;
   depositPaid?: number;
   bedSetup?: string | null;
-  /** Paid stay that exceeded sellable inventory — staff must resolve. */
-  overbooked?: boolean;
 };
 
 type EmailResult =
@@ -40,22 +38,16 @@ export async function sendStaffBookingEmail(
     return { ok: false, reason: "missing-config" };
   }
 
-  const subject = booking.overbooked
-    ? `Paid — needs dates: ${booking.roomName}`
-    : booking.depositPaid
-      ? `Paid in full: ${booking.roomName}`
-      : `New booking request: ${booking.roomName}`;
+  const subject = booking.depositPaid
+    ? `Paid in full: ${booking.roomName}`
+    : `New booking request: ${booking.roomName}`;
   const note = booking.note || "No note added.";
-  const headline = booking.overbooked
-    ? "Paid — needs dates (contact guest before confirming)"
-    : booking.depositPaid
-      ? "Paid in full — room reserved"
-      : "New booking request";
-  const intro = booking.overbooked
-    ? "A guest paid in full, but these dates already look full. The request is under Payment in Requests. Email or call them to offer other dates or a room, then confirm only after that is settled."
-    : booking.depositPaid
-      ? "A guest paid the full stay and the room is reserved pending your review."
-      : "A guest has requested a room through the Kamala website.";
+  const headline = booking.depositPaid
+    ? "Paid in full — room reserved"
+    : "New booking request";
+  const intro = booking.depositPaid
+    ? "A guest paid the full stay and the room is reserved pending your review."
+    : "A guest has requested a room through the Kamala website.";
   const bedSetupLabel = parseBedSetup(booking.bedSetup ?? undefined);
   const text = [
     headline,

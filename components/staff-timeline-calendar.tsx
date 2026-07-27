@@ -8,6 +8,7 @@ import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import {
   buildRoomTimelineBars,
   buildUnitTimelineBars,
+  countNetBookedForRoomDay,
   formatTimelineDayHeader,
   getDaySaleStatus,
   getDaySaleStatusLabel,
@@ -46,6 +47,7 @@ import {
 } from "@/lib/room-blocks";
 import {
   getTimelineUnitsForRoomType,
+  getTypeUnitIdSet,
   type RoomUnit,
   type UnitOccupancy,
 } from "@/lib/room-units";
@@ -123,6 +125,19 @@ function getBarColorStyle(bar: TimelineBar, guestColors: Map<string, string>) {
   return {
     ["--bar-color" as string]: color,
   };
+}
+
+function getInventoryDayCellClass(day: DayMetrics, extra: string[] = []) {
+  return [
+    ...extra,
+    day.isToday ? "extranet-cell--today" : "",
+    day.isPast ? "extranet-cell--past" : "",
+    !day.inCurrentMonth ? "extranet-cell--muted" : "",
+    day.isWeekend ? "extranet-cell--weekend" : "",
+    day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function MetricRowLabel({
@@ -226,7 +241,7 @@ function StatusDot({ status }: { status: DaySaleStatus }) {
         "extranet-status-mark",
         `extranet-status-mark--${status}`,
       ].join(" ")}
-      title={status === "overbooked" ? "Overbooked — needs attention" : label}
+      title={status === "conflict" ? "Conflict — needs attention" : label}
     >
       <span aria-hidden="true">{mark}</span>
       <span className="sr-only">{label}</span>
@@ -412,6 +427,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     () => getTimelineUnitsForRoomType(roomUnits, room.id),
     [roomUnits, room.id],
   );
+  const typeUnitIds = useMemo(
+    () => getTypeUnitIdSet(roomUnits, room.id),
+    [roomUnits, room.id],
+  );
   const roomShortNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const entry of rooms) {
@@ -440,15 +459,13 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       const isPast = isPastCalendarDate(day.iso);
       const capacity = getRoomsToSellForDay(room, day.iso, inventoryLookup);
       const hasAllotmentOverride = inventoryLookup.has(`${room.id}:${day.iso}`);
-      const directBooked = roomBookings.filter(
-        (booking) =>
-          booking.arrivalDate <= day.iso && booking.departureDate > day.iso,
-      ).length;
-      const channelBooked = channelReservations.filter(
-        (reservation) =>
-          reservation.startDate <= day.iso && reservation.endDate > day.iso,
-      ).length;
-      const netBooked = directBooked + channelBooked;
+      const netBooked = countNetBookedForRoomDay({
+        roomId: room.id,
+        iso: day.iso,
+        bookings,
+        channelBlocks: allChannelReservations,
+        typeUnitIds,
+      });
       const roomsLeft = Math.max(0, capacity - netBooked);
       const saleStatus = getDaySaleStatus(
         room.id,
@@ -458,7 +475,7 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         netBooked,
       );
       const closedColumn = saleStatus === "closed";
-      const soldOutColumn = saleStatus === "sold-out" || saleStatus === "overbooked";
+      const soldOutColumn = saleStatus === "sold-out" || saleStatus === "conflict";
       const blockForDay = getRoomBlockForDay(room.id, day.iso, manualClosures);
       const isSelected =
         (selectedRoomId === room.id && selectedDate === day.iso) ||
@@ -521,9 +538,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       };
     });
   }, [
+    allChannelReservations,
+    bookings,
     calendarDays,
     canManage,
-    channelReservations,
     inventoryLookup,
     rateLookup,
     manualClosures,
@@ -532,28 +550,29 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
     toIso,
     promotions,
     room,
-    roomBookings,
     selectedBlockKey,
     selectedDate,
     selectedRoomId,
     todayIso,
+    typeUnitIds,
   ]);
 
   const firstFutureDay = dayMetrics.find((day) => !day.isPast && day.inCurrentMonth)?.iso
     ?? dayMetrics.find((day) => !day.isPast)?.iso;
-  const [showInventory, setShowInventory] = useState(false);
+  const [inventoryOpenOverride, setInventoryOpenOverride] = useState<boolean | null>(null);
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const [unitsOpenOverride, setUnitsOpenOverride] = useState<boolean | null>(null);
   const needsAssignment = unassignedCount > 0;
-  const overbookedDays = dayMetrics.filter(
-    (day) => day.inCurrentMonth && day.saleStatus === "overbooked",
+  const conflictDays = dayMetrics.filter(
+    (day) => day.inCurrentMonth && day.saleStatus === "conflict",
   );
-  const hasOverbook = overbookedDays.length > 0;
-  const firstOverbookIso = overbookedDays[0]?.iso;
+  const hasConflict = conflictDays.length > 0;
+  const prefersInventoryOpen = needsAssignment || hasConflict;
+  const showInventory = inventoryOpenOverride ?? prefersInventoryOpen;
   const prefersUnitsOpen =
     !isNarrowViewport ||
     needsAssignment ||
-    hasOverbook ||
+    hasConflict ||
     selectedRoomId === room.id;
   const unitsOpen = unitsOpenOverride ?? prefersUnitsOpen;
   const unitsPanelId = `extranet-units-${room.id}`;
@@ -576,7 +595,10 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
       className={[
         "extranet-room",
         unitsOpen ? "extranet-room--units-open" : "extranet-room--units-collapsed",
-      ].join(" ")}
+        showInventory ? "extranet-room--inventory-open" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div
         className="extranet-room__header"
@@ -610,14 +632,14 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             aria-controls={`extranet-inventory-${room.id}`}
             aria-expanded={showInventory}
             aria-label={
-              needsAssignment || hasOverbook
+              needsAssignment || hasConflict
                 ? [
                     showInventory ? "Hide room details" : "Room details",
                     needsAssignment
                       ? `${unassignedCount} stay${unassignedCount === 1 ? "" : "s"} need a room number`
                       : null,
-                    hasOverbook
-                      ? `Overbooked on ${overbookedDays.length} night${overbookedDays.length === 1 ? "" : "s"}`
+                    hasConflict
+                      ? `Conflict on ${conflictDays.length} night${conflictDays.length === 1 ? "" : "s"}`
                       : null,
                   ]
                     .filter(Boolean)
@@ -626,30 +648,35 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
             }
             className={[
               "extranet-room__inventory-toggle",
-              needsAssignment || hasOverbook
+              needsAssignment || hasConflict
                 ? "extranet-room__inventory-toggle--attention"
                 : "",
-              hasOverbook ? "extranet-room__inventory-toggle--urgent" : "",
+              hasConflict ? "extranet-room__inventory-toggle--urgent" : "",
             ]
               .filter(Boolean)
               .join(" ")}
-            onClick={() => setShowInventory((open) => !open)}
+            onClick={() => setInventoryOpenOverride(!showInventory)}
+            title={
+              !showInventory && !needsAssignment && !hasConflict
+                ? "Show status, rooms left, and rates"
+                : undefined
+            }
             type="button"
           >
             <span className="extranet-room__inventory-toggle-label">
-              {showInventory ? "Hide details" : "Room details"}
+              {showInventory ? "Hide room details" : "Room details"}
             </span>
             {needsAssignment ? (
               <span className="extranet-room__inventory-toggle-badge">
                 {unassignedCount} need room #
               </span>
             ) : null}
-            {hasOverbook ? (
+            {hasConflict ? (
               <span
                 className="extranet-room__inventory-toggle-badge extranet-room__inventory-toggle-badge--urgent"
                 title="More stays than rooms to sell — needs attention"
               >
-                Overbooked
+                Conflict
               </span>
             ) : null}
           </button>
@@ -679,15 +706,9 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
         {dayMetrics.map((day) => (
           <DayCell
             ariaLabel={`${room.name} status on ${day.iso}: ${getDaySaleStatusLabel(day.saleStatus)}`}
-            className={[
-              day.isPast ? "extranet-cell--past" : "",
+            className={getInventoryDayCellClass(day, [
               day.isSelected ? "extranet-cell--selected" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            ])}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
             disabled={day.isPast}
@@ -698,31 +719,29 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
           </DayCell>
         ))}
 
-        <MetricRowLabel hint="Click a day to set a temporary allotment">
+        <MetricRowLabel
+          className="extranet-row--rooms-left"
+          hint="Click a day to set a temporary allotment"
+        >
           Rooms left
           <span className="extranet-row__meta">of {room.availableCount}</span>
         </MetricRowLabel>
         {dayMetrics.map((day) => (
           <DayCell
             ariaLabel={`${day.roomsLeft} of ${day.roomsToSell} rooms left on ${day.iso}${day.hasAllotmentOverride ? ", temporary allotment" : ""}`}
-            className={[
+            className={getInventoryDayCellClass(day, [
               "extranet-cell--metric",
               "extranet-cell--clickable",
+              "extranet-cell--rooms-left",
               day.hasAllotmentOverride ? "extranet-cell--allotment-override" : "",
-              day.isPast ? "extranet-cell--past" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            ])}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
             disabled={day.isPast}
             href={day.allotmentHref}
             key={`left-${day.iso}`}
           >
-            <span className="extranet-metric">
+            <span className="extranet-metric extranet-metric--rooms-left">
               {day.roomsLeft}
               {day.hasAllotmentOverride ? (
                 <span
@@ -877,17 +896,11 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                 ? `${day.netBooked} booked on ${day.iso}. Open day actions for stays or walk-in.`
                 : `No bookings on ${day.iso}. Open day actions.`
             }
-            className={[
+            className={getInventoryDayCellClass(day, [
               "extranet-cell--metric",
               "extranet-cell--clickable",
               "extranet-row--inventory",
-              day.isPast ? "extranet-cell--past" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            ])}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
             disabled={day.isPast && day.netBooked === 0}
@@ -921,19 +934,13 @@ const StaffExtranetRoomSection = memo(function StaffExtranetRoomSection({
                   ? `Promo rate on ${day.iso}: ${formatRate(day.rate, currency)}, ${day.percentOff}% off`
                   : `Rate on ${day.iso}: ${formatRate(day.rate, currency)}`
             }
-            className={[
+            className={getInventoryDayCellClass(day, [
               "extranet-cell--rate",
               "extranet-cell--clickable",
               "extranet-row--inventory",
               day.hasRateOverride ? "extranet-cell--rate-override" : "",
               day.percentOff > 0 ? "extranet-cell--promo" : "",
-              day.isPast ? "extranet-cell--past" : "",
-              !day.inCurrentMonth ? "extranet-cell--muted" : "",
-              day.isWeekend ? "extranet-cell--weekend" : "",
-              day.soldOutColumn ? "extranet-cell--sold-out-column" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            ])}
             closedColumn={day.closedColumn}
             columnIndex={day.columnIndex}
             disabled={day.isPast}
@@ -1170,6 +1177,7 @@ export function StaffTimelineCalendar({
 
             return (
               <div
+                aria-current={header.isToday ? "date" : undefined}
                 className={[
                   "staff-extranet__dayhead",
                   header.isWeekend ? "staff-extranet__dayhead--weekend" : "",

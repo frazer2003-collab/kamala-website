@@ -56,11 +56,6 @@ export default async function StaffSettingsCalendarsPage() {
 
   for (const room of rooms) {
     for (const unit of getUnitsForRoomType(unitsResult.units, room.id)) {
-      // 114 is a Deluxe door for assignment, but Airbnb iCal stays under Family.
-      if (room.id === "garden" && unit.number === "114") {
-        continue;
-      }
-
       airbnbUnits.push({
         id: unit.id,
         number: unit.number,
