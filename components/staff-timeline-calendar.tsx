@@ -1174,6 +1174,7 @@ export function StaffTimelineCalendar({
 
             return (
               <div
+                aria-current={header.isToday ? "date" : undefined}
                 className={[
                   "staff-extranet__dayhead",
                   header.isWeekend ? "staff-extranet__dayhead--weekend" : "",

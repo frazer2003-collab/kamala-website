@@ -585,8 +585,10 @@ export function getCalendarMonthStats({
 
 export function formatTimelineDayHeader(date: Date, iso: string, todayIso: string) {
   const dayNumber = date.getDate();
-  const weekday =
-    dayNumber === 1
+  const isToday = iso === todayIso;
+  const weekday = isToday
+    ? "Today"
+    : dayNumber === 1
       ? new Intl.DateTimeFormat("en", { month: "short" }).format(date)
       : new Intl.DateTimeFormat("en", { weekday: "short" }).format(date);
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -595,7 +597,7 @@ export function formatTimelineDayHeader(date: Date, iso: string, todayIso: strin
     weekday,
     dayNumber,
     isWeekend,
-    isToday: iso === todayIso,
+    isToday,
   };
 }
 
