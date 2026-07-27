@@ -3,6 +3,7 @@ import {
   THA_PHAE_BOOKING_HEADING,
   THA_PHAE_PRIMARY_HEADLINE,
   THA_PHAE_ROOMS_HEADING,
+  THAE_PHAE_GATE_NAME,
   buildThaPhaeHeroLede,
   buildThaPhaeStayStoryLede,
   isThaPhaeSeoContext,
@@ -75,7 +76,7 @@ export function isChiangMaiLocation(locationLabel: string): boolean {
 }
 
 export function isNearThaPhaeGate(addressLine: string | null): boolean {
-  return /tha\s*ph?ae/i.test(addressLine ?? "");
+  return /thae?\s*ph?ae/i.test(addressLine ?? "");
 }
 
 export function buildRoomsSectionHeading(
@@ -205,7 +206,7 @@ export function buildMetadataNearbyNote(
   if (isChiangMaiLocation(locationLabel)) {
     return isThaPhaeSeoContext(locationLabel, addressLine) ||
       isNearThaPhaeGate(addressLine)
-      ? "Near Tha Pae Gate and Chiang Mai Old City."
+      ? `Near ${THAE_PHAE_GATE_NAME} and Chiang Mai Old City.`
       : "In Chiang Mai Old City.";
   }
 
