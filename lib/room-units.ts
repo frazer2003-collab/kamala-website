@@ -94,6 +94,34 @@ export function getTimelineUnitsForRoomType(units: RoomUnit[], roomId: string) {
   return getUnitsForRoomType(units, roomId);
 }
 
+/**
+ * Flat door list for the distilled tape chart — every physical room number,
+ * sorted for glance scanning (not grouped by type).
+ */
+export function getTimelineDoorUnits(units: RoomUnit[]) {
+  const seen = new Set<string>();
+  const doors: RoomUnit[] = [];
+
+  for (const unit of units) {
+    if (seen.has(unit.id)) {
+      continue;
+    }
+    seen.add(unit.id);
+    doors.push(unit);
+  }
+
+  return doors.sort(
+    (left, right) =>
+      left.number.localeCompare(right.number, undefined, { numeric: true }) ||
+      left.sortOrder - right.sortOrder,
+  );
+}
+
+/** Primary room type for day-panel links from a door row. */
+export function getPrimaryRoomIdForUnit(unit: RoomUnit) {
+  return unit.roomIds[0] ?? null;
+}
+
 export function getRoomUnitById(units: RoomUnit[], unitId: string | null | undefined) {
   if (!unitId) {
     return null;

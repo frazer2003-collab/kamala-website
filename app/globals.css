@@ -6697,7 +6697,8 @@ textarea:focus {
     align-content: stretch;
   }
 
-  .staff-main--calendar .staff-extranet--full {
+  .staff-main--calendar .staff-extranet--full,
+  .staff-main--calendar .staff-extranet--doors {
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -7667,7 +7668,9 @@ html.staff-busy .staff-login-shell input {
 
 /* Descendants of the scrollport resolve 100cqi against its width. */
 .staff-extranet__scroll > .staff-extranet__dates,
-.staff-extranet__scroll > .extranet-room {
+.staff-extranet__scroll > .extranet-room,
+.staff-extranet__scroll > .extranet-doors,
+.staff-extranet__scroll > .extranet-doors__unassigned {
   --extranet-day-width: max(
     1.55rem,
     calc(
@@ -7680,7 +7683,9 @@ html.staff-busy .staff-login-shell input {
 }
 
 .staff-extranet__dates,
-.extranet-room__grid {
+.extranet-room__grid,
+.extranet-doors,
+.extranet-doors__unassigned {
   display: grid;
   column-gap: var(--extranet-day-gap);
   grid-template-columns: var(--extranet-label-width) repeat(
@@ -7691,6 +7696,58 @@ html.staff-busy .staff-login-shell input {
     var(--extranet-label-width) +
       var(--timeline-days) * (var(--extranet-day-width) + var(--extranet-day-gap))
   );
+}
+
+.extranet-doors {
+  align-content: start;
+}
+
+.extranet-doors__unassigned {
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-warning-wash) 55%, var(--color-surface));
+}
+
+.extranet-doors__empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 1rem 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.extranet-row__label--door {
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.extranet-row__label--door .extranet-unit-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.extranet-row__label--needs-room {
+  background: color-mix(in srgb, var(--color-warning-wash) 70%, var(--color-surface));
+}
+
+.extranet-reservations__day--action {
+  cursor: pointer;
+  text-decoration: none;
+  z-index: 0;
+}
+
+.extranet-reservations--unit .extranet-bar {
+  z-index: 2;
+}
+
+.extranet-reservations__day--action:hover {
+  background: color-mix(in srgb, var(--color-maroon-wash) 45%, var(--color-surface));
+}
+
+.extranet-reservations__day--action:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: -2px;
+  z-index: 3;
 }
 
 .staff-extranet__dates {

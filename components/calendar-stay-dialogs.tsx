@@ -112,7 +112,7 @@ export function CalendarStayDialogs({
           </div>
           <dl className="detail-list detail-list--stay-meta">
             <div>
-              <dt>Room</dt>
+              <dt>Room type</dt>
               <dd>
                 {selectedBooking.room}
                 {selectedBooking.roomNumber
