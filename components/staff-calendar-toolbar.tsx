@@ -105,7 +105,7 @@ export function StaffCalendarToolbar({
             unassignedCount > 0 ? " staff-calendar-toolbar__stat--urgent" : ""
           }`}
         >
-          <strong>{unassignedCount}</strong> need room #
+          <strong>{unassignedCount}</strong> Needs room #
         </span>
       </div>
 

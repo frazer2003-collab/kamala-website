@@ -633,15 +633,11 @@ export default async function StaffCalendarPage({
               calendarColors={settings.calendarColors}
               calendarDays={calendarDays}
               canManage={canManage}
-              currency={settings.currency}
-              inventoryLookup={inventoryLookup}
-              rateLookup={rateLookup}
               monthKey={monthKey}
               fromIso={fromIso}
               toIso={toIso}
               monthLabel={formatCalendarMonthLabel(year, month)}
               occupancies={unitOccupancies}
-              promotions={promotions}
               roomUnits={roomUnits}
               rooms={rooms}
               selectedBlockKey={selectedBlockKey}

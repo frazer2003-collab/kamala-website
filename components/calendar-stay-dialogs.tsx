@@ -117,7 +117,7 @@ export function CalendarStayDialogs({
                 {selectedBooking.room}
                 {selectedBooking.roomNumber
                   ? ` · #${selectedBooking.roomNumber}`
-                  : " · Unassigned"}
+                  : " · Needs room #"}
               </dd>
             </div>
             <div>

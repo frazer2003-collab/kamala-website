@@ -25,8 +25,6 @@ import {
 import type { StaffBooking } from "@/lib/booking-requests";
 import { getStaffBookingKey } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
-import type { PropertyCurrency } from "@/lib/currency";
-import type { RoomPromotionRate } from "@/lib/pricing";
 import {
   getStaffRoomBlockKey,
   isChannelReservation,
@@ -50,9 +48,6 @@ type StaffTimelineCalendarProps = {
   blocks: StaffRoomBlock[];
   calendarDays: CalendarDay[];
   calendarColors: CalendarColors;
-  inventoryLookup: Map<string, number>;
-  rateLookup: Map<string, number>;
-  promotions: RoomPromotionRate[];
   monthKey: string;
   fromIso?: string;
   toIso?: string;
@@ -62,7 +57,6 @@ type StaffTimelineCalendarProps = {
   selectedBlockKey: string;
   selectedDate?: string;
   selectedRoomId?: string;
-  currency: PropertyCurrency;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
 };
@@ -161,11 +155,20 @@ function DoorReservationRow({
     [unitBookings, unitChannels, calendarDays],
   );
   const laneCount = getTimelineLaneCount(bars);
+  const occupiedColumns = useMemo(() => {
+    const columns = new Set<number>();
+    for (const bar of bars) {
+      for (let column = bar.startCol; column < bar.startCol + bar.span; column += 1) {
+        columns.add(column);
+      }
+    }
+    return columns;
+  }, [bars]);
 
   return (
     <>
       <MetricRowLabel className="extranet-row__label--door">
-        <span className="extranet-unit-number">{unit.number}</span>
+        <span className="extranet-unit-number">#{unit.number}</span>
         {unit.roomIds.length > 1 ? (
           <span className="extranet-row__meta">Shared</span>
         ) : null}
@@ -185,9 +188,12 @@ function DoorReservationRow({
             Boolean(primaryRoomId) &&
             selectedRoomId === primaryRoomId &&
             selectedDate === day.iso;
-          const dayHref = primaryRoomId
-            ? getTimelineDayHref(primaryRoomId, day.iso, monthKey, rangeQuery)
-            : undefined;
+          const column = columnIndex + 1;
+          const isOccupied = occupiedColumns.has(column);
+          const dayHref =
+            !isOccupied && primaryRoomId
+              ? getTimelineDayHref(primaryRoomId, day.iso, monthKey, rangeQuery)
+              : undefined;
 
           const dayClass = [
             "extranet-reservations__day",
@@ -203,12 +209,11 @@ function DoorReservationRow({
           if (dayHref) {
             return (
               <Link
-                aria-label={`Room ${unit.number}, ${day.iso}: day actions`}
+                aria-label={`#${unit.number}, ${day.iso}: open day actions`}
                 className={dayClass}
                 href={dayHref}
                 key={`door-${unit.id}-bg-${day.iso}`}
-                style={{ gridColumn: columnIndex + 1 }}
-                title="Open day actions"
+                style={{ gridColumn: column }}
               >
                 <span className="sr-only">Open day actions</span>
               </Link>
@@ -217,9 +222,10 @@ function DoorReservationRow({
 
           return (
             <div
+              aria-hidden="true"
               className={dayClass}
               key={`door-${unit.id}-bg-${day.iso}`}
-              style={{ gridColumn: columnIndex + 1 }}
+              style={{ gridColumn: column }}
             />
           );
         })}
@@ -233,8 +239,8 @@ function DoorReservationRow({
 
           return (
             <CalendarStayBarLink
-              ariaLabel={`Room ${unit.number}: ${bar.label}${ariaExtra}`}
-              className={getBarClassName(bar, isSelected)}
+              ariaLabel={`#${unit.number}: ${bar.label}${ariaExtra}`}
+              className={[getBarClassName(bar, isSelected), "extranet-bar__open"].join(" ")}
               href={getTimelineBarHref(bar, monthKey, rangeQuery)}
               itemKey={bar.itemKey}
               key={bar.key}
@@ -319,10 +325,7 @@ function UnassignedReservationRow({
       className="extranet-doors__unassigned"
       style={{ ["--timeline-days" as string]: dayCount }}
     >
-      <MetricRowLabel
-        className="extranet-row__label--needs-room"
-        hint="Assign a room number on the stay bar"
-      >
+      <MetricRowLabel className="extranet-row__label--needs-room">
         Needs room #
         <span className="extranet-row__meta">{unassignedCount} waiting</span>
       </MetricRowLabel>
@@ -451,9 +454,6 @@ export function StaffTimelineCalendar({
   blocks,
   calendarDays,
   calendarColors,
-  inventoryLookup: _inventoryLookup,
-  rateLookup: _rateLookup,
-  promotions: _promotions,
   monthKey,
   fromIso,
   toIso,
@@ -463,15 +463,9 @@ export function StaffTimelineCalendar({
   selectedBlockKey,
   selectedDate,
   selectedRoomId,
-  currency: _currency,
   roomUnits,
   occupancies,
 }: StaffTimelineCalendarProps) {
-  void _inventoryLookup;
-  void _rateLookup;
-  void _promotions;
-  void _currency;
-
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
   const staySelection = useCalendarStaySelection();
@@ -663,7 +657,7 @@ export function StaffTimelineCalendar({
             ))
           ) : (
             <p className="extranet-doors__empty">
-              No room numbers set up yet. Add doors under Settings → Rooms.
+              No room numbers set up yet. Add them under Settings → Rooms.
             </p>
           )}
         </div>
