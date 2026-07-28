@@ -25,7 +25,6 @@ type CalendarStayDialogsProps = {
   fromIso?: string;
   toIso?: string;
   bookings: StaffBooking[];
-  bookingsWithConversationMessages?: ReadonlySet<string>;
   blocks: StaffRoomBlock[];
   /** Deep-linked stay that may sit outside the loaded month set. */
   seedBooking?: StaffBooking | null;
@@ -45,7 +44,6 @@ export function CalendarStayDialogs({
   fromIso,
   toIso,
   bookings,
-  bookingsWithConversationMessages,
   blocks,
   seedBooking = null,
   seedBlock = null,
@@ -89,13 +87,6 @@ export function CalendarStayDialogs({
   const hasGuestEmail = Boolean(
     selectedBooking && guestHasConversationLink(selectedBooking.contact),
   );
-  const conversationOpen =
-    selectedBooking?.status === "needs-reply" ||
-    Boolean(
-      selectedBooking?.databaseId &&
-        bookingsWithConversationMessages?.has(selectedBooking.databaseId),
-    ) ||
-    hasGuestEmail;
 
   return (
     <>
@@ -159,19 +150,19 @@ export function CalendarStayDialogs({
           </dl>
 
           {selectedBooking.databaseId ? (
-            <details
-              className={`staff-request-chat staff-request-chat--collapsible${
+            <div
+              className={`staff-request-chat${
                 selectedBooking.status === "needs-reply"
                   ? " staff-request-chat--priority"
                   : ""
               }`}
-              open={conversationOpen}
+              id="booking-chat"
             >
-              <summary className="staff-request-chat__title">
+              <h3 className="staff-request-chat__title">
                 {selectedBooking.status === "needs-reply"
                   ? "Conversation — reply needed"
                   : "Conversation"}
-              </summary>
+              </h3>
               {!hasGuestEmail ? (
                 <p className="detail-help staff-request-chat__hint">
                   No guest email on this stay yet. Save an email in the form
@@ -186,8 +177,14 @@ export function CalendarStayDialogs({
                 showHeading={false}
                 variant="staff"
               />
-            </details>
-          ) : null}
+            </div>
+          ) : (
+            <p className="form-message form-message--setup" role="status">
+              Conversation is unavailable for this stay — the booking record is
+              missing a database id. Reopen the stay from the calendar tape, or
+              check Supabase is connected.
+            </p>
+          )}
 
           <CalendarBookingPanel
             key={selectedKey}

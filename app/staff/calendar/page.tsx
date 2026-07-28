@@ -8,7 +8,6 @@ import { CalendarStaySelectionProvider } from "@/components/calendar-stay-select
 import { StaffCalendarScrollPage } from "@/components/staff-calendar-scroll-page";
 import { StaffCalendarToolbar } from "@/components/staff-calendar-toolbar";
 import { StaffShell } from "@/components/staff-shell";
-import { getBookingsWithConversationMessages } from "@/lib/booking-chat";
 import {
   buildCalendarDays,
   buildStaffTimelineDays,
@@ -220,11 +219,6 @@ export default async function StaffCalendarPage({
   const allAssignmentBookings = attachRoomNumbers(confirmedBookings.bookings, roomUnits);
   const calendarBookings = allAssignmentBookings.filter((booking) =>
     dateRangeOverlapsBooking(booking, boardFromIso, boardToIso),
-  );
-  const bookingsWithConversationMessages = await getBookingsWithConversationMessages(
-    calendarBookings
-      .map((booking) => booking.databaseId)
-      .filter((id): id is string => Boolean(id)),
   );
   const calendarBlocks = attachRoomNumbers(calendarBlockData.monthBlocks, roomUnits);
   const allAssignmentChannels = attachRoomNumbers(calendarBlockData.channelBlocks, roomUnits);
@@ -662,7 +656,6 @@ export default async function StaffCalendarPage({
           <CalendarStayDialogs
             blocks={calendarBlocks}
             bookings={calendarBookings}
-            bookingsWithConversationMessages={bookingsWithConversationMessages}
             canManage={canManage}
             currency={settings.currency}
             formError={panelFormError}
