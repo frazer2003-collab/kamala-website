@@ -7,6 +7,7 @@ import { BookingChat } from "@/components/staff-lazy";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import { formatBedSetup } from "@/lib/bed-setup";
 import { formatBookingSource } from "@/lib/booking-source";
+import { guestHasConversationLink } from "@/lib/booking-chat";
 import type { StaffBooking } from "@/lib/booking-requests";
 import { getStaffBookingKey } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
@@ -83,6 +84,9 @@ export function CalendarStayDialogs({
   const selectedBlockKey = selectedBlock ? getStaffRoomBlockKey(selectedBlock) : "";
   const canManageSelected = canManage && Boolean(selectedBooking?.databaseId);
   const canManageBlock = canManage && Boolean(selectedBlock?.databaseId);
+  const hasGuestEmail = Boolean(
+    selectedBooking && guestHasConversationLink(selectedBooking.contact),
+  );
 
   return (
     <>
@@ -145,6 +149,43 @@ export function CalendarStayDialogs({
             ) : null}
           </dl>
 
+          {selectedBooking.databaseId ? (
+            <div
+              className={`staff-request-chat${
+                selectedBooking.status === "needs-reply"
+                  ? " staff-request-chat--priority"
+                  : ""
+              }`}
+              id="booking-chat"
+            >
+              <h3 className="staff-request-chat__title">
+                {selectedBooking.status === "needs-reply"
+                  ? "Conversation — reply needed"
+                  : "Conversation"}
+              </h3>
+              {!hasGuestEmail ? (
+                <p className="detail-help staff-request-chat__hint">
+                  No guest email on this stay yet. Save an email in the form
+                  below to notify them when you reply.
+                </p>
+              ) : null}
+              <BookingChat
+                bookingId={selectedBooking.databaseId}
+                disabled={!canManageSelected}
+                guestLabel={selectedBooking.guest}
+                readOnly={selectedBooking.status === "declined"}
+                showHeading={false}
+                variant="staff"
+              />
+            </div>
+          ) : (
+            <p className="form-message form-message--setup" role="status">
+              Conversation is unavailable for this stay — the booking record is
+              missing a database id. Reopen the stay from the calendar tape, or
+              check Supabase is connected.
+            </p>
+          )}
+
           <CalendarBookingPanel
             key={selectedKey}
             arrivalDate={selectedBooking.arrivalDate}
@@ -202,20 +243,6 @@ export function CalendarStayDialogs({
               </>
             )}
           </p>
-
-          {selectedBooking.databaseId ? (
-            <details className="staff-request-chat staff-request-chat--collapsible">
-              <summary className="staff-request-chat__title">Conversation</summary>
-              <BookingChat
-                bookingId={selectedBooking.databaseId}
-                disabled={!canManageSelected}
-                guestLabel={selectedBooking.guest}
-                readOnly={selectedBooking.status === "declined"}
-                showHeading={false}
-                variant="staff"
-              />
-            </details>
-          ) : null}
         </CalendarBookingDialog>
       ) : null}
 

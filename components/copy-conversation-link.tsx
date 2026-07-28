@@ -22,7 +22,7 @@ export function CopyConversationLink({ url }: CopyConversationLinkProps) {
   return (
     <div className="booking-chat-page__link-tools">
       <p>
-        Save this private link — it is how you return to this conversation.
+        Save this link to return here — do not reply to notification emails.
       </p>
       <div className="booking-chat-page__link-row">
         <code className="booking-chat-page__link">{url}</code>

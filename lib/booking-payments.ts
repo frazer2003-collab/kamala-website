@@ -3,6 +3,7 @@ import { sendStaffBookingEmail, sendGuestChatNotificationEmail } from "@/lib/ema
 import {
   ensureConversationToken,
   getGuestChatUrl,
+  guestHasConversationLink,
 } from "@/lib/booking-chat";
 import { hasCapacityForStay } from "@/lib/booking-capacity";
 import { getRoomForBooking } from "@/lib/rooms";
@@ -181,7 +182,7 @@ export async function fulfillBookingDeposit({
     bedSetup: booking.bed_setup,
   });
 
-  if (booking.guest_email !== "walk-in@kamala.local") {
+  if (guestHasConversationLink(booking.guest_email)) {
     const token = await ensureConversationToken(bookingId);
     if (token) {
       await sendGuestChatNotificationEmail({
@@ -189,7 +190,7 @@ export async function fulfillBookingDeposit({
         guestName: booking.guest_name,
         roomName: booking.room_name,
         message:
-          "Thank you — we received payment for your stay and your room is reserved. Staff will review your request and message you here with arrival details.",
+          "Thank you — we received payment and your room is reserved.\nKamala will review your request and message you here with arrival details.",
         chatUrl: getGuestChatUrl(token),
         kind: "welcome",
       });

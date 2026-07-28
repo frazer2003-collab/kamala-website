@@ -122,12 +122,38 @@ export async function getInboxMessagePreviews(bookingIds: string[]) {
   return pickLatestMessagePreviews(data);
 }
 
+/** Booking IDs that have at least one message in the thread. */
+export async function getBookingsWithConversationMessages(bookingIds: string[]) {
+  const uniqueIds = [...new Set(bookingIds.filter(Boolean))];
+  if (uniqueIds.length === 0 || !hasStaffSupabaseConfig()) {
+    return new Set<string>();
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data, error } = await supabase
+    .from("booking_messages")
+    .select("booking_request_id")
+    .in("booking_request_id", uniqueIds);
+
+  if (error || !data) {
+    return new Set<string>();
+  }
+
+  return new Set(data.map((row) => row.booking_request_id));
+}
+
 export type GuestChatContext = {
   guestName: string;
   roomName: string;
   arrivalDate: string;
   departureDate: string;
 };
+
+export const WALK_IN_GUEST_EMAIL = "walk-in@kamala.local";
+
+export function guestHasConversationLink(email: string) {
+  return email.trim().toLowerCase() !== WALK_IN_GUEST_EMAIL;
+}
 
 const CHAT_ACTIVE_STATUSES: BookingRequestRow["status"][] = [
   "awaiting",
@@ -244,6 +270,23 @@ export async function ensureConversationToken(bookingId: string) {
   return updated.conversation_token;
 }
 
+export async function resolveGuestConversationUrl({
+  bookingId,
+  conversationToken,
+  guestEmail,
+}: {
+  bookingId: string;
+  conversationToken: string | null;
+  guestEmail: string;
+}) {
+  if (!guestHasConversationLink(guestEmail)) {
+    return null;
+  }
+
+  const token = conversationToken ?? (await ensureConversationToken(bookingId));
+  return token ? getGuestChatUrl(token) : null;
+}
+
 export async function getBookingByConversationToken(token: string) {
   if (!token.trim()) {
     return null;
@@ -257,6 +300,10 @@ export async function getBookingByConversationToken(token: string) {
     .maybeSingle();
 
   if (error || !data) {
+    return null;
+  }
+
+  if (!guestHasConversationLink(data.guest_email)) {
     return null;
   }
 
@@ -499,19 +546,21 @@ export async function recordStaffChatMessage({
 
   let emailSent: boolean | null = null;
 
-  if (!skipNotify && booking.guest_email !== "walk-in@kamala.local") {
-    const token = (await ensureConversationToken(booking.id)) ?? "";
-    const chatUrl = token ? getGuestChatUrl(token) : getAppBaseUrl();
-
-    const notify = await sendGuestChatNotificationEmail({
-      to: booking.guest_email,
-      guestName: booking.guest_name,
-      roomName: booking.room_name,
-      message: trimmed,
-      chatUrl,
-      kind: emailKind,
-    });
-    emailSent = notify.ok;
+  if (!skipNotify && guestHasConversationLink(booking.guest_email)) {
+    const token = await ensureConversationToken(booking.id);
+    if (!token) {
+      emailSent = false;
+    } else {
+      const notify = await sendGuestChatNotificationEmail({
+        to: booking.guest_email,
+        guestName: booking.guest_name,
+        roomName: booking.room_name,
+        message: trimmed,
+        chatUrl: getGuestChatUrl(token),
+        kind: emailKind,
+      });
+      emailSent = notify.ok;
+    }
   }
 
   return {

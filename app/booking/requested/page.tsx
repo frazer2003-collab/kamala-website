@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
-import { getGuestChatUrl } from "@/lib/booking-chat";
+import { resolveGuestConversationUrl } from "@/lib/booking-chat";
 import { getPropertySettings } from "@/lib/property-settings";
 import { createStaffSupabaseClient } from "@/lib/supabase";
-import { isLocale, t } from "@/lib/i18n";
+import { isLocale, t, tReplace } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +24,16 @@ export default async function BookingRequestedPage({
       const supabase = createStaffSupabaseClient();
       const { data } = await supabase
         .from("booking_requests")
-        .select("conversation_token")
+        .select("conversation_token, guest_email")
         .eq("id", bookingId)
         .maybeSingle();
 
-      if (data?.conversation_token) {
-        chatUrl = getGuestChatUrl(data.conversation_token);
+      if (data) {
+        chatUrl = await resolveGuestConversationUrl({
+          bookingId,
+          conversationToken: data.conversation_token,
+          guestEmail: data.guest_email,
+        });
       }
     } catch {
       // Booking details may not be available yet.
@@ -43,19 +47,24 @@ export default async function BookingRequestedPage({
         <h1>
           {isBankTransfer
             ? t(locale, "bankTransferWaitingTitle")
-            : "We received your booking request."}
+            : t(locale, "requestedTitle")}
         </h1>
         <p>
           {isBankTransfer
             ? t(locale, "bankTransferWaitingBody")
-            : `Staff at ${settings.propertyName} will review your dates and reply with confirmation details. No card payment was taken online.`}
+            : tReplace(locale, "requestedBody", {
+                property: settings.propertyName,
+              })}
         </p>
         {chatUrl ? (
-          <p>
-            <Link className="button button--primary" href={chatUrl}>
-              {t(locale, "openBookingConversation")}
-            </Link>
-          </p>
+          <>
+            <p>{t(locale, "requestedChatHint")}</p>
+            <p>
+              <Link className="button button--primary" href={chatUrl}>
+                {t(locale, "openBookingConversation")}
+              </Link>
+            </p>
+          </>
         ) : null}
         <Link className="button button--secondary" href="/">
           {t(locale, "backToHome")}

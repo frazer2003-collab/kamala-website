@@ -105,6 +105,7 @@ export function BookingChat(props: BookingChatProps) {
   const [draft, setDraft] = useState("");
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
   const threadRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const lastTimestampRef = useRef<string | null>(null);
   const lastSentAtRef = useRef<number | null>(null);
   const submittingRef = useRef(false);
@@ -262,6 +263,38 @@ export function BookingChat(props: BookingChatProps) {
   }, [refreshMessages]);
 
   useEffect(() => {
+    if (props.variant !== "guest") {
+      return;
+    }
+
+    const viewport = window.visualViewport;
+    if (!viewport) {
+      return;
+    }
+
+    const syncKeyboardOffset = () => {
+      const obscured = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop,
+      );
+      document.documentElement.style.setProperty(
+        "--booking-chat-keyboard-offset",
+        `${obscured}px`,
+      );
+    };
+
+    syncKeyboardOffset();
+    viewport.addEventListener("resize", syncKeyboardOffset);
+    viewport.addEventListener("scroll", syncKeyboardOffset);
+
+    return () => {
+      viewport.removeEventListener("resize", syncKeyboardOffset);
+      viewport.removeEventListener("scroll", syncKeyboardOffset);
+      document.documentElement.style.removeProperty("--booking-chat-keyboard-offset");
+    };
+  }, [props.variant]);
+
+  useEffect(() => {
     if (!hydratedRef.current) {
       messageCountRef.current = messages.length;
       return;
@@ -370,6 +403,16 @@ export function BookingChat(props: BookingChatProps) {
     }
   }
 
+  function handleTextareaFocus() {
+    if (props.variant !== "guest") {
+      return;
+    }
+
+    queueMicrotask(() => {
+      formRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    });
+  }
+
   const syncedLabel = formatSyncTime(lastSyncedAt);
   const statusLabel = isInitialLoading
     ? "Loading messages…"
@@ -386,7 +429,9 @@ export function BookingChat(props: BookingChatProps) {
     <section
       aria-label={showHeading ? undefined : "Conversation"}
       aria-labelledby={showHeading ? headingId : undefined}
-      className="booking-chat"
+      className={`booking-chat${
+        props.variant === "guest" ? " booking-chat--guest" : ""
+      }`}
       id="booking-chat"
     >
       <div className="booking-chat__header">
@@ -441,8 +486,8 @@ export function BookingChat(props: BookingChatProps) {
             {isInitialLoading
               ? "Loading messages…"
               : props.variant === "staff"
-                ? "No messages yet. Send the first note and the guest will be notified by email."
-                : "No messages yet. Write Kamala a note — your message is saved with this reservation, and they will email you when they reply."}
+                ? "No messages yet. Send the first note; the guest is notified by email."
+                : "No messages yet. Write Kamala a note — your message stays with this reservation."}
           </p>
         ) : (
           messages.map((message) => (
@@ -463,7 +508,7 @@ export function BookingChat(props: BookingChatProps) {
       {!canCompose ? (
         <p className="booking-chat__closed">
           {readOnly
-            ? "This conversation is closed. The full history is kept on record."
+            ? "This conversation is closed. The full history stays on your booking record."
             : "Messaging is unavailable for this booking. History above stays readable."}
         </p>
       ) : (
@@ -472,6 +517,7 @@ export function BookingChat(props: BookingChatProps) {
           className="reply-form booking-chat__form"
           id={formId}
           onSubmit={handleFormSubmit}
+          ref={formRef}
         >
           {props.variant === "staff" ? (
             <input name="booking-id" type="hidden" value={props.bookingId} />
@@ -486,6 +532,7 @@ export function BookingChat(props: BookingChatProps) {
             id={textareaId}
             name="message"
             onChange={(event) => setDraft(event.target.value)}
+            onFocus={handleTextareaFocus}
             onKeyDown={handleTextareaKeyDown}
             placeholder={
               props.variant === "staff"

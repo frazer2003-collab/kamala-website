@@ -2,7 +2,7 @@ import Link from "next/link";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { fulfillBookingDeposit } from "@/lib/booking-payments";
-import { getGuestChatUrl } from "@/lib/booking-chat";
+import { resolveGuestConversationUrl } from "@/lib/booking-chat";
 import { getRequestGuestLocale } from "@/lib/guest-locale";
 import { t, tReplace } from "@/lib/i18n";
 import { getPropertySettings } from "@/lib/property-settings";
@@ -56,7 +56,7 @@ export default async function BookingConfirmedPage({
         const supabase = createStaffSupabaseClient();
         const { data: booking } = await supabase
           .from("booking_requests")
-          .select("room_name, conversation_token, deposit_paid_at")
+          .select("room_name, conversation_token, deposit_paid_at, guest_email")
           .eq("id", resolvedBookingId)
           .maybeSingle();
 
@@ -75,19 +75,27 @@ export default async function BookingConfirmedPage({
           if (result.ok) {
             const { data: paidBooking } = await supabase
               .from("booking_requests")
-              .select("conversation_token")
+              .select("conversation_token, guest_email")
               .eq("id", resolvedBookingId)
               .maybeSingle();
-            if (paidBooking?.conversation_token) {
-              chatUrl = getGuestChatUrl(paidBooking.conversation_token);
-            } else if (booking?.conversation_token) {
-              chatUrl = getGuestChatUrl(booking.conversation_token);
-            }
+            chatUrl = await resolveGuestConversationUrl({
+              bookingId: resolvedBookingId,
+              conversationToken:
+                paidBooking?.conversation_token ??
+                booking?.conversation_token ??
+                null,
+              guestEmail:
+                paidBooking?.guest_email ?? booking?.guest_email ?? "",
+            });
           } else {
             paymentPending = true;
           }
-        } else if (booking?.deposit_paid_at && booking.conversation_token) {
-          chatUrl = getGuestChatUrl(booking.conversation_token);
+        } else if (booking?.deposit_paid_at) {
+          chatUrl = await resolveGuestConversationUrl({
+            bookingId: resolvedBookingId,
+            conversationToken: booking.conversation_token,
+            guestEmail: booking.guest_email,
+          });
         } else if (!booking?.deposit_paid_at) {
           paymentPending = true;
         }

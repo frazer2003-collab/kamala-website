@@ -304,16 +304,19 @@ export async function getConfirmedBookingById(bookingId: string) {
       getBookingRoomUnitMap(supabase),
     ]);
 
-    if (
-      error ||
-      !data ||
-      (data.status !== "confirmed" &&
-        !(data.status === "awaiting" && data.deposit_paid_at))
-    ) {
+    if (error || !data) {
       return null;
     }
 
-    return mapBookingRequest(data, unitMap.get(data.id) ?? data.room_unit_id ?? null);
+    const booking = mapBookingRequest(
+      data,
+      unitMap.get(data.id) ?? data.room_unit_id ?? null,
+    );
+    if (!isCalendarBooking(booking)) {
+      return null;
+    }
+
+    return booking;
   } catch {
     return null;
   }

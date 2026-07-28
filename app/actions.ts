@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import { createStaffSupabaseClient, type BookingRequestRow } from "@/lib/supabase";
 import { sendGuestBookingEmail, sendStaffBookingEmail } from "@/lib/email";
 import {
+  ensureConversationToken,
   getGuestChatUrl,
+  guestHasConversationLink,
   recordStaffChatMessage,
   seedGuestNoteMessage,
 } from "@/lib/booking-chat";
@@ -1035,18 +1037,27 @@ export async function confirmBookingRequest(formData: FormData) {
     })
     .eq("id", bookingId);
 
-  await recordStaffChatMessage({
+  const notifyResult = await recordStaffChatMessage({
     booking: { ...booking, status: "confirmed" },
     body: message,
     emailKind: "confirmation",
   });
 
+  const calendarHref = `/staff/calendar?month=${booking.arrival_date.slice(0, 7)}&booking=${encodeURIComponent(bookingId)}`;
+
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
-  redirect(
-    `/staff/calendar?month=${booking.arrival_date.slice(0, 7)}&booking=${encodeURIComponent(bookingId)}`,
-  );
+
+  if (
+    notifyResult.ok &&
+    guestHasConversationLink(booking.guest_email) &&
+    notifyResult.emailSent === false
+  ) {
+    redirect(`${calendarHref}&confirm-email=failed`);
+  }
+
+  redirect(calendarHref);
 }
 
 export type UpdateConfirmedBookingState = {
@@ -1242,6 +1253,11 @@ export async function updateConfirmedBooking(
     redirect(appendCalendarError(bookingHref, "save-failed", error.message));
   }
 
+  // Former walk-ins get a conversation link once a real guest email is saved.
+  if (guestHasConversationLink(guestEmail)) {
+    await ensureConversationToken(bookingId);
+  }
+
   const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
     p_booking_id: bookingId,
     p_room_unit_id: effectiveRoomUnitId,
@@ -1283,6 +1299,7 @@ export async function updateConfirmedBooking(
   redirect(
     calendarHrefFromFormData(formData, {
       month: arrival.slice(0, 7),
+      booking: bookingId,
       extras: { saved: "1" },
     }),
   );
@@ -1758,7 +1775,8 @@ export async function createWalkInBooking(
       stay_status: "checked-in",
       deposit_amount: depositPaid ? estimatedTotal : null,
       deposit_paid_at: paidAt,
-      conversation_token: randomUUID(),
+      conversation_token:
+        guestEmail !== walkInEmailFallback ? randomUUID() : null,
     })
     .select("id, conversation_token")
     .single();

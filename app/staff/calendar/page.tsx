@@ -84,6 +84,7 @@ export default async function StaffCalendarPage({
     "ical-failed"?: string;
     "ical-error"?: string;
     "ical-warning"?: string;
+    "confirm-email"?: string;
   }>;
 }) {
   const staffSession = await requireStaffSessionDetails();
@@ -110,6 +111,7 @@ export default async function StaffCalendarPage({
     "ical-failed": icalFailed,
     "ical-error": icalError,
     "ical-warning": icalWarning,
+    "confirm-email": confirmEmail,
   } = await searchParams;
   const timelineRange = parseStaffTimelineRange({
     month: monthParam,
@@ -485,6 +487,16 @@ export default async function StaffCalendarPage({
         {created === "walk-in" ? (
           <p className="form-message form-message--success" role="status">
             New booking added to the calendar and marked checked in.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {confirmEmail === "failed" ? (
+          <p className="form-message form-message--error" role="alert">
+            Stay confirmed, but the guest confirmation email could not be sent.
+            Reply in the conversation so they receive your message with their
+            link.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>

@@ -27,6 +27,18 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;");
 }
 
+const GUEST_CONVERSATION_BUTTON = "Open your conversation";
+const GUEST_CONVERSATION_FOOTER =
+  "Use your private conversation link to read and reply — replies to this email are not monitored.";
+
+function guestConversationButtonHtml(chatUrl: string) {
+  return `<a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: #5c2f35; color: #fff; text-decoration: none; border-radius: 8px;">${GUEST_CONVERSATION_BUTTON}</a>`;
+}
+
+function guestConversationFooterHtml() {
+  return `<p style="color: #6b5559; font-size: 14px;">${escapeHtml(GUEST_CONVERSATION_FOOTER)}</p>`;
+}
+
 export async function sendStaffBookingEmail(
   booking: StaffBookingEmail,
 ): Promise<EmailResult> {
@@ -143,17 +155,19 @@ export async function sendGuestBookingEmail({
     ? [
         body,
         "",
-        "Message us about your stay here (save this link):",
+        GUEST_CONVERSATION_BUTTON + ":",
         chatUrl,
+        "",
+        GUEST_CONVERSATION_FOOTER,
       ].join("\n")
     : body;
 
   const chatHtml = chatUrl
     ? `
       <p style="margin-top: 24px;">
-        <a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: #5c2f35; color: #fff; text-decoration: none; border-radius: 8px;">Open your conversation</a>
+        ${guestConversationButtonHtml(chatUrl)}
       </p>
-      <p style="color: #6b5559; font-size: 14px;">Use this private link to message us about your booking — we can talk back and forth there.</p>
+      ${guestConversationFooterHtml()}
     `
     : "";
 
@@ -219,7 +233,7 @@ export async function sendStaffChatNotificationEmail({
     "",
     message,
     "",
-    `Open the conversation: ${staffUrl}`,
+    `Reply on staff site: ${staffUrl}`,
   ].join("\n");
 
   const html = `
@@ -228,7 +242,7 @@ export async function sendStaffChatNotificationEmail({
       <p><strong>${escapeHtml(guestName)}</strong> · ${escapeHtml(roomName)}<br />
       ${escapeHtml(arrivalDate)} to ${escapeHtml(departureDate)}</p>
       <p style="white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</p>
-      <p><a href="${escapeHtml(staffUrl)}">Open the conversation on the staff site</a></p>
+      <p><a href="${escapeHtml(staffUrl)}">Reply on staff site</a></p>
     </div>
   `;
 
@@ -290,35 +304,35 @@ export async function sendGuestChatNotificationEmail({
           "",
           message,
           "",
-          "Open your private conversation link:",
+          GUEST_CONVERSATION_BUTTON + ":",
           chatUrl,
           "",
-          "Please save this link. It is the only way to message us about this booking.",
+          GUEST_CONVERSATION_FOOTER,
         ].join("\n")
       : kind === "confirmation"
         ? [
             `Hello ${guestName},`,
             "",
-            "Your booking is confirmed.",
+            `Your ${roomName} booking is confirmed.`,
             "",
             message,
             "",
-            "Message us any time about your stay here (save this link):",
+            GUEST_CONVERSATION_BUTTON + ":",
             chatUrl,
             "",
-            "We can talk back and forth in this private conversation. Please use the link rather than replying to this email.",
+            GUEST_CONVERSATION_FOOTER,
           ].join("\n")
         : [
             `Hello ${guestName},`,
             "",
-            "You have a new message from Kamala about your booking:",
+            `Kamala sent you a message about your ${roomName} stay:`,
             "",
             message,
             "",
-            "Open your private conversation link to read and reply:",
+            GUEST_CONVERSATION_BUTTON + ":",
             chatUrl,
             "",
-            "Please use this link to respond — we cannot accept replies by email.",
+            GUEST_CONVERSATION_FOOTER,
           ].join("\n");
 
   const html =
@@ -327,8 +341,8 @@ export async function sendGuestChatNotificationEmail({
     <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
       <p>Hello ${escapeHtml(guestName)},</p>
       <p style="white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</p>
-      <p><a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: #5c2f35; color: #fff; text-decoration: none; border-radius: 8px;">Open your conversation</a></p>
-      <p style="color: #6b5559; font-size: 14px;">Please save this link. It is the only way to message us about this booking.</p>
+      <p>${guestConversationButtonHtml(chatUrl)}</p>
+      ${guestConversationFooterHtml()}
     </div>
   `
       : kind === "confirmation"
@@ -337,8 +351,8 @@ export async function sendGuestChatNotificationEmail({
       <h1 style="font-size: 20px;">Your stay is confirmed</h1>
       <p>Hello ${escapeHtml(guestName)}, your <strong>${escapeHtml(roomName)}</strong> booking is confirmed.</p>
       <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid #d9c5c8; background: #f8f3f4; white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
-      <p><a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: #5c2f35; color: #fff; text-decoration: none; border-radius: 8px;">Open conversation and reply</a></p>
-      <p style="color: #6b5559; font-size: 14px;">Save this private link — we can talk back and forth there about your stay. Please use it instead of replying to this email.</p>
+      <p>${guestConversationButtonHtml(chatUrl)}</p>
+      ${guestConversationFooterHtml()}
     </div>
   `
         : `
@@ -346,8 +360,8 @@ export async function sendGuestChatNotificationEmail({
       <h1 style="font-size: 20px;">You have a new message</h1>
       <p>Hello ${escapeHtml(guestName)}, Kamala sent you a message about your ${escapeHtml(roomName)} stay.</p>
       <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid #d9c5c8; background: #f8f3f4; white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
-      <p><a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: #5c2f35; color: #fff; text-decoration: none; border-radius: 8px;">Open conversation and reply</a></p>
-      <p style="color: #6b5559; font-size: 14px;">Please use your private link to respond — we cannot accept replies by email.</p>
+      <p>${guestConversationButtonHtml(chatUrl)}</p>
+      ${guestConversationFooterHtml()}
     </div>
   `;
 
