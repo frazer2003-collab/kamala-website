@@ -3191,6 +3191,14 @@ p {
   font-size: 0.92rem;
 }
 
+.listing-card__reserve--full:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border));
+  background: var(--color-danger-wash);
+  color: var(--color-danger);
+}
+
 .section__heading {
   max-width: 62ch;
   margin-bottom: var(--space-8);

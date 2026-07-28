@@ -143,6 +143,15 @@ function RoomListingCard({
     >
       Reserve
     </BookRoomLink>
+  ) : hasStayDates ? (
+    <button
+      aria-disabled="true"
+      className="button button--secondary listing-card__reserve listing-card__reserve--full"
+      disabled
+      type="button"
+    >
+      Full
+    </button>
   ) : (
     <button
       className="button button--secondary listing-card__reserve"
@@ -298,7 +307,7 @@ export function HomeRoomCatalog({
           </div>
           <p className="section__subhead">
             {availabilityVerifyFailed
-              ? "Availability could not be verified — treat open rooms as provisional until you reserve."
+              ? "We couldn’t verify live availability — open rooms may still be full when you reserve."
               : buildRoomsSectionSubhead(rooms.length, addressLine)}
           </p>
           {!hasStayDates ? (
