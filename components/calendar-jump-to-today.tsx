@@ -14,15 +14,12 @@ function prefersReducedMotion() {
 export function scrollCalendarTodayIntoView() {
   const today =
     document.querySelector<HTMLElement>(".staff-extranet__dayhead--today") ??
-    document.querySelector<HTMLElement>(".staff-timeline__dayhead--today") ??
     document.querySelector<HTMLElement>(".extranet-cell--today");
   if (!today) {
     return false;
   }
 
-  const scrollRoot =
-    today.closest<HTMLElement>(".staff-extranet__scroll") ??
-    today.closest<HTMLElement>(".staff-timeline__scroll");
+  const scrollRoot = today.closest<HTMLElement>(".staff-extranet__scroll");
   if (!scrollRoot) {
     today.scrollIntoView({ block: "nearest", inline: "nearest" });
     return true;
