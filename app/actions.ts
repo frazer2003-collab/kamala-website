@@ -24,6 +24,7 @@ import {
   releaseBookingReservation,
 } from "@/lib/booking-payments";
 import { getBankClaimCardError } from "@/lib/booking-payment-race";
+import { isStaffCalendarManageableStay } from "@/lib/staff-calendar-stay";
 import { PUBLIC_CACHE_TAGS, revalidatePublicCache } from "@/lib/public-cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -1085,11 +1086,12 @@ export async function updateConfirmedBooking(
   const roomUnitId = roomUnitIdRaw || null;
   const booking = await getBookingForStaff(bookingId);
 
-  const isAssignableCalendarStay =
-    booking?.status === "confirmed" ||
-    (booking?.status === "awaiting" && Boolean(booking.deposit_paid_at));
-
-  if (!bookingId || !booking || !isAssignableCalendarStay || booking.id !== bookingId) {
+  if (
+    !bookingId ||
+    !booking ||
+    booking.id !== bookingId ||
+    !isStaffCalendarManageableStay(booking)
+  ) {
     redirect(calendarHrefFromFormData(formData, { month }));
   }
 
@@ -1566,7 +1568,12 @@ export async function cancelConfirmedBooking(
 
   const booking = await getBookingForStaff(bookingId);
 
-  if (!bookingId || !booking || booking.status !== "confirmed" || booking.id !== bookingId) {
+  if (
+    !bookingId ||
+    !booking ||
+    booking.id !== bookingId ||
+    !isStaffCalendarManageableStay(booking)
+  ) {
     redirect(calendarHrefFromFormData(formData, { month }));
   }
 

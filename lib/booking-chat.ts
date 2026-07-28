@@ -5,6 +5,10 @@ import {
 } from "@/lib/email";
 import { getAppBaseUrl } from "@/lib/stripe";
 import {
+  nextStatusAfterGuestMessage,
+  nextStatusAfterStaffReply,
+} from "@/lib/staff-calendar-stay";
+import {
   createStaffSupabaseClient,
   hasStaffSupabaseConfig,
   type BookingMessageRow,
@@ -409,29 +413,31 @@ export async function listBookingMessages(
 }
 
 async function markNeedsReply(booking: BookingRequestRow) {
-  // Only awaiting → needs-reply. Confirmed stays keep status so calendar/confirm
-  // state is not rewritten when a guest messages after confirmation; staff still
-  // get email notification below.
-  if (booking.status !== "awaiting") {
+  const nextStatus = nextStatusAfterGuestMessage(booking.status);
+  if (!nextStatus) {
     return;
   }
 
   const supabase = createStaffSupabaseClient();
   await supabase
     .from("booking_requests")
-    .update({ status: "needs-reply" })
+    .update({ status: nextStatus })
     .eq("id", booking.id);
 }
 
 async function markStaffReplied(booking: BookingRequestRow) {
-  if (booking.status !== "needs-reply") {
+  const nextStatus = nextStatusAfterStaffReply(
+    booking.status,
+    Boolean(booking.deposit_paid_at),
+  );
+  if (!nextStatus) {
     return;
   }
 
   const supabase = createStaffSupabaseClient();
   await supabase
     .from("booking_requests")
-    .update({ status: "awaiting" })
+    .update({ status: nextStatus })
     .eq("id", booking.id);
 }
 

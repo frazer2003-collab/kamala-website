@@ -19,6 +19,7 @@ import {
   type StaffRoomBlock,
 } from "@/lib/room-blocks";
 import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
+import { isStaffCalendarManageableStay } from "@/lib/staff-calendar-stay";
 
 type CalendarStayDialogsProps = {
   monthKey: string;
@@ -191,11 +192,13 @@ export function CalendarStayDialogs({
             arrivalDate={selectedBooking.arrivalDate}
             bookingKey={selectedKey}
             bookingSource={selectedBooking.bookingSource}
-            canCancelStay={selectedBooking.status === "confirmed"}
+            canCancelStay={
+              canManageSelected &&
+              isStaffCalendarManageableStay(selectedBooking)
+            }
             canManage={
               canManageSelected &&
-              (selectedBooking.status === "confirmed" ||
-                (selectedBooking.status === "awaiting" && selectedBooking.depositPaid))
+              isStaffCalendarManageableStay(selectedBooking)
             }
             currency={currency}
             databaseId={selectedBooking.databaseId ?? ""}
@@ -226,11 +229,23 @@ export function CalendarStayDialogs({
           />
 
           <p className="detail-help">
-            {selectedBooking.status === "awaiting" ? (
+            {selectedBooking.status === "awaiting" && selectedBooking.depositPaid ? (
               <>
-                This stay is reserved by payment. You can still assign a room number
-                here (including for past dates). Confirm the request from the inbox
-                when ready.
+                This stay is reserved by payment and already on the calendar. You
+                can assign a room number and edit details here. Confirm from the
+                inbox only if the request is still open there (bank or legacy
+                card holds).
+              </>
+            ) : selectedBooking.status === "needs-reply" ? (
+              <>
+                Guest is waiting on a reply above. You can still assign a door
+                number and edit dates or details here — conversation triage does
+                not lock the tape.
+              </>
+            ) : selectedBooking.status === "awaiting" ? (
+              <>
+                This stay is waiting on payment or staff confirmation. Assign a
+                room number if needed, then Confirm from the inbox when ready.
               </>
             ) : (
               <>

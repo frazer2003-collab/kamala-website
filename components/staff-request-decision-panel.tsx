@@ -79,7 +79,9 @@ export function StaffRequestDecisionPanel({
         <h3 className="staff-decide__title">Practice complete</h3>
         <p className="staff-decide__summary">
           {practiceResult === "confirmed"
-            ? "In live mode this would email the guest and move the stay to the calendar."
+            ? depositPaid
+              ? "In live mode this would email the guest and mark the stay confirmed (card-paid stays are already on the calendar)."
+              : "In live mode this would email the guest and move the stay to the calendar."
             : "In live mode this would email the guest, close the request, and refund payment if one was paid."}
         </p>
         <div className="staff-decide__actions">
@@ -123,13 +125,15 @@ export function StaffRequestDecisionPanel({
           </p>
         ) : null}
         <p className="staff-decide__summary">
-          Email <strong>{guestName}</strong> at <strong>{guestEmail}</strong>,
-          then move this stay to the calendar.
+          Email <strong>{guestName}</strong> at <strong>{guestEmail}</strong>
           {depositPaid
-            ? ` They already paid ${depositLabel} in full for the stay.`
+            ? ", then mark this stay confirmed."
+            : ", then move this stay onto the calendar."}
+          {depositPaid
+            ? ` They already paid ${depositLabel} — card-paid stays are already on the calendar; Confirm closes the inbox request and emails arrival details.`
             : bankTransferClaimed
               ? " The guest reported a bank transfer; verify it before sending confirmation."
-            : " No payment is on record yet."}
+              : " No payment is on record yet."}
         </p>
         <form
           action={practiceMode ? undefined : confirmBookingRequest}
@@ -262,16 +266,18 @@ export function StaffRequestDecisionPanel({
       ) : null}
       {!needsReply && !needsTransferGate ? (
         <p className="detail-help">
-          Confirm moves the stay to the calendar and emails the guest. Decline
-          closes the request
-          {depositPaid ? ", refunds their payment," : ""} and emails them. You
-          will review the message before it sends.
+          {depositPaid
+            ? "Card-paid stays are already on the calendar. Confirm emails the guest and closes this inbox request. Decline refunds and emails them. You will review the message before it sends."
+            : "Confirm verifies payment when needed, moves the stay to the calendar, and emails the guest. Decline closes the request and emails them. You will review the message before it sends."}
         </p>
       ) : (
         <p className="detail-help">
           Decline still closes the request
           {depositPaid ? ", refunds their payment," : ""} and emails them when
           you are ready.
+          {depositPaid
+            ? " Reply in the conversation above to clear needs-reply without using Confirm."
+            : ""}
         </p>
       )}
       {needsReply || needsTransferGate ? (

@@ -663,7 +663,10 @@ begin
   where id = p_booking_id
     and (
       status = 'confirmed'
-      or (status = 'awaiting' and deposit_paid_at is not null)
+      or (
+        deposit_paid_at is not null
+        and status in ('awaiting', 'needs-reply')
+      )
     );
 
   if not found then

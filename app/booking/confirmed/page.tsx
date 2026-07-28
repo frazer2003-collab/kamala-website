@@ -33,6 +33,7 @@ export default async function BookingConfirmedPage({
   let roomName = locale === "th" ? "ห้องของคุณ" : "your room";
   let chatUrl: string | null = null;
   let paymentPending = false;
+  let overbooked = false;
 
   if (hasStripeServerConfig()) {
     try {
@@ -73,6 +74,7 @@ export default async function BookingConfirmedPage({
           });
 
           if (result.ok) {
+            overbooked = Boolean(result.overbooked);
             const { data: paidBooking } = await supabase
               .from("booking_requests")
               .select("conversation_token, guest_email")
@@ -109,10 +111,14 @@ export default async function BookingConfirmedPage({
 
   const title = paymentPending
     ? t(locale, "confirmedPendingTitle")
-    : t(locale, "confirmedTitle");
+    : overbooked
+      ? t(locale, "confirmedOverbookedTitle")
+      : t(locale, "confirmedTitle");
   const body = paymentPending
     ? t(locale, "confirmedPendingBody")
-    : tReplace(locale, "confirmedBody", { room: roomName });
+    : overbooked
+      ? tReplace(locale, "confirmedOverbookedBody", { room: roomName })
+      : tReplace(locale, "confirmedBody", { room: roomName });
 
   return (
     <main className="guest-site site-shell">

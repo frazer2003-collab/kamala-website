@@ -99,7 +99,7 @@ export async function fulfillBookingDeposit({
   }
 
   if (booking.deposit_paid_at) {
-    return { ok: true as const, alreadyPaid: true as const };
+    return { ok: true as const, alreadyPaid: true as const, overbooked: false as const };
   }
 
   if (booking.status !== "pending_payment") {
@@ -123,6 +123,7 @@ export async function fulfillBookingDeposit({
   }
 
   const room = await getRoomForBooking(booking.room_id);
+  let overbooked = false;
   if (room) {
     const hasCapacity = await hasCapacityForStay(
       booking.room_id,
@@ -131,16 +132,16 @@ export async function fulfillBookingDeposit({
       room.availableCount,
       { excludeBookingId: bookingId },
     );
-    if (!hasCapacity) {
-      return { ok: false as const, reason: "no-capacity" as const };
-    }
+    // Guest already paid — still confirm onto the calendar (survive overbook)
+    // rather than leaving them stuck in pending_payment.
+    overbooked = !hasCapacity;
   }
 
   const paidAt = new Date().toISOString();
   const { data: updatedRows, error: updateError } = await supabase
     .from("booking_requests")
     .update({
-      status: "awaiting",
+      status: "confirmed",
       deposit_paid_at: paidAt,
       ...(verified.checkoutSessionId
         ? { stripe_checkout_session_id: verified.checkoutSessionId }
@@ -163,7 +164,7 @@ export async function fulfillBookingDeposit({
       .eq("id", bookingId)
       .maybeSingle();
     if (again?.deposit_paid_at) {
-      return { ok: true as const, alreadyPaid: true as const };
+      return { ok: true as const, alreadyPaid: true as const, overbooked: false as const };
     }
     return { ok: false as const, reason: "update-failed" as const };
   }
@@ -189,10 +190,11 @@ export async function fulfillBookingDeposit({
         to: booking.guest_email,
         guestName: booking.guest_name,
         roomName: booking.room_name,
-        message:
-          "Thank you — we received payment and your room is reserved.\nKamala will review your request and message you here with arrival details.",
+        message: overbooked
+          ? "Thank you — we received payment for your stay. Kamala will message you here shortly with confirmation of your dates and arrival details."
+          : "Thank you — we received payment and your stay is confirmed.\nMessage us here any time about arrival details.",
         chatUrl: getGuestChatUrl(token),
-        kind: "welcome",
+        kind: overbooked ? "welcome" : "confirmation",
       });
     }
   }
@@ -201,7 +203,7 @@ export async function fulfillBookingDeposit({
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
 
-  return { ok: true as const, alreadyPaid: false as const };
+  return { ok: true as const, alreadyPaid: false as const, overbooked };
 }
 
 export async function releaseBookingReservation(bookingId: string) {
