@@ -35,12 +35,12 @@ const messages = {
     nightsAria: "Calculated nights",
     phonePlaceholder: "Include country code, e.g. +66",
     notePlaceholder: "Arrival time, breakfast needs, or questions about the room.",
-    roomFull: "This room is full. Choose another room to send a request.",
+    roomFull: "This room is full for your dates. Choose another room or change dates.",
     allRoomsFull:
       "All rooms are currently full. Please check back later or contact staff directly.",
     quoteHint:
       "Choose arrival and departure to see your total, including any promotional rates.",
-    roomFullSuffix: " · FULL",
+    roomFullSuffix: " · Full",
     paymentsNotConfigured:
       "Online payment is temporarily unavailable. Please contact the guesthouse to complete your booking.",
     payDeposit: "Pay in full",
@@ -158,7 +158,7 @@ const messages = {
     nightsAria: "จำนวนคืนที่คำนวณแล้ว",
     phonePlaceholder: "ใส่รหัสประเทศ เช่น +66",
     notePlaceholder: "เวลาเข้าพัก ความต้องการอาหารเช้า หรือคำถามเกี่ยวกับห้อง",
-    roomFull: "ห้องนี้เต็มแล้ว กรุณาเลือกห้องอื่นเพื่อส่งคำขอ",
+    roomFull: "ห้องนี้เต็มสำหรับวันที่เลือก กรุณาเลือกห้องอื่นหรือเปลี่ยนวันที่",
     allRoomsFull:
       "ห้องทั้งหมดเต็มในขณะนี้ กรุณาลองใหม่ภายหลังหรือติดต่อเจ้าหน้าที่โดยตรง",
     quoteHint: "เลือกวันเช็คอินและเช็คเอาท์เพื่อดูยอดรวม รวมถึงโปรโมชัน (ถ้ามี)",

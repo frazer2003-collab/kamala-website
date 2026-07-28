@@ -437,9 +437,9 @@ export async function createBookingRequest(
     }
 
     return bookingErrorState(
-      "These dates are no longer available for this room.",
+      "This room is full for those dates. Choose another room or different dates.",
       formData,
-      { room: "These dates are no longer available for this room." },
+      { room: "This room is full for those dates. Choose another room or different dates." },
     );
   }
 
@@ -462,9 +462,9 @@ export async function createBookingRequest(
     })
   ) {
     return bookingErrorState(
-      "These dates are no longer available for this room.",
+      "This room is full for those dates. Choose another room or different dates.",
       formData,
-      { room: "These dates are no longer available for this room." },
+      { room: "This room is full for those dates. Choose another room or different dates." },
     );
   }
 
@@ -512,9 +512,9 @@ export async function createBookingRequest(
         }
 
         return bookingErrorState(
-          "These dates are no longer available for this room.",
+          "This room is full for those dates. Choose another room or different dates.",
           formData,
-          { room: "These dates are no longer available for this room." },
+          { room: "This room is full for those dates. Choose another room or different dates." },
         );
       }
 

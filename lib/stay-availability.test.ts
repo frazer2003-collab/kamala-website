@@ -1,8 +1,29 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { stayAvailabilityMap, type RoomStayAvailability } from "./stay-availability";
+import {
+  computeGuestRoomStayAvailableCount,
+  stayAvailabilityMap,
+  type RoomStayAvailability,
+} from "./stay-availability";
 import { parseStayDates, refreshStaleStayDates } from "./stay-dates";
 import { getPropertyTodayIso } from "./calendar";
+import type { Room } from "./content";
+import { SAMPLE_ROOM_UNITS } from "./room-units";
+
+const gardenRoom: Room = {
+  id: "garden",
+  name: "Deluxe",
+  shortName: "Deluxe",
+  rate: 1900,
+  availableCount: 4,
+  sleeps: "Sleeps 2",
+  outlook: "Garden",
+  summary: "",
+  amenities: [],
+  tone: "garden",
+  imageUrl: null,
+  galleryUrls: [],
+};
 
 describe("stayAvailabilityMap", () => {
   it("maps room ids to available counts", () => {
@@ -13,6 +34,117 @@ describe("stayAvailabilityMap", () => {
 
     assert.equal(stayAvailabilityMap(entries).get("garden"), 1);
     assert.equal(stayAvailabilityMap(entries).get("loft"), 0);
+  });
+});
+
+describe("computeGuestRoomStayAvailableCount", () => {
+  const arrival = "2026-08-10";
+  const departure = "2026-08-12";
+
+  it("returns zero when every door for the type is taken", () => {
+    const gardenUnits = SAMPLE_ROOM_UNITS.filter((unit) =>
+      unit.roomIds.includes("garden"),
+    );
+    assert.equal(gardenUnits.length, 3);
+
+    const available = computeGuestRoomStayAvailableCount({
+      room: gardenRoom,
+      arrival,
+      departure,
+      bookings: gardenUnits.map((unit, index) => ({
+        roomId: "garden",
+        roomUnitId: unit.id,
+        arrivalDate: arrival,
+        departureDate: departure,
+        databaseId: `b-${index}`,
+        guest: `Guest ${index}`,
+      })),
+      channelBlocks: [],
+      staffClosures: [],
+      inventoryLookup: new Map(),
+      units: SAMPLE_ROOM_UNITS,
+    });
+
+    assert.equal(available, 0);
+  });
+
+  it("counts a door assigned under another room_id toward that door's type", () => {
+    const unit114 = SAMPLE_ROOM_UNITS.find((unit) => unit.number === "114");
+    assert.ok(unit114);
+
+    const loftRoom: Room = {
+      ...gardenRoom,
+      id: "loft",
+      name: "Family",
+      shortName: "Family",
+      availableCount: 1,
+      rate: 2500,
+      tone: "attic",
+    };
+
+    const available = computeGuestRoomStayAvailableCount({
+      room: loftRoom,
+      arrival,
+      departure,
+      bookings: [
+        {
+          roomId: "garden",
+          roomUnitId: unit114.id,
+          arrivalDate: arrival,
+          departureDate: departure,
+          databaseId: "cross-type",
+          guest: "OTA guest",
+        },
+      ],
+      channelBlocks: [],
+      staffClosures: [],
+      inventoryLookup: new Map(),
+      units: SAMPLE_ROOM_UNITS,
+    });
+
+    assert.equal(available, 0);
+  });
+
+  it("caps allotment by free doors when catalog count is higher", () => {
+    const gardenUnits = SAMPLE_ROOM_UNITS.filter((unit) =>
+      unit.roomIds.includes("garden"),
+    );
+    const available = computeGuestRoomStayAvailableCount({
+      room: gardenRoom,
+      arrival,
+      departure,
+      bookings: gardenUnits.slice(0, 2).map((unit, index) => ({
+        roomId: "garden",
+        roomUnitId: unit.id,
+        arrivalDate: arrival,
+        departureDate: departure,
+        databaseId: `b-${index}`,
+        guest: `Guest ${index}`,
+      })),
+      channelBlocks: [],
+      staffClosures: [],
+      inventoryLookup: new Map(),
+      units: SAMPLE_ROOM_UNITS,
+    });
+
+    assert.equal(available, 1);
+  });
+
+  it("returns zero on a staff-closed night", () => {
+    const available = computeGuestRoomStayAvailableCount({
+      room: gardenRoom,
+      arrival,
+      departure,
+      bookings: [],
+      channelBlocks: [],
+      staffClosures: [
+        { roomId: "garden", startDate: arrival, endDate: departure },
+      ],
+      inventoryLookup: new Map(),
+      units: SAMPLE_ROOM_UNITS,
+    });
+
+    assert.equal(available, 0);
   });
 });
 
