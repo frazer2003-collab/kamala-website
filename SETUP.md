@@ -34,11 +34,11 @@ After swapping keys: redeploy (or restart `npm run dev`), and confirm property c
    - `STAFF_NOTIFICATION_EMAIL` (fallback until staff settings are saved)
 
 4. **Hosting** — deploy to Vercel (or similar) and set:
-   - `NEXT_PUBLIC_APP_URL=https://your-domain.com`
+   - `NEXT_PUBLIC_APP_URL=https://www.kamalaguesthouse.com` (use **www** — apex DNS is unreliable for GitHub Actions cron)
    - `STAFF_ADMIN_USERNAME` / `STAFF_ADMIN_PASSWORD` / `STAFF_SESSION_SECRET`
    - `CRON_SECRET` — random string; authorizes `/api/cron/sync-ical` (Airbnb auto-sync)
 
-5. **Airbnb sync every 5 minutes** — the repo includes `.github/workflows/sync-airbnb-ical.yml`. In GitHub → Settings → Secrets, add the same `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` as on Vercel. The workflow calls `GET /api/cron/sync-ical?channel=airbnb` on a schedule. (Vercel Hobby only allows daily built-in crons; GitHub Actions is what hits every 5 minutes.)
+5. **Airbnb sync every 5 minutes** — the repo includes `.github/workflows/sync-airbnb-ical.yml`. In GitHub → Settings → Secrets, add the same `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` as on Vercel (`https://www.kamalaguesthouse.com`). The workflow calls `GET /api/cron/sync-ical?channel=airbnb` on a schedule. (Vercel Hobby only allows daily built-in crons; GitHub Actions is what hits every 5 minutes.)
 
 ## 2. Run the database schema
 

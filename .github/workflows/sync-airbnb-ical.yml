@@ -1,5 +1,7 @@
 # Pull Airbnb iCal bookings into Kamala every 5 minutes.
-# Requires repo secrets: CRON_SECRET, NEXT_PUBLIC_APP_URL (e.g. https://your-domain.com)
+# Requires repo secrets: CRON_SECRET, NEXT_PUBLIC_APP_URL
+# Prefer https://www.kamalaguesthouse.com — apex kamalaguesthouse.com fails DNS
+# on some GitHub Actions resolvers (curl exit 6).
 name: Sync Airbnb iCal
 
 on:
@@ -20,6 +22,22 @@ jobs:
             echo "Missing CRON_SECRET or NEXT_PUBLIC_APP_URL secrets."
             exit 1
           fi
+
           base="${APP_URL%/}"
-          curl -fsS -H "Authorization: Bearer ${CRON_SECRET}" \
-            "${base}/api/cron/sync-ical?channel=airbnb"
+          # Apex DNS for this property is flaky on Actions runners; www resolves.
+          case "$base" in
+            https://kamalaguesthouse.com|http://kamalaguesthouse.com)
+              base="https://www.kamalaguesthouse.com"
+              echo "Using www host (apex DNS unreliable on runners)."
+              ;;
+          esac
+
+          url="${base}/api/cron/sync-ical?channel=airbnb"
+          echo "POST target host: $(printf '%s' "$base" | sed -E 's#https?://##')"
+
+          if ! curl -fsS --retry 2 --retry-all-errors --retry-delay 2 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "$url"; then
+            echo "::error::iCal sync request failed for ${base}"
+            exit 1
+          fi
