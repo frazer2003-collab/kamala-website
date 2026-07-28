@@ -7103,6 +7103,17 @@ html.staff-busy .staff-login-shell input {
   font-weight: 650;
 }
 
+.staff-calendar-toolbar__cue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.9rem;
+  color: var(--color-maroon);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
 .calendar-date-strip {
   margin-bottom: var(--space-3);
   border: 1px solid var(--color-border);
@@ -8136,10 +8147,35 @@ html.staff-busy .staff-login-shell input {
   font-weight: 850;
 }
 
-.extranet-cell--allotment-override,
-.extranet-cell--rate-override {
+.extranet-cell--allotment-override:not(.extranet-reservations__day),
+.extranet-cell--rate-override:not(.extranet-reservations__day) {
   background: color-mix(in oklab, var(--color-maroon) 8%, var(--color-surface));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-maroon) 18%, transparent);
+}
+
+.extranet-day-cue {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  font-size: 0.62rem;
+  font-weight: 850;
+  line-height: 1;
+  color: var(--color-maroon);
+  pointer-events: none;
+  user-select: none;
+}
+
+.extranet-day-cue--allotment {
+  top: 0.08rem;
+  left: 0.12rem;
+}
+
+.extranet-day-cue--rate {
+  top: 0.08rem;
+  right: 0.12rem;
 }
 
 .extranet-rate--override {
@@ -8264,6 +8300,7 @@ html.staff-busy .staff-login-shell input {
 }
 
 .extranet-reservations__day {
+  position: relative;
   grid-row: 1;
   align-self: stretch;
   min-height: var(--extranet-reservations-height);

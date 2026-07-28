@@ -59,6 +59,10 @@ type StaffTimelineCalendarProps = {
   selectedRoomId?: string;
   roomUnits: RoomUnit[];
   occupancies: UnitOccupancy[];
+  /** `${roomId}:${iso}` keys with a temporary rooms-to-sell override */
+  allotmentOverrideKeys?: string[];
+  /** `${roomId}:${iso}` keys with a temporary nightly rate override */
+  rateOverrideKeys?: string[];
 };
 
 function getBarClassName(bar: TimelineBar, isSelected: boolean) {
@@ -104,6 +108,19 @@ function MetricRowLabel({
   );
 }
 
+function overrideCueTitle(hasAllotment: boolean, hasRate: boolean) {
+  if (hasAllotment && hasRate) {
+    return "Temporary allotment and rate";
+  }
+  if (hasAllotment) {
+    return "Temporary allotment";
+  }
+  if (hasRate) {
+    return "Temporary rate";
+  }
+  return undefined;
+}
+
 function DoorReservationRow({
   unit,
   bookings,
@@ -118,6 +135,8 @@ function DoorReservationRow({
   selectedDate,
   selectedRoomId,
   todayIso,
+  allotmentOverrideKeys,
+  rateOverrideKeys,
 }: {
   unit: RoomUnit;
   bookings: StaffBooking[];
@@ -132,6 +151,8 @@ function DoorReservationRow({
   selectedDate?: string;
   selectedRoomId?: string;
   todayIso: string;
+  allotmentOverrideKeys: Set<string>;
+  rateOverrideKeys: Set<string>;
 }) {
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
@@ -194,6 +215,13 @@ function DoorReservationRow({
             !isOccupied && primaryRoomId
               ? getTimelineDayHref(primaryRoomId, day.iso, monthKey, rangeQuery)
               : undefined;
+          const overrideKey =
+            primaryRoomId && dayHref ? `${primaryRoomId}:${day.iso}` : "";
+          const hasAllotmentOverride =
+            Boolean(overrideKey) && allotmentOverrideKeys.has(overrideKey);
+          const hasRateOverride =
+            Boolean(overrideKey) && rateOverrideKeys.has(overrideKey);
+          const cueTitle = overrideCueTitle(hasAllotmentOverride, hasRateOverride);
 
           const dayClass = [
             "extranet-reservations__day",
@@ -202,19 +230,45 @@ function DoorReservationRow({
             isWeekend ? "extranet-cell--weekend" : "",
             isSelectedDay ? "extranet-cell--selected" : "",
             dayHref ? "extranet-reservations__day--action" : "",
+            hasAllotmentOverride ? "extranet-cell--allotment-override" : "",
+            hasRateOverride ? "extranet-cell--rate-override" : "",
           ]
             .filter(Boolean)
             .join(" ");
 
+          const cues = (
+            <>
+              {hasAllotmentOverride ? (
+                <span
+                  aria-hidden="true"
+                  className="extranet-day-cue extranet-day-cue--allotment"
+                >
+                  ∗
+                </span>
+              ) : null}
+              {hasRateOverride ? (
+                <span
+                  aria-hidden="true"
+                  className="extranet-day-cue extranet-day-cue--rate"
+                >
+                  ¤
+                </span>
+              ) : null}
+            </>
+          );
+
           if (dayHref) {
+            const ariaCue = cueTitle ? `, ${cueTitle.toLowerCase()}` : "";
             return (
               <Link
-                aria-label={`#${unit.number}, ${day.iso}: open day actions`}
+                aria-label={`#${unit.number}, ${day.iso}: open day actions${ariaCue}`}
                 className={dayClass}
                 href={dayHref}
                 key={`door-${unit.id}-bg-${day.iso}`}
                 style={{ gridColumn: column }}
+                title={cueTitle}
               >
+                {cues}
                 <span className="sr-only">Open day actions</span>
               </Link>
             );
@@ -465,6 +519,8 @@ export function StaffTimelineCalendar({
   selectedRoomId,
   roomUnits,
   occupancies,
+  allotmentOverrideKeys = [],
+  rateOverrideKeys = [],
 }: StaffTimelineCalendarProps) {
   const todayIso = getTodayIso();
   const dayCount = calendarDays.length;
@@ -473,6 +529,14 @@ export function StaffTimelineCalendar({
   const activeBlockKey = staySelection?.blockKey || selectedBlockKey;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [visibleMonthLabel, setVisibleMonthLabel] = useState(monthLabel);
+  const allotmentOverrideKeySet = useMemo(
+    () => new Set(allotmentOverrideKeys),
+    [allotmentOverrideKeys],
+  );
+  const rateOverrideKeySet = useMemo(
+    () => new Set(rateOverrideKeys),
+    [rateOverrideKeys],
+  );
   const fitMonthDayCount = Math.max(
     28,
     calendarDays.filter((day) => day.iso.startsWith(`${monthKey}-`)).length ||
@@ -639,6 +703,7 @@ export function StaffTimelineCalendar({
           {doorUnits.length > 0 ? (
             doorUnits.map((unit) => (
               <DoorReservationRow
+                allotmentOverrideKeys={allotmentOverrideKeySet}
                 bookings={bookings}
                 calendarDays={calendarDays}
                 channelReservations={channelReservations}
@@ -646,6 +711,7 @@ export function StaffTimelineCalendar({
                 guestColors={guestColors}
                 key={unit.id}
                 monthKey={monthKey}
+                rateOverrideKeys={rateOverrideKeySet}
                 selectedBlockKey={activeBlockKey}
                 selectedBookingKey={activeBookingKey}
                 selectedDate={selectedDate}

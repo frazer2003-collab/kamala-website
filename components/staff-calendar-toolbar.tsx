@@ -126,6 +126,14 @@ export function StaffCalendarToolbar({
             aria-hidden="true"
           />
           Needs room #
+          <span className="staff-calendar-toolbar__cue" aria-hidden="true">
+            ∗
+          </span>
+          Temp allotment
+          <span className="staff-calendar-toolbar__cue" aria-hidden="true">
+            ¤
+          </span>
+          Temp rate
         </div>
       </details>
     </div>

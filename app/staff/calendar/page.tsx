@@ -628,6 +628,7 @@ export default async function StaffCalendarPage({
             />
 
             <StaffTimelineCalendar
+              allotmentOverrideKeys={Array.from(inventoryLookup.keys())}
               blocks={calendarBlocks}
               bookings={calendarBookings}
               calendarColors={settings.calendarColors}
@@ -638,6 +639,7 @@ export default async function StaffCalendarPage({
               toIso={toIso}
               monthLabel={formatCalendarMonthLabel(year, month)}
               occupancies={unitOccupancies}
+              rateOverrideKeys={Array.from(rateLookup.keys())}
               roomUnits={roomUnits}
               rooms={rooms}
               selectedBlockKey={selectedBlockKey}
