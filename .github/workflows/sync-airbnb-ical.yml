@@ -1,4 +1,4 @@
-# Pull Airbnb iCal bookings into Kamala every 5 minutes.
+# Pull Airbnb iCal bookings into Kamala every 3 hours.
 # Requires repo secrets: CRON_SECRET, NEXT_PUBLIC_APP_URL
 # Prefer https://www.kamalaguesthouse.com — apex kamalaguesthouse.com fails DNS
 # on some GitHub Actions resolvers (curl exit 6).
@@ -6,7 +6,7 @@ name: Sync Airbnb iCal
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "0 */3 * * *"
   workflow_dispatch:
 
 jobs:

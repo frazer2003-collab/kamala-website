@@ -22,7 +22,7 @@ function parseChannel(value: string | null): "all" | "airbnb" | "booking" | "exp
   if (value === "airbnb" || value === "booking" || value === "expedia" || value === "all") {
     return value;
   }
-  // Default: Airbnb door calendars (requested auto-refresh cadence).
+  // Default: Airbnb door calendars (GitHub Actions syncs about every 3 hours).
   return "airbnb";
 }
 

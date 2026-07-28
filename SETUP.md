@@ -38,7 +38,7 @@ After swapping keys: redeploy (or restart `npm run dev`), and confirm property c
    - `STAFF_ADMIN_USERNAME` / `STAFF_ADMIN_PASSWORD` / `STAFF_SESSION_SECRET`
    - `CRON_SECRET` — random string; authorizes `/api/cron/sync-ical` (Airbnb auto-sync)
 
-5. **Airbnb sync every 5 minutes** — the repo includes `.github/workflows/sync-airbnb-ical.yml`. In GitHub → Settings → Secrets, add the same `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` as on Vercel (`https://www.kamalaguesthouse.com`). The workflow calls `GET /api/cron/sync-ical?channel=airbnb` on a schedule. (Vercel Hobby only allows daily built-in crons; GitHub Actions is what hits every 5 minutes.)
+5. **Airbnb sync every 3 hours** — the repo includes `.github/workflows/sync-airbnb-ical.yml`. In GitHub → Settings → Secrets, add the same `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` as on Vercel (`https://www.kamalaguesthouse.com`). The workflow calls `GET /api/cron/sync-ical?channel=airbnb` on a schedule. (Vercel Hobby only allows daily built-in crons; GitHub Actions is what hits every 3 hours.)
 
 ## 2. Run the database schema
 
@@ -49,7 +49,7 @@ In the Supabase SQL editor:
 
 Historical one-off upgrade scripts live in `supabase/archive/` — only needed for very old databases. See `supabase/README.md`.
 
-Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airbnb per door number, Booking.com and Expedia per room type. Airbnb feeds also refresh automatically every ~5 minutes when the GitHub Actions cron + `CRON_SECRET` are configured. You can still use **Sync OTA bookings** on the staff calendar anytime; Booking.com / Expedia stay manual unless you call `?channel=all`.
+Under Staff → Settings → Calendars, paste import-only iCal export URLs: Airbnb per door number, Booking.com and Expedia per room type. Airbnb feeds also refresh automatically every ~3 hours when the GitHub Actions cron + `CRON_SECRET` are configured. You can still use **Sync OTA bookings** on the staff calendar anytime; Booking.com / Expedia stay manual unless you call `?channel=all`.
 
 ## 3. Configure the property
 
