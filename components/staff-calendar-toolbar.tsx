@@ -105,32 +105,13 @@ export function StaffCalendarToolbar({
             unassignedCount > 0 ? " staff-calendar-toolbar__stat--urgent" : ""
           }`}
         >
-          <strong>{unassignedCount}</strong> need room #
+          <strong>{unassignedCount}</strong> Needs room #
         </span>
       </div>
 
       <details className="staff-calendar-toolbar__legend-details">
         <summary>Legend</summary>
         <div className="staff-calendar-toolbar__legend" aria-label="Calendar legend">
-          <span className="extranet-status-mark extranet-status-mark--bookable" aria-hidden="true">
-            O
-          </span>
-          Open
-          <span className="extranet-status-mark extranet-status-mark--closed" aria-hidden="true">
-            ×
-          </span>
-          Closed
-          <span className="extranet-status-mark extranet-status-mark--sold-out" aria-hidden="true">
-            F
-          </span>
-          Full
-          <span
-            className="extranet-status-mark extranet-status-mark--conflict"
-            aria-hidden="true"
-          >
-            !
-          </span>
-          Conflict
           <span
             className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--guest-a"
             aria-hidden="true"
@@ -145,10 +126,6 @@ export function StaffCalendarToolbar({
             aria-hidden="true"
           />
           Needs room #
-          <span className="staff-calendar-toolbar__mark" aria-hidden="true">
-            *
-          </span>
-          Temp allotment
         </div>
       </details>
     </div>

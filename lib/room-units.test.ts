@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import {
   SAMPLE_ROOM_UNITS,
   applyDefaultRoomIds,
+  getPrimaryRoomIdForUnit,
+  getTimelineDoorUnits,
   getTimelineUnitsForRoomType,
   getTypeUnitIdSet,
   getUnitsForRoomType,
@@ -45,6 +47,19 @@ describe("getTimelineUnitsForRoomType", () => {
       getTimelineUnitsForRoomType(SAMPLE_ROOM_UNITS, "ground").map((unit) => unit.number),
       getUnitsForRoomType(SAMPLE_ROOM_UNITS, "ground").map((unit) => unit.number),
     );
+  });
+});
+
+describe("getTimelineDoorUnits", () => {
+  it("lists every door once, sorted by number", () => {
+    const doors = getTimelineDoorUnits(SAMPLE_ROOM_UNITS).map((unit) => unit.number);
+    assert.deepEqual(doors, ["112", "113", "114", "115", "116", "117", "118", "119", "120"]);
+  });
+
+  it("uses the first linked room type for day-panel links", () => {
+    const unit114 = SAMPLE_ROOM_UNITS.find((unit) => unit.number === "114");
+    assert.ok(unit114);
+    assert.equal(getPrimaryRoomIdForUnit(unit114), "loft");
   });
 });
 

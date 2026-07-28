@@ -188,18 +188,21 @@ export function buildRoomTimelineBars({
   return assignTimelineLanes(bars);
 }
 
+/**
+ * Door-row bars: guest (or channel) name only. Room type lives in stay details.
+ */
 export function buildUnitTimelineBars({
   bookings,
   channelReservations = [],
   calendarDays,
-  roomShortNameById,
-  currentRoomId,
 }: {
   bookings: StaffBooking[];
   channelReservations?: StaffRoomBlock[];
   calendarDays: CalendarDay[];
-  roomShortNameById: Map<string, string>;
-  currentRoomId: string;
+  /** @deprecated Type no longer shown on door bars; ignored when passed. */
+  roomShortNameById?: Map<string, string>;
+  /** @deprecated Type no longer shown on door bars; ignored when passed. */
+  currentRoomId?: string;
 }): TimelineBar[] {
   const bars: Omit<TimelineBar, "lane">[] = [];
 
@@ -214,17 +217,12 @@ export function buildUnitTimelineBars({
       continue;
     }
 
-    const otherType =
-      booking.roomId !== currentRoomId
-        ? roomShortNameById.get(booking.roomId) ?? booking.room
-        : null;
-
     bars.push({
       key: `unit-booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
       label: booking.guest,
-      sublabel: otherType ? otherType : "Direct",
+      sublabel: "",
       colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
       compact: range.span < 2,
@@ -244,10 +242,6 @@ export function buildUnitTimelineBars({
     }
 
     const channel = reservation.channelLabel ?? "Channel";
-    const otherType =
-      reservation.roomId !== currentRoomId
-        ? roomShortNameById.get(reservation.roomId) ?? reservation.roomId
-        : null;
     const label = reservation.guestName.trim() || channel;
 
     bars.push({
@@ -255,7 +249,7 @@ export function buildUnitTimelineBars({
       itemKey: getStaffRoomBlockKey(reservation),
       kind: "channel",
       label,
-      sublabel: otherType ? `${otherType} · ${channel}` : channel,
+      sublabel: reservation.guestName.trim() ? channel : "",
       colorKey: normalizeGuestColorKey(label),
       showLabel: true,
       compact: range.span < 2,

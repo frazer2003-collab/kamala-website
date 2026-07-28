@@ -214,7 +214,7 @@ Flat by default. Surfaces separate through background steps (canvas → surface 
 - Staff sidebar + top header. Current page via `aria-current`. Touch targets ≥2.75rem. Guest topbar is opaque surface (no glass).
 
 ### Staff timeline (signature)
-- Horizontal month grid with sticky room labels and day heads. Default **Desk** density (status + assign + doors); **Full** reveals rates/net booked. Reservation bars ≥24px (≥44px on coarse pointers). Close dates is a secondary quiet control, not the loudest CTA.
+- Horizontal month grid with sticky **door-number** labels and day heads — one flat list of rooms, not type section bands. Unassigned stays sit in a single Needs room # lane at the top. Room type lives in stay details (and on unassigned bars for assign). Reservation bars ≥24px (≥44px on coarse pointers). Day actions (walk-in, close, rates) open from empty day cells on a door row.
 
 ## Do's and Don'ts
 

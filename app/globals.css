@@ -6697,7 +6697,7 @@ textarea:focus {
     align-content: stretch;
   }
 
-  .staff-main--calendar .staff-extranet--full {
+  .staff-main--calendar .staff-extranet--doors {
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -6875,8 +6875,7 @@ textarea:focus {
 
 .staff-calendar-toolbar__month-picker:focus-within,
 .staff-calendar-toolbar__month-step:focus-visible,
-.staff-calendar-toolbar__today:focus-visible,
-.staff-calendar-toolbar__density-btn:focus-visible {
+.staff-calendar-toolbar__today:focus-visible {
   outline: 2px solid var(--color-maroon);
   outline-offset: 2px;
 }
@@ -7037,49 +7036,6 @@ html.staff-busy .staff-login-shell input {
   font-weight: 650;
 }
 
-.staff-calendar-toolbar__density {
-  display: inline-flex;
-  align-items: center;
-  margin-left: var(--space-1);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--color-surface);
-}
-
-.staff-calendar-toolbar__density-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-  padding: 0 var(--space-3);
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  text-decoration: none;
-  border-right: 1px solid var(--color-border);
-}
-
-.staff-calendar-toolbar__density-btn:last-child {
-  border-right: 0;
-}
-
-.staff-calendar-toolbar__density-btn:hover {
-  color: var(--color-ink);
-  background: var(--color-maroon-wash);
-}
-
-.staff-calendar-toolbar__density-btn--active {
-  color: var(--color-maroon-deep);
-  background: color-mix(in srgb, var(--color-maroon) 12%, var(--color-surface));
-}
-
-.staff-calendar-toolbar__density-btn:focus-visible {
-  outline: 2px solid var(--color-maroon);
-  outline-offset: -2px;
-  z-index: 1;
-}
 
 .staff-calendar-toolbar__meta {
   display: flex;
@@ -7649,8 +7605,7 @@ html.staff-busy .staff-login-shell input {
 }
 
 .staff-extranet__scroll {
-  --extranet-dates-sticky-offset: 3.15rem;
-  --extranet-label-width: 9.25rem;
+  --extranet-label-width: 7.25rem;
   --extranet-day-gap: 0.14rem;
   /* Fit the anchor month (1st → last) in the visible scrollport; extra months scroll. */
   --extranet-fit-days: var(--extranet-fit-month-days, 31);
@@ -7659,7 +7614,7 @@ html.staff-busy .staff-login-shell input {
   container-name: extranet-scroll;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.35rem;
   overflow: auto;
   max-height: min(82vh, 58rem);
   overscroll-behavior: contain;
@@ -7667,7 +7622,8 @@ html.staff-busy .staff-login-shell input {
 
 /* Descendants of the scrollport resolve 100cqi against its width. */
 .staff-extranet__scroll > .staff-extranet__dates,
-.staff-extranet__scroll > .extranet-room {
+.staff-extranet__scroll > .extranet-doors,
+.staff-extranet__scroll > .extranet-doors__unassigned {
   --extranet-day-width: max(
     1.55rem,
     calc(
@@ -7680,7 +7636,8 @@ html.staff-busy .staff-login-shell input {
 }
 
 .staff-extranet__dates,
-.extranet-room__grid {
+.extranet-doors,
+.extranet-doors__unassigned {
   display: grid;
   column-gap: var(--extranet-day-gap);
   grid-template-columns: var(--extranet-label-width) repeat(
@@ -7691,6 +7648,65 @@ html.staff-busy .staff-login-shell input {
     var(--extranet-label-width) +
       var(--timeline-days) * (var(--extranet-day-width) + var(--extranet-day-gap))
   );
+}
+
+.extranet-doors {
+  align-content: start;
+}
+
+.extranet-doors__unassigned {
+  margin-bottom: 0.15rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-warning) 28%, var(--color-border));
+  background: var(--color-warning-wash);
+}
+
+.extranet-doors__empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 1rem 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.extranet-row__label--door {
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.extranet-row__label--door .extranet-unit-number {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.extranet-row__label--needs-room {
+  background: var(--color-warning-wash);
+  color: var(--color-warning-ink);
+  font-weight: 800;
+}
+
+.extranet-row__label--needs-room .extranet-row__meta {
+  color: var(--color-warning-ink);
+}
+
+.extranet-reservations__day--action {
+  cursor: pointer;
+  text-decoration: none;
+  z-index: 0;
+}
+
+.extranet-reservations--unit .extranet-bar {
+  z-index: 2;
+}
+
+.extranet-reservations__day--action:hover {
+  background: color-mix(in srgb, var(--color-maroon-wash) 45%, var(--color-surface));
+}
+
+.extranet-reservations__day--action:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: -2px;
+  z-index: 3;
 }
 
 .staff-extranet__dates {
@@ -7815,378 +7831,6 @@ html.staff-busy .staff-login-shell input {
   font-size: 0.72rem;
 }
 
-.extranet-room {
-  --extranet-room-band: color-mix(in srgb, var(--calendar-color-available) 34%, white);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.extranet-room__header {
-  position: sticky;
-  top: var(--extranet-dates-sticky-offset, 3.15rem);
-  z-index: 4;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  box-sizing: border-box;
-  min-width: calc(
-    var(--extranet-label-width, 9.25rem) +
-      var(--timeline-days) *
-      (var(--extranet-day-width, 2.55rem) + var(--extranet-day-gap, 0.14rem))
-  );
-  padding: 0.65rem 0.85rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-success) 22%, var(--color-border));
-  background: var(--extranet-room-band);
-}
-
-.extranet-room__title {
-  position: sticky;
-  left: 0.75rem;
-  z-index: 2;
-  flex: 0 1 auto;
-  min-width: 0;
-  padding: 0.15rem 0.5rem 0.15rem 0;
-  background: var(--extranet-room-band);
-  box-shadow: 0.75rem 0 0.5rem -0.25rem var(--extranet-room-band);
-}
-
-.extranet-room__units-toggle {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem 0.65rem;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.extranet-room__units-toggle:focus-visible {
-  outline: 2px solid var(--color-maroon);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
-}
-
-.extranet-room__units-toggle-name {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-}
-
-.extranet-room__units-toggle-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--color-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.extranet-room__units-toggle-hint {
-  color: var(--color-maroon-deep);
-  font-weight: 800;
-}
-
-.extranet-room__units-toggle-hint::before {
-  content: "·";
-  margin-right: 0.35rem;
-  color: var(--color-soft);
-  font-weight: 650;
-}
-
-.extranet-room__units-toggle[aria-expanded="true"] .extranet-room__units-toggle-hint::after,
-.extranet-room__units-toggle[aria-expanded="false"] .extranet-room__units-toggle-hint::after {
-  content: "";
-  display: inline-block;
-  width: 0.4rem;
-  height: 0.4rem;
-  margin-left: 0.2rem;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(45deg);
-  translate: 0 -0.1rem;
-}
-
-.extranet-room__units-toggle[aria-expanded="true"] .extranet-room__units-toggle-hint::after {
-  transform: rotate(-135deg);
-  translate: 0 0.1rem;
-}
-
-.extranet-room__units-collapsed {
-  position: sticky;
-  left: 0;
-  width: max-content;
-  max-width: min(22rem, 85vw);
-  margin: 0;
-  padding: 0.45rem 0.85rem 0.65rem;
-  color: var(--color-muted);
-  font-size: 0.74rem;
-  font-weight: 650;
-  line-height: 1.35;
-}
-
-.extranet-room__title h2,
-.extranet-room__title h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-}
-
-.extranet-room__title p {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem 0.65rem;
-  margin: 0.15rem 0 0;
-  color: var(--color-muted);
-  font-size: 0.72rem;
-  font-weight: 650;
-  line-height: 1.3;
-}
-
-.extranet-room__fullname {
-  min-width: 0;
-}
-
-.extranet-room__sleeps {
-  color: var(--color-soft);
-}
-
-.extranet-room__actions {
-  position: sticky;
-  right: 0.75rem;
-  z-index: 2;
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
-  padding-left: var(--space-2);
-  background: var(--extranet-room-band);
-  box-shadow: -0.75rem 0 0.5rem -0.25rem var(--extranet-room-band);
-}
-
-.extranet-room__inventory-toggle {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.5rem;
-  min-height: 2.75rem;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.extranet-room__inventory-toggle::after {
-  content: "";
-  width: 0.4rem;
-  height: 0.4rem;
-  margin-left: 0.15rem;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(45deg) translateY(-0.1rem);
-}
-
-.extranet-room__inventory-toggle[aria-expanded="true"]::after {
-  transform: rotate(-135deg) translateY(-0.05rem);
-}
-
-.extranet-room__inventory-toggle[aria-expanded="true"]:not(
-    .extranet-room__inventory-toggle--attention,
-    .extranet-room__inventory-toggle--urgent
-  ) {
-  border-color: color-mix(in srgb, var(--color-maroon) 50%, var(--color-border));
-  background: var(--color-maroon-wash);
-  color: var(--color-maroon-deep);
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--color-maroon) 75%, transparent);
-}
-
-.extranet-room__inventory-toggle[aria-expanded="true"].extranet-room__inventory-toggle--attention,
-.extranet-room__inventory-toggle[aria-expanded="true"].extranet-room__inventory-toggle--urgent {
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent),
-    inset 0 -2px 0 color-mix(in srgb, currentColor 55%, transparent);
-}
-
-.extranet-room--inventory-open .extranet-room__header {
-  border-bottom-color: color-mix(in srgb, var(--color-maroon) 18%, var(--color-border));
-}
-
-.extranet-room__inventory-toggle:hover {
-  background: var(--color-maroon-wash);
-  color: var(--color-maroon-deep);
-}
-
-.extranet-room__inventory-toggle:focus-visible {
-  outline: 2px solid var(--color-maroon);
-  outline-offset: 2px;
-}
-
-.extranet-room__inventory-toggle--attention {
-  border-color: color-mix(in srgb, var(--color-warning) 70%, var(--color-border));
-  background: var(--color-warning-wash);
-  color: var(--color-warning-ink);
-  font-weight: 800;
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-warning) 45%, transparent),
-    0 0 0 2px color-mix(in srgb, var(--color-warning) 22%, transparent);
-}
-
-.extranet-room__inventory-toggle--attention:hover {
-  background: color-mix(in srgb, var(--color-warning-wash) 65%, white);
-  color: var(--color-warning-ink);
-}
-
-.extranet-room__inventory-toggle--urgent {
-  border-color: color-mix(in srgb, var(--color-danger) 55%, var(--color-border));
-  background: var(--color-danger-wash);
-  color: var(--color-danger);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 40%, transparent),
-    0 0 0 2px color-mix(in srgb, var(--color-danger) 18%, transparent);
-}
-
-.extranet-room__inventory-toggle--urgent:hover {
-  background: color-mix(in srgb, var(--color-danger-wash) 70%, white);
-  color: var(--color-danger);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .extranet-room__inventory-toggle--attention:not([aria-expanded="true"]) {
-    animation: extranet-room-toggle-insist 1.7s var(--ease-out-quint) infinite;
-  }
-}
-
-@keyframes extranet-room-toggle-insist {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 0 1px color-mix(in srgb, var(--color-warning) 45%, transparent),
-      0 0 0 2px color-mix(in srgb, var(--color-warning) 18%, transparent);
-  }
-
-  50% {
-    box-shadow:
-      inset 0 0 0 1px color-mix(in srgb, var(--color-warning) 55%, transparent),
-      0 0 0 4px color-mix(in srgb, var(--color-warning) 32%, transparent);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .extranet-room__inventory-toggle--urgent:not([aria-expanded="true"]) {
-    animation: extranet-room-toggle-insist-urgent 1.7s var(--ease-out-quint) infinite;
-  }
-}
-
-@keyframes extranet-room-toggle-insist-urgent {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 40%, transparent),
-      0 0 0 2px color-mix(in srgb, var(--color-danger) 16%, transparent);
-  }
-
-  50% {
-    box-shadow:
-      inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 50%, transparent),
-      0 0 0 4px color-mix(in srgb, var(--color-danger) 30%, transparent);
-  }
-}
-
-.extranet-room__inventory-toggle-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.12rem 0.45rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-warning) 28%, white);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-}
-
-.extranet-room__inventory-toggle-badge--urgent,
-.extranet-room__inventory-toggle-badge--conflict {
-  background: color-mix(in srgb, var(--color-danger) 18%, white);
-  color: var(--color-danger);
-}
-
-.extranet-room__grid--inventory {
-  border-top: 1px solid color-mix(in srgb, var(--color-maroon) 16%, var(--color-border));
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface-muted) 35%, white);
-}
-
-.extranet-room__no-units {
-  margin: 0;
-  padding: 0.75rem 0.85rem;
-  color: var(--color-muted);
-  font-size: 0.82rem;
-}
-
-.extranet-room__rates {
-  display: none;
-  min-height: 2.75rem;
-  padding: 0.45rem 0.75rem;
-  align-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-muted);
-  font-size: 0.78rem;
-  font-weight: 650;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.extranet-room__rates:hover {
-  color: var(--color-maroon-deep);
-  background: var(--color-maroon-wash);
-}
-
-.extranet-room__rates:focus-visible {
-  outline: 2px solid var(--color-maroon);
-  outline-offset: 2px;
-}
-
-.extranet-room__bulk {
-  flex: 0 0 auto;
-  min-height: 2.75rem;
-  padding: 0.45rem 0.75rem;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-size: 0.78rem;
-  font-weight: 650;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.extranet-room__bulk:hover {
-  color: var(--color-maroon-deep);
-  background: var(--color-maroon-wash);
-}
-
-.extranet-room__bulk:focus-visible {
-  outline: 2px solid var(--color-maroon);
-  outline-offset: 2px;
-}
 
 .extranet-row__label {
   position: sticky;
@@ -8603,8 +8247,8 @@ html.staff-busy .staff-login-shell input {
   align-items: stretch;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
-  /* Keep reservation bars from overlapping metric rows below (net booked, rates). */
-  overflow: hidden;
+  /* Allow focus rings on stay bars to remain visible. */
+  overflow: visible;
 }
 
 .extranet-reservations--assign {
@@ -8906,7 +8550,7 @@ html.staff-busy .staff-login-shell input {
   }
 
   .staff-extranet__scroll {
-    --extranet-label-width: 7.25rem;
+    --extranet-label-width: 6.5rem;
     --extranet-day-gap: 0.12rem;
   }
 
@@ -8915,66 +8559,28 @@ html.staff-busy .staff-login-shell input {
     font-size: 0.66rem;
   }
 
-  .extranet-room__header {
-    flex-wrap: nowrap;
-    gap: var(--space-2);
-    padding-inline: 0.65rem;
-  }
-
-  .extranet-room__actions {
-    position: sticky;
-    right: 0.5rem;
-    bottom: auto;
-    margin-top: 0;
-    margin-left: auto;
-    padding: 0 0 0 var(--space-2);
-    border: none;
-    border-radius: 0;
-    box-shadow: -0.5rem 0 0.45rem -0.2rem var(--extranet-room-band);
-  }
-
-  .extranet-room__units-toggle-meta {
-    width: 100%;
-  }
-
-  .extranet-room__units-collapsed {
-    /* Keep the hint under the sticky type header while scrolling days. */
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background: var(--color-surface);
-  }
-
-  .extranet-room__inventory-toggle {
-    min-height: 2.5rem;
-    padding: 0.35rem 0.55rem;
-    font-size: 0.72rem;
-  }
-
-  .extranet-room__bulk {
-    min-height: 2.5rem;
-    padding: 0.35rem 0.55rem;
-    font-size: 0.72rem;
-  }
-
   .extranet-row--defer-mobile {
     display: none;
-  }
-
-  .extranet-room__rates {
-    display: inline-flex;
   }
 
   .extranet-row__action--desktop {
     display: none;
   }
 
-  .extranet-room__fullname {
-    display: none;
-  }
-
-  .staff-extranet__scroll {
-    gap: 0.7rem;
+  @media (pointer: coarse) {
+    .staff-extranet__scroll > .staff-extranet__dates,
+    .staff-extranet__scroll > .extranet-doors,
+    .staff-extranet__scroll > .extranet-doors__unassigned {
+      --extranet-day-width: max(
+        2.75rem,
+        calc(
+          (
+              100cqi - var(--extranet-label-width) -
+                (var(--extranet-fit-days) * var(--extranet-day-gap))
+            ) / var(--extranet-fit-days)
+        )
+      );
+    }
   }
 }
 
