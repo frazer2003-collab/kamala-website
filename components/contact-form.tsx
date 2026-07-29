@@ -1,11 +1,11 @@
 "use client";
 
 import { useActionState, useId } from "react";
+import { sendContactMessage } from "@/app/contact-actions";
 import {
+  CONTACT_MESSAGE_MAX_LENGTH,
   initialContactFormState,
-  sendContactMessage,
-} from "@/app/contact-actions";
-import { CONTACT_MESSAGE_MAX_LENGTH } from "@/lib/contact-message";
+} from "@/lib/contact-message";
 
 type ContactFormProps = {
   canEmail: boolean;

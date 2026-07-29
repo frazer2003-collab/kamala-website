@@ -24,6 +24,21 @@ export function emptyContactMessageValues(): ContactMessageValues {
   };
 }
 
+export type ContactFormState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  fieldErrors?: ContactMessageFieldErrors;
+  values: ContactMessageValues;
+};
+
+export function initialContactFormState(): ContactFormState {
+  return {
+    status: "idle",
+    message: "",
+    values: emptyContactMessageValues(),
+  };
+}
+
 export function isValidContactEmail(value: string) {
   return emailPattern.test(value.trim().toLowerCase());
 }
