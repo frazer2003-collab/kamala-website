@@ -51,35 +51,29 @@ describe("getTimelineUnitsForRoomType", () => {
 });
 
 describe("getTimelineDoorUnits", () => {
-  it("lists every door once, ordered Twin/Superior → Deluxe → Family → Family GF", () => {
-    const shortNames = new Map([
-      ["courtyard", "Superior"],
-      ["garden", "Deluxe"],
-      ["loft", "Family"],
-      ["ground", "Family GF"],
-    ]);
-    const doors = getTimelineDoorUnits(SAMPLE_ROOM_UNITS, shortNames).map(
-      (unit) => unit.number,
-    );
-    assert.deepEqual(doors, ["113", "115", "118", "120", "112", "117", "119", "114", "116"]);
+  it("lists every door once in property walk order", () => {
+    const doors = getTimelineDoorUnits(SAMPLE_ROOM_UNITS).map((unit) => unit.number);
+    assert.deepEqual(doors, ["116", "113", "120", "115", "118", "112", "117", "119", "114"]);
   });
 
-  it("orders Twin → Double → Deluxe → Family when those short names are used", () => {
+  it("orders unknown doors Twin → Double → Deluxe → Family after the chart", () => {
     const units = [
       { id: "u1", number: "201", sortOrder: 1, roomIds: ["family"], icalExportToken: null },
       { id: "u2", number: "101", sortOrder: 2, roomIds: ["deluxe"], icalExportToken: null },
       { id: "u3", number: "50", sortOrder: 3, roomIds: ["twin"], icalExportToken: null },
       { id: "u4", number: "75", sortOrder: 4, roomIds: ["double"], icalExportToken: null },
+      { id: "u5", number: "116", sortOrder: 5, roomIds: ["ground"], icalExportToken: null },
     ];
     const shortNames = new Map([
       ["twin", "Twin"],
       ["double", "Double"],
       ["deluxe", "Deluxe"],
       ["family", "Family"],
+      ["ground", "Family GF"],
     ]);
     assert.deepEqual(
       getTimelineDoorUnits(units, shortNames).map((unit) => unit.number),
-      ["50", "75", "101", "201"],
+      ["116", "50", "75", "101", "201"],
     );
   });
 
