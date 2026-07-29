@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { BookingQuoteResult } from "@/app/actions";
 import { BookRoomLink } from "@/components/book-room-link";
 import { OptimizedImage } from "@/components/optimized-image";
@@ -111,7 +111,14 @@ function RoomListingCard({
     : getRoomAvailabilityLabel(availableCount);
   const essentials = formatRoomEssentials(room);
   const outlookDetails = formatRoomOutlookDetails(room);
-  const openDetailsLabel = `View details for ${room.name}`;
+  const imageAlt = [room.name, essentials, outlookDetails].filter(Boolean).join(" — ");
+  const openDetailsLabel = [
+    `View details for ${room.name}`,
+    essentials,
+    outlookDetails,
+  ]
+    .filter(Boolean)
+    .join(". ");
 
   const priceBlock = (
     <div className="listing-card__price">
@@ -123,7 +130,6 @@ function RoomListingCard({
           <strong className="listing-card__price-now">
             {formatMoneySuffix(price.rate, currency)}
           </strong>
-          <span className="listing-card__price-off">{price.percentOff}% off</span>
         </>
       ) : (
         <strong>{formatMoneySuffix(price.rate, currency)}</strong>
@@ -136,32 +142,84 @@ function RoomListingCard({
     </div>
   );
 
-  const reserveControl = bookable ? (
-    <BookRoomLink
-      arrival={stayDates?.arrival}
-      className="button button--primary listing-card__reserve"
-      departure={stayDates?.departure}
-      roomId={room.id}
-    >
-      Reserve
-    </BookRoomLink>
-  ) : hasStayDates ? (
+  const statusClass = bookable
+    ? "listing-card__status listing-card__status--open"
+    : "listing-card__status listing-card__status--full";
+
+  const statusBlock = (
+    <span className={statusClass}>
+      <span className="listing-card__status-mark" aria-hidden="true">
+        {bookable ? "○" : "×"}
+      </span>
+      <span className="listing-card__status-text">{availabilityLabel}</span>
+    </span>
+  );
+
+  const detailsControl = (
     <button
-      aria-disabled="true"
-      className="button button--secondary listing-card__reserve listing-card__reserve--full"
-      disabled
-      type="button"
-    >
-      Full
-    </button>
-  ) : (
-    <button
-      className="button button--secondary listing-card__reserve"
+      className="button button--quiet listing-card__details"
       onClick={() => onOpenDetails(room.id)}
       type="button"
     >
-      View details
+      Details
     </button>
+  );
+
+  let primaryControl: ReactNode = null;
+  if (hasStayDates && bookable) {
+    primaryControl = (
+      <BookRoomLink
+        arrival={stayDates?.arrival}
+        className="button button--primary listing-card__reserve"
+        departure={stayDates?.departure}
+        roomId={room.id}
+      >
+        Reserve
+      </BookRoomLink>
+    );
+  } else if (hasStayDates && !bookable) {
+    primaryControl = (
+      <a className="button button--secondary listing-card__reserve" href="#dates">
+        Change dates
+      </a>
+    );
+  } else if (bookable) {
+    primaryControl = (
+      <a className="button button--secondary listing-card__reserve" href="#dates">
+        Check dates
+      </a>
+    );
+  }
+
+  const actionControls = (
+    <div className="listing-card__cta-group">
+      {detailsControl}
+      {primaryControl}
+    </div>
+  );
+
+  const media = room.imageUrl ? (
+    <div className="listing-card__media">
+      <OptimizedImage
+        alt={imageAlt}
+        className="listing-card__image"
+        fill
+        priority={variant === "feature"}
+        sizes={
+          variant === "feature"
+            ? "(max-width: 920px) 100vw, 55vw"
+            : "(max-width: 919px) 100vw, 5rem"
+        }
+        src={room.imageUrl}
+      />
+    </div>
+  ) : (
+    <div
+      aria-hidden="true"
+      className={`listing-card__media listing-card__media--${room.tone}`}
+    >
+      <span>{room.shortName}</span>
+    </div>
   );
 
   if (variant === "standard") {
@@ -174,42 +232,20 @@ function RoomListingCard({
           onClick={() => onOpenDetails(room.id)}
           type="button"
         >
-          {room.imageUrl ? (
-            <div className="listing-card__media">
-              <OptimizedImage
-                alt=""
-                className="listing-card__image"
-                fill
-                sizes="(max-width: 919px) 72vw, 5rem"
-                src={room.imageUrl}
-              />
-            </div>
-          ) : (
-            <div
-              aria-hidden="true"
-              className={`listing-card__media listing-card__media--${room.tone}`}
-            >
-              <span>{room.shortName}</span>
-            </div>
-          )}
+          {media}
           <div className="listing-card__rail-copy">
             <h3>{room.name}</h3>
             <p className="listing-card__essentials">{essentials}</p>
+            {outlookDetails ? (
+              <p className="listing-card__outlook">{outlookDetails}</p>
+            ) : null}
             <div className="listing-card__rail-facts">
               {priceBlock}
-              <span
-                className={`listing-card__availability ${
-                  bookable
-                    ? "listing-card__availability--open"
-                    : "listing-card__availability--full"
-                }`}
-              >
-                {availabilityLabel}
-              </span>
+              {statusBlock}
             </div>
           </div>
         </button>
-        <div className="listing-card__rail-cta">{reserveControl}</div>
+        <div className="listing-card__rail-cta">{actionControls}</div>
       </article>
     );
   }
@@ -223,25 +259,7 @@ function RoomListingCard({
         onClick={() => onOpenDetails(room.id)}
         type="button"
       >
-        {room.imageUrl ? (
-          <div className="listing-card__media">
-            <OptimizedImage
-              alt=""
-              className="listing-card__image"
-              fill
-              priority
-              sizes="(max-width: 920px) 100vw, 55vw"
-              src={room.imageUrl}
-            />
-          </div>
-        ) : (
-          <div
-            aria-hidden="true"
-            className={`listing-card__media listing-card__media--${room.tone}`}
-          >
-            <span>{room.shortName}</span>
-          </div>
-        )}
+        {media}
         <div className="listing-card__copy">
           <div className="listing-card__meta">
             <h3>{room.name}</h3>
@@ -254,16 +272,10 @@ function RoomListingCard({
           {room.summary.trim() ? (
             <p className="listing-card__summary">{room.summary}</p>
           ) : null}
-          <div
-            className={`listing-card__badge ${
-              bookable ? "listing-card__badge--open" : "listing-card__badge--full"
-            }`}
-          >
-            {availabilityLabel}
-          </div>
+          {statusBlock}
         </div>
       </button>
-      <div className="listing-card__actions">{reserveControl}</div>
+      <div className="listing-card__actions">{actionControls}</div>
     </article>
   );
 }
@@ -354,26 +366,28 @@ export function HomeRoomCatalog({
           {otherRooms.length > 0 ? (
             <div className="listing-rail">
               <p className="listing-rail__label" id="rooms-rail-label">
-                More rooms
+                {otherRooms.length === 1
+                  ? "1 more room type"
+                  : `${otherRooms.length} more room types`}
               </p>
               <div
                 aria-labelledby="rooms-rail-label"
                 className="listing-rail__track"
                 role="list"
               >
-              {otherRooms.map((room) => (
-                <RoomListingCard
-                  availabilityByRoomId={availabilityByRoomId}
-                  currency={currency}
-                  hasStayDates={hasStayDates}
-                  key={room.id}
-                  onOpenDetails={setSelectedRoomId}
-                  price={pricesByRoomId[room.id]}
-                  room={room}
-                  stayDates={stayDates}
-                  variant="standard"
-                />
-              ))}
+                {otherRooms.map((room) => (
+                  <RoomListingCard
+                    availabilityByRoomId={availabilityByRoomId}
+                    currency={currency}
+                    hasStayDates={hasStayDates}
+                    key={room.id}
+                    onOpenDetails={setSelectedRoomId}
+                    price={pricesByRoomId[room.id]}
+                    room={room}
+                    stayDates={stayDates}
+                    variant="standard"
+                  />
+                ))}
               </div>
             </div>
           ) : null}
