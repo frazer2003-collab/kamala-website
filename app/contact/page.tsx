@@ -8,9 +8,9 @@
  * FORM: Operate desk — shaped contact brief; polish-before-build contract.
  */
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ContactChannels } from "@/components/contact-channels";
 import { ContactForm } from "@/components/contact-form";
+import { GuestPageClosingActions } from "@/components/guest-page-closing-actions";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { getPropertySettings } from "@/lib/property-settings";
@@ -57,14 +57,7 @@ export default async function ContactPage() {
         <ContactChannels settings={settings} />
       </div>
 
-      <div className="guest-page__actions contact-page__actions">
-        <Link className="button button--secondary" href="/location">
-          Location
-        </Link>
-        <a className="button button--primary" href="/#booking">
-          Request a stay
-        </a>
-      </div>
+      <GuestPageClosingActions />
 
       <SiteFooter settings={settings} />
     </main>
