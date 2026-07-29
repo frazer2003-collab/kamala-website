@@ -17,7 +17,7 @@ export function StaffLoginForm({ nextPath, configured }: StaffLoginFormProps) {
   return (
     <form
       action={formAction}
-      className="booking-form staff-login-form"
+      className="staff-login-form"
       data-busy-message="Signing in…"
     >
       <StaffFormBusyBridge message="Signing in…" />
@@ -25,8 +25,8 @@ export function StaffLoginForm({ nextPath, configured }: StaffLoginFormProps) {
 
       {!configured ? (
         <p className="form-message form-message--setup" role="status">
-          Staff login is not configured yet. Add STAFF_ADMIN_PASSWORD and
-          STAFF_SESSION_SECRET to your environment.
+          Staff sign-in isn’t set up yet. Add STAFF_ADMIN_PASSWORD and
+          STAFF_SESSION_SECRET to the environment, then reload this page.
         </p>
       ) : null}
 
@@ -37,20 +37,15 @@ export function StaffLoginForm({ nextPath, configured }: StaffLoginFormProps) {
       ) : null}
 
       <div className="field-pair">
-        <label htmlFor="staff-username">Username or staff email</label>
+        <label htmlFor="staff-username">Username or email</label>
         <input
           autoComplete="username"
           disabled={!configured}
           id="staff-username"
           name="username"
-          placeholder="admin or staff@example.com"
           required
           type="text"
         />
-        <span className="field-help">
-          Staff emails use the shared staff password. Calendar access is set under
-          Settings.
-        </span>
       </div>
 
       <div className="field-pair">

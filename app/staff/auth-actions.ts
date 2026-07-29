@@ -112,7 +112,8 @@ export async function loginStaff(
 ): Promise<StaffLoginState> {
   if (!hasStaffAuthConfig()) {
     return {
-      error: "Staff login is not configured yet. Add STAFF_ADMIN_PASSWORD and STAFF_SESSION_SECRET.",
+      error:
+        "Staff sign-in isn’t set up yet. Add STAFF_ADMIN_PASSWORD and STAFF_SESSION_SECRET to the environment, then reload this page.",
     };
   }
 
@@ -120,7 +121,7 @@ export async function loginStaff(
   const password = getValue(formData, "password");
 
   if (!username || !password) {
-    return { error: "Enter your username or staff email and password." };
+    return { error: "Enter your username or email and password." };
   }
 
   if (verifyAdminCredentials(username, password)) {
@@ -140,7 +141,9 @@ export async function loginStaff(
     redirect(safeStaffPath(getValue(formData, "next")));
   }
 
-  return { error: "That username or password did not match." };
+  return {
+    error: "That username or password did not match. Try again.",
+  };
 }
 
 export async function logoutStaff() {

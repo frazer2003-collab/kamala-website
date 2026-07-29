@@ -28,12 +28,7 @@ export default async function StaffLoginPage({
             </span>
           </Link>
 
-          <p className="section-note">Staff sign in</p>
-          <h1 id="staff-login-title">Bookings and calendar access.</h1>
-          <p>
-            Sign in with the admin credentials to review guest requests, manage
-            the calendar, and update notification settings.
-          </p>
+          <h1 id="staff-login-title">Sign in</h1>
 
           <StaffLoginForm configured={hasStaffAuthConfig()} nextPath={nextPath} />
         </section>

@@ -2,12 +2,15 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { getPropertyTodayIso } from "@/lib/calendar";
 import {
   MAX_STAY_NIGHTS,
   MIN_STAY_NIGHTS,
   refreshStaleStayDates,
 } from "@/lib/stay-dates";
+
+const GUEST_DATES_BUSY_CLASS = "guest-dates-busy";
 
 type HomeDateSearchProps = {
   arrival?: string;
@@ -77,12 +80,37 @@ export function HomeDateSearch({
   const searchParams = useSearchParams();
   const formId = useId();
   const [isPending, startTransition] = useTransition();
+  const [overlayReady, setOverlayReady] = useState(false);
   const propertyToday = useMemo(() => getPropertyTodayIso(), []);
   const defaultArrival = arrival ?? propertyToday;
   const defaultDeparture =
     departure ?? (arrival ? addIsoDays(arrival, 1) : addIsoDays(propertyToday, 1));
   const [arrivalValue, setArrivalValue] = useState(defaultArrival);
   const [departureValue, setDepartureValue] = useState(defaultDeparture);
+
+  useEffect(() => {
+    setOverlayReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isPending) {
+      return;
+    }
+
+    const root = document.documentElement;
+    const main = document.querySelector("main.guest-site");
+    const previousOverflow = document.body.style.overflow;
+
+    root.classList.add(GUEST_DATES_BUSY_CLASS);
+    document.body.style.overflow = "hidden";
+    main?.setAttribute("inert", "");
+
+    return () => {
+      root.classList.remove(GUEST_DATES_BUSY_CLASS);
+      document.body.style.overflow = previousOverflow;
+      main?.removeAttribute("inert");
+    };
+  }, [isPending]);
 
   useEffect(() => {
     const refreshed = refreshStaleStayDates(arrival, departure);
@@ -180,23 +208,33 @@ export function HomeDateSearch({
         </button>
       </form>
 
-      {isPending ? (
-        <p
-          className="search-bar__pending hero-atmosphere__message"
-          id={statusId}
-          role="status"
-          aria-live="polite"
-        >
-          Checking which rooms are free for your stay…
-        </p>
-      ) : null}
-
       {dateError ? (
         <p className="form-message form-message--error hero-atmosphere__message" role="alert">
           Check-out must be after check-in. Choose a stay between {MIN_STAY_NIGHTS} and{" "}
           {MAX_STAY_NIGHTS} nights, starting from today.
         </p>
       ) : null}
+
+      {overlayReady && isPending
+        ? createPortal(
+            <div
+              aria-labelledby={statusId}
+              aria-modal="true"
+              className="guest-dates-busy-overlay"
+              role="alertdialog"
+            >
+              <p
+                className="guest-dates-busy-overlay__label"
+                id={statusId}
+                role="status"
+                aria-live="assertive"
+              >
+                Checking which rooms are free for your stay…
+              </p>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
