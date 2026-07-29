@@ -2,12 +2,13 @@
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://va.vercel-scripts.com",
+  // vercel.live = Preview Comments / Live Feedback toolbar on Vercel deployments
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
   "style-src 'self' 'unsafe-inline' https://js.stripe.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://q.stripe.com https://*.stripe.com https://*.tile.openstreetmap.org",
+  "img-src 'self' data: blob: https://*.supabase.co https://q.stripe.com https://*.stripe.com https://*.tile.openstreetmap.org https://vercel.live https://vercel.com",
   "font-src 'self' data:",
-  "frame-src https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org",
-  "connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vitals.vercel-insights.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org https://vercel.live",
+  "connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vitals.vercel-insights.com https://vercel.live wss://*.pusher.com https://*.pusher.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
