@@ -7,7 +7,7 @@ export function StaffOtaSyncControls() {
 
   return (
     <button className="button button--quiet" disabled={pending} type="submit">
-      {pending ? "Syncing channel calendars…" : "Sync channel calendars"}
+      {pending ? "Syncing…" : "Sync"}
     </button>
   );
 }

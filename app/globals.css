@@ -5886,12 +5886,14 @@ textarea:focus {
     flex: 1;
     min-height: 0;
     max-height: none;
-  }}
+  }
+}
 
 @media (max-width: 920px) {
   .staff-main--calendar {
     width: 100%;
-  }}
+  }
+}
 
 .staff-header--calendar {
   margin-bottom: var(--space-3);
@@ -6445,8 +6447,9 @@ html.staff-busy .staff-login-shell input {
 .staff-extranet__scroll > .staff-extranet__dates,
 .staff-extranet__scroll > .extranet-doors,
 .staff-extranet__scroll > .extranet-doors__unassigned {
+  /* Readable day columns; month 1 still fills when the viewport is wide enough. */
   --extranet-day-width: max(
-    1.55rem,
+    2.35rem,
     calc(
       (
           100cqi - var(--extranet-label-width) -
@@ -6895,7 +6898,8 @@ html.staff-busy .staff-login-shell input {
     height: 2.75rem;
     font-size: 0.78rem;
     padding-inline: 0.4rem;
-  }}
+  }
+}
 
 .extranet-bar strong,
 .extranet-bar span {
@@ -7032,9 +7036,46 @@ html.staff-busy .staff-login-shell input {
     margin-left: 0;
   }
 
+  .staff-calendar-toolbar__meta {
+    gap: var(--space-2) var(--space-3);
+    font-size: 0.78rem;
+  }
+
   .staff-extranet__scroll {
-    --extranet-label-width: 6.5rem;
-    --extranet-day-gap: 0.12rem;
+    --extranet-label-width: 3.75rem;
+    --extranet-day-gap: 0.1rem;
+  }
+
+  /* Phone/tablet: fewer days on screen, wider cells for scan + tap. */
+  .staff-extranet__scroll > .staff-extranet__dates,
+  .staff-extranet__scroll > .extranet-doors,
+  .staff-extranet__scroll > .extranet-doors__unassigned {
+    --extranet-day-width: max(
+      2.85rem,
+      calc(
+        (
+            100cqi - var(--extranet-label-width) -
+              (var(--extranet-fit-days) * var(--extranet-day-gap))
+          ) / var(--extranet-fit-days)
+      )
+    );
+  }
+
+  .staff-extranet__daynum {
+    font-size: 0.78rem;
+  }
+
+  .staff-extranet__weekday {
+    font-size: 0.58rem;
+  }
+
+  .extranet-row__label--door {
+    font-size: 0.72rem;
+    padding-inline: 0.35rem;
+  }
+
+  .extranet-row__meta {
+    display: none;
   }
 
   @media (pointer: coarse) {
@@ -7042,7 +7083,7 @@ html.staff-busy .staff-login-shell input {
     .staff-extranet__scroll > .extranet-doors,
     .staff-extranet__scroll > .extranet-doors__unassigned {
       --extranet-day-width: max(
-        2.75rem,
+        3rem,
         calc(
           (
               100cqi - var(--extranet-label-width) -
@@ -7050,12 +7091,16 @@ html.staff-busy .staff-login-shell input {
             ) / var(--extranet-fit-days)
         )
       );
-    }}}
+    }
 
-/* Desktop/tablet timeline (non-extranet): fit width — vertical scroll only. */
+    .extranet-reservations__day {
+      min-height: 2.75rem;
+    }
+  }
+}
+
+/* Desktop/tablet: month 1 fills the scrollport; later months scroll in. */
 @media (min-width: 900px) {
-
-  /* Extranet keeps horizontal scroll: month 1 fills the screen; months 2–3 scroll in. */
   .staff-extranet {
     width: 100%;
     min-width: 0;

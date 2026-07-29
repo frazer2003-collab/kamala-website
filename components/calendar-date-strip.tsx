@@ -37,7 +37,7 @@ export function CalendarDateStrip({
   }, [fromIso, toIso]);
 
   const maxTo = maxStaffTimelineEndIso(fromValue);
-  const hint = `Choose a start and end date (up to ${STAFF_TIMELINE_MAX_MONTHS} calendar months). The board also scrolls into the next months when you open a single month.`;
+  const hint = `Up to ${STAFF_TIMELINE_MAX_MONTHS} months.`;
 
   function applyRange(nextFrom: string, nextTo: string) {
     if (!nextFrom || !nextTo) {

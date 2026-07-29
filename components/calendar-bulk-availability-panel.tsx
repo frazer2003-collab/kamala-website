@@ -56,8 +56,7 @@ export function CalendarBulkAvailabilityPanel({
   return (
     <>
       <p className="calendar-day-panel__intro">
-        Set <strong>room status</strong> for <strong>{room.name}</strong> across a
-        date range. Closed nights show as red status pills on the calendar.
+        Status · <strong>{room.name}</strong>
       </p>
       {errorMessage ? (
         <p className="form-message form-message--error" role="alert">

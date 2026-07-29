@@ -75,15 +75,15 @@ export function StaffCalendarToolbar({
           className="staff-calendar-toolbar__today"
           href={`${buildMonthHref(currentMonthKey, selectedBookingKey, selectedBlockKey)}#calendar-today`}
         >
-          Jump to today
+          Today
         </Link>
         {canSyncOta ? (
           <form
             action={syncAllRoomIcalFeedsAction}
             className="staff-calendar-toolbar__sync"
-            data-busy-message="Syncing channel calendars…"
+            data-busy-message="Syncing…"
           >
-            <StaffFormBusyBridge message="Syncing channel calendars…" />
+            <StaffFormBusyBridge message="Syncing…" />
             <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
             <StaffOtaSyncControls />
           </form>
@@ -92,26 +92,26 @@ export function StaffCalendarToolbar({
 
       <div className="staff-calendar-toolbar__meta" aria-label="Month summary">
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
-          <strong>{stats.currentGuests}</strong> current guests
+          <strong>{stats.currentGuests}</strong> In
         </span>
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
-          <strong>{stats.departed}</strong> departed
+          <strong>{stats.departed}</strong> Out
         </span>
         <span className="staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary">
-          <strong>{stats.arriving}</strong> arriving
+          <strong>{stats.arriving}</strong> Arriving
         </span>
         <span
           className={`staff-calendar-toolbar__stat staff-calendar-toolbar__stat--primary${
             unassignedCount > 0 ? " staff-calendar-toolbar__stat--urgent" : ""
           }`}
         >
-          <strong>{unassignedCount}</strong> Needs room #
+          <strong>{unassignedCount}</strong> No #
         </span>
       </div>
 
       <details className="staff-calendar-toolbar__legend-details">
-        <summary>Legend</summary>
-        <div className="staff-calendar-toolbar__legend" aria-label="Calendar legend">
+        <summary>Key</summary>
+        <div className="staff-calendar-toolbar__legend" aria-label="Calendar key">
           <span
             className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--guest-a"
             aria-hidden="true"
@@ -120,20 +120,20 @@ export function StaffCalendarToolbar({
             className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--guest-b"
             aria-hidden="true"
           />
-          Guest color
+          Guest
           <span
             className="staff-calendar-toolbar__swatch staff-calendar-toolbar__swatch--needs-room"
             aria-hidden="true"
           />
-          Needs room #
+          No #
           <span className="staff-calendar-toolbar__cue" aria-hidden="true">
             ∗
           </span>
-          Temp allotment
+          Allotment
           <span className="staff-calendar-toolbar__cue" aria-hidden="true">
             ¤
           </span>
-          Temp rate
+          Rate
         </div>
       </details>
     </div>

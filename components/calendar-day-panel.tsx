@@ -69,35 +69,35 @@ function getErrorMessage(error?: string, overlap?: string) {
   }
 
   if (error === "past-date") {
-    return "New bookings, closures, and allotment changes can only start from today onward.";
+    return "Start from today.";
   }
 
   if (error === "invalid-name") {
-    return "Enter the guest name before saving the booking.";
+    return "Enter guest name.";
   }
 
   if (error === "invalid-phone") {
-    return "Enter a valid phone number with at least 7 digits, or leave phone blank.";
+    return "Phone needs 7+ digits, or leave blank.";
   }
 
   if (error === "invalid-email") {
-    return "Enter a valid email, or leave blank if the guest has no email.";
+    return "Enter a valid email, or leave blank.";
   }
 
   if (error === "invalid-dates") {
-    return "Choose a valid date range.";
+    return "Pick a valid date range.";
   }
 
   if (error === "invalid-allotment") {
-    return "Enter how many rooms to sell (0 or more).";
+    return "Rooms to sell must be 0 or more.";
   }
 
   if (error === "invalid-rate") {
-    return "Enter a valid nightly rate (0 or more).";
+    return "Rate must be 0 or more.";
   }
 
   if (error === "invalid-custom-total") {
-    return "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates.";
+    return "Stay total must be 0 or more, or leave blank.";
   }
 
   if (error === "overbook" || error === "unavailable" || error === "no-assignable-door" || error === "capacity-verify-failed") {
@@ -105,7 +105,7 @@ function getErrorMessage(error?: string, overlap?: string) {
   }
 
   if (error === "save-failed") {
-    return "Could not save. Try again, or ask whoever set up the site if the problem continues.";
+    return "Could not save. Try again.";
   }
 
   return null;
@@ -146,10 +146,10 @@ export function CalendarDayPanel({
     return (
       <>
         <p className="calendar-day-panel__intro">
-          Stays on {formatDisplayDate(date)} · <strong>{room.name}</strong>
+          {formatDisplayDate(date)} · <strong>{room.name}</strong>
         </p>
         {dayStays.length === 0 ? (
-          <p className="detail-help">No stays overlap this night.</p>
+          <p className="detail-help">No stays.</p>
         ) : (
           <div className="calendar-day-panel__choices">
             {dayStays.map((stay) => (
@@ -163,19 +163,17 @@ export function CalendarDayPanel({
         <div className="calendar-day-panel__choices">
           {soldOutForNight ? (
             <p className="detail-help" role="status">
-              This night is full for <strong>{room.name}</strong>. Open a stay
-              above to change it, or pick a night with rooms left in the
-              inventory row.
+              Full for <strong>{room.name}</strong>.
             </p>
           ) : (
             <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-              <strong>New booking</strong>
-              <span>Add another confirmed stay on this room type for tonight.</span>
+              <strong>Book</strong>
+              <span>Confirmed stay</span>
             </Link>
           )}
         </div>
         <p className="detail-help">
-          <Link href={dayHref}>Back to day actions</Link>
+          <Link href={dayHref}>Back</Link>
         </p>
       </>
     );
@@ -185,8 +183,8 @@ export function CalendarDayPanel({
     return (
       <>
         <p className="calendar-day-panel__intro">
-          Temporarily change rooms to sell for <strong>{room.name}</strong>. The
-          default in room settings stays <strong>{room.availableCount}</strong>.
+          Allotment · <strong>{room.name}</strong> · default{" "}
+          <strong>{room.availableCount}</strong>
         </p>
         {errorMessage ? (
           <p className="form-message form-message--error" role="alert">
@@ -194,11 +192,11 @@ export function CalendarDayPanel({
           </p>
         ) : null}
         <form action={updateRoomDayAllotment} className="calendar-manage-form">
-      <StaffFormBusyBridge />
+          <StaffFormBusyBridge />
           <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
-            <label htmlFor="allotment-start-date">First night</label>
+            <label htmlFor="allotment-start-date">From</label>
             <input
               defaultValue={date}
               disabled={!canManage}
@@ -210,7 +208,7 @@ export function CalendarDayPanel({
             />
           </div>
           <div className="field-pair">
-            <label htmlFor="allotment-end-date">Last night</label>
+            <label htmlFor="allotment-end-date">To</label>
             <input
               defaultValue={date}
               disabled={!canManage}
@@ -220,7 +218,6 @@ export function CalendarDayPanel({
               required
               type="date"
             />
-            <span className="field-help">Both nights are included.</span>
           </div>
           <div className="field-pair">
             <label htmlFor="allotment-rooms-to-sell">Rooms to sell</label>
@@ -234,11 +231,8 @@ export function CalendarDayPanel({
               type="number"
             />
             <span className="field-help">
-              Max {room.availableCount}. Use 0 to stop selling without closing the
-              type.
-              {hasAllotmentOverride
-                ? ` Tonight’s override is ${currentAllotment}.`
-                : " Tonight uses the room default."}
+              Max {room.availableCount}. 0 = stop selling.
+              {hasAllotmentOverride ? ` Now ${currentAllotment}.` : ""}
             </span>
           </div>
           <div className="calendar-day-panel__actions">
@@ -250,11 +244,11 @@ export function CalendarDayPanel({
                 className="button button--quiet"
                 disabled={!canManage}
                 name="allotment-action"
-                title={`Clear temporary overrides for the selected nights and restore ${room.availableCount}`}
+                title={`Reset to ${room.availableCount}`}
                 type="submit"
                 value="reset"
               >
-                Reset selected dates
+                Reset
               </button>
               <button
                 className="button button--primary"
@@ -263,15 +257,13 @@ export function CalendarDayPanel({
                 type="submit"
                 value="set"
               >
-                Save temporary allotment
+                Save
               </button>
             </div>
           </div>
         </form>
         {!canManage ? (
-          <p className="detail-help">
-            Day allotments aren’t available until the site connection is set up.
-          </p>
+          <p className="detail-help">Connect the site to edit allotment.</p>
         ) : null}
       </>
     );
@@ -281,9 +273,7 @@ export function CalendarDayPanel({
     return (
       <>
         <p className="calendar-day-panel__intro">
-          Temporarily set the nightly rate for <strong>{room.name}</strong>. The
-          room default stays <strong>{room.rate}</strong>. This overrides any
-          promotion for the selected nights.
+          Rate · <strong>{room.name}</strong> · default <strong>{room.rate}</strong>
         </p>
         {errorMessage ? (
           <p className="form-message form-message--error" role="alert">
@@ -291,11 +281,11 @@ export function CalendarDayPanel({
           </p>
         ) : null}
         <form action={updateRoomDayRate} className="calendar-manage-form">
-      <StaffFormBusyBridge />
+          <StaffFormBusyBridge />
           <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
-            <label htmlFor="rate-start-date">First night</label>
+            <label htmlFor="rate-start-date">From</label>
             <input
               defaultValue={date}
               disabled={!canManage}
@@ -307,7 +297,7 @@ export function CalendarDayPanel({
             />
           </div>
           <div className="field-pair">
-            <label htmlFor="rate-end-date">Last night</label>
+            <label htmlFor="rate-end-date">To</label>
             <input
               defaultValue={date}
               disabled={!canManage}
@@ -317,7 +307,6 @@ export function CalendarDayPanel({
               required
               type="date"
             />
-            <span className="field-help">Both nights are included.</span>
           </div>
           <div className="field-pair">
             <label htmlFor="rate-nightly-rate">Nightly rate</label>
@@ -333,10 +322,8 @@ export function CalendarDayPanel({
               type="number"
             />
             <span className="field-help">
-              Room default is {room.rate}.
-              {hasRateOverride
-                ? ` Tonight’s temporary rate is ${currentRate}.`
-                : " Tonight currently uses the default or promo price."}
+              Default {room.rate}.
+              {hasRateOverride ? ` Now ${currentRate}.` : ""}
             </span>
           </div>
           <div className="calendar-day-panel__actions">
@@ -348,11 +335,11 @@ export function CalendarDayPanel({
                 className="button button--quiet"
                 disabled={!canManage}
                 name="rate-action"
-                title={`Clear temporary rates for the selected nights and restore ${room.rate}`}
+                title={`Reset to ${room.rate}`}
                 type="submit"
                 value="reset"
               >
-                Reset selected dates
+                Reset
               </button>
               <button
                 className="button button--primary"
@@ -361,15 +348,13 @@ export function CalendarDayPanel({
                 type="submit"
                 value="set"
               >
-                Save temporary rate
+                Save
               </button>
             </div>
           </div>
         </form>
         {!canManage ? (
-          <p className="detail-help">
-            Day rates aren’t available until the site connection is set up.
-          </p>
+          <p className="detail-help">Connect the site to edit rates.</p>
         ) : null}
       </>
     );
@@ -399,8 +384,7 @@ export function CalendarDayPanel({
     return (
       <>
         <p className="calendar-day-panel__intro">
-          Close nights for <strong>{room.name}</strong> starting{" "}
-          {formatDisplayDate(date)}.
+          Close · <strong>{room.name}</strong> · {formatDisplayDate(date)}
         </p>
         {errorMessage ? (
           <p className="form-message form-message--error" role="alert">
@@ -408,11 +392,11 @@ export function CalendarDayPanel({
           </p>
         ) : null}
         <form action={createRoomBlock} className="calendar-manage-form">
-      <StaffFormBusyBridge />
+          <StaffFormBusyBridge />
           <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
           <input name="room-id" type="hidden" value={room.id} />
           <div className="field-pair">
-            <label htmlFor="block-start-date">Closed from</label>
+            <label htmlFor="block-start-date">From</label>
             <input
               defaultValue={date}
               disabled={!canManage}
@@ -424,7 +408,7 @@ export function CalendarDayPanel({
             />
           </div>
           <div className="field-pair">
-            <label htmlFor="block-end-date">Available again from</label>
+            <label htmlFor="block-end-date">Open again</label>
             <input
               defaultValue={defaultDeparture}
               disabled={!canManage}
@@ -442,17 +426,17 @@ export function CalendarDayPanel({
               disabled={!canManage}
               id="block-reason"
               name="reason"
-              placeholder="Maintenance, hold, or private use"
+              placeholder="Maintenance, hold…"
               type="text"
             />
           </div>
           <div className="field-pair field-pair--wide">
-            <label htmlFor="block-staff-note">Staff note</label>
+            <label htmlFor="block-staff-note">Note</label>
             <textarea
               disabled={!canManage}
               id="block-staff-note"
               name="staff-note"
-              placeholder="Anything the front desk should remember."
+              placeholder="Front desk note"
               rows={3}
             />
           </div>
@@ -461,14 +445,12 @@ export function CalendarDayPanel({
               Back
             </Link>
             <button className="button button--primary" disabled={!canManage} type="submit">
-              Close dates
+              Close
             </button>
           </div>
         </form>
         {!canManage ? (
-          <p className="detail-help">
-            Connect the site to save room closures from the calendar.
-          </p>
+          <p className="detail-help">Connect the site to close nights.</p>
         ) : null}
       </>
     );
@@ -482,9 +464,7 @@ export function CalendarDayPanel({
       {dayStays.length > 0 ? (
         <>
           <p className="detail-help">
-            {dayStays.length === 1
-              ? "1 stay already on this night."
-              : `${dayStays.length} stays already on this night.`}
+            {dayStays.length === 1 ? "1 stay" : `${dayStays.length} stays`}
           </p>
           <div className="calendar-day-panel__choices">
             {dayStays.map((stay) => (
@@ -499,46 +479,33 @@ export function CalendarDayPanel({
       <div className="calendar-day-panel__choices">
         {soldOutForNight ? (
           <p className="detail-help" role="status">
-            This night is full for <strong>{room.name}</strong>. Inventory shows
-            no rooms left to sell — open a stay above, or choose a different
-            night.
+            Full for <strong>{room.name}</strong>.
           </p>
         ) : (
           <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-            <strong>New booking</strong>
-            <span>Add a confirmed stay directly from the front desk.</span>
+            <strong>Book</strong>
+            <span>Confirmed stay</span>
           </Link>
         )}
         <Link className="calendar-day-choice" href={`${dayHref}&mode=allotment`}>
-          <strong>Change allotment</strong>
+          <strong>Allotment</strong>
           <span>
-            Still for sale — limit how many rooms to sell tonight. Room settings
-            default stays {room.availableCount}
-            {hasAllotmentOverride ? ` · override is ${currentAllotment}` : ""}.
+            Rooms to sell · default {room.availableCount}
+            {hasAllotmentOverride ? ` · now ${currentAllotment}` : ""}
           </span>
         </Link>
         <Link className="calendar-day-choice" href={`${dayHref}&mode=rate`}>
-          <strong>Set temporary rate</strong>
+          <strong>Rate</strong>
           <span>
-            Exact nightly price for selected nights (overrides default and promos).
-            Room default stays {room.rate}
-            {hasRateOverride ? ` · tonight is ${currentRate}` : ""}.
+            Nightly price · default {room.rate}
+            {hasRateOverride ? ` · now ${currentRate}` : ""}
           </span>
         </Link>
         <Link className="calendar-day-choice" href={`${dayHref}&mode=block`}>
-          <strong>Close dates</strong>
-          <span>
-            Not for sale — mark nights closed in the status row (not as a
-            reservation).
-          </span>
+          <strong>Close</strong>
+          <span>Not for sale</span>
         </Link>
       </div>
-      <p className="detail-help">
-        Prefer <strong>Close</strong> when the room type should not sell.
-        Prefer <strong>Allotment</strong> when it stays open but you need a
-        temporary count. Prefer <strong>Rate</strong> for a one-off price.
-        Sold out means bookings already filled inventory.
-      </p>
     </>
   );
 }
