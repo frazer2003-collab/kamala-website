@@ -102,7 +102,7 @@ export function CalendarBulkAvailabilityPanel({
           />
         </div>
         <div className="field-pair">
-          <label htmlFor="bulk-status-end-date">To (inclusive)</label>
+          <label htmlFor="bulk-status-end-date">To</label>
           <input
             defaultValue={defaultEnd}
             disabled={!canManage}
@@ -127,7 +127,7 @@ export function CalendarBulkAvailabilityPanel({
               />
             </div>
             <div className="field-pair field-pair--wide">
-              <label htmlFor="bulk-status-staff-note">Staff note</label>
+              <label htmlFor="bulk-status-staff-note">Note</label>
               <textarea
                 disabled={!canManage}
                 id="bulk-status-staff-note"
@@ -143,7 +143,7 @@ export function CalendarBulkAvailabilityPanel({
             Cancel
           </Link>
           <button className="button button--primary" disabled={!canManage} type="submit">
-            {action === "close" ? "Close dates" : "Open dates"}
+            {action === "close" ? "Close" : "Open"}
           </button>
         </div>
       </form>
