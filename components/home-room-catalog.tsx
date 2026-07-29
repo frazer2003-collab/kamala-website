@@ -20,7 +20,7 @@ import {
 } from "@/lib/room-availability";
 import { formatStayDateRange } from "@/lib/stay-dates";
 import { buildRoomsSectionSubhead, buildRoomsSectionHeading } from "@/lib/home-hero-copy";
-import { formatRoomEssentials } from "@/lib/room-essentials";
+import { formatRoomEssentials, formatRoomOutlookDetails } from "@/lib/room-essentials";
 
 type HomeRoomCatalogProps = {
   rooms: Room[];
@@ -109,7 +109,9 @@ function RoomListingCard({
   const availabilityLabel = hasStayDates
     ? formatRoomTypeAvailabilityCount(availableCount)
     : getRoomAvailabilityLabel(availableCount);
-  const imageAlt = `${room.name} — ${room.outlook}`;
+  const essentials = formatRoomEssentials(room);
+  const outlookDetails = formatRoomOutlookDetails(room);
+  const openDetailsLabel = `View details for ${room.name}`;
 
   const priceBlock = (
     <div className="listing-card__price">
@@ -166,6 +168,7 @@ function RoomListingCard({
     return (
       <article className="listing-card listing-card--rail" role="listitem">
         <button
+          aria-label={openDetailsLabel}
           className="listing-card__rail-main"
           data-room-trigger={room.id}
           onClick={() => onOpenDetails(room.id)}
@@ -174,7 +177,7 @@ function RoomListingCard({
           {room.imageUrl ? (
             <div className="listing-card__media">
               <OptimizedImage
-                alt={imageAlt}
+                alt=""
                 className="listing-card__image"
                 fill
                 sizes="(max-width: 919px) 72vw, 5rem"
@@ -182,13 +185,16 @@ function RoomListingCard({
               />
             </div>
           ) : (
-            <div className={`listing-card__media listing-card__media--${room.tone}`}>
+            <div
+              aria-hidden="true"
+              className={`listing-card__media listing-card__media--${room.tone}`}
+            >
               <span>{room.shortName}</span>
             </div>
           )}
           <div className="listing-card__rail-copy">
             <h3>{room.name}</h3>
-            <p className="listing-card__essentials">{formatRoomEssentials(room)}</p>
+            <p className="listing-card__essentials">{essentials}</p>
             <div className="listing-card__rail-facts">
               {priceBlock}
               <span
@@ -211,6 +217,7 @@ function RoomListingCard({
   return (
     <article className="listing-card listing-card--feature">
       <button
+        aria-label={openDetailsLabel}
         className="listing-card__hit"
         data-room-trigger={room.id}
         onClick={() => onOpenDetails(room.id)}
@@ -219,7 +226,7 @@ function RoomListingCard({
         {room.imageUrl ? (
           <div className="listing-card__media">
             <OptimizedImage
-              alt={imageAlt}
+              alt=""
               className="listing-card__image"
               fill
               priority
@@ -228,17 +235,25 @@ function RoomListingCard({
             />
           </div>
         ) : (
-          <div className={`listing-card__media listing-card__media--${room.tone}`}>
+          <div
+            aria-hidden="true"
+            className={`listing-card__media listing-card__media--${room.tone}`}
+          >
             <span>{room.shortName}</span>
           </div>
         )}
         <div className="listing-card__copy">
           <div className="listing-card__meta">
             <h3>{room.name}</h3>
-            <p>{room.outlook}</p>
+            <p className="listing-card__essentials">{essentials}</p>
+            {outlookDetails ? (
+              <p className="listing-card__outlook">{outlookDetails}</p>
+            ) : null}
           </div>
           {priceBlock}
-          <p className="listing-card__summary">{room.summary}</p>
+          {room.summary.trim() ? (
+            <p className="listing-card__summary">{room.summary}</p>
+          ) : null}
           <div
             className={`listing-card__badge ${
               bookable ? "listing-card__badge--open" : "listing-card__badge--full"
@@ -306,10 +321,14 @@ export function HomeRoomCatalog({
             ) : null}
           </div>
           <p className="section__subhead">
-            {availabilityVerifyFailed
-              ? "We couldn’t verify live availability — open rooms may still be full when you reserve."
-              : buildRoomsSectionSubhead(rooms.length, addressLine)}
+            {buildRoomsSectionSubhead(rooms.length, addressLine)}
           </p>
+          {availabilityVerifyFailed ? (
+            <p className="section__verify-note" role="status">
+              Live availability couldn’t be confirmed — rooms marked open may
+              already be full when you reserve.
+            </p>
+          ) : null}
           {!hasStayDates ? (
             <p className="section__dates-prompt">
               <a className="section__dates-prompt-link" href="#dates">
@@ -335,7 +354,7 @@ export function HomeRoomCatalog({
           {otherRooms.length > 0 ? (
             <div className="listing-rail">
               <p className="listing-rail__label" id="rooms-rail-label">
-                {otherRooms.length === 1 ? "Also available" : "More rooms"}
+                More rooms
               </p>
               <div
                 aria-labelledby="rooms-rail-label"

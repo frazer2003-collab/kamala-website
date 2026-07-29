@@ -117,13 +117,6 @@ export default async function Home({
       />
 
       <div className="site-shell home-body">
-        {availabilityVerifyFailed ? (
-          <p className="home-availability-notice" role="status">
-            We couldn’t confirm live availability just now. Rooms below may not be
-            open — try again shortly, or message us to check your dates.
-          </p>
-        ) : null}
-
         <HomeRoomCatalog
           addressLine={settings.addressLine}
           availabilityByRoomId={availabilityByRoomId}

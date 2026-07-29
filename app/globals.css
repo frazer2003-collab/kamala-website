@@ -2158,11 +2158,32 @@ p {
   color: var(--color-maroon-deep);
 }
 
+.section__change-dates:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 3px;
+  border-radius: 2px;
+  color: var(--color-maroon-deep);
+}
+
 .section__subhead {
   margin: var(--space-2) 0 0;
-  color: var(--color-soft);
+  color: var(--color-muted);
   font-size: 0.92rem;
   font-weight: 600;
+  line-height: 1.45;
+  max-width: 58ch;
+}
+
+.section__verify-note {
+  margin: var(--space-3) 0 0;
+  max-width: 52ch;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-wash);
+  color: var(--color-warning-ink);
+  font-size: 0.9rem;
+  font-weight: 650;
   line-height: 1.45;
 }
 
@@ -2201,8 +2222,8 @@ p {
 .listing-rail__label {
   margin: 0 0 var(--space-2);
   color: var(--color-muted);
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 750;
   letter-spacing: 0;
 }
 
@@ -2319,6 +2340,9 @@ p {
 }
 
 .listing-card__availability--full {
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-danger-wash);
   color: var(--color-danger);
 }
 
@@ -2350,7 +2374,6 @@ p {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-panel);
 }
 
 .listing-card--feature .listing-card__copy {
@@ -2372,6 +2395,18 @@ p {
 
 .listing-card--feature .listing-card__meta h3 {
   font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+}
+
+.listing-card--feature .listing-card__essentials {
+  margin: 0;
+}
+
+.listing-card--feature .listing-card__outlook {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 550;
+  line-height: 1.45;
 }
 
 .listing-card--feature .listing-card__badge {
@@ -2422,7 +2457,8 @@ p {
   .listing-rail__track {
     flex: 1;
     gap: 0;
-  }}
+  }
+}
 
 @media (max-width: 919px) {
   .listing-showcase {
@@ -2440,7 +2476,7 @@ p {
   .listing-rail__track {
     display: flex;
     gap: var(--space-3);
-    padding: 0 0 var(--space-2);
+    padding: 0 1.25rem var(--space-2) 0;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
@@ -2449,7 +2485,7 @@ p {
   }
 
   .listing-card--rail {
-    flex: 0 0 min(78vw, 17.5rem);
+    flex: 0 0 min(70vw, 16.5rem);
     grid-template-columns: 1fr;
     grid-template-rows: auto auto;
     gap: var(--space-3);
@@ -2487,7 +2523,8 @@ p {
 
   .listing-card--rail .listing-card__reserve {
     width: 100%;
-  }}
+  }
+}
 
 .listing-card {
   display: grid;
@@ -8137,7 +8174,7 @@ html.staff-busy .staff-login-shell input {
 }
 
 .guest-site .listing-rail__label {
-  color: var(--color-maroon-deep);
+  color: var(--color-muted);
 }
 
 .guest-site .listing-card__essentials {
