@@ -17,7 +17,7 @@ export function StaffLoginForm({ nextPath, configured }: StaffLoginFormProps) {
   return (
     <form
       action={formAction}
-      className="booking-form staff-login-form"
+      className="staff-login-form"
       data-busy-message="Signing in…"
     >
       <StaffFormBusyBridge message="Signing in…" />
@@ -43,14 +43,9 @@ export function StaffLoginForm({ nextPath, configured }: StaffLoginFormProps) {
           disabled={!configured}
           id="staff-username"
           name="username"
-          placeholder="admin or you@example.com"
           required
           type="text"
         />
-        <span className="field-help">
-          Admins use the admin username. Other staff use their notification email
-          and the shared staff password.
-        </span>
       </div>
 
       <div className="field-pair">

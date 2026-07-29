@@ -142,8 +142,7 @@ export async function loginStaff(
   }
 
   return {
-    error:
-      "That username or password did not match. Try again, or ask an admin for access.",
+    error: "That username or password did not match. Try again.",
   };
 }
 
