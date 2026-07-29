@@ -5,25 +5,10 @@ import {
   emptyContactMessageValues,
   normalizeContactMessageValues,
   validateContactMessage,
-  type ContactMessageFieldErrors,
+  type ContactFormState,
   type ContactMessageValues,
 } from "@/lib/contact-message";
 import { getPropertySettings } from "@/lib/property-settings";
-
-export type ContactFormState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  fieldErrors?: ContactMessageFieldErrors;
-  values: ContactMessageValues;
-};
-
-export function initialContactFormState(): ContactFormState {
-  return {
-    status: "idle",
-    message: "",
-    values: emptyContactMessageValues(),
-  };
-}
 
 function readContactValues(formData: FormData): ContactMessageValues {
   return {
