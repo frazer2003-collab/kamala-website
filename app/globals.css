@@ -1036,6 +1036,44 @@ p {
   font-size: 0.92rem;
 }
 
+.search-bar--pending {
+  opacity: 0.94;
+}
+
+.search-bar--pending .search-bar__submit:disabled {
+  cursor: wait;
+  opacity: 1;
+}
+
+.search-bar__pending {
+  margin: var(--space-3) 0 0;
+  max-width: 42ch;
+  color: oklch(95% 0.015 12);
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.45;
+  text-shadow: 0 1px 12px oklch(8% 0.04 12 / 0.4);
+  text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .search-bar__pending {
+    animation: search-bar-pending-in 220ms var(--ease-out-quint) both;
+  }
+}
+
+@keyframes search-bar-pending-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.2rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .property-location {
   display: grid;
   gap: var(--space-3);
