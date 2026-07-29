@@ -155,9 +155,19 @@ function RoomListingCard({
     </span>
   );
 
-  let reserveControl: ReactNode;
+  const detailsControl = (
+    <button
+      className="button button--quiet listing-card__details"
+      onClick={() => onOpenDetails(room.id)}
+      type="button"
+    >
+      Details
+    </button>
+  );
+
+  let primaryControl: ReactNode = null;
   if (hasStayDates && bookable) {
-    reserveControl = (
+    primaryControl = (
       <BookRoomLink
         arrival={stayDates?.arrival}
         className="button button--primary listing-card__reserve"
@@ -168,28 +178,25 @@ function RoomListingCard({
       </BookRoomLink>
     );
   } else if (hasStayDates && !bookable) {
-    reserveControl = (
+    primaryControl = (
       <a className="button button--secondary listing-card__reserve" href="#dates">
         Change dates
       </a>
     );
   } else if (bookable) {
-    reserveControl = (
+    primaryControl = (
       <a className="button button--secondary listing-card__reserve" href="#dates">
         Check dates
       </a>
     );
-  } else {
-    reserveControl = (
-      <button
-        className="button button--secondary listing-card__reserve"
-        onClick={() => onOpenDetails(room.id)}
-        type="button"
-      >
-        View details
-      </button>
-    );
   }
+
+  const actionControls = (
+    <div className="listing-card__cta-group">
+      {detailsControl}
+      {primaryControl}
+    </div>
+  );
 
   const media = room.imageUrl ? (
     <div className="listing-card__media">
@@ -238,7 +245,7 @@ function RoomListingCard({
             </div>
           </div>
         </button>
-        <div className="listing-card__rail-cta">{reserveControl}</div>
+        <div className="listing-card__rail-cta">{actionControls}</div>
       </article>
     );
   }
@@ -268,7 +275,7 @@ function RoomListingCard({
           {statusBlock}
         </div>
       </button>
-      <div className="listing-card__actions">{reserveControl}</div>
+      <div className="listing-card__actions">{actionControls}</div>
     </article>
   );
 }
