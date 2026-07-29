@@ -32,7 +32,7 @@ export function SiteFooter({ settings }: { settings: PropertySettings }) {
           <Link href="/#rooms">Rooms</Link>
           <Link href="/location">Location</Link>
           <Link href="/tours">Tours</Link>
-          <Link href="/#booking">Contact</Link>
+          <Link href="/contact">Contact</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/cancellation">Cancellation</Link>

@@ -133,6 +133,78 @@ export async function sendStaffBookingEmail(
   return { ok: true };
 }
 
+export async function sendStaffContactMessageEmail({
+  propertyName,
+  to,
+  guestName,
+  guestEmail,
+  guestPhone,
+  message,
+}: {
+  propertyName: string;
+  to: string;
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  message: string;
+}): Promise<EmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.BOOKING_EMAIL_FROM;
+
+  if (!apiKey || !from || !to.trim()) {
+    return { ok: false, reason: "missing-config" };
+  }
+
+  const subject = `Website message: ${guestName}`;
+  const phoneLine = guestPhone.trim() || "Not provided";
+  const text = [
+    `New message from the ${propertyName} contact page.`,
+    "",
+    `Guest: ${guestName}`,
+    `Email: ${guestEmail}`,
+    `Phone: ${phoneLine}`,
+    "",
+    "Message:",
+    message,
+  ].join("\n");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
+      <h1 style="font-size: 20px;">Website message</h1>
+      <p>A guest wrote through the ${escapeHtml(propertyName)} contact page.</p>
+      <table style="border-collapse: collapse; width: 100%; max-width: 560px;">
+        <tr><td style="padding: 8px 0; color: #6b5559;">Guest</td><td>${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding: 8px 0; color: #6b5559;">Email</td><td>${escapeHtml(guestEmail)}</td></tr>
+        <tr><td style="padding: 8px 0; color: #6b5559;">Phone</td><td>${escapeHtml(phoneLine)}</td></tr>
+      </table>
+      <h2 style="font-size: 16px; margin-top: 24px;">Message</h2>
+      <p style="white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</p>
+    </div>
+  `;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [to.trim()],
+      reply_to: guestEmail,
+      subject,
+      text,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    return { ok: false, reason: "send-failed" };
+  }
+
+  return { ok: true };
+}
+
 export async function sendGuestBookingEmail({
   to,
   subject,
