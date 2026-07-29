@@ -1045,32 +1045,56 @@ p {
   opacity: 1;
 }
 
-.search-bar__pending {
-  margin: var(--space-3) 0 0;
-  max-width: 42ch;
-  color: oklch(95% 0.015 12);
-  font-size: 0.95rem;
-  font-weight: 650;
+html.guest-dates-busy {
+  cursor: wait;
+}
+
+html.guest-dates-busy .guest-site,
+html.guest-dates-busy .home-sticky-dates {
+  pointer-events: none;
+  user-select: none;
+}
+
+.guest-dates-busy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  place-content: center;
+  padding: var(--space-6);
+  background: color-mix(in oklab, oklch(14% 0.03 12) 58%, transparent);
+  pointer-events: all;
+  cursor: wait;
+}
+
+.guest-dates-busy-overlay__label {
+  margin: 0;
+  max-width: 22rem;
+  color: white;
+  font-size: 1.05rem;
+  font-weight: 700;
   line-height: 1.45;
-  text-shadow: 0 1px 12px oklch(8% 0.04 12 / 0.4);
+  text-align: center;
+  text-shadow:
+    0 1px 2px oklch(8% 0.035 12 / 0.75),
+    0 0 18px oklch(8% 0.035 12 / 0.55);
   text-wrap: pretty;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .search-bar__pending {
-    animation: search-bar-pending-in 220ms var(--ease-out-quint) both;
+  .guest-dates-busy-overlay {
+    animation: guest-dates-busy-cover-in 200ms var(--ease-out-quint) both;
   }
 }
 
-@keyframes search-bar-pending-in {
+@keyframes guest-dates-busy-cover-in {
   from {
     opacity: 0;
-    transform: translateY(0.2rem);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -8422,13 +8446,6 @@ html.staff-busy .staff-login-shell input {
 }
 
 .guest-site .hero-atmosphere__search-label {
-  color: white;
-  text-shadow:
-    0 1px 2px oklch(8% 0.035 12 / 0.75),
-    0 0 18px oklch(8% 0.035 12 / 0.55);
-}
-
-.guest-site .search-bar__pending {
   color: white;
   text-shadow:
     0 1px 2px oklch(8% 0.035 12 / 0.75),
