@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { getPropertyTodayIso } from "@/lib/calendar";
 import {
   MAX_STAY_NIGHTS,
@@ -29,6 +29,7 @@ function formatSegmentDate(iso: string) {
 }
 
 function SearchDateSegment({
+  disabled = false,
   id,
   label,
   min,
@@ -36,6 +37,7 @@ function SearchDateSegment({
   onChange,
   value,
 }: {
+  disabled?: boolean;
   id: string;
   label: string;
   min: string;
@@ -49,6 +51,7 @@ function SearchDateSegment({
       <input
         autoComplete="off"
         className="search-bar__input"
+        disabled={disabled}
         id={id}
         min={min}
         name={name}
@@ -73,6 +76,7 @@ export function HomeDateSearch({
   const router = useRouter();
   const searchParams = useSearchParams();
   const formId = useId();
+  const [isPending, startTransition] = useTransition();
   const propertyToday = useMemo(() => getPropertyTodayIso(), []);
   const defaultArrival = arrival ?? propertyToday;
   const defaultDeparture =
@@ -114,6 +118,10 @@ export function HomeDateSearch({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isPending) {
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     const nextArrival = String(formData.get("arrival") ?? "");
     const nextDeparture = String(formData.get("departure") ?? "");
@@ -123,19 +131,25 @@ export function HomeDateSearch({
     params.set("departure", nextDeparture);
     params.delete("error");
 
-    router.push(`/?${params.toString()}#rooms`);
+    startTransition(() => {
+      router.push(`/?${params.toString()}#rooms`);
+    });
   }
+
+  const statusId = `${formId}-status`;
 
   return (
     <>
       <form
-        aria-describedby="home-dates-label"
+        aria-busy={isPending}
+        aria-describedby={isPending ? `${statusId} home-dates-label` : "home-dates-label"}
         aria-label="Check availability for your stay"
-        className="search-bar search-bar--atmosphere"
+        className={`search-bar search-bar--atmosphere${isPending ? " search-bar--pending" : ""}`}
         onSubmit={handleSubmit}
       >
         <div className="search-bar__fields">
           <SearchDateSegment
+            disabled={isPending}
             id={`${formId}-arrival`}
             label="Check in"
             min={propertyToday}
@@ -145,6 +159,7 @@ export function HomeDateSearch({
           />
           <div aria-hidden="true" className="search-bar__divider" />
           <SearchDateSegment
+            disabled={isPending}
             id={`${formId}-departure`}
             label="Check out"
             min={departureMin}
@@ -153,10 +168,28 @@ export function HomeDateSearch({
             value={departureValue}
           />
         </div>
-        <button className="search-bar__submit button button--primary" type="submit">
-          <span className="search-bar__submit-label">See available rooms</span>
+        <button
+          aria-disabled={isPending}
+          className="search-bar__submit button button--primary"
+          disabled={isPending}
+          type="submit"
+        >
+          <span className="search-bar__submit-label">
+            {isPending ? "Checking dates…" : "See available rooms"}
+          </span>
         </button>
       </form>
+
+      {isPending ? (
+        <p
+          className="search-bar__pending hero-atmosphere__message"
+          id={statusId}
+          role="status"
+          aria-live="polite"
+        >
+          Checking which rooms are free for your stay…
+        </p>
+      ) : null}
 
       {dateError ? (
         <p className="form-message form-message--error hero-atmosphere__message" role="alert">

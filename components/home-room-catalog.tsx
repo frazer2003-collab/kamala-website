@@ -208,7 +208,7 @@ function RoomListingCard({
         sizes={
           variant === "feature"
             ? "(max-width: 920px) 100vw, 55vw"
-            : "(max-width: 919px) 100vw, 5rem"
+            : "(max-width: 640px) 4.75rem, 5.25rem"
         }
         src={room.imageUrl}
       />

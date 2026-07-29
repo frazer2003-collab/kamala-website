@@ -1036,6 +1036,44 @@ p {
   font-size: 0.92rem;
 }
 
+.search-bar--pending {
+  opacity: 0.94;
+}
+
+.search-bar--pending .search-bar__submit:disabled {
+  cursor: wait;
+  opacity: 1;
+}
+
+.search-bar__pending {
+  margin: var(--space-3) 0 0;
+  max-width: 42ch;
+  color: oklch(95% 0.015 12);
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.45;
+  text-shadow: 0 1px 12px oklch(8% 0.04 12 / 0.4);
+  text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .search-bar__pending {
+    animation: search-bar-pending-in 220ms var(--ease-out-quint) both;
+  }
+}
+
+@keyframes search-bar-pending-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.2rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .property-location {
   display: grid;
   gap: var(--space-3);
@@ -2607,7 +2645,7 @@ p {
     padding-left: 0;
   }
 
-  /* Phone: stack every room type — no horizontal carousel hide. */
+  /* Narrow viewports: stack every room type — no horizontal carousel hide. */
   .listing-rail__track {
     display: grid;
     gap: 0;
@@ -2655,6 +2693,172 @@ p {
 
   .listing-card--rail .listing-card__reserve {
     width: auto;
+  }
+}
+
+/* Phone: rethink rooms listing for thumbs — stack CTAs, larger targets, no hover reliance. */
+@media (max-width: 640px) {
+  .section--listings .section__heading--compact h2 {
+    font-size: clamp(1.2rem, 5.2vw, 1.45rem);
+    line-height: 1.25;
+    max-width: 22ch;
+  }
+
+  .section--listings .section__heading-row {
+    align-items: flex-start;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .section--listings .section__change-dates {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.15rem 0.1rem;
+    flex-shrink: 0;
+  }
+
+  .section--listings .section__subhead {
+    font-size: 0.9rem;
+    max-width: none;
+  }
+
+  .section--listings .section__dates-prompt {
+    max-width: none;
+    font-size: 0.92rem;
+  }
+
+  .section--listings .section__dates-prompt-link {
+    display: inline;
+    padding-block: 0.2rem;
+  }
+
+  .listing-showcase {
+    gap: var(--space-6);
+  }
+
+  .listing-card--feature {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    gap: var(--space-3);
+  }
+
+  .listing-card--feature .listing-card__media {
+    aspect-ratio: 4 / 3;
+  }
+
+  .listing-card--feature .listing-card__summary {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    margin-top: var(--space-1);
+    font-size: 0.9rem;
+  }
+
+  .listing-card--feature .listing-card__actions .listing-card__cta-group {
+    gap: var(--space-2);
+  }
+
+  .listing-card--feature .listing-card__details,
+  .listing-card--feature .listing-card__reserve {
+    min-height: 2.75rem;
+    font-size: 0.9rem;
+  }
+
+  .listing-rail {
+    gap: var(--space-2);
+    padding-top: var(--space-1);
+  }
+
+  .listing-rail__label {
+    margin-bottom: var(--space-1);
+    font-size: 0.8rem;
+  }
+
+  .listing-card--rail {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: stretch;
+    padding-block: var(--space-5);
+  }
+
+  .listing-card--rail .listing-card__media {
+    flex: 0 0 4.75rem;
+    width: 4.75rem;
+  }
+
+  .listing-card__rail-copy h3 {
+    font-size: 1rem;
+  }
+
+  .listing-card__rail-facts {
+    gap: 0.35rem 0.55rem;
+    margin-top: var(--space-2);
+  }
+
+  .listing-card--rail .listing-card__price strong,
+  .listing-card--rail .listing-card__price-now {
+    font-size: 0.95rem;
+  }
+
+  .listing-card__rail-cta {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .listing-card--rail .listing-card__cta-group {
+    width: 100%;
+  }
+
+  .listing-card--rail .listing-card__details {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 2.75rem;
+    padding-inline: 0.9rem;
+    font-size: 0.88rem;
+  }
+
+  .listing-card--rail .listing-card__reserve {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding-inline: 0.9rem;
+    font-size: 0.88rem;
+  }
+}
+
+@media (hover: none) {
+  .listing-card--rail:hover {
+    background: transparent;
+  }
+
+  .listing-card--rail:active {
+    background: var(--color-maroon-wash);
+  }
+
+  .listing-card__rail-main:hover .listing-card__media,
+  .listing-card__hit:hover .listing-card__media {
+    filter: none;
+  }
+
+  .listing-card__rail-main:active .listing-card__media,
+  .listing-card__hit:active .listing-card__media {
+    filter: brightness(0.97);
+  }
+}
+
+@media (pointer: coarse) {
+  .listing-card--rail .listing-card__details,
+  .listing-card--rail .listing-card__reserve,
+  .listing-card--feature .listing-card__details,
+  .listing-card--feature .listing-card__reserve {
+    min-height: 2.75rem;
+  }
+
+  .section--listings .section__change-dates {
+    min-height: 2.75rem;
   }
 }
 
@@ -8224,6 +8428,13 @@ html.staff-busy .staff-login-shell input {
     0 0 18px oklch(8% 0.035 12 / 0.55);
 }
 
+.guest-site .search-bar__pending {
+  color: white;
+  text-shadow:
+    0 1px 2px oklch(8% 0.035 12 / 0.75),
+    0 0 18px oklch(8% 0.035 12 / 0.55);
+}
+
 .guest-site .hero-atmosphere__message.form-message--error {
   max-width: 26rem;
   border: 1px solid oklch(50% 0.17 12 / 0.18);
@@ -8307,8 +8518,25 @@ html.staff-busy .staff-login-shell input {
   outline-color: var(--color-maroon-light);
 }
 
-.guest-site .listing-card__hit:hover .listing-card__media {
-  filter: brightness(1.06);
+@media (hover: hover) {
+  .guest-site .listing-card__hit:hover .listing-card__media {
+    filter: brightness(1.06);
+  }
+}
+
+@media (hover: none) {
+  .guest-site .listing-card--rail:hover {
+    background: transparent;
+  }
+
+  .guest-site .listing-card--rail:active {
+    background: var(--color-maroon-wash);
+  }
+
+  .guest-site .listing-card__hit:active .listing-card__media,
+  .guest-site .listing-card__rail-main:active .listing-card__media {
+    filter: brightness(0.97);
+  }
 }
 
 .guest-site .listing-card--feature {
