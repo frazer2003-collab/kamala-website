@@ -95,10 +95,13 @@ export function getTimelineUnitsForRoomType(units: RoomUnit[], roomId: string) {
 }
 
 /**
- * Flat door list for the distilled tape chart — every physical room number,
- * sorted for glance scanning (not grouped by type).
+ * Flat door list for the distilled tape chart — every physical room number.
+ * Ordered by room type (twin → double → deluxe → family), then door number.
  */
-export function getTimelineDoorUnits(units: RoomUnit[]) {
+export function getTimelineDoorUnits(
+  units: RoomUnit[],
+  roomShortNameById?: ReadonlyMap<string, string>,
+) {
   const seen = new Set<string>();
   const doors: RoomUnit[] = [];
 
@@ -110,11 +113,61 @@ export function getTimelineDoorUnits(units: RoomUnit[]) {
     doors.push(unit);
   }
 
-  return doors.sort(
-    (left, right) =>
+  return doors.sort((left, right) => {
+    const typeDelta =
+      getTimelineDoorTypeSortKey(left, roomShortNameById) -
+      getTimelineDoorTypeSortKey(right, roomShortNameById);
+    if (typeDelta !== 0) {
+      return typeDelta;
+    }
+    return (
       left.number.localeCompare(right.number, undefined, { numeric: true }) ||
-      left.sortOrder - right.sortOrder,
-  );
+      left.sortOrder - right.sortOrder
+    );
+  });
+}
+
+/**
+ * Staff calendar door order: Twin → Double → Deluxe → Family.
+ * Superior (double-or-twin) sorts with Twin; Family GF after Family balcony.
+ */
+export function getTimelineDoorTypeSortKey(
+  unit: RoomUnit,
+  roomShortNameById?: ReadonlyMap<string, string>,
+) {
+  const roomId = (getPrimaryRoomIdForUnit(unit) ?? "").toLowerCase();
+  const short = (
+    roomShortNameById?.get(roomId) ??
+    roomShortNameById?.get(getPrimaryRoomIdForUnit(unit) ?? "") ??
+    roomId
+  )
+    .toLowerCase()
+    .trim();
+
+  const label = `${short} ${roomId}`;
+
+  if (/\bgf\b/.test(label) || roomId === "ground" || short === "family gf") {
+    return 40;
+  }
+  if (roomId === "loft" || short === "family" || short.startsWith("family")) {
+    return 30;
+  }
+  if (roomId === "garden" || short.startsWith("deluxe")) {
+    return 20;
+  }
+  if (short.startsWith("double") || roomId === "double") {
+    return 10;
+  }
+  if (
+    short.startsWith("twin") ||
+    roomId === "twin" ||
+    roomId === "courtyard" ||
+    short.startsWith("superior")
+  ) {
+    return 0;
+  }
+
+  return 100;
 }
 
 /** Primary room type for day-panel links from a door row. */

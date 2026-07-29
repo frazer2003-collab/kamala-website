@@ -6503,6 +6503,16 @@ html.staff-busy .staff-login-shell input {
   font-weight: 800;
 }
 
+.extranet-unit-type {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  text-transform: none;
+}
+
 .extranet-row__label--needs-room {
   background: var(--color-warning-wash);
   color: var(--color-warning-ink);
@@ -7042,7 +7052,7 @@ html.staff-busy .staff-login-shell input {
   }
 
   .staff-extranet__scroll {
-    --extranet-label-width: 3.75rem;
+    --extranet-label-width: 4.25rem;
     --extranet-day-gap: 0.1rem;
   }
 
@@ -7072,6 +7082,10 @@ html.staff-busy .staff-login-shell input {
   .extranet-row__label--door {
     font-size: 0.72rem;
     padding-inline: 0.35rem;
+  }
+
+  .extranet-unit-type {
+    font-size: 0.55rem;
   }
 
   .extranet-row__meta {

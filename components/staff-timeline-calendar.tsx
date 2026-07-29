@@ -137,6 +137,7 @@ function DoorReservationRow({
   todayIso,
   allotmentOverrideKeys,
   rateOverrideKeys,
+  roomTypeLabel,
 }: {
   unit: RoomUnit;
   bookings: StaffBooking[];
@@ -153,6 +154,7 @@ function DoorReservationRow({
   todayIso: string;
   allotmentOverrideKeys: Set<string>;
   rateOverrideKeys: Set<string>;
+  roomTypeLabel?: string;
 }) {
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
@@ -190,8 +192,10 @@ function DoorReservationRow({
     <>
       <MetricRowLabel className="extranet-row__label--door">
         <span className="extranet-unit-number">#{unit.number}</span>
-        {unit.roomIds.length > 1 ? (
-          <span className="extranet-row__meta">Shared</span>
+        {roomTypeLabel ? (
+          <span className="extranet-unit-type">{roomTypeLabel}</span>
+        ) : unit.roomIds.length > 1 ? (
+          <span className="extranet-unit-type">Shared</span>
         ) : null}
       </MetricRowLabel>
       <div
@@ -551,7 +555,6 @@ export function StaffTimelineCalendar({
     () => blocks.filter(isChannelReservation),
     [blocks],
   );
-  const doorUnits = useMemo(() => getTimelineDoorUnits(roomUnits), [roomUnits]);
   const roomShortNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const room of rooms) {
@@ -559,6 +562,10 @@ export function StaffTimelineCalendar({
     }
     return map;
   }, [rooms]);
+  const doorUnits = useMemo(
+    () => getTimelineDoorUnits(roomUnits, roomShortNameById),
+    [roomUnits, roomShortNameById],
+  );
 
   const guestColors = useMemo(() => {
     const names: string[] = [];
@@ -701,26 +708,33 @@ export function StaffTimelineCalendar({
           style={{ ["--timeline-days" as string]: dayCount }}
         >
           {doorUnits.length > 0 ? (
-            doorUnits.map((unit) => (
-              <DoorReservationRow
-                allotmentOverrideKeys={allotmentOverrideKeySet}
-                bookings={bookings}
-                calendarDays={calendarDays}
-                channelReservations={channelReservations}
-                fromIso={fromIso}
-                guestColors={guestColors}
-                key={unit.id}
-                monthKey={monthKey}
-                rateOverrideKeys={rateOverrideKeySet}
-                selectedBlockKey={activeBlockKey}
-                selectedBookingKey={activeBookingKey}
-                selectedDate={selectedDate}
-                selectedRoomId={selectedRoomId}
-                toIso={toIso}
-                todayIso={todayIso}
-                unit={unit}
-              />
-            ))
+            doorUnits.map((unit) => {
+              const primaryRoomId = getPrimaryRoomIdForUnit(unit);
+              const roomTypeLabel = primaryRoomId
+                ? roomShortNameById.get(primaryRoomId)
+                : undefined;
+              return (
+                <DoorReservationRow
+                  allotmentOverrideKeys={allotmentOverrideKeySet}
+                  bookings={bookings}
+                  calendarDays={calendarDays}
+                  channelReservations={channelReservations}
+                  fromIso={fromIso}
+                  guestColors={guestColors}
+                  key={unit.id}
+                  monthKey={monthKey}
+                  rateOverrideKeys={rateOverrideKeySet}
+                  roomTypeLabel={roomTypeLabel}
+                  selectedBlockKey={activeBlockKey}
+                  selectedBookingKey={activeBookingKey}
+                  selectedDate={selectedDate}
+                  selectedRoomId={selectedRoomId}
+                  toIso={toIso}
+                  todayIso={todayIso}
+                  unit={unit}
+                />
+              );
+            })
           ) : (
             <p className="extranet-doors__empty">
               No doors yet. Add them in Settings → Rooms.
