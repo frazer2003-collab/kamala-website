@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Libre_Baskerville, Plus_Jakarta_Sans } from "next/font/google";
 import { getPropertySettings } from "@/lib/property-settings";
@@ -16,6 +16,10 @@ const libreBaskerville = Libre_Baskerville({
   variable: "--font-display",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#7a2f36",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
   const { defaultTitle, description, propertyName } = buildSiteMetadataCopy(settings);
@@ -27,7 +31,6 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s · ${propertyName}`,
     },
     description,
-    themeColor: "#7a2f36",
     openGraph: {
       title: defaultTitle,
       description,
