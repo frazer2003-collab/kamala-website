@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { GuestPageClosingActions } from "@/components/guest-page-closing-actions";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { PropertyGallery } from "@/components/property-gallery";
 import { SiteFooter } from "@/components/site-footer";
@@ -42,14 +42,7 @@ export default async function GalleryPage() {
 
       <PropertyGallery propertyName={settings.propertyName} sections={sections} />
 
-      <div className="guest-page__actions gallery-page__actions">
-        <Link className="button button--secondary" href="/">
-          Back to home
-        </Link>
-        <Link className="button button--primary" href="/#booking">
-          Request a stay
-        </Link>
-      </div>
+      <GuestPageClosingActions />
 
       <SiteFooter settings={settings} />
     </main>
