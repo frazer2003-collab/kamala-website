@@ -8428,6 +8428,13 @@ html.staff-busy .staff-login-shell input {
     0 0 18px oklch(8% 0.035 12 / 0.55);
 }
 
+.guest-site .search-bar__pending {
+  color: white;
+  text-shadow:
+    0 1px 2px oklch(8% 0.035 12 / 0.75),
+    0 0 18px oklch(8% 0.035 12 / 0.55);
+}
+
 .guest-site .hero-atmosphere__message.form-message--error {
   max-width: 26rem;
   border: 1px solid oklch(50% 0.17 12 / 0.18);
