@@ -145,7 +145,7 @@ export function CalendarBlockPanel({
             </div>
             {block.staffNote ? (
               <div>
-                <dt>Staff note</dt>
+                <dt>Note</dt>
                 <dd>{block.staffNote}</dd>
               </div>
             ) : null}
@@ -164,7 +164,7 @@ export function CalendarBlockPanel({
             <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
       <StaffFormBusyBridge />
             <div className="field-pair field-pair--wide">
-              <label htmlFor={`channel-guest-name-${fieldPrefix}`}>Guest name</label>
+              <label htmlFor={`channel-guest-name-${fieldPrefix}`}>Guest</label>
               <input
                 defaultValue={block.guestName}
                 disabled={!canManage}
@@ -175,7 +175,7 @@ export function CalendarBlockPanel({
               />
             </div>
             <div className="field-pair">
-              <label htmlFor={`channel-guest-phone-${fieldPrefix}`}>Phone number</label>
+              <label htmlFor={`channel-guest-phone-${fieldPrefix}`}>Phone</label>
               <input
                 defaultValue={block.guestPhone}
                 disabled={!canManage}
@@ -270,7 +270,7 @@ export function CalendarBlockPanel({
                 }
                 value={fields.roomUnitId}
               >
-                <option value="">Not assigned yet</option>
+                <option value="">Unassigned</option>
                 {currentUnit &&
                 !unitOptions.some((option) => option.unit.id === currentUnit.id) ? (
                   <option value={currentUnit.id}>
@@ -309,7 +309,7 @@ export function CalendarBlockPanel({
               value={fields.bookingSource || "walk-in"}
             />
             <div className="field-pair field-pair--wide">
-              <label htmlFor={`channel-note-${fieldPrefix}`}>Staff note</label>
+              <label htmlFor={`channel-note-${fieldPrefix}`}>Note</label>
               <textarea
                 defaultValue={block.staffNote}
                 disabled={!canManage}
@@ -373,10 +373,7 @@ export function CalendarBlockPanel({
             </div>
           )}
 
-          <p className="detail-help">
-            Reopening removes this closure. Closed nights stay visible in the room
-            status row and shaded columns — not as reservation bars.
-          </p>
+          <p className="detail-help">Reopen removes this closure.</p>
         </>
       )}
     </>

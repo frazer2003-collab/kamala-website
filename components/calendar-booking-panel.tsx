@@ -265,7 +265,7 @@ export function CalendarBookingPanel({
             }
             value={fields.roomUnitId}
           >
-            <option value="">Not assigned yet</option>
+            <option value="">Unassigned</option>
             {assignableUnits.map((unit) => (
               <option key={unit.id} value={unit.id}>
                 {unit.number}
@@ -382,7 +382,7 @@ export function CalendarBookingPanel({
           </div>
         </div>
         <div className="field-pair field-pair--wide">
-          <label htmlFor={`calendar-guest-name-${bookingKey}`}>Guest name</label>
+          <label htmlFor={`calendar-guest-name-${bookingKey}`}>Guest</label>
           <input
             autoComplete="name"
             disabled={!canManage}
@@ -397,7 +397,7 @@ export function CalendarBookingPanel({
           />
         </div>
         <div className="field-pair">
-          <label htmlFor={`calendar-guest-phone-${bookingKey}`}>Phone number (optional)</label>
+          <label htmlFor={`calendar-guest-phone-${bookingKey}`}>Phone</label>
           <input
             autoComplete="tel"
             disabled={!canManage}
@@ -412,7 +412,7 @@ export function CalendarBookingPanel({
           />
         </div>
         <div className="field-pair">
-          <label htmlFor={`calendar-guest-email-${bookingKey}`}>Email (optional)</label>
+          <label htmlFor={`calendar-guest-email-${bookingKey}`}>Email</label>
           <input
             aria-describedby={emailHelpId}
             autoComplete="email"
@@ -434,7 +434,7 @@ export function CalendarBookingPanel({
           <p>{note || "No guest note added."}</p>
         </div>
         <div className="field-pair field-pair--wide">
-          <label htmlFor={`calendar-staff-note-${bookingKey}`}>Staff note</label>
+          <label htmlFor={`calendar-staff-note-${bookingKey}`}>Note</label>
           <textarea
             disabled={!canManage}
             id={`calendar-staff-note-${bookingKey}`}

@@ -430,7 +430,7 @@ export default async function StaffCalendarPage({
 
         {!canWriteCalendar ? (
           <p className="form-message form-message--setup" role="status">
-            Viewing only — your staff email has read-only calendar access.
+            Viewing only — read-only access.
           </p>
         ) : null}
         {confirmedBookings.error ? (
@@ -455,7 +455,7 @@ export default async function StaffCalendarPage({
         ) : null}
         {confirmedBookings.source === "sample" && !confirmedBookings.error ? (
           <p className="form-message form-message--setup" role="status">
-            Add Supabase environment variables to show live confirmed bookings here.
+            Add Supabase env vars for live bookings.
           </p>
         ) : null}
         {pageFormError ? (
@@ -468,7 +468,7 @@ export default async function StaffCalendarPage({
         ) : null}
         {saved === "1" ? (
           <p className="form-message form-message--success" role="status">
-            Stay updated.{" "}
+            Stay saved.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
@@ -478,7 +478,7 @@ export default async function StaffCalendarPage({
           <p className="form-message form-message--success" role="status">
             {assignUnit
               ? `Assigned #${assignUnit}${assignGuest ? ` to ${assignGuest}` : ""}.`
-              : "Room number assigned."}{" "}
+              : "Assigned."}{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
@@ -486,7 +486,7 @@ export default async function StaffCalendarPage({
         ) : null}
         {created === "walk-in" ? (
           <p className="form-message form-message--success" role="status">
-            New booking added to the calendar and marked checked in.{" "}
+            Booking added.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
@@ -494,9 +494,7 @@ export default async function StaffCalendarPage({
         ) : null}
         {confirmEmail === "failed" ? (
           <p className="form-message form-message--error" role="alert">
-            Stay confirmed, but the guest confirmation email could not be sent.
-            Reply in the conversation so they receive your message with their
-            link.{" "}
+            Stay confirmed; email failed. Reply in chat.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
@@ -560,10 +558,8 @@ export default async function StaffCalendarPage({
         ) : null}
         {icalSynced !== undefined && !icalFailed ? (
           <p className="form-message form-message--success" role="status">
-            Channel calendars updated
-            {icalFeeds ? ` (${icalFeeds} feed${icalFeeds === "1" ? "" : "s"})` : ""}.{" "}
-            {icalSynced} stay{icalSynced === "1" ? "" : "s"} on the board. Check dates and room
-            numbers.{" "}
+            Synced{icalFeeds ? ` · ${icalFeeds} feed${icalFeeds === "1" ? "" : "s"}` : ""}
+            {icalSynced ? ` · ${icalSynced} stay${icalSynced === "1" ? "" : "s"}` : ""}.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
@@ -571,20 +567,15 @@ export default async function StaffCalendarPage({
         ) : null}
         {icalFailed ? (
           <p className="form-message form-message--error" role="alert">
-            Channel sync partially finished: {icalSynced ?? "0"} stay
-            {icalSynced === "1" ? "" : "s"} from {icalFeeds ?? "0"} feed
-            {icalFeeds === "1" ? "" : "s"} updated; {icalFailed} feed
-            {icalFailed === "1" ? "" : "s"} failed
-            {icalError ? ` (${decodeURIComponent(icalError)})` : ""}. Try Sync again, or check
-            the feed URLs under Settings → Calendars.{" "}
+            Sync partial · {icalSynced ?? "0"} ok, {icalFailed} failed
+            {icalError ? ` · ${decodeURIComponent(icalError)}` : ""}.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
           </p>
         ) : icalError ? (
           <p className="form-message form-message--error" role="alert">
-            Channel sync didn’t finish: {decodeURIComponent(icalError)}. Try Sync again, or check
-            the feed URLs under Settings → Calendars.{" "}
+            Sync failed · {decodeURIComponent(icalError)}.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
@@ -592,7 +583,7 @@ export default async function StaffCalendarPage({
         ) : null}
         {icalWarning ? (
           <p className="form-message form-message--setup" role="status">
-            Channel sync note: {decodeURIComponent(icalWarning)}. Existing stays were kept.{" "}
+            Sync note · {decodeURIComponent(icalWarning)}.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>

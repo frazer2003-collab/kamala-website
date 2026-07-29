@@ -110,13 +110,13 @@ function MetricRowLabel({
 
 function overrideCueTitle(hasAllotment: boolean, hasRate: boolean) {
   if (hasAllotment && hasRate) {
-    return "Temporary allotment and rate";
+    return "Allotment + rate";
   }
   if (hasAllotment) {
-    return "Temporary allotment";
+    return "Allotment";
   }
   if (hasRate) {
-    return "Temporary rate";
+    return "Rate";
   }
   return undefined;
 }
@@ -261,7 +261,7 @@ function DoorReservationRow({
             const ariaCue = cueTitle ? `, ${cueTitle.toLowerCase()}` : "";
             return (
               <Link
-                aria-label={`#${unit.number}, ${day.iso}: open day actions${ariaCue}`}
+                aria-label={`#${unit.number}, ${day.iso}${ariaCue}`}
                 className={dayClass}
                 href={dayHref}
                 key={`door-${unit.id}-bg-${day.iso}`}
@@ -269,7 +269,7 @@ function DoorReservationRow({
                 title={cueTitle}
               >
                 {cues}
-                <span className="sr-only">Open day actions</span>
+                <span className="sr-only">Day actions</span>
               </Link>
             );
           }
@@ -375,13 +375,13 @@ function UnassignedReservationRow({
 
   return (
     <div
-      aria-label="Stays that need a room number"
+      aria-label="Needs room #"
       className="extranet-doors__unassigned"
       style={{ ["--timeline-days" as string]: dayCount }}
     >
       <MetricRowLabel className="extranet-row__label--needs-room">
-        Needs room #
-        <span className="extranet-row__meta">{unassignedCount} waiting</span>
+        No #
+        <span className="extranet-row__meta">{unassignedCount}</span>
       </MetricRowLabel>
       <div
         className={[
@@ -439,7 +439,7 @@ function UnassignedReservationRow({
             canManage && Boolean(stayId) && bar.needsRoom && bar.showLabel;
           const detailHref = getTimelineBarHref(bar, monthKey, rangeQuery);
           const sublabel = typeLabel
-            ? `${typeLabel} · Needs room #`
+            ? `${typeLabel} · No #`
             : bar.sublabel;
 
           return (
@@ -642,7 +642,7 @@ export function StaffTimelineCalendar({
       }}
     >
       <CalendarJumpToToday />
-      <h2 className="sr-only">Room numbers by day</h2>
+      <h2 className="sr-only">Doors by day</h2>
       <div className="staff-extranet__scroll" id="calendar-today" ref={scrollRef}>
         <div
           className="staff-extranet__dates"
@@ -723,7 +723,7 @@ export function StaffTimelineCalendar({
             ))
           ) : (
             <p className="extranet-doors__empty">
-              No room numbers set up yet. Add them under Settings → Rooms.
+              No doors yet. Add them in Settings → Rooms.
             </p>
           )}
         </div>

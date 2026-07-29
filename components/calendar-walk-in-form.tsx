@@ -48,19 +48,19 @@ function addIsoDays(iso: string, days: number) {
 function walkInErrorCopy(code?: string) {
   switch (code) {
     case "past-date":
-      return "New bookings can only start from today onward.";
+      return "Start from today.";
     case "invalid-name":
-      return "Enter the guest name before saving the booking.";
+      return "Enter guest name.";
     case "invalid-phone":
-      return "Enter a valid phone number with at least 7 digits, or leave phone blank.";
+      return "Phone needs 7+ digits, or leave blank.";
     case "invalid-email":
-      return "Enter a valid email, or leave blank if the guest has no email.";
+      return "Enter a valid email, or leave blank.";
     case "invalid-dates":
-      return `Choose a valid date range (${MIN_STAY_NIGHTS}–${MAX_STAY_NIGHTS} nights).`;
+      return `Pick ${MIN_STAY_NIGHTS}–${MAX_STAY_NIGHTS} nights.`;
     case "invalid-custom-total":
-      return "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates.";
+      return "Stay total must be 0 or more, or leave blank.";
     case "invalid-source":
-      return "Choose a booking source.";
+      return "Choose a source.";
     case "capacity-verify-failed":
     case "unavailable":
     case "no-assignable-door":
@@ -171,12 +171,7 @@ export function CalendarWalkInForm({
   return (
     <>
       <p className="calendar-day-panel__intro">
-        Add a confirmed booking for <strong>{roomName}</strong>, starting{" "}
-        {new Intl.DateTimeFormat("en", {
-          month: "short",
-          day: "numeric",
-        }).format(new Date(`${date}T00:00:00`))}
-        .
+        Book · <strong>{roomName}</strong>
       </p>
       {displayError ? (
         <p className="form-message form-message--error" role="alert">
@@ -190,7 +185,7 @@ export function CalendarWalkInForm({
         {showEmail ? <input name="show-email" type="hidden" value="1" /> : null}
         {showTotal ? <input name="show-total" type="hidden" value="1" /> : null}
         <div className="field-pair">
-          <label htmlFor="walk-in-guest-name">Guest name</label>
+          <label htmlFor="walk-in-guest-name">Guest</label>
           <input
             aria-invalid={nameInvalid || undefined}
             autoComplete="name"
@@ -204,7 +199,7 @@ export function CalendarWalkInForm({
           />
         </div>
         <div className="field-pair">
-          <label htmlFor="walk-in-guest-phone">Phone number (optional)</label>
+          <label htmlFor="walk-in-guest-phone">Phone</label>
           <input
             aria-invalid={phoneInvalid || undefined}
             autoComplete="tel"
@@ -248,14 +243,14 @@ export function CalendarWalkInForm({
 
         {quoteLabel ? (
           <p className="detail-help" id="walk-in-quote">
-            Usual rate for these dates: <strong>{quoteLabel}</strong>
+            Usual rate: <strong>{quoteLabel}</strong>
             {quote.hasPromotion ? " (includes promo nights)" : ""}.
           </p>
         ) : null}
 
         {showEmail ? (
           <div className="field-pair">
-            <label htmlFor="walk-in-guest-email">Email (optional)</label>
+            <label htmlFor="walk-in-guest-email">Email</label>
             <input
               aria-describedby={emailHelpId}
               aria-invalid={emailInvalid || undefined}
@@ -345,7 +340,7 @@ export function CalendarWalkInForm({
         </div>
 
         <div className="field-pair field-pair--wide">
-          <label htmlFor="walk-in-note">Staff note</label>
+          <label htmlFor="walk-in-note">Note</label>
           <textarea
             disabled={!canManage || pending}
             id="walk-in-note"
@@ -360,14 +355,12 @@ export function CalendarWalkInForm({
             Back
           </Link>
           <button className="button button--primary" disabled={!canManage || pending} type="submit">
-            {pending ? "Saving…" : "Save booking"}
+            {pending ? "Saving…" : "Save"}
           </button>
         </div>
       </form>
       {!canManage ? (
-        <p className="detail-help">
-          Connect the site to save bookings from the calendar.
-        </p>
+        <p className="detail-help">Connect the site to book.</p>
       ) : null}
     </>
   );
