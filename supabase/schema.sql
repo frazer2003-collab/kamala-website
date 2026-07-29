@@ -135,15 +135,15 @@ create index if not exists room_unit_types_room_id_idx
 
 insert into public.room_units (number, sort_order)
 values
-  ('113', 10),
-  ('115', 20),
-  ('118', 30),
-  ('120', 40),
-  ('116', 45),
-  ('112', 50),
-  ('114', 60),
+  ('116', 10),
+  ('113', 20),
+  ('120', 30),
+  ('115', 40),
+  ('118', 50),
+  ('112', 60),
   ('117', 70),
-  ('119', 80)
+  ('119', 80),
+  ('114', 90)
 on conflict (number) do update
 set sort_order = excluded.sort_order;
 

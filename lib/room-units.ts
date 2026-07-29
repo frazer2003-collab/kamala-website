@@ -25,6 +25,22 @@ export const LOFT_UNIT_NUMBERS = ["114"] as const;
 /** Family Ground Floor — Airbnb iCal door 116. */
 export const GROUND_UNIT_NUMBERS = ["116"] as const;
 
+/**
+ * Staff door-chart row order (property walk order).
+ * Unknown doors sort after these, by type then number.
+ */
+export const TIMELINE_DOOR_CHART_ORDER = [
+  "116",
+  "113",
+  "120",
+  "115",
+  "118",
+  "112",
+  "117",
+  "119",
+  "114",
+] as const;
+
 /** Door number → room type ids (used to repair missing room_unit_types rows). */
 const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
   "113": ["courtyard"],
@@ -39,13 +55,16 @@ const DEFAULT_UNIT_ROOM_IDS: Record<string, string[]> = {
 };
 
 export const SAMPLE_ROOM_UNITS: RoomUnit[] = Object.entries(DEFAULT_UNIT_ROOM_IDS).map(
-  ([number, roomIds], index) => ({
-    id: `unit-${number}`,
-    number,
-    sortOrder: (index + 1) * 10,
-    roomIds,
-    icalExportToken: null,
-  }),
+  ([number, roomIds]) => {
+    const chartIndex = (TIMELINE_DOOR_CHART_ORDER as readonly string[]).indexOf(number);
+    return {
+      id: `unit-${number}`,
+      number,
+      sortOrder: chartIndex >= 0 ? (chartIndex + 1) * 10 : 1000,
+      roomIds,
+      icalExportToken: null,
+    };
+  },
 );
 
 type UnitQueryResult = {
@@ -95,10 +114,13 @@ export function getTimelineUnitsForRoomType(units: RoomUnit[], roomId: string) {
 }
 
 /**
- * Flat door list for the distilled tape chart — every physical room number,
- * sorted for glance scanning (not grouped by type).
+ * Flat door list for the distilled tape chart — every physical room number.
+ * Prefer property walk order; unknown doors fall back to type then number.
  */
-export function getTimelineDoorUnits(units: RoomUnit[]) {
+export function getTimelineDoorUnits(
+  units: RoomUnit[],
+  roomShortNameById?: ReadonlyMap<string, string>,
+) {
   const seen = new Set<string>();
   const doors: RoomUnit[] = [];
 
@@ -110,11 +132,73 @@ export function getTimelineDoorUnits(units: RoomUnit[]) {
     doors.push(unit);
   }
 
-  return doors.sort(
-    (left, right) =>
+  return doors.sort((left, right) => {
+    const chartDelta =
+      getTimelineDoorChartSortKey(left.number) - getTimelineDoorChartSortKey(right.number);
+    if (chartDelta !== 0) {
+      return chartDelta;
+    }
+    const typeDelta =
+      getTimelineDoorTypeSortKey(left, roomShortNameById) -
+      getTimelineDoorTypeSortKey(right, roomShortNameById);
+    if (typeDelta !== 0) {
+      return typeDelta;
+    }
+    return (
       left.number.localeCompare(right.number, undefined, { numeric: true }) ||
-      left.sortOrder - right.sortOrder,
-  );
+      left.sortOrder - right.sortOrder
+    );
+  });
+}
+
+/** Index in the property door chart; unknown doors sort after known ones. */
+export function getTimelineDoorChartSortKey(unitNumber: string) {
+  const index = (TIMELINE_DOOR_CHART_ORDER as readonly string[]).indexOf(unitNumber);
+  return index >= 0 ? index : TIMELINE_DOOR_CHART_ORDER.length;
+}
+
+/**
+ * Fallback door order for doors not in TIMELINE_DOOR_CHART_ORDER:
+ * Twin → Double → Deluxe → Family.
+ * Superior (double-or-twin) sorts with Twin; Family GF after Family balcony.
+ */
+export function getTimelineDoorTypeSortKey(
+  unit: RoomUnit,
+  roomShortNameById?: ReadonlyMap<string, string>,
+) {
+  const roomId = (getPrimaryRoomIdForUnit(unit) ?? "").toLowerCase();
+  const short = (
+    roomShortNameById?.get(roomId) ??
+    roomShortNameById?.get(getPrimaryRoomIdForUnit(unit) ?? "") ??
+    roomId
+  )
+    .toLowerCase()
+    .trim();
+
+  const label = `${short} ${roomId}`;
+
+  if (/\bgf\b/.test(label) || roomId === "ground" || short === "family gf") {
+    return 40;
+  }
+  if (roomId === "loft" || short === "family" || short.startsWith("family")) {
+    return 30;
+  }
+  if (roomId === "garden" || short.startsWith("deluxe")) {
+    return 20;
+  }
+  if (short.startsWith("double") || roomId === "double") {
+    return 10;
+  }
+  if (
+    short.startsWith("twin") ||
+    roomId === "twin" ||
+    roomId === "courtyard" ||
+    short.startsWith("superior")
+  ) {
+    return 0;
+  }
+
+  return 100;
 }
 
 /** Primary room type for day-panel links from a door row. */
