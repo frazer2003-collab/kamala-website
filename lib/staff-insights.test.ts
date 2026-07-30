@@ -7,6 +7,7 @@ import {
 import type { StaffBooking } from "@/lib/booking-requests";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
 import type { Room } from "@/lib/content";
+import type { RoomPromotionRate } from "@/lib/pricing";
 
 function booking(partial: Partial<StaffBooking> & Pick<StaffBooking, "roomId" | "arrivalDate" | "departureDate">): StaffBooking {
   return {
@@ -144,16 +145,34 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.rooms[0]?.nightsSold, 7); // 2 walk-in + 5 airbnb
     assert.equal(report.rooms[0]?.stayCount, 2);
     assert.equal(report.rooms[0]?.websiteRevenue, 1400);
+    assert.equal(report.rooms[0]?.channelRevenue, 3500); // 5 × 700
+    assert.equal(report.rooms[0]?.estimatedRevenue, 4900);
     assert.equal(report.rooms[1]?.roomId, "family");
     assert.equal(report.rooms[1]?.nightsSold, 3);
     assert.equal(report.rooms[1]?.websiteRevenue, 2700);
+    assert.equal(report.rooms[1]?.channelRevenue, 0);
     assert.equal(report.totals.nightsSold, 10);
     assert.equal(report.totals.stayCount, 3);
     assert.equal(report.totals.websiteRevenue, 4100);
+    assert.equal(report.totals.channelRevenue, 3500);
+    assert.equal(report.totals.estimatedRevenue, 7600);
     assert.ok(report.totals.occupancyPercent !== null);
   });
 
-  it("does not invent OTA revenue and ignores closed blocks", () => {
+  it("estimates channel money with the website quote rules and ignores closed blocks", () => {
+    const promotions: RoomPromotionRate[] = [
+      {
+        roomId: "superior",
+        startDate: "2026-07-01",
+        endDate: "2026-07-31",
+        percentOff: 10,
+      },
+    ];
+    const rateOverrides = new Map<string, number>([
+      ["family:2026-07-10", 1200],
+      ["family:2026-07-11", 1200],
+    ]);
+
     const report = buildStaffInsightsReport({
       year: 2026,
       month: 7,
@@ -164,6 +183,14 @@ describe("buildStaffInsightsReport", () => {
           roomId: "superior",
           startDate: "2026-07-01",
           endDate: "2026-07-03",
+        }),
+        channel({
+          id: "c2",
+          databaseId: "cdb2",
+          roomId: "family",
+          startDate: "2026-07-10",
+          endDate: "2026-07-12",
+          bookingSource: "booking",
         }),
       ],
       monthBlocks: [
@@ -185,11 +212,57 @@ describe("buildStaffInsightsReport", () => {
           roomNumber: null,
         },
       ],
+      promotions,
+      rateOverrides,
+    });
+
+    // Superior: 2 nights × 630 (10% off 700)
+    assert.equal(report.rooms.find((row) => row.roomId === "superior")?.nightsSold, 2);
+    assert.equal(report.rooms.find((row) => row.roomId === "superior")?.channelRevenue, 1260);
+    // Family: 2 nights × day override 1200
+    assert.equal(report.rooms.find((row) => row.roomId === "family")?.channelRevenue, 2400);
+    assert.equal(report.totals.websiteRevenue, 0);
+    assert.equal(report.totals.channelRevenue, 3660);
+    assert.equal(report.totals.estimatedRevenue, 3660);
+    assert.match(report.revenueNote, /quote|rate|promotion|channel/i);
+  });
+
+  it("falls back to quoted nights when a website stay has no saved total", () => {
+    const report = buildStaffInsightsReport({
+      year: 2026,
+      month: 7,
+      rooms,
+      bookings: [
+        booking({
+          roomId: "superior",
+          arrivalDate: "2026-07-01",
+          departureDate: "2026-07-04",
+          estimatedTotal: 0,
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.rooms[0]?.websiteRevenue, 2100); // 3 × 700
+    assert.equal(report.rooms[0]?.estimatedRevenue, 2100);
+  });
+
+  it("quotes only channel nights that fall inside the month", () => {
+    const report = buildStaffInsightsReport({
+      year: 2026,
+      month: 7,
+      rooms,
+      bookings: [],
+      channelBlocks: [
+        channel({
+          roomId: "superior",
+          startDate: "2026-06-28",
+          endDate: "2026-07-03",
+        }),
+      ],
     });
 
     assert.equal(report.rooms[0]?.nightsSold, 2);
-    assert.equal(report.rooms[0]?.websiteRevenue, 0);
-    assert.equal(report.totals.websiteRevenue, 0);
-    assert.match(report.revenueNote, /website/i);
+    assert.equal(report.rooms[0]?.channelRevenue, 1400); // Jul 1–2 only
   });
 });

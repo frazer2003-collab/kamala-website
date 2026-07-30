@@ -11,6 +11,11 @@ import {
 } from "@/lib/booking-source";
 import type { Room } from "@/lib/content";
 import {
+  eachStayNight,
+  getNightlyRateDetails,
+  type RoomPromotionRate,
+} from "@/lib/pricing";
+import {
   isChannelReservation,
   type StaffRoomBlock,
 } from "@/lib/room-blocks";
@@ -26,6 +31,8 @@ export type StaffInsightsRoomRow = {
   nightsSold: number;
   stayCount: number;
   websiteRevenue: number;
+  channelRevenue: number;
+  estimatedRevenue: number;
   sources: StaffInsightsSourceCount[];
 };
 
@@ -40,6 +47,8 @@ export type StaffInsightsReport = {
     nightsSold: number;
     stayCount: number;
     websiteRevenue: number;
+    channelRevenue: number;
+    estimatedRevenue: number;
     websiteStayCount: number;
     occupancyPercent: number | null;
     bookedNights: number;
@@ -76,6 +85,49 @@ export function countNightsInMonth(
   const start = new Date(`${visibleStart}T00:00:00`);
   const end = new Date(`${visibleLastNight}T00:00:00`);
   return Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+}
+
+/**
+ * Sum nightly rates for stay nights that fall inside the month,
+ * using the same quote rules as website bookings (day override → promo → base).
+ */
+export function estimateQuotedMoneyInMonth({
+  roomId,
+  baseRate,
+  arrival,
+  departure,
+  monthStart,
+  monthEnd,
+  promotions,
+  rateOverrides,
+}: {
+  roomId: string;
+  baseRate: number;
+  arrival: string;
+  departure: string;
+  monthStart: string;
+  monthEnd: string;
+  promotions: RoomPromotionRate[];
+  rateOverrides?: Map<string, number>;
+}) {
+  if (baseRate <= 0) {
+    return 0;
+  }
+
+  let total = 0;
+  for (const night of eachStayNight(arrival, departure)) {
+    if (night < monthStart || night > monthEnd) {
+      continue;
+    }
+    total += getNightlyRateDetails(
+      roomId,
+      night,
+      baseRate,
+      promotions,
+      rateOverrides,
+    ).rate;
+  }
+  return total;
 }
 
 function websiteSourceLabel(source: BookingSource | null) {
@@ -118,6 +170,8 @@ export function buildStaffInsightsReport({
   bookings,
   channelBlocks,
   monthBlocks = [],
+  promotions = [],
+  rateOverrides,
 }: {
   year: number;
   month: number;
@@ -126,6 +180,8 @@ export function buildStaffInsightsReport({
   channelBlocks: StaffRoomBlock[];
   /** Full month blocks; non-channel closed days are ignored for sold nights. */
   monthBlocks?: StaffRoomBlock[];
+  promotions?: RoomPromotionRate[];
+  rateOverrides?: Map<string, number>;
 }): StaffInsightsReport {
   const { monthStart, monthEnd } = getCalendarMonthBounds(year, month);
   const channelStays = [
@@ -146,6 +202,7 @@ export function buildStaffInsightsReport({
     let nightsSold = 0;
     let stayCount = 0;
     let websiteRevenue = 0;
+    let channelRevenue = 0;
 
     for (const booking of roomBookings) {
       const nights = countNightsInMonth(
@@ -162,6 +219,17 @@ export function buildStaffInsightsReport({
       bumpSource(sources, websiteSourceLabel(booking.bookingSource));
       if (booking.estimatedTotal > 0) {
         websiteRevenue += booking.estimatedTotal;
+      } else {
+        websiteRevenue += estimateQuotedMoneyInMonth({
+          roomId: room.id,
+          baseRate: room.rate,
+          arrival: booking.arrivalDate,
+          departure: booking.departureDate,
+          monthStart,
+          monthEnd,
+          promotions,
+          rateOverrides,
+        });
       }
     }
 
@@ -178,7 +246,19 @@ export function buildStaffInsightsReport({
       nightsSold += nights;
       stayCount += 1;
       bumpSource(sources, channelSourceLabel(stay));
+      channelRevenue += estimateQuotedMoneyInMonth({
+        roomId: room.id,
+        baseRate: room.rate,
+        arrival: stay.startDate,
+        departure: stay.endDate,
+        monthStart,
+        monthEnd,
+        promotions,
+        rateOverrides,
+      });
     }
+
+    const estimatedRevenue = websiteRevenue + channelRevenue;
 
     return {
       roomId: room.id,
@@ -186,6 +266,8 @@ export function buildStaffInsightsReport({
       nightsSold,
       stayCount,
       websiteRevenue,
+      channelRevenue,
+      estimatedRevenue,
       sources: [...sources.entries()]
         .map(([label, stays]) => ({ label, stays }))
         .sort((a, b) => b.stays - a.stays || a.label.localeCompare(b.label)),
@@ -195,7 +277,7 @@ export function buildStaffInsightsReport({
   rows.sort(
     (a, b) =>
       b.nightsSold - a.nightsSold ||
-      b.websiteRevenue - a.websiteRevenue ||
+      b.estimatedRevenue - a.estimatedRevenue ||
       a.roomName.localeCompare(b.roomName),
   );
 
@@ -211,6 +293,8 @@ export function buildStaffInsightsReport({
     nightsSold: rows.reduce((sum, row) => sum + row.nightsSold, 0),
     stayCount: rows.reduce((sum, row) => sum + row.stayCount, 0),
     websiteRevenue: rows.reduce((sum, row) => sum + row.websiteRevenue, 0),
+    channelRevenue: rows.reduce((sum, row) => sum + row.channelRevenue, 0),
+    estimatedRevenue: rows.reduce((sum, row) => sum + row.estimatedRevenue, 0),
     websiteStayCount: bookings.filter(
       (booking) =>
         countNightsInMonth(
@@ -234,6 +318,6 @@ export function buildStaffInsightsReport({
     rooms: rows,
     totals,
     revenueNote:
-      "Money counts website bookings with a saved stay total. Airbnb and other calendar channels count toward nights, not money.",
+      "Money uses saved website stay totals when available. Channel nights use the same quote as the website — room rate, day rates, and promotions — not the OTA payout.",
   };
 }

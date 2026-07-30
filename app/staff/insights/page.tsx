@@ -9,7 +9,12 @@ import {
 import { getConfirmedBookings } from "@/lib/booking-requests";
 import { formatMoneySuffix } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
+import {
+  buildRateLookup,
+  getRoomDayRatesForMonth,
+} from "@/lib/room-day-rates";
 import { getStaffCalendarBlocks } from "@/lib/room-blocks";
+import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
 import { requireStaffCalendarWrite } from "@/lib/staff-auth";
@@ -23,6 +28,17 @@ function stayLabel(count: number) {
 
 function nightLabel(count: number) {
   return count === 1 ? "1 night" : `${count} nights`;
+}
+
+function sourceLine(
+  sources: { label: string; stays: number }[],
+) {
+  return sources
+    .map(
+      (source) =>
+        `${source.label} · ${source.stays === 1 ? "1 stay" : `${source.stays} stays`}`,
+    )
+    .join(", ");
 }
 
 export default async function StaffInsightsPage({
@@ -41,18 +57,30 @@ export default async function StaffInsightsPage({
   const prevLabel = formatCalendarMonthLabel(prev.year, prev.month);
   const nextLabel = formatCalendarMonthLabel(next.year, next.month);
 
-  const [rooms, bookingsResult, blocksResult, settings, supabaseReady] =
-    await Promise.all([
-      getStaffRooms(),
-      getConfirmedBookings({ year, month }),
-      getStaffCalendarBlocks({ year, month }),
-      getPropertySettings(),
-      Promise.resolve(hasStaffSupabaseConfig()),
-    ]);
+  const [
+    rooms,
+    bookingsResult,
+    blocksResult,
+    settings,
+    promotions,
+    dayRatesResult,
+    supabaseReady,
+  ] = await Promise.all([
+    getStaffRooms(),
+    getConfirmedBookings({ year, month }),
+    getStaffCalendarBlocks({ year, month }),
+    getPropertySettings(),
+    getStaffRoomPromotions(),
+    getRoomDayRatesForMonth({ year, month }),
+    Promise.resolve(hasStaffSupabaseConfig()),
+  ]);
 
-  const warnings = [bookingsResult.error, blocksResult.error].filter(
-    (message): message is string => Boolean(message),
-  );
+  const warnings = [
+    bookingsResult.error,
+    blocksResult.error,
+    dayRatesResult.error,
+  ].filter((message): message is string => Boolean(message));
+
   const report = buildStaffInsightsReport({
     year,
     month,
@@ -60,19 +88,31 @@ export default async function StaffInsightsPage({
     bookings: bookingsResult.bookings,
     channelBlocks: blocksResult.channelBlocks,
     monthBlocks: blocksResult.monthBlocks,
+    promotions,
+    rateOverrides: buildRateLookup(dayRatesResult.entries),
   });
   const currency = settings.currency;
   const soldRooms = report.rooms.filter((row) => row.nightsSold > 0);
   const quietRooms = report.rooms.filter((row) => row.nightsSold === 0);
   const noRoomsConfigured = rooms.length === 0;
+  const occupancyLine =
+    report.totals.availableNights > 0
+      ? `${report.totals.bookedNights} of ${report.totals.availableNights} nights booked`
+      : null;
 
   return (
     <StaffShell current="insights">
-      <section className="staff-main staff-main--insights" aria-labelledby="staff-insights-title">
+      <section
+        className="staff-main staff-main--insights"
+        aria-labelledby="staff-insights-title"
+      >
         <div className="staff-header staff-header--compact staff-insights__header">
           <div className="staff-insights__intro">
-            <h1 id="staff-insights-title">Insights</h1>
-            <p>See which room types sold — from the website and every channel.</p>
+            <h1 id="staff-insights-title">Sold</h1>
+            <p>
+              Which rooms sold this month — nights and estimated money from every
+              channel.
+            </p>
           </div>
           <nav className="staff-insights__month" aria-label="Choose month">
             <Link
@@ -122,51 +162,6 @@ export default async function StaffInsightsPage({
               </p>
             ) : (
               <>
-                <div
-                  className="staff-insights__summary"
-                  role="region"
-                  aria-label="Month totals"
-                >
-                  <dl className="staff-insights__facts">
-                    <div>
-                      <dt>Nights sold</dt>
-                      <dd>{report.totals.nightsSold}</dd>
-                    </div>
-                    <div>
-                      <dt>Stays</dt>
-                      <dd>{report.totals.stayCount}</dd>
-                    </div>
-                    {report.totals.occupancyPercent !== null ? (
-                      <div>
-                        <dt>Occupancy</dt>
-                        <dd>{report.totals.occupancyPercent}%</dd>
-                      </div>
-                    ) : null}
-                    <div>
-                      <dt>Website money</dt>
-                      <dd>
-                        {report.totals.websiteRevenue > 0
-                          ? formatMoneySuffix(
-                              report.totals.websiteRevenue,
-                              currency,
-                            )
-                          : "—"}
-                      </dd>
-                    </div>
-                  </dl>
-                  {report.totals.websiteStayCount > 0 ? (
-                    <p className="staff-insights__summary-meta">
-                      From {stayLabel(report.totals.websiteStayCount)} booked on
-                      the website.
-                    </p>
-                  ) : (
-                    <p className="staff-insights__summary-meta">
-                      No website booking money for this month.
-                    </p>
-                  )}
-                  <p className="staff-insights__note">{report.revenueNote}</p>
-                </div>
-
                 {soldRooms.length === 0 ? (
                   <p className="staff-insights__empty" role="status">
                     Nothing sold in {report.monthLabel} yet. Confirmed stays that
@@ -178,11 +173,8 @@ export default async function StaffInsightsPage({
                     aria-label="Rooms ranked by nights sold"
                     role="list"
                   >
-                    {soldRooms.map((row, index) => (
+                    {soldRooms.map((row) => (
                       <li className="staff-insights__row" key={row.roomId}>
-                        <div className="staff-insights__rank" aria-hidden="true">
-                          {index + 1}
-                        </div>
                         <div className="staff-insights__row-main">
                           <h2>{row.roomName}</h2>
                           <p className="staff-insights__row-stats">
@@ -191,37 +183,31 @@ export default async function StaffInsightsPage({
                             <span>{stayLabel(row.stayCount)}</span>
                           </p>
                           {row.sources.length > 0 ? (
-                            <ul
-                              className="staff-insights__sources"
-                              role="list"
-                            >
-                              {row.sources.map((source) => (
-                                <li key={source.label}>
-                                  {source.label}{" "}
-                                  <span>
-                                    {source.stays === 1
-                                      ? "1 stay"
-                                      : `${source.stays} stays`}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
+                            <p className="staff-insights__sources">
+                              {sourceLine(row.sources)}
+                            </p>
                           ) : null}
                         </div>
                         <div className="staff-insights__row-money">
-                          {row.websiteRevenue > 0 ? (
+                          {row.estimatedRevenue > 0 ? (
                             <p>
                               <strong>
                                 {formatMoneySuffix(
-                                  row.websiteRevenue,
+                                  row.estimatedRevenue,
                                   currency,
                                 )}
                               </strong>
-                              <span>from website</span>
+                              {row.channelRevenue > 0 &&
+                              row.websiteRevenue === 0 ? (
+                                <span>estimated</span>
+                              ) : row.channelRevenue > 0 &&
+                                row.websiteRevenue > 0 ? (
+                                <span>incl. estimated channels</span>
+                              ) : null}
                             </p>
                           ) : (
                             <p className="staff-insights__row-money--quiet">
-                              <span>No website money</span>
+                              <span>No money figured</span>
                             </p>
                           )}
                         </div>
@@ -240,6 +226,30 @@ export default async function StaffInsightsPage({
                     </ul>
                   </div>
                 ) : null}
+
+                <div
+                  className="staff-insights__summary"
+                  role="region"
+                  aria-label="Month totals"
+                >
+                  <p className="staff-insights__summary-line">
+                    <span>
+                      {nightLabel(report.totals.nightsSold)}
+                      <span aria-hidden="true"> · </span>
+                      {stayLabel(report.totals.stayCount)}
+                    </span>
+                    {report.totals.estimatedRevenue > 0 ? (
+                      <span>
+                        {formatMoneySuffix(
+                          report.totals.estimatedRevenue,
+                          currency,
+                        )}
+                      </span>
+                    ) : null}
+                    {occupancyLine ? <span>{occupancyLine}</span> : null}
+                  </p>
+                  <p className="staff-insights__note">{report.revenueNote}</p>
+                </div>
               </>
             )}
           </>

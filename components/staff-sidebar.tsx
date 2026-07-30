@@ -37,7 +37,7 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
           aria-current={current === "insights" ? "page" : undefined}
           href="/staff/insights"
         >
-          Insights
+          Sold
         </Link>
         <Link
           aria-current={current === "promotions" ? "page" : undefined}
