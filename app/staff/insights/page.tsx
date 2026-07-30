@@ -161,60 +161,86 @@ export default async function StaffInsightsPage({
                 before you can see what sold.
               </p>
             ) : (
-              <>
-                {soldRooms.length === 0 ? (
-                  <p className="staff-insights__empty" role="status">
-                    Nothing sold in {report.monthLabel} yet. Confirmed stays that
-                    land in this month will appear here.
-                  </p>
-                ) : (
-                  <ol
-                    className="staff-insights__list"
-                    aria-label="Rooms ranked by nights sold"
-                    role="list"
+              <div className="staff-insights__body">
+                <div className="staff-insights__sold">
+                  {soldRooms.length === 0 ? (
+                    <p className="staff-insights__empty" role="status">
+                      Nothing sold in {report.monthLabel} yet. Confirmed stays
+                      that land in this month will appear here.
+                    </p>
+                  ) : (
+                    <ol
+                      className="staff-insights__list"
+                      aria-label="Rooms ranked by nights sold"
+                      role="list"
+                    >
+                      {soldRooms.map((row) => (
+                        <li className="staff-insights__row" key={row.roomId}>
+                          <div className="staff-insights__row-main">
+                            <h2>{row.roomName}</h2>
+                            <p className="staff-insights__row-stats">
+                              <span>{nightLabel(row.nightsSold)}</span>
+                              <span aria-hidden="true">·</span>
+                              <span>{stayLabel(row.stayCount)}</span>
+                            </p>
+                            {row.sources.length > 0 ? (
+                              <p className="staff-insights__sources">
+                                {sourceLine(row.sources)}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="staff-insights__row-money">
+                            {row.estimatedRevenue > 0 ? (
+                              <p>
+                                <strong>
+                                  {formatMoneySuffix(
+                                    row.estimatedRevenue,
+                                    currency,
+                                  )}
+                                </strong>
+                                {row.channelRevenue > 0 &&
+                                row.websiteRevenue === 0 ? (
+                                  <span>estimated</span>
+                                ) : row.channelRevenue > 0 &&
+                                  row.websiteRevenue > 0 ? (
+                                  <span>incl. estimated channels</span>
+                                ) : null}
+                              </p>
+                            ) : (
+                              <p className="staff-insights__row-money--quiet">
+                                <span>No money figured</span>
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+
+                  <div
+                    className="staff-insights__summary"
+                    role="region"
+                    aria-label="Month totals"
                   >
-                    {soldRooms.map((row) => (
-                      <li className="staff-insights__row" key={row.roomId}>
-                        <div className="staff-insights__row-main">
-                          <h2>{row.roomName}</h2>
-                          <p className="staff-insights__row-stats">
-                            <span>{nightLabel(row.nightsSold)}</span>
-                            <span aria-hidden="true">·</span>
-                            <span>{stayLabel(row.stayCount)}</span>
-                          </p>
-                          {row.sources.length > 0 ? (
-                            <p className="staff-insights__sources">
-                              {sourceLine(row.sources)}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="staff-insights__row-money">
-                          {row.estimatedRevenue > 0 ? (
-                            <p>
-                              <strong>
-                                {formatMoneySuffix(
-                                  row.estimatedRevenue,
-                                  currency,
-                                )}
-                              </strong>
-                              {row.channelRevenue > 0 &&
-                              row.websiteRevenue === 0 ? (
-                                <span>estimated</span>
-                              ) : row.channelRevenue > 0 &&
-                                row.websiteRevenue > 0 ? (
-                                <span>incl. estimated channels</span>
-                              ) : null}
-                            </p>
-                          ) : (
-                            <p className="staff-insights__row-money--quiet">
-                              <span>No money figured</span>
-                            </p>
+                    <p className="staff-insights__summary-line">
+                      <span>
+                        {nightLabel(report.totals.nightsSold)}
+                        <span aria-hidden="true"> · </span>
+                        {stayLabel(report.totals.stayCount)}
+                      </span>
+                      {report.totals.estimatedRevenue > 0 ? (
+                        <span>
+                          {formatMoneySuffix(
+                            report.totals.estimatedRevenue,
+                            currency,
                           )}
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                )}
+                        </span>
+                      ) : null}
+                      {occupancyLine ? <span>{occupancyLine}</span> : null}
+                    </p>
+                    <p className="staff-insights__note">{report.revenueNote}</p>
+                  </div>
+                </div>
 
                 {soldRooms.length > 0 && quietRooms.length > 0 ? (
                   <div className="staff-insights__quiet">
@@ -226,31 +252,7 @@ export default async function StaffInsightsPage({
                     </ul>
                   </div>
                 ) : null}
-
-                <div
-                  className="staff-insights__summary"
-                  role="region"
-                  aria-label="Month totals"
-                >
-                  <p className="staff-insights__summary-line">
-                    <span>
-                      {nightLabel(report.totals.nightsSold)}
-                      <span aria-hidden="true"> · </span>
-                      {stayLabel(report.totals.stayCount)}
-                    </span>
-                    {report.totals.estimatedRevenue > 0 ? (
-                      <span>
-                        {formatMoneySuffix(
-                          report.totals.estimatedRevenue,
-                          currency,
-                        )}
-                      </span>
-                    ) : null}
-                    {occupancyLine ? <span>{occupancyLine}</span> : null}
-                  </p>
-                  <p className="staff-insights__note">{report.revenueNote}</p>
-                </div>
-              </>
+              </div>
             )}
           </>
         )}
