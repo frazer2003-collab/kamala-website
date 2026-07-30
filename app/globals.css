@@ -4297,26 +4297,26 @@ textarea:focus {
   text-underline-offset: 0.12em;
 }
 
-.staff-main--insights .staff-header--compact,
-.staff-insights__header {
+.staff-main--sold .staff-header--compact,
+.staff-sold__header {
   align-items: flex-end;
   gap: var(--space-4) var(--space-6);
   flex-wrap: wrap;
   margin-bottom: var(--space-6);
 }
 
-.staff-insights__intro {
+.staff-sold__intro {
   min-width: 0;
   flex: 1 1 16rem;
   max-width: 36rem;
 }
 
-.staff-insights__intro p {
+.staff-sold__intro p {
   max-width: 42ch;
   overflow-wrap: anywhere;
 }
 
-.staff-insights__month {
+.staff-sold__month {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
@@ -4325,7 +4325,7 @@ textarea:focus {
   flex: 0 1 22rem;
 }
 
-.staff-insights__month-btn {
+.staff-sold__month-btn {
   min-height: 2.75rem;
   justify-content: center;
   gap: 0.35rem;
@@ -4333,15 +4333,15 @@ textarea:focus {
   white-space: nowrap;
 }
 
-.staff-insights__month-btn:first-child {
+.staff-sold__month-btn:first-child {
   justify-self: start;
 }
 
-.staff-insights__month-btn:last-child {
+.staff-sold__month-btn:last-child {
   justify-self: end;
 }
 
-.staff-insights__month-label {
+.staff-sold__month-label {
   margin: 0;
   min-width: 0;
   padding-inline: 0.25rem;
@@ -4352,19 +4352,19 @@ textarea:focus {
   text-wrap: balance;
 }
 
-.staff-insights__body {
+.staff-sold__body {
   display: grid;
   gap: var(--space-12);
   width: min(100%, 40rem);
 }
 
-.staff-insights__sold {
+.staff-sold__sold {
   display: grid;
   gap: var(--space-5);
   min-width: 0;
 }
 
-.staff-insights__summary {
+.staff-sold__summary {
   display: grid;
   gap: var(--space-2);
   max-width: 52ch;
@@ -4372,7 +4372,7 @@ textarea:focus {
   border-top: 1px solid var(--color-border);
 }
 
-.staff-insights__summary-line {
+.staff-sold__summary-line {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 0.85rem;
@@ -4383,12 +4383,12 @@ textarea:focus {
   line-height: 1.45;
 }
 
-.staff-insights__summary-line span {
+.staff-sold__summary-line span {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.staff-insights__note {
+.staff-sold__note {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.88rem;
@@ -4397,7 +4397,7 @@ textarea:focus {
   text-wrap: pretty;
 }
 
-.staff-insights__empty {
+.staff-sold__empty {
   margin: 0;
   max-width: 42ch;
   color: var(--color-muted);
@@ -4407,14 +4407,14 @@ textarea:focus {
   text-wrap: pretty;
 }
 
-.staff-insights__empty a {
+.staff-sold__empty a {
   color: var(--color-maroon-deep);
   font-weight: 750;
   text-decoration: underline;
   text-underline-offset: 0.14em;
 }
 
-.staff-insights__list {
+.staff-sold__list {
   /* Keep list semantics in Safari when markers are visually removed. */
   list-style: none;
   margin: 0;
@@ -4424,12 +4424,12 @@ textarea:focus {
   border-top: 1px solid var(--color-border);
 }
 
-.staff-insights__list > li::before,
-.staff-insights__quiet ul > li::before {
+.staff-sold__list > li::before,
+.staff-sold__quiet ul > li::before {
   content: "\200B";
 }
 
-.staff-insights__row {
+.staff-sold__row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(6.5rem, max-content);
   gap: var(--space-3) var(--space-5);
@@ -4438,17 +4438,17 @@ textarea:focus {
   border-bottom: 1px solid var(--color-border);
 }
 
-.staff-insights__row:first-child {
+.staff-sold__row:first-child {
   padding-top: var(--space-5);
 }
 
-.staff-insights__row-main {
+.staff-sold__row-main {
   min-width: 0;
   display: grid;
   gap: 0.2rem;
 }
 
-.staff-insights__row-main h2 {
+.staff-sold__row-main h2 {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
@@ -4458,7 +4458,7 @@ textarea:focus {
   text-wrap: balance;
 }
 
-.staff-insights__room-link {
+.staff-sold__room-link {
   color: inherit;
   text-decoration: underline;
   text-decoration-color: color-mix(in oklab, var(--color-border) 80%, transparent);
@@ -4466,12 +4466,24 @@ textarea:focus {
   text-decoration-thickness: 1px;
 }
 
-.staff-insights__room-link:hover {
+.staff-sold__room-link:hover {
   color: var(--color-maroon-deep);
   text-decoration-color: color-mix(in oklab, var(--color-maroon) 45%, transparent);
 }
 
-.staff-insights__row-stats {
+.staff-sold__room-link:focus-visible {
+  outline: 3px solid oklch(62% 0.22 12 / 0.45);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.staff-sold__quiet-link:focus-visible {
+  outline: 3px solid oklch(62% 0.22 12 / 0.45);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.staff-sold__row-stats {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0.45rem;
@@ -4482,7 +4494,7 @@ textarea:focus {
   line-height: 1.4;
 }
 
-.staff-insights__sources {
+.staff-sold__sources {
   margin: 0.15rem 0 0;
   max-width: 48ch;
   color: var(--color-muted);
@@ -4493,13 +4505,13 @@ textarea:focus {
   text-wrap: pretty;
 }
 
-.staff-insights__row-money {
+.staff-sold__row-money {
   min-width: 0;
   justify-self: end;
   text-align: right;
 }
 
-.staff-insights__row-money p {
+.staff-sold__row-money p {
   margin: 0;
   display: grid;
   gap: 0.1rem;
@@ -4509,33 +4521,33 @@ textarea:focus {
   line-height: 1.3;
 }
 
-.staff-insights__row-money strong {
+.staff-sold__row-money strong {
   overflow-wrap: anywhere;
 }
 
-.staff-insights__row-money span {
+.staff-sold__row-money span {
   color: var(--color-muted);
   font-size: 0.78rem;
   font-weight: 650;
 }
 
-.staff-insights__row-money--quiet span {
+.staff-sold__row-money--quiet span {
   color: var(--color-muted);
 }
 
-.staff-insights__quiet {
+.staff-sold__quiet {
   max-width: 36ch;
   padding-top: var(--space-1);
 }
 
-.staff-insights__quiet h2 {
+.staff-sold__quiet h2 {
   margin: 0 0 var(--space-3);
   font-size: 0.92rem;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
-.staff-insights__quiet ul {
+.staff-sold__quiet ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -4543,7 +4555,7 @@ textarea:focus {
   gap: var(--space-2);
 }
 
-.staff-insights__quiet li {
+.staff-sold__quiet li {
   color: var(--color-muted);
   font-size: 0.9rem;
   font-weight: 650;
@@ -4551,70 +4563,70 @@ textarea:focus {
   overflow-wrap: anywhere;
 }
 
-.staff-insights__quiet-link {
+.staff-sold__quiet-link {
   color: inherit;
   text-decoration: underline;
   text-decoration-color: transparent;
   text-underline-offset: 0.14em;
 }
 
-.staff-insights__quiet-link:hover {
+.staff-sold__quiet-link:hover {
   color: var(--color-maroon-deep);
   text-decoration-color: color-mix(in oklab, var(--color-maroon) 40%, transparent);
 }
 
 @media (max-width: 640px) {
-  .staff-main--insights .staff-header--compact,
-  .staff-insights__header {
+  .staff-main--sold .staff-header--compact,
+  .staff-sold__header {
     align-items: stretch;
     flex-direction: column;
     gap: var(--space-3);
     margin-bottom: var(--space-5);
   }
 
-  .staff-insights__intro {
+  .staff-sold__intro {
     max-width: none;
   }
 
-  .staff-insights__month {
+  .staff-sold__month {
     width: 100%;
     flex: none;
   }
 
-  .staff-insights__month-btn-text {
+  .staff-sold__month-btn-text {
     display: none;
   }
 
-  .staff-insights__month-btn {
+  .staff-sold__month-btn {
     min-width: 2.75rem;
     padding-inline: 0.85rem;
     font-size: 1.25rem;
     line-height: 1;
   }
 
-  .staff-insights__month-label {
+  .staff-sold__month-label {
     font-size: 1rem;
   }
 
-  .staff-insights__body {
+  .staff-sold__body {
     gap: var(--space-10);
     width: 100%;
   }
 
-  .staff-insights__row {
+  .staff-sold__row {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2);
     padding-block: var(--space-5);
   }
 
-  .staff-insights__row-money {
+  .staff-sold__row-money {
     justify-self: start;
     text-align: left;
   }
 }
 
 @media (pointer: coarse) {
-  .staff-insights__month-btn {
+  .staff-sold__month-btn {
     min-height: 2.75rem;
   }
 }

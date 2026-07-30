@@ -127,35 +127,35 @@ export default async function StaffSoldPage({
   return (
     <StaffShell current="sold">
       <section
-        className="staff-main staff-main--insights"
+        className="staff-main staff-main--sold"
         aria-labelledby="staff-sold-title"
       >
-        <div className="staff-header staff-header--compact staff-insights__header">
-          <div className="staff-insights__intro">
+        <div className="staff-header staff-header--compact staff-sold__header">
+          <div className="staff-sold__intro">
             <h1 id="staff-sold-title">Sold</h1>
             <p>
               Which rooms sold this month — nights and money from website stays
               and quoted channel nights.
             </p>
           </div>
-          <nav className="staff-insights__month" aria-label="Choose month">
+          <nav className="staff-sold__month" aria-label="Choose month">
             <Link
               aria-label={`Previous month, ${prevLabel}`}
-              className="button button--quiet staff-insights__month-btn"
+              className="button button--quiet staff-sold__month-btn"
               href={`/staff/sold?month=${prevKey}`}
             >
               <span aria-hidden="true">‹</span>
-              <span className="staff-insights__month-btn-text">{prevLabel}</span>
+              <span className="staff-sold__month-btn-text">{prevLabel}</span>
             </Link>
-            <p className="staff-insights__month-label" aria-live="polite">
+            <p className="staff-sold__month-label" aria-live="polite">
               {report.monthLabel}
             </p>
             <Link
               aria-label={`Next month, ${nextLabel}`}
-              className="button button--quiet staff-insights__month-btn"
+              className="button button--quiet staff-sold__month-btn"
               href={`/staff/sold?month=${nextKey}`}
             >
-              <span className="staff-insights__month-btn-text">{nextLabel}</span>
+              <span className="staff-sold__month-btn-text">{nextLabel}</span>
               <span aria-hidden="true">›</span>
             </Link>
           </nav>
@@ -179,53 +179,53 @@ export default async function StaffSoldPage({
             ))}
 
             {noRoomsConfigured ? (
-              <p className="staff-insights__empty" role="status">
+              <p className="staff-sold__empty" role="status">
                 No room types yet.{" "}
                 <Link href="/staff/settings/rooms">Add rooms in Settings</Link>{" "}
                 before you can see what sold.
               </p>
             ) : (
-              <div className="staff-insights__body">
-                <div className="staff-insights__sold">
+              <div className="staff-sold__body">
+                <div className="staff-sold__sold">
                   {soldRooms.length === 0 ? (
-                    <p className="staff-insights__empty" role="status">
+                    <p className="staff-sold__empty" role="status">
                       Nothing sold in {report.monthLabel} yet. Confirmed stays
                       that land in this month will appear here.
                     </p>
                   ) : (
                     <ol
-                      className="staff-insights__list"
+                      className="staff-sold__list"
                       aria-label="Rooms ranked by nights sold"
                       role="list"
                     >
                       {soldRooms.map((row) => {
                         const caption = moneyCaption(row);
                         return (
-                          <li className="staff-insights__row" key={row.roomId}>
-                            <div className="staff-insights__row-main">
+                          <li className="staff-sold__row" key={row.roomId}>
+                            <div className="staff-sold__row-main">
                               <h2>
                                 <Link
-                                  className="staff-insights__room-link"
+                                  className="staff-sold__room-link"
                                   href={calendarRoomHref(monthKey, row.roomId)}
                                 >
                                   {row.roomName}
                                   <span className="sr-only">
-                                    {` — open ${row.roomName} on the calendar for ${report.monthLabel}`}
+                                    {` (open on calendar for ${report.monthLabel})`}
                                   </span>
                                 </Link>
                               </h2>
-                              <p className="staff-insights__row-stats">
+                              <p className="staff-sold__row-stats">
                                 <span>{nightLabel(row.nightsSold)}</span>
                                 <span aria-hidden="true">·</span>
                                 <span>{stayLabel(row.stayCount)}</span>
                               </p>
                               {row.sources.length > 0 ? (
-                                <p className="staff-insights__sources">
+                                <p className="staff-sold__sources">
                                   {sourceLine(row.sources)}
                                 </p>
                               ) : null}
                             </div>
-                            <div className="staff-insights__row-money">
+                            <div className="staff-sold__row-money">
                               {row.estimatedRevenue > 0 && caption ? (
                                 <p>
                                   <strong>
@@ -237,7 +237,7 @@ export default async function StaffSoldPage({
                                   <span>{caption}</span>
                                 </p>
                               ) : (
-                                <p className="staff-insights__row-money--quiet">
+                                <p className="staff-sold__row-money--quiet">
                                   <span>No stay total yet</span>
                                 </p>
                               )}
@@ -249,11 +249,11 @@ export default async function StaffSoldPage({
                   )}
 
                   <div
-                    className="staff-insights__summary"
+                    className="staff-sold__summary"
                     role="region"
                     aria-label="Month totals"
                   >
-                    <p className="staff-insights__summary-line">
+                    <p className="staff-sold__summary-line">
                       <span>
                         {nightLabel(report.totals.nightsSold)}
                         <span aria-hidden="true"> · </span>
@@ -268,23 +268,23 @@ export default async function StaffSoldPage({
                         </span>
                       ) : null}
                     </p>
-                    <p className="staff-insights__note">{report.revenueNote}</p>
+                    <p className="staff-sold__note">{report.revenueNote}</p>
                   </div>
                 </div>
 
                 {soldRooms.length > 0 && quietRooms.length > 0 ? (
-                  <div className="staff-insights__quiet">
+                  <div className="staff-sold__quiet">
                     <h2>Didn’t sell this month</h2>
                     <ul role="list">
                       {quietRooms.map((row) => (
                         <li key={row.roomId}>
                           <Link
-                            className="staff-insights__quiet-link"
+                            className="staff-sold__quiet-link"
                             href={calendarRoomHref(monthKey, row.roomId)}
                           >
                             {row.roomName}
                             <span className="sr-only">
-                              {` — open ${row.roomName} on the calendar for ${report.monthLabel}`}
+                              {` (open on calendar for ${report.monthLabel})`}
                             </span>
                           </Link>
                         </li>
