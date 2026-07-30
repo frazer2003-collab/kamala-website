@@ -83,7 +83,7 @@ export default async function StaffInsightsPage({
               <span aria-hidden="true">‹</span>
               <span className="staff-insights__month-btn-text">{prevLabel}</span>
             </Link>
-            <p className="staff-insights__month-label" aria-current="date">
+            <p className="staff-insights__month-label" aria-live="polite">
               {report.monthLabel}
             </p>
             <Link
@@ -102,121 +102,146 @@ export default async function StaffInsightsPage({
             Booking data isn’t connected yet. Finish Supabase setup, then reload
             this page.
           </p>
-        ) : null}
-
-        {warnings.map((message) => (
-          <p className="form-message form-message--warning" key={message} role="status">
-            {message} Some numbers may be missing — try again in a moment.
-          </p>
-        ))}
-
-        {noRoomsConfigured ? (
-          <p className="staff-insights__empty" role="status">
-            No room types yet.{" "}
-            <Link href="/staff/settings/rooms">Add rooms in Settings</Link>{" "}
-            before you can see what sold.
-          </p>
         ) : (
           <>
-            <div className="staff-insights__summary" role="region" aria-label="Month totals">
-              <dl className="staff-insights__facts">
-                <div>
-                  <dt>Nights sold</dt>
-                  <dd>{report.totals.nightsSold}</dd>
-                </div>
-                <div>
-                  <dt>Stays</dt>
-                  <dd>{report.totals.stayCount}</dd>
-                </div>
-                {report.totals.occupancyPercent !== null ? (
-                  <div>
-                    <dt>Occupancy</dt>
-                    <dd>{report.totals.occupancyPercent}%</dd>
-                  </div>
-                ) : null}
-                <div>
-                  <dt>Website money</dt>
-                  <dd>
-                    {report.totals.websiteRevenue > 0
-                      ? formatMoneySuffix(report.totals.websiteRevenue, currency)
-                      : "—"}
-                  </dd>
-                </div>
-              </dl>
-              {report.totals.websiteStayCount > 0 ? (
-                <p className="staff-insights__summary-meta">
-                  From {stayLabel(report.totals.websiteStayCount)} booked on the
-                  website.
-                </p>
-              ) : (
-                <p className="staff-insights__summary-meta">
-                  No website booking money for this month.
-                </p>
-              )}
-              <p className="staff-insights__note">{report.revenueNote}</p>
-            </div>
+            {warnings.map((message) => (
+              <p
+                className="form-message form-message--warning"
+                key={message}
+                role="status"
+              >
+                {message} Some numbers may be missing — try again in a moment.
+              </p>
+            ))}
 
-            {soldRooms.length === 0 ? (
+            {noRoomsConfigured ? (
               <p className="staff-insights__empty" role="status">
-                Nothing sold in {report.monthLabel} yet. Confirmed stays that land
-                in this month will appear here.
+                No room types yet.{" "}
+                <Link href="/staff/settings/rooms">Add rooms in Settings</Link>{" "}
+                before you can see what sold.
               </p>
             ) : (
-              <ol className="staff-insights__list" aria-label="Rooms ranked by nights sold">
-                {soldRooms.map((row, index) => (
-                  <li className="staff-insights__row" key={row.roomId}>
-                    <div className="staff-insights__rank" aria-hidden="true">
-                      {index + 1}
+              <>
+                <div
+                  className="staff-insights__summary"
+                  role="region"
+                  aria-label="Month totals"
+                >
+                  <dl className="staff-insights__facts">
+                    <div>
+                      <dt>Nights sold</dt>
+                      <dd>{report.totals.nightsSold}</dd>
                     </div>
-                    <div className="staff-insights__row-main">
-                      <h2>{row.roomName}</h2>
-                      <p className="staff-insights__row-stats">
-                        <span>{nightLabel(row.nightsSold)}</span>
-                        <span aria-hidden="true">·</span>
-                        <span>{stayLabel(row.stayCount)}</span>
-                      </p>
-                      {row.sources.length > 0 ? (
-                        <ul className="staff-insights__sources">
-                          {row.sources.map((source) => (
-                            <li key={source.label}>
-                              {source.label}{" "}
-                              <span>
-                                {source.stays === 1 ? "1 stay" : `${source.stays} stays`}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
+                    <div>
+                      <dt>Stays</dt>
+                      <dd>{report.totals.stayCount}</dd>
                     </div>
-                    <div className="staff-insights__row-money">
-                      {row.websiteRevenue > 0 ? (
-                        <p>
-                          <strong>
-                            {formatMoneySuffix(row.websiteRevenue, currency)}
-                          </strong>
-                          <span>from website</span>
-                        </p>
-                      ) : (
-                        <p className="staff-insights__row-money--quiet">
-                          <span>No website money</span>
-                        </p>
-                      )}
+                    {report.totals.occupancyPercent !== null ? (
+                      <div>
+                        <dt>Occupancy</dt>
+                        <dd>{report.totals.occupancyPercent}%</dd>
+                      </div>
+                    ) : null}
+                    <div>
+                      <dt>Website money</dt>
+                      <dd>
+                        {report.totals.websiteRevenue > 0
+                          ? formatMoneySuffix(
+                              report.totals.websiteRevenue,
+                              currency,
+                            )
+                          : "—"}
+                      </dd>
                     </div>
-                  </li>
-                ))}
-              </ol>
-            )}
+                  </dl>
+                  {report.totals.websiteStayCount > 0 ? (
+                    <p className="staff-insights__summary-meta">
+                      From {stayLabel(report.totals.websiteStayCount)} booked on
+                      the website.
+                    </p>
+                  ) : (
+                    <p className="staff-insights__summary-meta">
+                      No website booking money for this month.
+                    </p>
+                  )}
+                  <p className="staff-insights__note">{report.revenueNote}</p>
+                </div>
 
-            {soldRooms.length > 0 && quietRooms.length > 0 ? (
-              <div className="staff-insights__quiet">
-                <h2>Didn’t sell this month</h2>
-                <ul>
-                  {quietRooms.map((row) => (
-                    <li key={row.roomId}>{row.roomName}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+                {soldRooms.length === 0 ? (
+                  <p className="staff-insights__empty" role="status">
+                    Nothing sold in {report.monthLabel} yet. Confirmed stays that
+                    land in this month will appear here.
+                  </p>
+                ) : (
+                  <ol
+                    className="staff-insights__list"
+                    aria-label="Rooms ranked by nights sold"
+                    role="list"
+                  >
+                    {soldRooms.map((row, index) => (
+                      <li className="staff-insights__row" key={row.roomId}>
+                        <div className="staff-insights__rank" aria-hidden="true">
+                          {index + 1}
+                        </div>
+                        <div className="staff-insights__row-main">
+                          <h2>{row.roomName}</h2>
+                          <p className="staff-insights__row-stats">
+                            <span>{nightLabel(row.nightsSold)}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{stayLabel(row.stayCount)}</span>
+                          </p>
+                          {row.sources.length > 0 ? (
+                            <ul
+                              className="staff-insights__sources"
+                              role="list"
+                            >
+                              {row.sources.map((source) => (
+                                <li key={source.label}>
+                                  {source.label}{" "}
+                                  <span>
+                                    {source.stays === 1
+                                      ? "1 stay"
+                                      : `${source.stays} stays`}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                        <div className="staff-insights__row-money">
+                          {row.websiteRevenue > 0 ? (
+                            <p>
+                              <strong>
+                                {formatMoneySuffix(
+                                  row.websiteRevenue,
+                                  currency,
+                                )}
+                              </strong>
+                              <span>from website</span>
+                            </p>
+                          ) : (
+                            <p className="staff-insights__row-money--quiet">
+                              <span>No website money</span>
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+
+                {soldRooms.length > 0 && quietRooms.length > 0 ? (
+                  <div className="staff-insights__quiet">
+                    <h2>Didn’t sell this month</h2>
+                    <ul role="list">
+                      {quietRooms.map((row) => (
+                        <li key={row.roomId}>{row.roomName}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </>
+            )}
           </>
         )}
       </section>

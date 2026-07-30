@@ -4422,12 +4422,19 @@ textarea:focus {
 }
 
 .staff-insights__list {
+  /* Keep list semantics in Safari when markers are visually removed. */
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   gap: 0;
   border-top: 1px solid var(--color-border);
+}
+
+.staff-insights__list > li::before,
+.staff-insights__sources > li::before,
+.staff-insights__quiet ul > li::before {
+  content: "\200B";
 }
 
 .staff-insights__row {
@@ -4528,7 +4535,7 @@ textarea:focus {
 }
 
 .staff-insights__row-money--quiet span {
-  color: var(--color-soft);
+  color: var(--color-muted);
 }
 
 .staff-insights__quiet {
