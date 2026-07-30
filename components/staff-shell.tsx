@@ -3,7 +3,13 @@ import { StaffBusyRoot } from "@/components/staff-busy";
 import { StaffSidebar } from "@/components/staff-sidebar";
 
 type StaffShellProps = {
-  current: "requests" | "calendar" | "promotions" | "gallery" | "settings";
+  current:
+    | "requests"
+    | "calendar"
+    | "insights"
+    | "promotions"
+    | "gallery"
+    | "settings";
   children: ReactNode;
 };
 
