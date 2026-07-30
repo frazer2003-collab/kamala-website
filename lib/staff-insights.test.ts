@@ -224,7 +224,7 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.totals.websiteRevenue, 0);
     assert.equal(report.totals.channelRevenue, 3660);
     assert.equal(report.totals.estimatedRevenue, 3660);
-    assert.match(report.revenueNote, /quote|rate|promotion|channel/i);
+    assert.match(report.revenueNote, /website|quote|channel|payout/i);
   });
 
   it("falls back to quoted nights when a website stay has no saved total", () => {

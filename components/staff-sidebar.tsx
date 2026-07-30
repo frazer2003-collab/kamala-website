@@ -5,7 +5,7 @@ type StaffSidebarProps = {
   current:
     | "requests"
     | "calendar"
-    | "insights"
+    | "sold"
     | "promotions"
     | "gallery"
     | "settings";
@@ -34,8 +34,8 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
           Calendar
         </Link>
         <Link
-          aria-current={current === "insights" ? "page" : undefined}
-          href="/staff/insights"
+          aria-current={current === "sold" ? "page" : undefined}
+          href="/staff/sold"
         >
           Sold
         </Link>

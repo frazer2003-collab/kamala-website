@@ -318,6 +318,6 @@ export function buildStaffInsightsReport({
     rooms: rows,
     totals,
     revenueNote:
-      "Money uses saved website stay totals when available. Channel nights use the same quote as the website — room rate, day rates, and promotions — not the OTA payout.",
+      "Website money uses the full stay total when a stay overlaps this month. Channel nights use the website quote for nights in this month (room rate, day rates, promotions) — not the OTA payout.",
   };
 }

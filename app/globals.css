@@ -4458,6 +4458,19 @@ textarea:focus {
   text-wrap: balance;
 }
 
+.staff-insights__room-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-border) 80%, transparent);
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 1px;
+}
+
+.staff-insights__room-link:hover {
+  color: var(--color-maroon-deep);
+  text-decoration-color: color-mix(in oklab, var(--color-maroon) 45%, transparent);
+}
+
 .staff-insights__row-stats {
   display: flex;
   flex-wrap: wrap;
@@ -4536,6 +4549,18 @@ textarea:focus {
   font-weight: 650;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.staff-insights__quiet-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.14em;
+}
+
+.staff-insights__quiet-link:hover {
+  color: var(--color-maroon-deep);
+  text-decoration-color: color-mix(in oklab, var(--color-maroon) 40%, transparent);
 }
 
 @media (max-width: 640px) {
