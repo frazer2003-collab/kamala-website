@@ -2,7 +2,13 @@ import Link from "next/link";
 import { StaffLogoutForm } from "@/components/staff-logout-form";
 
 type StaffSidebarProps = {
-  current: "requests" | "calendar" | "promotions" | "gallery" | "settings";
+  current:
+    | "requests"
+    | "calendar"
+    | "sold"
+    | "promotions"
+    | "gallery"
+    | "settings";
 };
 
 export function StaffSidebar({ current }: StaffSidebarProps) {
@@ -26,6 +32,12 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
           href="/staff/calendar"
         >
           Calendar
+        </Link>
+        <Link
+          aria-current={current === "sold" ? "page" : undefined}
+          href="/staff/sold"
+        >
+          Sold
         </Link>
         <Link
           aria-current={current === "promotions" ? "page" : undefined}
