@@ -234,6 +234,6 @@ export function buildStaffInsightsReport({
     rooms: rows,
     totals,
     revenueNote:
-      "Money totals only include website bookings with a saved stay total. Channel stays (Airbnb, Booking.com, Expedia) count toward nights sold, not revenue.",
+      "Money counts website bookings with a saved stay total. Airbnb and other calendar channels count toward nights, not money.",
   };
 }
