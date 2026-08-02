@@ -10,6 +10,17 @@ import type { StaffRoomBlock } from "@/lib/room-blocks";
 import { getStaffRoomBlockKey, isChannelReservation } from "@/lib/room-blocks";
 import { normalizeGuestColorKey } from "@/lib/booking-bar-colors";
 
+export type TimelineBarRange = {
+  startCol: number;
+  span: number;
+  /** Fraction of the first grid cell left empty (0 or 0.5). */
+  startInset: number;
+  /** Fraction of the last grid cell left empty (0 or 0.5). */
+  endInset: number;
+  continuesLeft: boolean;
+  continuesRight: boolean;
+};
+
 export type TimelineBar = {
   key: string;
   itemKey: string;
@@ -20,6 +31,8 @@ export type TimelineBar = {
   colorKey: string;
   startCol: number;
   span: number;
+  startInset: number;
+  endInset: number;
   lane: number;
   showLabel: boolean;
   compact: boolean;
@@ -29,63 +42,128 @@ export type TimelineBar = {
   needsRoom?: boolean;
 };
 
+/** Left edge of a stay bar in 0-based day fractions (check-in noon = n + 0.5). */
+export function timelineBarStartEdge(
+  bar: Pick<TimelineBarRange, "startCol" | "startInset">,
+) {
+  return bar.startCol - 1 + bar.startInset;
+}
+
+/** Right edge of a stay bar in 0-based day fractions (checkout noon = n + 0.5). */
+export function timelineBarEndEdge(
+  bar: Pick<TimelineBarRange, "startCol" | "span" | "endInset">,
+) {
+  return bar.startCol - 1 + bar.span - bar.endInset;
+}
+
+export function timelineBarVisualSpan(
+  bar: Pick<TimelineBarRange, "span" | "startInset" | "endInset">,
+) {
+  return bar.span - bar.startInset - bar.endInset;
+}
+
+/** CSS grid placement with mid-cell check-in / checkout insets. */
+export function getTimelineBarPlacementStyle(
+  bar: Pick<TimelineBarRange, "startCol" | "span" | "startInset" | "endInset"> & {
+    lane: number;
+  },
+) {
+  const visual = Math.max(timelineBarVisualSpan(bar), 0);
+  const widthPct = bar.span > 0 ? (visual / bar.span) * 100 : 100;
+  const startPct = bar.span > 0 ? (bar.startInset / bar.span) * 100 : 0;
+
+  return {
+    gridColumn: `${bar.startCol} / span ${bar.span}`,
+    ["--lane" as string]: bar.lane,
+    width: `${widthPct}%`,
+    marginInlineStart: `${startPct}%`,
+  };
+}
+
+/**
+ * Night columns a stay occupies for empty-day actions (arrival through last night).
+ * Departure-day morning halves do not block the afternoon cell action.
+ */
+export function timelineBarNightColumns(
+  bar: Pick<TimelineBarRange, "startCol" | "span" | "endInset">,
+) {
+  const lastNightCol =
+    bar.endInset > 0 ? bar.startCol + bar.span - 2 : bar.startCol + bar.span - 1;
+  const columns: number[] = [];
+
+  for (let column = bar.startCol; column <= lastNightCol; column += 1) {
+    columns.push(column);
+  }
+
+  return columns;
+}
+
 function addIsoDays(iso: string, days: number) {
   const date = new Date(`${iso}T00:00:00`);
   date.setDate(date.getDate() + days);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function getClippedBarRange(
+/**
+ * Stay bars run mid check-in cell → mid departure cell (hotel noon turnover).
+ * When clipped at the board edge, the open side fills the cell (no inset).
+ */
+export function getClippedBarRange(
   arrival: string,
   departure: string,
   calendarDays: CalendarDay[],
-) {
+): TimelineBarRange | null {
   const firstIso = calendarDays[0]?.iso;
   const lastIso = calendarDays[calendarDays.length - 1]?.iso;
 
-  if (!firstIso || !lastIso || departure <= firstIso || arrival >= departure) {
+  if (!firstIso || !lastIso || departure < firstIso || arrival > lastIso || arrival >= departure) {
     return null;
   }
 
   const visibleStart = arrival < firstIso ? firstIso : arrival;
-  const lastNight = addIsoDays(departure, -1);
-  const visibleLastNight = lastNight > lastIso ? lastIso : lastNight;
+  const visibleEnd = departure > lastIso ? lastIso : departure;
 
-  if (visibleStart > visibleLastNight) {
+  if (visibleStart > visibleEnd) {
     return null;
   }
 
   const startIdx = calendarDays.findIndex((day) => day.iso === visibleStart);
-  const endIdx = calendarDays.findIndex((day) => day.iso === visibleLastNight);
+  const endIdx = calendarDays.findIndex((day) => day.iso === visibleEnd);
 
   if (startIdx === -1 || endIdx === -1) {
     return null;
   }
 
+  const continuesLeft = arrival < firstIso;
+  const continuesRight = departure > addIsoDays(lastIso, 1);
+
   return {
     startCol: startIdx + 1,
     span: endIdx - startIdx + 1,
-    continuesLeft: arrival < firstIso,
-    continuesRight: departure > addIsoDays(lastIso, 1),
+    startInset: continuesLeft ? 0 : 0.5,
+    endInset: departure > lastIso ? 0 : 0.5,
+    continuesLeft,
+    continuesRight,
   };
 }
 
-function rangesOverlap(
-  a: { startCol: number; span: number },
-  b: { startCol: number; span: number },
-) {
-  return a.startCol < b.startCol + b.span && b.startCol < a.startCol + a.span;
+function rangesOverlap(a: TimelineBarRange, b: TimelineBarRange) {
+  return (
+    timelineBarStartEdge(a) < timelineBarEndEdge(b) &&
+    timelineBarStartEdge(b) < timelineBarEndEdge(a)
+  );
 }
 
 function assignTimelineLanes(bars: Omit<TimelineBar, "lane">[]): TimelineBar[] {
   const sorted = [...bars].sort((left, right) => {
-    if (left.startCol !== right.startCol) {
-      return left.startCol - right.startCol;
+    const startDelta = timelineBarStartEdge(left) - timelineBarStartEdge(right);
+    if (startDelta !== 0) {
+      return startDelta;
     }
 
-    return right.span - left.span;
+    return timelineBarVisualSpan(right) - timelineBarVisualSpan(left);
   });
-  const lanes: { startCol: number; span: number }[] = [];
+  const lanes: TimelineBarRange[] = [];
   const placed: TimelineBar[] = [];
 
   for (const bar of sorted) {
@@ -95,11 +173,22 @@ function assignTimelineLanes(bars: Omit<TimelineBar, "lane">[]): TimelineBar[] {
       lane += 1;
     }
 
-    lanes[lane] = { startCol: bar.startCol, span: bar.span };
+    lanes[lane] = {
+      startCol: bar.startCol,
+      span: bar.span,
+      startInset: bar.startInset,
+      endInset: bar.endInset,
+      continuesLeft: bar.continuesLeft,
+      continuesRight: bar.continuesRight,
+    };
     placed.push({ ...bar, lane });
   }
 
   return placed;
+}
+
+function isCompactBar(range: TimelineBarRange) {
+  return timelineBarVisualSpan(range) < 2;
 }
 
 export function buildRoomTimelineBars({
@@ -146,7 +235,7 @@ export function buildRoomTimelineBars({
           : "Direct",
       colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
-      compact: range.span < 2,
+      compact: isCompactBar(range),
       needsRoom,
       ...range,
     });
@@ -179,7 +268,7 @@ export function buildRoomTimelineBars({
           : channel,
       colorKey: normalizeGuestColorKey(label),
       showLabel: true,
-      compact: range.span < 2,
+      compact: isCompactBar(range),
       needsRoom,
       ...range,
     });
@@ -225,7 +314,7 @@ export function buildUnitTimelineBars({
       sublabel: "",
       colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
-      compact: range.span < 2,
+      compact: isCompactBar(range),
       ...range,
     });
   }
@@ -252,7 +341,7 @@ export function buildUnitTimelineBars({
       sublabel: reservation.guestName.trim() ? channel : "",
       colorKey: normalizeGuestColorKey(label),
       showLabel: true,
-      compact: range.span < 2,
+      compact: isCompactBar(range),
       ...range,
     });
   }

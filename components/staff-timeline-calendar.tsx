@@ -10,8 +10,10 @@ import {
   buildUnitTimelineBars,
   formatTimelineDayHeader,
   getTimelineBarHref,
+  getTimelineBarPlacementStyle,
   getTimelineDayHref,
   getTimelineLaneCount,
+  timelineBarNightColumns,
   type TimelineBar,
 } from "@/lib/calendar-timeline";
 import type { CalendarColors } from "@/lib/calendar-colors";
@@ -181,7 +183,7 @@ function DoorReservationRow({
   const occupiedColumns = useMemo(() => {
     const columns = new Set<number>();
     for (const bar of bars) {
-      for (let column = bar.startCol; column < bar.startCol + bar.span; column += 1) {
+      for (const column of timelineBarNightColumns(bar)) {
         columns.add(column);
       }
     }
@@ -304,8 +306,7 @@ function DoorReservationRow({
               key={bar.key}
               kind={bar.kind === "booking" ? "booking" : "block"}
               style={{
-                gridColumn: `${bar.startCol} / span ${bar.span}`,
-                ["--lane" as string]: bar.lane,
+                ...getTimelineBarPlacementStyle(bar),
                 ...getBarColorStyle(bar, guestColors),
               }}
             >
@@ -456,8 +457,7 @@ function UnassignedReservationRow({
                 .join(" ")}
               key={bar.key}
               style={{
-                gridColumn: `${bar.startCol} / span ${bar.span}`,
-                ["--lane" as string]: bar.lane,
+                ...getTimelineBarPlacementStyle(bar),
                 ...getBarColorStyle(bar, guestColors),
               }}
             >
