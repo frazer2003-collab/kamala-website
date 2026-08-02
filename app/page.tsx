@@ -21,8 +21,8 @@ import { getPublicRoomPromotions } from "@/lib/room-promotions";
 import { getRoomsStayAvailability } from "@/lib/stay-availability";
 import {
   buildHomeStaySearchParams,
-  parseStayDates,
   refreshStaleStayDates,
+  resolveHomeStayDates,
 } from "@/lib/stay-dates";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -59,8 +59,10 @@ export default async function Home({
     getPublicRoomPromotions(),
     getPropertySettings(),
   ]);
-  const stayDates = parseStayDates(arrival, departure);
-  const dateError = Boolean((arrival || departure) && !stayDates);
+  const {
+    stayDates,
+    dateError,
+  } = resolveHomeStayDates(arrival, departure);
   const stayAvailability = stayDates
     ? await getRoomsStayAvailability(rooms, stayDates.arrival, stayDates.departure)
     : null;
@@ -101,9 +103,9 @@ export default async function Home({
         <div className="hero hero--atmosphere">
           <HomeDateSearchSection
             addressLine={settings.addressLine}
-            arrival={arrival}
+            arrival={stayDates?.arrival ?? arrival}
             dateError={dateError}
-            departure={departure}
+            departure={stayDates?.departure ?? departure}
             propertyName={settings.propertyName}
             propertyTagline={settings.propertyTagline}
           />
