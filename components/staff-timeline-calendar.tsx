@@ -33,8 +33,10 @@ import {
   type StaffRoomBlock,
 } from "@/lib/room-blocks";
 import {
+  getKnownUnitIdSet,
   getPrimaryRoomIdForUnit,
   getTimelineDoorUnits,
+  stayNeedsRoomAssignment,
   type RoomUnit,
   type UnitOccupancy,
 } from "@/lib/room-units";
@@ -365,14 +367,19 @@ function UnassignedReservationRow({
         bookings,
         channelReservations,
         calendarDays,
+        units: roomUnits,
         unassignedOnly: true,
       }),
-    [bookings, channelReservations, calendarDays],
+    [bookings, channelReservations, calendarDays, roomUnits],
   );
   const laneCount = getTimelineLaneCount(bars);
+  const knownUnitIds = useMemo(() => getKnownUnitIdSet(roomUnits), [roomUnits]);
   const unassignedCount =
-    bookings.filter((booking) => !booking.roomUnitId).length +
-    channelReservations.filter((reservation) => !reservation.roomUnitId).length;
+    bookings.filter((booking) => stayNeedsRoomAssignment(booking, knownUnitIds))
+      .length +
+    channelReservations.filter((reservation) =>
+      stayNeedsRoomAssignment(reservation, knownUnitIds),
+    ).length;
 
   if (unassignedCount === 0) {
     return null;

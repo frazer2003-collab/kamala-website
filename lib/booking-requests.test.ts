@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   isCalendarBooking,
+  isInventoryHoldBooking,
   isPendingBooking,
   mapBookingRequest,
 } from "./booking-requests";
+import { bookingReservesRoom } from "./booking-reservation";
 import type { BookingRequestRow } from "./supabase";
 
 const bankClaimRow: BookingRequestRow = {
@@ -69,5 +71,36 @@ describe("staff booking requests", () => {
     });
 
     assert.equal(isCalendarBooking(unpaid), false);
+  });
+
+  it("puts payment holds on the calendar so they match guest Full", () => {
+    const pendingPayment = mapBookingRequest({
+      ...bankClaimRow,
+      status: "pending_payment",
+      deposit_paid_at: null,
+      bank_transfer_claimed_at: null,
+    });
+    const bankHold = mapBookingRequest(bankClaimRow);
+
+    assert.equal(isCalendarBooking(pendingPayment), true);
+    assert.equal(isInventoryHoldBooking(pendingPayment), true);
+    assert.equal(isCalendarBooking(bankHold), true);
+    assert.equal(isInventoryHoldBooking(bankHold), true);
+    assert.equal(
+      bookingReservesRoom({
+        status: pendingPayment.status,
+        deposit_paid_at: null,
+        bank_transfer_claimed_at: null,
+      }),
+      true,
+    );
+    assert.equal(
+      bookingReservesRoom({
+        status: bankHold.status,
+        deposit_paid_at: null,
+        bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z",
+      }),
+      true,
+    );
   });
 });

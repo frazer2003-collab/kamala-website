@@ -4,11 +4,35 @@ import {
   type CalendarDay,
 } from "@/lib/calendar";
 import type { StaffBooking } from "@/lib/booking-requests";
-import { getStaffBookingKey } from "@/lib/booking-requests";
+import {
+  getStaffBookingKey,
+  isInventoryHoldBooking,
+} from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
 import { getStaffRoomBlockKey, isChannelReservation } from "@/lib/room-blocks";
 import { normalizeGuestColorKey } from "@/lib/booking-bar-colors";
+import {
+  getKnownUnitIdSet,
+  stayNeedsRoomAssignment,
+  type RoomUnit,
+} from "@/lib/room-units";
+
+function inventoryHoldLabel(booking: StaffBooking) {
+  if (!isInventoryHoldBooking(booking)) {
+    return null;
+  }
+
+  if (booking.status === "pending_payment") {
+    return "Awaiting payment";
+  }
+
+  if (booking.bankTransferClaimed && !booking.depositPaid) {
+    return "Bank transfer hold";
+  }
+
+  return "Payment hold";
+}
 
 export type TimelineBarRange = {
   startCol: number;
@@ -195,20 +219,26 @@ export function buildRoomTimelineBars({
   bookings,
   channelReservations = [],
   calendarDays,
-  /** When true, only stays without a room number. */
+  units = [],
+  /** When true, only stays without a known door number. */
   unassignedOnly = false,
 }: {
   bookings: StaffBooking[];
   channelReservations?: StaffRoomBlock[];
   calendarDays: CalendarDay[];
+  /** Used to treat orphaned room_unit_id values as unassigned. */
+  units?: RoomUnit[];
   unassignedOnly?: boolean;
 }): TimelineBar[] {
   const bars: Omit<TimelineBar, "lane">[] = [];
+  const knownUnitIds = getKnownUnitIdSet(units);
   const visibleBookings = unassignedOnly
-    ? bookings.filter((booking) => !booking.roomUnitId)
+    ? bookings.filter((booking) => stayNeedsRoomAssignment(booking, knownUnitIds))
     : bookings;
   const visibleChannels = unassignedOnly
-    ? channelReservations.filter((reservation) => !reservation.roomUnitId)
+    ? channelReservations.filter((reservation) =>
+        stayNeedsRoomAssignment(reservation, knownUnitIds),
+      )
     : channelReservations;
 
   for (const booking of visibleBookings) {
@@ -222,21 +252,26 @@ export function buildRoomTimelineBars({
       continue;
     }
 
-    const needsRoom = !booking.roomUnitId;
+    const needsRoom = stayNeedsRoomAssignment(booking, knownUnitIds);
+    const hold = inventoryHoldLabel(booking);
     bars.push({
       key: `booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
       label: booking.guest,
       sublabel: needsRoom
-        ? "Needs room #"
-        : booking.roomNumber
-          ? `Room ${booking.roomNumber}`
-          : "Direct",
+        ? hold
+          ? `Needs room # · ${hold}`
+          : "Needs room #"
+        : hold
+          ? hold
+          : booking.roomNumber
+            ? `Room ${booking.roomNumber}`
+            : "Direct",
       colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
       compact: isCompactBar(range),
-      needsRoom,
+      needsRoom: needsRoom || Boolean(hold),
       ...range,
     });
   }
@@ -253,7 +288,7 @@ export function buildRoomTimelineBars({
     }
 
     const channel = reservation.channelLabel ?? "Channel";
-    const needsRoom = !reservation.roomUnitId;
+    const needsRoom = stayNeedsRoomAssignment(reservation, knownUnitIds);
     const label = reservation.guestName.trim() || channel;
 
     bars.push({
@@ -306,15 +341,17 @@ export function buildUnitTimelineBars({
       continue;
     }
 
+    const hold = inventoryHoldLabel(booking);
     bars.push({
       key: `unit-booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
       label: booking.guest,
-      sublabel: "",
+      sublabel: hold ?? "",
       colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
       compact: isCompactBar(range),
+      needsRoom: Boolean(hold),
       ...range,
     });
   }
