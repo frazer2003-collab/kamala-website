@@ -21,6 +21,7 @@ import {
   getConfirmedBookingById,
   getConfirmedBookings,
   getStaffBookingKey,
+  isInventoryHoldBooking,
 } from "@/lib/booking-requests";
 import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS } from "@/lib/stay-dates";
 import {
@@ -396,16 +397,25 @@ export default async function StaffCalendarPage({
                 booking.roomId === selectedRoom.id &&
                 bookingOccupiesDay(booking, selectedDate),
             )
-            .map((booking) => ({
-              key: getStaffBookingKey(booking),
-              href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
-              label: booking.guest,
-              sublabel: stayNeedsRoomAssignment(booking, knownUnitIds)
-                ? "Needs room # · direct"
+            .map((booking) => {
+              const hold =
+                booking.status === "pending_payment"
+                  ? "Awaiting payment"
+                  : booking.bankTransferClaimed && !booking.depositPaid
+                    ? "Bank transfer hold"
+                    : null;
+              const roomBit = stayNeedsRoomAssignment(booking, knownUnitIds)
+                ? "Needs room #"
                 : booking.roomNumber
-                  ? `Room ${booking.roomNumber} · direct`
-                  : "Direct",
-            })),
+                  ? `Room ${booking.roomNumber}`
+                  : "Direct";
+              return {
+                key: getStaffBookingKey(booking),
+                href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
+                label: booking.guest,
+                sublabel: hold ? `${roomBit} · ${hold}` : `${roomBit} · direct`,
+              };
+            }),
           ...calendarBlocks
             .filter(
               (block) =>

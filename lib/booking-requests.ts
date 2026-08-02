@@ -10,9 +10,12 @@ import {
 
 export const PENDING_BOOKING_STATUSES = ["awaiting", "needs-reply", "new"] as const;
 
-/** Confirmed stays, plus paid awaiting / needs-reply (guest replied; still on the tape). */
+/**
+ * Stays that hold guest inventory — must match `bookingReservesRoom` /
+ * `isCalendarBooking` so the tape never looks empty while the site says Full.
+ */
 export const CALENDAR_BOOKING_FILTER =
-  "status.eq.confirmed,and(status.eq.awaiting,deposit_paid_at.not.is.null),and(status.eq.needs-reply,deposit_paid_at.not.is.null)";
+  "status.eq.confirmed,status.eq.pending_payment,deposit_paid_at.not.is.null,bank_transfer_claimed_at.not.is.null";
 
 export type StaffBooking = Booking & {
   databaseId: string | null;
@@ -129,15 +132,49 @@ export function isPendingBooking(booking: StaffBooking) {
   );
 }
 
-export function isCalendarBooking(booking: Booking) {
-  if (booking.status === "confirmed") {
+/**
+ * Visible on the staff calendar tape. Keep in lockstep with
+ * `bookingReservesRoom` so payment holds are not invisible inventory.
+ */
+export function isCalendarBooking(
+  booking: Pick<Booking, "status" | "depositPaid"> & {
+    bankTransferClaimed?: boolean;
+  },
+) {
+  if (booking.status === "declined") {
+    return false;
+  }
+
+  if (booking.status === "pending_payment" || booking.status === "confirmed") {
     return true;
   }
 
-  return (
-    (booking.status === "awaiting" || booking.status === "needs-reply") &&
-    booking.depositPaid
-  );
+  if (booking.depositPaid) {
+    return true;
+  }
+
+  if (booking.bankTransferClaimed) {
+    return true;
+  }
+
+  return false;
+}
+
+/** Guest-facing hold that is not yet a paid/confirmed stay. */
+export function isInventoryHoldBooking(
+  booking: Pick<Booking, "status" | "depositPaid"> & {
+    bankTransferClaimed?: boolean;
+  },
+) {
+  if (!isCalendarBooking(booking)) {
+    return false;
+  }
+
+  if (booking.status === "pending_payment") {
+    return true;
+  }
+
+  return Boolean(booking.bankTransferClaimed && !booking.depositPaid);
 }
 
 function isConfirmedBooking(booking: Booking) {

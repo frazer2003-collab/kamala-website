@@ -4,7 +4,10 @@ import {
   type CalendarDay,
 } from "@/lib/calendar";
 import type { StaffBooking } from "@/lib/booking-requests";
-import { getStaffBookingKey } from "@/lib/booking-requests";
+import {
+  getStaffBookingKey,
+  isInventoryHoldBooking,
+} from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
 import { getStaffRoomBlockKey, isChannelReservation } from "@/lib/room-blocks";
@@ -14,6 +17,22 @@ import {
   stayNeedsRoomAssignment,
   type RoomUnit,
 } from "@/lib/room-units";
+
+function inventoryHoldLabel(booking: StaffBooking) {
+  if (!isInventoryHoldBooking(booking)) {
+    return null;
+  }
+
+  if (booking.status === "pending_payment") {
+    return "Awaiting payment";
+  }
+
+  if (booking.bankTransferClaimed && !booking.depositPaid) {
+    return "Bank transfer hold";
+  }
+
+  return "Payment hold";
+}
 
 export type TimelineBar = {
   key: string;
@@ -145,20 +164,25 @@ export function buildRoomTimelineBars({
     }
 
     const needsRoom = stayNeedsRoomAssignment(booking, knownUnitIds);
+    const hold = inventoryHoldLabel(booking);
     bars.push({
       key: `booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
       label: booking.guest,
       sublabel: needsRoom
-        ? "Needs room #"
-        : booking.roomNumber
-          ? `Room ${booking.roomNumber}`
-          : "Direct",
+        ? hold
+          ? `Needs room # · ${hold}`
+          : "Needs room #"
+        : hold
+          ? hold
+          : booking.roomNumber
+            ? `Room ${booking.roomNumber}`
+            : "Direct",
       colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
       compact: range.span < 2,
-      needsRoom,
+      needsRoom: needsRoom || Boolean(hold),
       ...range,
     });
   }
@@ -228,15 +252,17 @@ export function buildUnitTimelineBars({
       continue;
     }
 
+    const hold = inventoryHoldLabel(booking);
     bars.push({
       key: `unit-booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
       label: booking.guest,
-      sublabel: "",
+      sublabel: hold ?? "",
       colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,
       compact: range.span < 2,
+      needsRoom: Boolean(hold),
       ...range,
     });
   }

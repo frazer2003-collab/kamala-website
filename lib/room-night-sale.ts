@@ -83,6 +83,6 @@ export function formatRoomNightSaleReason(reason: RoomNightSaleReason): string |
     case "allotment-zero":
       return "Rooms to sell is 0 for this night. Door rows stay empty until allotment is raised.";
     case "sold-out":
-      return `Full: ${reason.netBooked} stay${reason.netBooked === 1 ? "" : "s"} against ${reason.roomsToSell} to sell. Check Needs room # above if this door looks empty.`;
+      return `Full: ${reason.netBooked} stay${reason.netBooked === 1 ? "" : "s"} against ${reason.roomsToSell} to sell. Check Needs room #, or a payment / bank-transfer hold on this type.`;
   }
 }
