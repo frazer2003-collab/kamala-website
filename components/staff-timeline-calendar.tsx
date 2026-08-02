@@ -114,13 +114,13 @@ function MetricRowLabel({
 
 function overrideCueTitle(hasAllotment: boolean, hasRate: boolean) {
   if (hasAllotment && hasRate) {
-    return "Allotment + rate";
+    return "Temporary allotment and rate";
   }
   if (hasAllotment) {
-    return "Allotment";
+    return "Temporary allotment";
   }
   if (hasRate) {
-    return "Rate";
+    return "Temporary rate";
   }
   return undefined;
 }
@@ -223,8 +223,7 @@ function DoorReservationRow({
             !isOccupied && primaryRoomId
               ? getTimelineDayHref(primaryRoomId, day.iso, monthKey, rangeQuery)
               : undefined;
-          const overrideKey =
-            primaryRoomId && dayHref ? `${primaryRoomId}:${day.iso}` : "";
+          const overrideKey = primaryRoomId ? `${primaryRoomId}:${day.iso}` : "";
           const hasAllotmentOverride =
             Boolean(overrideKey) && allotmentOverrideKeys.has(overrideKey);
           const hasRateOverride =
@@ -246,20 +245,20 @@ function DoorReservationRow({
 
           const cues = (
             <>
-              {hasAllotmentOverride ? (
-                <span
-                  aria-hidden="true"
-                  className="extranet-day-cue extranet-day-cue--allotment"
-                >
-                  ∗
-                </span>
-              ) : null}
               {hasRateOverride ? (
                 <span
                   aria-hidden="true"
                   className="extranet-day-cue extranet-day-cue--rate"
                 >
-                  ¤
+                  ฿
+                </span>
+              ) : null}
+              {hasAllotmentOverride ? (
+                <span
+                  aria-hidden="true"
+                  className="extranet-day-cue extranet-day-cue--allotment"
+                >
+                  ★
                 </span>
               ) : null}
             </>
@@ -288,7 +287,10 @@ function DoorReservationRow({
               className={dayClass}
               key={`door-${unit.id}-bg-${day.iso}`}
               style={{ gridColumn: column }}
-            />
+              title={cueTitle}
+            >
+              {cues}
+            </div>
           );
         })}
 
