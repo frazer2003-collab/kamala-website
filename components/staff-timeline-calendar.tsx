@@ -2,17 +2,20 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import "@/app/staff-calendar-closed-cells.css";
 import { CalendarJumpToToday } from "@/components/calendar-jump-to-today";
 import { CalendarStayBarLink } from "@/components/calendar-stay-bar-link";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import {
   buildRoomTimelineBars,
+  buildStaffClosedDayKeys,
   buildUnitTimelineBars,
   formatTimelineDayHeader,
   getTimelineBarHref,
   getTimelineBarPlacementStyle,
   getTimelineDayHref,
   getTimelineLaneCount,
+  isUnitDayStaffClosed,
   timelineBarNightColumns,
   type TimelineBar,
 } from "@/lib/calendar-timeline";
@@ -141,6 +144,7 @@ function DoorReservationRow({
   todayIso,
   allotmentOverrideKeys,
   rateOverrideKeys,
+  closedDayKeys,
   roomTypeLabel,
 }: {
   unit: RoomUnit;
@@ -158,6 +162,7 @@ function DoorReservationRow({
   todayIso: string;
   allotmentOverrideKeys: Set<string>;
   rateOverrideKeys: Set<string>;
+  closedDayKeys: Set<string>;
   roomTypeLabel?: string;
 }) {
   const dayCount = calendarDays.length;
@@ -228,7 +233,11 @@ function DoorReservationRow({
             Boolean(overrideKey) && allotmentOverrideKeys.has(overrideKey);
           const hasRateOverride =
             Boolean(overrideKey) && rateOverrideKeys.has(overrideKey);
+          const isClosed = isUnitDayStaffClosed(unit, day.iso, closedDayKeys);
           const cueTitle = overrideCueTitle(hasAllotmentOverride, hasRateOverride);
+          const dayTitle = [isClosed ? "Closed" : null, cueTitle]
+            .filter(Boolean)
+            .join(" · ");
 
           const dayClass = [
             "extranet-reservations__day",
@@ -236,6 +245,7 @@ function DoorReservationRow({
             !day.inCurrentMonth ? "extranet-cell--muted" : "",
             isWeekend ? "extranet-cell--weekend" : "",
             isSelectedDay ? "extranet-cell--selected" : "",
+            isClosed ? "extranet-cell--closed" : "",
             dayHref ? "extranet-reservations__day--action" : "",
             hasAllotmentOverride ? "extranet-cell--allotment-override" : "",
             hasRateOverride ? "extranet-cell--rate-override" : "",
@@ -265,7 +275,11 @@ function DoorReservationRow({
           );
 
           if (dayHref) {
-            const ariaCue = cueTitle ? `, ${cueTitle.toLowerCase()}` : "";
+            const ariaParts = [
+              isClosed ? "closed" : null,
+              cueTitle ? cueTitle.toLowerCase() : null,
+            ].filter(Boolean);
+            const ariaCue = ariaParts.length > 0 ? `, ${ariaParts.join(", ")}` : "";
             return (
               <Link
                 aria-label={`#${unit.number}, ${day.iso}${ariaCue}`}
@@ -273,7 +287,7 @@ function DoorReservationRow({
                 href={dayHref}
                 key={`door-${unit.id}-bg-${day.iso}`}
                 style={{ gridColumn: column }}
-                title={cueTitle}
+                title={dayTitle || undefined}
               >
                 {cues}
                 <span className="sr-only">Day actions</span>
@@ -287,7 +301,7 @@ function DoorReservationRow({
               className={dayClass}
               key={`door-${unit.id}-bg-${day.iso}`}
               style={{ gridColumn: column }}
-              title={cueTitle}
+              title={dayTitle || undefined}
             >
               {cues}
             </div>
@@ -564,6 +578,18 @@ export function StaffTimelineCalendar({
     () => blocks.filter(isChannelReservation),
     [blocks],
   );
+  const staffClosures = useMemo(
+    () => blocks.filter((block) => !isChannelReservation(block)),
+    [blocks],
+  );
+  const closedDayKeys = useMemo(
+    () =>
+      buildStaffClosedDayKeys({
+        staffClosures,
+        calendarDays,
+      }),
+    [staffClosures, calendarDays],
+  );
   const roomShortNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const room of rooms) {
@@ -728,6 +754,7 @@ export function StaffTimelineCalendar({
                   bookings={bookings}
                   calendarDays={calendarDays}
                   channelReservations={channelReservations}
+                  closedDayKeys={closedDayKeys}
                   fromIso={fromIso}
                   guestColors={guestColors}
                   key={unit.id}

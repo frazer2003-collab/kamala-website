@@ -616,3 +616,37 @@ export function getTimelineDayHref(
   params.set("date", iso);
   return `/staff/calendar?${params.toString()}`;
 }
+
+/** `${roomId}:${iso}` keys for nights shut by a staff type closure (not channel stays). */
+export function buildStaffClosedDayKeys({
+  staffClosures,
+  calendarDays,
+}: {
+  staffClosures: Array<{ roomId: string; startDate: string; endDate: string }>;
+  calendarDays: CalendarDay[];
+}): Set<string> {
+  const keys = new Set<string>();
+
+  for (const block of staffClosures) {
+    for (const day of calendarDays) {
+      if (
+        bookingOccupiesDay(
+          { arrivalDate: block.startDate, departureDate: block.endDate },
+          day.iso,
+        )
+      ) {
+        keys.add(`${block.roomId}:${day.iso}`);
+      }
+    }
+  }
+
+  return keys;
+}
+
+export function isUnitDayStaffClosed(
+  unit: Pick<RoomUnit, "roomIds">,
+  iso: string,
+  closedDayKeys: ReadonlySet<string>,
+) {
+  return unit.roomIds.some((roomId) => closedDayKeys.has(`${roomId}:${iso}`));
+}

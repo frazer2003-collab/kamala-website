@@ -1,0 +1,36 @@
+/* Staff type closures: grey the empty door cell (Closed settings swatch). */
+.extranet-reservations__day.extranet-cell--closed {
+  background-color: color-mix(
+    in srgb,
+    var(--calendar-color-closed) 55%,
+    var(--color-surface-strong)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--calendar-color-closed) 40%,
+    var(--color-border)
+  );
+  background-image: repeating-linear-gradient(
+    -28deg,
+    transparent,
+    transparent 0.28rem,
+    color-mix(in srgb, var(--color-ink) 6%, transparent) 0.28rem,
+    color-mix(in srgb, var(--color-ink) 6%, transparent) 0.36rem
+  );
+}
+
+.extranet-reservations__day.extranet-cell--closed.extranet-cell--today {
+  background-color: color-mix(
+    in srgb,
+    var(--calendar-color-closed) 48%,
+    var(--color-maroon-wash)
+  );
+}
+
+.extranet-reservations__day--action.extranet-cell--closed:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--calendar-color-closed) 62%,
+    var(--color-surface-muted)
+  );
+}
