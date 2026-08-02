@@ -9,6 +9,11 @@ import type { Room } from "@/lib/content";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
 import { getStaffRoomBlockKey, isChannelReservation } from "@/lib/room-blocks";
 import { normalizeGuestColorKey } from "@/lib/booking-bar-colors";
+import {
+  getKnownUnitIdSet,
+  stayNeedsRoomAssignment,
+  type RoomUnit,
+} from "@/lib/room-units";
 
 export type TimelineBar = {
   key: string;
@@ -106,20 +111,26 @@ export function buildRoomTimelineBars({
   bookings,
   channelReservations = [],
   calendarDays,
-  /** When true, only stays without a room number. */
+  units = [],
+  /** When true, only stays without a known door number. */
   unassignedOnly = false,
 }: {
   bookings: StaffBooking[];
   channelReservations?: StaffRoomBlock[];
   calendarDays: CalendarDay[];
+  /** Used to treat orphaned room_unit_id values as unassigned. */
+  units?: RoomUnit[];
   unassignedOnly?: boolean;
 }): TimelineBar[] {
   const bars: Omit<TimelineBar, "lane">[] = [];
+  const knownUnitIds = getKnownUnitIdSet(units);
   const visibleBookings = unassignedOnly
-    ? bookings.filter((booking) => !booking.roomUnitId)
+    ? bookings.filter((booking) => stayNeedsRoomAssignment(booking, knownUnitIds))
     : bookings;
   const visibleChannels = unassignedOnly
-    ? channelReservations.filter((reservation) => !reservation.roomUnitId)
+    ? channelReservations.filter((reservation) =>
+        stayNeedsRoomAssignment(reservation, knownUnitIds),
+      )
     : channelReservations;
 
   for (const booking of visibleBookings) {
@@ -133,7 +144,7 @@ export function buildRoomTimelineBars({
       continue;
     }
 
-    const needsRoom = !booking.roomUnitId;
+    const needsRoom = stayNeedsRoomAssignment(booking, knownUnitIds);
     bars.push({
       key: `booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
@@ -164,7 +175,7 @@ export function buildRoomTimelineBars({
     }
 
     const channel = reservation.channelLabel ?? "Channel";
-    const needsRoom = !reservation.roomUnitId;
+    const needsRoom = stayNeedsRoomAssignment(reservation, knownUnitIds);
     const label = reservation.guestName.trim() || channel;
 
     bars.push({

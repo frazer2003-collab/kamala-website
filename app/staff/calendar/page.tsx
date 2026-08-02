@@ -16,7 +16,7 @@ import {
   dateRangeOverlapsBooking,
   bookingOccupiesDay,
 } from "@/lib/calendar";
-import { getCalendarMonthStats, countNetBookedForRoomDay } from "@/lib/calendar-timeline";
+import { getCalendarMonthStats } from "@/lib/calendar-timeline";
 import {
   getConfirmedBookingById,
   getConfirmedBookings,
@@ -43,11 +43,16 @@ import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
 import {
   attachRoomNumbers,
+  getKnownUnitIdSet,
   getStaffRoomUnits,
-  getTypeUnitIdSet,
   occupancyFromBooking,
   occupancyFromChannelBlock,
+  stayNeedsRoomAssignment,
 } from "@/lib/room-units";
+import {
+  explainRoomNightSale,
+  formatRoomNightSaleReason,
+} from "@/lib/room-night-sale";
 import {
   requireStaffSessionDetails,
   staffCanWriteCalendar,
@@ -227,10 +232,15 @@ export default async function StaffCalendarPage({
   ];
   const inventoryLookup = buildInventoryLookup(dayInventory.entries);
   const rateLookup = buildRateLookup(dayRates.entries);
+  const knownUnitIds = getKnownUnitIdSet(roomUnits);
   const unassignedCount =
-    calendarBookings.filter((booking) => !booking.roomUnitId).length +
+    calendarBookings.filter((booking) =>
+      stayNeedsRoomAssignment(booking, knownUnitIds),
+    ).length +
     calendarBlocks.filter(
-      (block) => isChannelReservation(block) && !block.roomUnitId,
+      (block) =>
+        isChannelReservation(block) &&
+        stayNeedsRoomAssignment(block, knownUnitIds),
     ).length;
   const monthStats = getCalendarMonthStats({
     bookings: calendarBookings,
@@ -353,22 +363,30 @@ export default async function StaffCalendarPage({
       mode !== "bulk-status" &&
       !isPastCalendarDate(selectedDate),
   );
-  const soldOutForSelectedNight =
+  const selectedNightSaleReason =
     selectedRoom && selectedDate
-      ? (() => {
-          const roomsToSell =
-            inventoryLookup.get(`${selectedRoom.id}:${selectedDate}`) ??
-            selectedRoom.availableCount;
-          const netBooked = countNetBookedForRoomDay({
-            roomId: selectedRoom.id,
-            iso: selectedDate,
-            bookings: calendarBookings,
-            channelBlocks: allAssignmentChannels.filter(isChannelReservation),
-            typeUnitIds: getTypeUnitIdSet(roomUnits, selectedRoom.id),
-          });
-          return netBooked >= roomsToSell;
-        })()
-      : false;
+      ? explainRoomNightSale({
+          room: selectedRoom,
+          iso: selectedDate,
+          bookings: calendarBookings,
+          channelBlocks: allAssignmentChannels.filter(isChannelReservation),
+          staffClosures: calendarBlocks
+            .filter((block) => !isChannelReservation(block))
+            .map((block) => ({
+              roomId: block.roomId,
+              startDate: block.startDate,
+              endDate: block.endDate,
+            })),
+          inventoryLookup,
+          units: roomUnits,
+        })
+      : null;
+  const soldOutForSelectedNight = Boolean(
+    selectedNightSaleReason && selectedNightSaleReason.kind !== "open",
+  );
+  const soldOutReason = selectedNightSaleReason
+    ? formatRoomNightSaleReason(selectedNightSaleReason)
+    : null;
   const dayStays =
     selectedRoom && selectedDate
       ? [
@@ -382,9 +400,11 @@ export default async function StaffCalendarPage({
               key: getStaffBookingKey(booking),
               href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
               label: booking.guest,
-              sublabel: booking.roomNumber
-                ? `Room ${booking.roomNumber} · direct`
-                : "Needs room # · direct",
+              sublabel: stayNeedsRoomAssignment(booking, knownUnitIds)
+                ? "Needs room # · direct"
+                : booking.roomNumber
+                  ? `Room ${booking.roomNumber} · direct`
+                  : "Direct",
             })),
           ...calendarBlocks
             .filter(
@@ -400,9 +420,27 @@ export default async function StaffCalendarPage({
               key: block.databaseId ?? block.id,
               href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
               label: block.guestName || block.channelLabel || "Channel stay",
-              sublabel: block.roomNumber
-                ? `Room ${block.roomNumber} · ${block.channelLabel ?? "channel"}`
-                : `Needs room # · ${block.channelLabel ?? "channel"}`,
+              sublabel: stayNeedsRoomAssignment(block, knownUnitIds)
+                ? `Needs room # · ${block.channelLabel ?? "channel"}`
+                : block.roomNumber
+                  ? `Room ${block.roomNumber} · ${block.channelLabel ?? "channel"}`
+                  : (block.channelLabel ?? "channel"),
+            })),
+          ...calendarBlocks
+            .filter(
+              (block) =>
+                block.roomId === selectedRoom.id &&
+                !isChannelReservation(block) &&
+                bookingOccupiesDay(
+                  { arrivalDate: block.startDate, departureDate: block.endDate },
+                  selectedDate,
+                ),
+            )
+            .map((block) => ({
+              key: `close-${block.databaseId ?? block.id}`,
+              href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
+              label: "Closed",
+              sublabel: block.reason || "Not for sale",
             })),
         ]
       : [];
@@ -724,6 +762,7 @@ export default async function StaffCalendarPage({
               rateOverrides={Object.fromEntries(rateLookup)}
               room={selectedRoom}
               soldOutForNight={soldOutForSelectedNight}
+              soldOutReason={soldOutReason}
             />
           </CalendarBookingDialog>
         ) : null}

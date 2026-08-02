@@ -47,6 +47,8 @@ type CalendarDayPanelProps = {
   dayStays?: DayStayLink[];
   /** True when inventory row shows this night is full for the room type. */
   soldOutForNight?: boolean;
+  /** Plain-language reason when the type night is not bookable. */
+  soldOutReason?: string | null;
 };
 
 function addIsoDays(iso: string, days: number) {
@@ -130,6 +132,7 @@ export function CalendarDayPanel({
   rateOverrides,
   dayStays = [],
   soldOutForNight = false,
+  soldOutReason = null,
 }: CalendarDayPanelProps) {
   const defaultDeparture = useMemo(() => addIsoDays(date, 1), [date]);
   const todayIso = useMemo(() => getTodayIso(), []);
@@ -141,6 +144,17 @@ export function CalendarDayPanel({
     date,
   });
   const errorMessage = getErrorMessage(error, overlap);
+  const fullStatus = (
+    <p className="detail-help" role="status">
+      Full for <strong>{room.name}</strong>.
+      {soldOutReason ? (
+        <>
+          {" "}
+          {soldOutReason}
+        </>
+      ) : null}
+    </p>
+  );
 
   if (mode === "stays") {
     return (
@@ -162,9 +176,7 @@ export function CalendarDayPanel({
         )}
         <div className="calendar-day-panel__choices">
           {soldOutForNight ? (
-            <p className="detail-help" role="status">
-              Full for <strong>{room.name}</strong>.
-            </p>
+            fullStatus
           ) : (
             <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
               <strong>Book</strong>
@@ -478,9 +490,7 @@ export function CalendarDayPanel({
       ) : null}
       <div className="calendar-day-panel__choices">
         {soldOutForNight ? (
-          <p className="detail-help" role="status">
-            Full for <strong>{room.name}</strong>.
-          </p>
+          fullStatus
         ) : (
           <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
             <strong>Book</strong>

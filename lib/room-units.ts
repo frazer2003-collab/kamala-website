@@ -84,6 +84,18 @@ export function getTypeUnitIdSet(units: RoomUnit[], roomId: string) {
   return new Set(getUnitsForRoomType(units, roomId).map((unit) => unit.id));
 }
 
+/** True when a stay has no door, or points at a deleted/unknown unit id. */
+export function stayNeedsRoomAssignment(
+  stay: { roomUnitId?: string | null },
+  knownUnitIds: ReadonlySet<string>,
+) {
+  return !stay.roomUnitId || !knownUnitIds.has(stay.roomUnitId);
+}
+
+export function getKnownUnitIdSet(units: RoomUnit[]) {
+  return new Set(units.map((unit) => unit.id));
+}
+
 export function getUnitsForRoomType(units: RoomUnit[], roomId: string) {
   return units
     .filter((unit) => {
