@@ -179,9 +179,13 @@ function RoomListingCard({
     );
   } else if (hasStayDates && !bookable) {
     primaryControl = (
-      <a className="button button--secondary listing-card__reserve" href="#dates">
-        Change dates
-      </a>
+      <button
+        className="button button--secondary listing-card__reserve listing-card__reserve--full"
+        disabled
+        type="button"
+      >
+        Full
+      </button>
     );
   } else if (bookable) {
     primaryControl = (

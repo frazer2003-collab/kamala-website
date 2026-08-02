@@ -60,6 +60,46 @@ export function parseStayDates(arrival?: string, departure?: string): StayDates 
   return { arrival, departure, nights };
 }
 
+/** One-night stay starting on the property’s local today (tonight). */
+export function getDefaultStayDates(nights: number = MIN_STAY_NIGHTS): StayDates {
+  const stayNights = isStayLengthAllowed(nights) ? nights : MIN_STAY_NIGHTS;
+  const today = getPropertyTodayIso();
+  return {
+    arrival: today,
+    departure: addIsoDays(today, stayNights),
+    nights: stayNights,
+  };
+}
+
+/**
+ * Homepage stay resolution: use the guest’s dates when present, otherwise
+ * default to tonight so room cards can show Reserve / Full instead of Check dates.
+ * Incomplete or invalid date params are errors — they do not fall back to tonight.
+ */
+export function resolveHomeStayDates(
+  arrival?: string,
+  departure?: string,
+): {
+  stayDates: StayDates | null;
+  dateError: boolean;
+  usedDefault: boolean;
+} {
+  if (!arrival && !departure) {
+    return {
+      stayDates: getDefaultStayDates(),
+      dateError: false,
+      usedDefault: true,
+    };
+  }
+
+  const parsed = parseStayDates(arrival, departure);
+  return {
+    stayDates: parsed,
+    dateError: !parsed,
+    usedDefault: false,
+  };
+}
+
 /** True when the query has a well-formed stay whose arrival is already in the past. */
 export function isStaleStayDateQuery(arrival?: string, departure?: string): boolean {
   if (!isIsoDate(arrival) || !isIsoDate(departure)) {
