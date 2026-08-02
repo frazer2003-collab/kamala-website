@@ -127,11 +127,11 @@ export function StaffCalendarToolbar({
           />
           No #
           <span className="staff-calendar-toolbar__cue" aria-hidden="true">
-            ∗
+            ★
           </span>
           Allotment
           <span className="staff-calendar-toolbar__cue" aria-hidden="true">
-            ¤
+            ฿
           </span>
           Rate
         </div>

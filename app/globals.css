@@ -7495,8 +7495,8 @@ html.staff-busy .staff-login-shell input {
   position: absolute;
   z-index: 1;
   display: block;
-  width: 0;
-  height: 0;
+  width: auto;
+  height: auto;
   overflow: visible;
   font-size: 0.62rem;
   font-weight: 850;
@@ -7507,13 +7507,20 @@ html.staff-busy .staff-login-shell input {
 }
 
 .extranet-day-cue--allotment {
-  top: 0.08rem;
-  left: 0.12rem;
+  top: 0.1rem;
+  right: 0.14rem;
+  left: auto;
+  transform: scale(0.85);
+  transform-origin: top right;
 }
 
 .extranet-day-cue--rate {
-  top: 0.08rem;
-  right: 0.12rem;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  font-weight: 750;
+  color: color-mix(in srgb, var(--color-maroon) 55%, var(--color-muted));
 }
 
 .extranet-reservations {
