@@ -6,6 +6,7 @@ type StaffShellProps = {
   current:
     | "requests"
     | "calendar"
+    | "reservations"
     | "sold"
     | "promotions"
     | "gallery"
