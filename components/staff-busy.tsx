@@ -53,7 +53,12 @@ function messageForStaffUrl(url: URL) {
     }
     return "Opening calendar…";
   }
-
+  if (path.startsWith("/staff/reservations")) {
+    return "Opening reservations…";
+  }
+  if (path.startsWith("/staff/sold")) {
+    return "Opening sold…";
+  }
   if (path.startsWith("/staff/settings/rooms")) {
     return "Opening rooms…";
   }
@@ -478,6 +483,8 @@ function StaffRoutePrefetch() {
     const routes = [
       "/staff",
       "/staff/calendar",
+      "/staff/reservations",
+      "/staff/sold",
       "/staff/promotions",
       "/staff/gallery",
       "/staff/settings",
