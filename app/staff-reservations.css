@@ -1,4 +1,4 @@
-/* Staff Reservations — signal strip + scanned ledger (Operate). */
+/* Staff Reservations — date-range ledger for OTA cross-check (Operate). */
 
 .staff-main--reservations {
   display: flex;
@@ -23,26 +23,36 @@
 .staff-reservations__intro p {
   margin: var(--space-2) 0 0;
   color: var(--color-muted);
-  max-width: 42ch;
+  max-width: 52ch;
 }
 
-.staff-reservations__month {
+.staff-reservations__search {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
   flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
-.staff-reservations__month-btn {
-  gap: var(--space-2);
+.staff-reservations__search-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  flex: 1 1 auto;
 }
 
-.staff-reservations__month-label {
+.staff-reservations__search .field-pair {
+  min-width: 10rem;
+}
+
+.staff-reservations__range-label {
   margin: 0;
-  min-width: 8rem;
-  text-align: center;
-  font-weight: 750;
-  font-size: 0.92rem;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 650;
 }
 
 .staff-reservations__signals {
@@ -89,94 +99,114 @@
   gap: var(--space-3);
 }
 
-.staff-reservations__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--color-border);
+.staff-reservations__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
-.staff-reservations__row {
+.staff-reservations__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.staff-reservations__table th {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  white-space: nowrap;
+}
+
+.staff-reservations__table td {
+  padding: var(--space-3);
+  vertical-align: top;
   border-bottom: 1px solid var(--color-border);
 }
 
+.staff-reservations__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.staff-reservations__table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-maroon-wash) 35%, var(--color-surface));
+}
+
 .staff-reservations__row--urgent {
-  background: color-mix(in srgb, var(--color-warning-wash) 55%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-warning-wash) 45%, var(--color-surface));
 }
 
-.staff-reservations__row-link {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: var(--space-3);
-  align-items: start;
-  padding: var(--space-3) var(--space-2);
-  text-decoration: none;
-  color: inherit;
-  min-height: 2.75rem;
+.staff-reservations__row--urgent:hover {
+  background: color-mix(in srgb, var(--color-warning-wash) 60%, var(--color-surface));
 }
 
-.staff-reservations__row-link:hover {
-  background: color-mix(in srgb, var(--color-maroon-wash) 40%, var(--color-surface));
-}
-
-.staff-reservations__row-link:focus-visible {
-  outline: 2px solid var(--color-maroon);
-  outline-offset: -2px;
-}
-
-.staff-reservations__row-main {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.staff-reservations__row-main strong {
-  font-size: 0.92rem;
+.staff-reservations__table strong {
+  display: block;
   font-weight: 800;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
+  font-size: 0.88rem;
 }
 
-.staff-reservations__row-meta {
+.staff-reservations__substatus {
+  display: block;
+  margin-top: 0.15rem;
   color: var(--color-muted);
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   font-weight: 650;
 }
 
-.staff-reservations__row-side {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.staff-reservations__kind,
-.staff-reservations__source,
-.staff-reservations__money {
+.staff-reservations__door {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-muted);
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--color-muted);
+}
+
+.staff-reservations__door--missing {
+  color: var(--color-warning-ink);
 }
 
 .staff-reservations__open {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 750;
   color: var(--color-maroon);
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-@media (max-width: 640px) {
-  .staff-reservations__row-link {
-    grid-template-columns: 1fr;
-  }
+.staff-reservations__open:hover {
+  text-decoration: underline;
+}
 
-  .staff-reservations__row-side {
-    justify-content: flex-start;
-  }
-
-  .staff-reservations__month-btn-text {
+@media (max-width: 900px) {
+  .staff-reservations__table thead {
     display: none;
+  }
+
+  .staff-reservations__table,
+  .staff-reservations__table tbody,
+  .staff-reservations__table tr,
+  .staff-reservations__table td {
+    display: block;
+    width: 100%;
+  }
+
+  .staff-reservations__table tr {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .staff-reservations__table td {
+    padding: 0.2rem 0;
+    border: none;
+  }
+
+  .staff-reservations__table td:last-child {
+    margin-top: var(--space-2);
   }
 }

@@ -1,92 +1,78 @@
 import Link from "next/link";
 import { StaffShell } from "@/components/staff-shell";
-import {
-  formatCalendarMonth,
-  formatCalendarMonthLabel,
-  parseCalendarMonth,
-  shiftCalendarMonth,
-} from "@/lib/calendar";
-import { getConfirmedBookings } from "@/lib/booking-requests";
+import { getBookingsForDateRange } from "@/lib/booking-requests";
+import { BOOKING_SOURCE_LABELS, BOOKING_SOURCES } from "@/lib/booking-source";
+import { getTodayIso } from "@/lib/calendar";
 import { getPropertySettings } from "@/lib/property-settings";
-import { getStaffCalendarBlocks } from "@/lib/room-blocks";
-import { getStaffRooms } from "@/lib/rooms";
+import { getChannelReservationsForRange } from "@/lib/room-blocks";
+import { requireStaffSession } from "@/lib/staff-auth";
+import {
+  buildReservationRows,
+  countLedgerStatuses,
+  filterReservationRows,
+  ledgerFilterLabel,
+  ledgerStatusLabel,
+  parseReservationsDateRange,
+  parseReservationsLedgerFilter,
+  parseReservationsSource,
+  reservationsListHref,
+  sortReservationRows,
+  type ReservationsLedgerFilter,
+} from "@/lib/staff-reservations";
 import {
   attachRoomNumbers,
   getKnownUnitIdSet,
   getStaffRoomUnits,
 } from "@/lib/room-units";
-import { requireStaffSession } from "@/lib/staff-auth";
-import {
-  buildReservationRows,
-  countReservationSignals,
-  filterReservationRows,
-  parseReservationsAttention,
-  parseReservationsKind,
-  parseReservationsPayment,
-  parseReservationsSource,
-  reservationsListHref,
-  reservationsMonthSelection,
-  sortReservationRows,
-  type ReservationsAttention,
-  type ReservationsKindFilter,
-  type ReservationsPaymentFilter,
-} from "@/lib/staff-reservations";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
-import { BOOKING_SOURCE_LABELS, BOOKING_SOURCES } from "@/lib/booking-source";
 import "@/app/staff-reservations.css";
 
 export const dynamic = "force-dynamic";
 
-function signalLabel(attention: ReservationsAttention, count: number) {
-  switch (attention) {
-    case "needs":
-      return `Needs attention · ${count}`;
-    case "unpaid":
-      return `Unpaid · ${count}`;
-    case "no-door":
-      return `No door # · ${count}`;
-    case "closed":
-      return `Closed · ${count}`;
-    case "all":
-      return `All · ${count}`;
-  }
+const LEDGER_FILTERS = [
+  "all",
+  "upcoming",
+  "confirmed",
+  "pending",
+  "completed",
+  "cancelled",
+  "no-show",
+] as const satisfies readonly ReservationsLedgerFilter[];
+
+function formatRangeLabel(fromIso: string, toIso: string) {
+  const formatter = new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const from = formatter.format(new Date(`${fromIso}T00:00:00`));
+  const to = formatter.format(new Date(`${toIso}T00:00:00`));
+  return `${from} – ${to}`;
 }
 
 export default async function StaffReservationsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    month?: string;
-    attention?: string;
-    kind?: string;
-    payment?: string;
+    from?: string;
+    to?: string;
+    ledger?: string;
     source?: string;
   }>;
 }) {
   await requireStaffSession();
 
   const params = await searchParams;
-  const { year, month } = parseCalendarMonth(params.month);
-  const monthKey = formatCalendarMonth(year, month);
-  const monthLabel = formatCalendarMonthLabel(year, month);
-  const prev = shiftCalendarMonth(year, month, -1);
-  const next = shiftCalendarMonth(year, month, 1);
-  const prevKey = formatCalendarMonth(prev.year, prev.month);
-  const nextKey = formatCalendarMonth(next.year, next.month);
-  const prevLabel = formatCalendarMonthLabel(prev.year, prev.month);
-  const nextLabel = formatCalendarMonthLabel(next.year, next.month);
-  const selection = reservationsMonthSelection(monthKey);
-
-  const attention = parseReservationsAttention(params.attention);
-  const kind = parseReservationsKind(params.kind);
-  const payment = parseReservationsPayment(params.payment);
+  const { fromIso, toIso } = parseReservationsDateRange(params);
+  const ledger = parseReservationsLedgerFilter(params.ledger);
   const source = parseReservationsSource(params.source);
+  const todayIso = getTodayIso();
+  const rangeLabel = formatRangeLabel(fromIso, toIso);
 
-  const [bookingsResult, blocksResult, rooms, roomUnitsResult, settings, supabaseReady] =
+  const [bookingsResult, channelsResult, roomUnitsResult, settings, supabaseReady] =
     await Promise.all([
-      getConfirmedBookings({ year, month }),
-      getStaffCalendarBlocks({ year, month }),
-      getStaffRooms(),
+      getBookingsForDateRange(fromIso, toIso),
+      getChannelReservationsForRange(fromIso, toIso),
       getStaffRoomUnits(),
       getPropertySettings(),
       Promise.resolve(hasStaffSupabaseConfig()),
@@ -94,34 +80,27 @@ export default async function StaffReservationsPage({
 
   const knownUnitIds = getKnownUnitIdSet(roomUnitsResult.units);
   const bookings = attachRoomNumbers(bookingsResult.bookings, roomUnitsResult.units);
-  const monthBlocks = attachRoomNumbers(blocksResult.monthBlocks, roomUnitsResult.units);
+  const channelBlocks = attachRoomNumbers(channelsResult.blocks, roomUnitsResult.units);
 
   const allRows = buildReservationRows({
     bookings,
-    blocks: monthBlocks,
+    blocks: channelBlocks,
     knownUnitIds,
-    monthKey,
-    fromIso: selection.fromIso,
-    toIso: selection.toIso,
+    fromIso,
+    toIso,
     currency: settings.currency,
-    roomShortNameById: new Map(rooms.map((room) => [room.id, room.shortName])),
+    todayIso,
   });
-  const signals = countReservationSignals(allRows);
+  const counts = countLedgerStatuses(allRows);
   const visibleRows = sortReservationRows(
-    filterReservationRows(allRows, { attention, kind, payment, source }),
+    filterReservationRows(allRows, { ledger, source, todayIso }),
   );
 
-  const warnings = [bookingsResult.error, blocksResult.error].filter(
+  const warnings = [bookingsResult.error, channelsResult.error].filter(
     (message): message is string => Boolean(message),
   );
 
-  const filterBase = {
-    month: monthKey,
-    attention,
-    kind,
-    payment,
-    source,
-  };
+  const filterBase = { from: fromIso, to: toIso, ledger, source };
 
   return (
     <StaffShell current="reservations">
@@ -133,30 +112,10 @@ export default async function StaffReservationsPage({
           <div className="staff-reservations__intro">
             <h1 id="staff-reservations-title">Reservations</h1>
             <p>
-              Scan stays and closures for this month. Open a row on the calendar.
+              Cross-check bookings against Airbnb and other OTAs. Search a date
+              range, then filter by status or channel.
             </p>
           </div>
-          <nav className="staff-reservations__month" aria-label="Choose month">
-            <Link
-              aria-label={`Previous month, ${prevLabel}`}
-              className="button button--quiet staff-reservations__month-btn"
-              href={reservationsListHref({ ...filterBase, month: prevKey })}
-            >
-              <span aria-hidden="true">‹</span>
-              <span className="staff-reservations__month-btn-text">{prevLabel}</span>
-            </Link>
-            <p className="staff-reservations__month-label" aria-live="polite">
-              {monthLabel}
-            </p>
-            <Link
-              aria-label={`Next month, ${nextLabel}`}
-              className="button button--quiet staff-reservations__month-btn"
-              href={reservationsListHref({ ...filterBase, month: nextKey })}
-            >
-              <span className="staff-reservations__month-btn-text">{nextLabel}</span>
-              <span aria-hidden="true">›</span>
-            </Link>
-          </nav>
         </div>
 
         {!supabaseReady ? (
@@ -166,6 +125,51 @@ export default async function StaffReservationsPage({
           </p>
         ) : (
           <>
+            <form
+              action="/staff/reservations"
+              className="staff-reservations__search"
+              method="get"
+            >
+              <div className="staff-reservations__search-fields">
+                <div className="field-pair">
+                  <label htmlFor="reservations-from">From</label>
+                  <input
+                    defaultValue={fromIso}
+                    id="reservations-from"
+                    max={toIso}
+                    name="from"
+                    required
+                    type="date"
+                  />
+                </div>
+                <div className="field-pair">
+                  <label htmlFor="reservations-to">To</label>
+                  <input
+                    defaultValue={toIso}
+                    id="reservations-to"
+                    min={fromIso}
+                    name="to"
+                    required
+                    type="date"
+                  />
+                </div>
+              </div>
+              {ledger !== "all" ? (
+                <input name="ledger" type="hidden" value={ledger} />
+              ) : null}
+              {source !== "all" ? (
+                <input name="source" type="hidden" value={source} />
+              ) : null}
+              <button className="button button--primary" type="submit">
+                Search
+              </button>
+            </form>
+
+            <p className="staff-reservations__range-label" aria-live="polite">
+              Showing <strong>{visibleRows.length}</strong> of {allRows.length}{" "}
+              reservations · {rangeLabel}
+            </p>
+
             {warnings.map((message) => (
               <p
                 className="form-message form-message--warning"
@@ -178,94 +182,31 @@ export default async function StaffReservationsPage({
 
             <div
               className="staff-reservations__signals"
-              aria-label="Attention filters"
+              aria-label="Reservation status"
               role="group"
             >
-              {(
-                [
-                  ["needs", signals.needsAttention],
-                  ["unpaid", signals.unpaid],
-                  ["no-door", signals.noDoor],
-                  ["closed", signals.closed],
-                  ["all", signals.total],
-                ] as const
-              ).map(([key, count]) => (
+              {LEDGER_FILTERS.map((key) => (
                 <Link
-                  aria-current={attention === key ? "true" : undefined}
+                  aria-current={ledger === key ? "true" : undefined}
                   className={[
                     "staff-reservations__signal",
-                    attention === key ? "staff-reservations__signal--active" : "",
-                    key === "needs" && count > 0
+                    ledger === key ? "staff-reservations__signal--active" : "",
+                    key === "pending" && counts.pending > 0
                       ? "staff-reservations__signal--urgent"
                       : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  href={reservationsListHref({ ...filterBase, attention: key })}
+                  href={reservationsListHref({ ...filterBase, ledger: key })}
                   key={key}
                 >
-                  {signalLabel(key, count)}
+                  {ledgerFilterLabel(key)} · {counts[key]}
                 </Link>
               ))}
             </div>
 
             <div className="staff-reservations__filters">
-              <div className="booking-list__filters" aria-label="Booking type">
-                {(
-                  [
-                    ["all", "All kinds"],
-                    ["website", "Website"],
-                    ["channel", "Channel"],
-                    ["closure", "Closed"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <Link
-                    aria-current={kind === value ? "true" : undefined}
-                    className={[
-                      "booking-list__filter",
-                      kind === value ? "booking-list__filter--active" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    href={reservationsListHref({
-                      ...filterBase,
-                      kind: value as ReservationsKindFilter,
-                    })}
-                    key={value}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-
-              <div className="booking-list__filters" aria-label="Payment">
-                {(
-                  [
-                    ["all", "Any payment"],
-                    ["unpaid", "Unpaid / hold"],
-                    ["paid", "Paid"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <Link
-                    aria-current={payment === value ? "true" : undefined}
-                    className={[
-                      "booking-list__filter",
-                      payment === value ? "booking-list__filter--active" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    href={reservationsListHref({
-                      ...filterBase,
-                      payment: value as ReservationsPaymentFilter,
-                    })}
-                    key={value}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-
-              <div className="booking-list__filters" aria-label="Source">
+              <div className="booking-list__filters" aria-label="Booking source">
                 <Link
                   aria-current={source === "all" ? "true" : undefined}
                   className={[
@@ -276,7 +217,7 @@ export default async function StaffReservationsPage({
                     .join(" ")}
                   href={reservationsListHref({ ...filterBase, source: "all" })}
                 >
-                  Any source
+                  All sources
                 </Link>
                 <Link
                   aria-current={source === "website" ? "true" : undefined}
@@ -313,87 +254,98 @@ export default async function StaffReservationsPage({
 
             {visibleRows.length === 0 ? (
               <p className="staff-empty-state" role="status">
-                Nothing in this filter for {monthLabel}.{" "}
-                <Link href={reservationsListHref({ month: monthKey, attention: "all" })}>
+                No reservations in this range and filter.{" "}
+                <Link href={reservationsListHref({ from: fromIso, to: toIso })}>
                   Show all
                 </Link>
                 .
               </p>
             ) : (
-              <ul className="staff-reservations__list" aria-label="Reservations">
-                {visibleRows.map((row) => {
-                  return (
-                    <li
-                      className={[
-                        "staff-reservations__row",
-                        reservationNeedsAttentionClass(row.isHold, row.needsRoom),
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      key={`${row.kind}-${row.id}`}
-                    >
-                      <Link className="staff-reservations__row-link" href={row.href}>
-                        <span className="staff-reservations__row-main">
-                          <strong>{row.label}</strong>
-                          <span className="staff-reservations__row-meta">
-                            {row.datesLabel}
-                            <span aria-hidden="true"> · </span>
-                            {row.sublabel}
-                            {row.doorLabel ? (
-                              <>
-                                <span aria-hidden="true"> · </span>
-                                {row.doorLabel}
-                              </>
-                            ) : row.needsRoom ? (
-                              <>
-                                <span aria-hidden="true"> · </span>
-                                Needs room #
-                              </>
-                            ) : null}
-                          </span>
-                        </span>
-                        <span className="staff-reservations__row-side">
-                          <span className="staff-reservations__kind">{row.kindLabel}</span>
+              <div className="staff-reservations__table-wrap">
+                <table className="staff-reservations__table">
+                  <caption className="sr-only">
+                    Reservations from {rangeLabel}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Status</th>
+                      <th scope="col">Guest</th>
+                      <th scope="col">Check-in</th>
+                      <th scope="col">Checkout</th>
+                      <th scope="col">Room</th>
+                      <th scope="col">Source</th>
+                      <th scope="col">Total</th>
+                      <th scope="col">
+                        <span className="sr-only">Open</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRows.map((row) => (
+                      <tr
+                        className={
+                          row.needsRoom ? "staff-reservations__row--urgent" : undefined
+                        }
+                        key={`${row.kind}-${row.id}`}
+                      >
+                        <td>
                           <span
                             className={[
                               "staff-status",
-                              row.isHold ? "staff-status--pending_payment" : "",
-                              row.kind === "closure" ? "staff-status--declined" : "",
-                              row.kind === "channel" ? "staff-status--channel" : "",
+                              row.ledgerStatus === "pending"
+                                ? "staff-status--pending_payment"
+                                : "",
+                              row.ledgerStatus === "cancelled" ||
+                              row.ledgerStatus === "no-show"
+                                ? "staff-status--declined"
+                                : "",
+                              row.ledgerStatus === "confirmed" ||
+                              row.ledgerStatus === "upcoming"
+                                ? "staff-status--confirmed"
+                                : "",
                             ]
                               .filter(Boolean)
                               .join(" ")}
                           >
-                            <span>{row.statusLabel}</span>
+                            <span>{ledgerStatusLabel(row.ledgerStatus)}</span>
                           </span>
-                          {row.sourceLabel && row.kind !== "closure" ? (
-                            <span className="staff-reservations__source">
-                              {row.sourceLabel}
+                          {row.statusLabel !== ledgerStatusLabel(row.ledgerStatus) ? (
+                            <span className="staff-reservations__substatus">
+                              {row.statusLabel}
                             </span>
                           ) : null}
-                          {row.moneyLabel ? (
-                            <span className="staff-reservations__money">
-                              {row.moneyLabel}
+                        </td>
+                        <td>
+                          <strong>{row.label}</strong>
+                          {row.doorLabel ? (
+                            <span className="staff-reservations__door">
+                              {row.doorLabel}
+                            </span>
+                          ) : row.needsRoom ? (
+                            <span className="staff-reservations__door staff-reservations__door--missing">
+                              Needs room #
                             </span>
                           ) : null}
-                          <span className="staff-reservations__open">Open on calendar</span>
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+                        </td>
+                        <td>{row.checkInLabel}</td>
+                        <td>{row.checkOutLabel}</td>
+                        <td>{row.sublabel}</td>
+                        <td>{row.sourceLabel}</td>
+                        <td>{row.moneyLabel ?? "—"}</td>
+                        <td>
+                          <Link className="staff-reservations__open" href={row.href}>
+                            Details
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </>
         )}
       </section>
     </StaffShell>
   );
-}
-
-function reservationNeedsAttentionClass(isHold: boolean, needsRoom: boolean) {
-  if (isHold || needsRoom) {
-    return "staff-reservations__row--urgent";
-  }
-  return "";
 }

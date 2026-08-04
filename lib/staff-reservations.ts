@@ -1,6 +1,10 @@
 import {
   buildStaffCalendarHref,
-  defaultStaffTimelineSelectionRange,
+  dateRangeOverlapsBooking,
+  formatCalendarMonth,
+  getCalendarMonthBounds,
+  getTodayIso,
+  parseCalendarMonth,
 } from "@/lib/calendar";
 import {
   getStaffBookingKey,
@@ -17,70 +21,84 @@ import {
   isChannelReservation,
   type StaffRoomBlock,
 } from "@/lib/room-blocks";
+import { formatStayEndReason } from "@/lib/stay-end-reason";
 import { stayNeedsRoomAssignment } from "@/lib/room-units";
-import { STAY_STATUS_LABELS } from "@/lib/stay-status";
 
-export type ReservationKind = "website" | "channel" | "closure";
+export type ReservationRowKind = "website" | "channel";
 
-export type ReservationsAttention =
-  | "needs"
-  | "unpaid"
-  | "no-door"
-  | "closed"
-  | "all";
+export type LedgerStatus =
+  | "upcoming"
+  | "confirmed"
+  | "pending"
+  | "completed"
+  | "cancelled"
+  | "no-show";
 
-export type ReservationsKindFilter = "all" | ReservationKind;
-
-export type ReservationsPaymentFilter = "all" | "paid" | "unpaid";
+export type ReservationsLedgerFilter = "all" | LedgerStatus;
 
 export type ReservationRow = {
   id: string;
-  kind: ReservationKind;
+  kind: ReservationRowKind;
   label: string;
   sublabel: string;
-  kindLabel: string;
   statusLabel: string;
+  ledgerStatus: LedgerStatus;
   arrivalDate: string;
   departureDate: string;
-  datesLabel: string;
+  checkInLabel: string;
+  checkOutLabel: string;
+  bookedLabel: string | null;
   doorLabel: string | null;
   needsRoom: boolean;
-  isHold: boolean;
-  isPaid: boolean;
-  sourceLabel: string | null;
+  sourceLabel: string;
   moneyLabel: string | null;
-  /** Lower sorts first. */
-  urgency: number;
   href: string;
 };
 
-export type ReservationSignals = {
-  needsAttention: number;
-  unpaid: number;
-  noDoor: number;
-  closed: number;
-  total: number;
-};
+export type LedgerStatusCounts = Record<LedgerStatus, number> & { all: number };
 
-function formatStayDates(arrival: string, departure: string) {
-  const arrivalDate = new Date(`${arrival}T00:00:00`);
-  const departureDate = new Date(`${departure}T00:00:00`);
-  const formatter = new Intl.DateTimeFormat("en", {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function formatIsoDate(iso: string) {
+  const date = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return iso;
+  }
+  return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function calendarHrefForRange(options: {
+  fromIso: string;
+  toIso: string;
+  booking?: string;
+  block?: string;
+}) {
+  const monthKey = options.fromIso.slice(0, 7);
+  return buildStaffCalendarHref({
+    month: monthKey,
+    from: options.fromIso,
+    to: options.toIso,
+    booking: options.booking,
+    block: options.block,
   });
+}
 
-  if (
-    Number.isNaN(arrivalDate.getTime()) ||
-    Number.isNaN(departureDate.getTime())
-  ) {
-    return `${arrival} – ${departure}`;
+function websiteSourceLabel(booking: StaffBooking) {
+  if (booking.bookingSource) {
+    return formatBookingSource(booking.bookingSource);
   }
-
-  return `${formatter.format(arrivalDate)}–${formatter.format(departureDate)}`;
+  return "Website";
 }
 
 function websiteStatusLabel(booking: StaffBooking) {
+  if (booking.status === "declined") {
+    return formatStayEndReason(booking.stayEndReason) ?? "Cancelled";
+  }
+
   if (isInventoryHoldBooking(booking)) {
     if (booking.bankTransferClaimed && !booking.depositPaid) {
       return "Transfer to verify";
@@ -97,112 +115,124 @@ function websiteStatusLabel(booking: StaffBooking) {
   }
 
   if (booking.status === "confirmed") {
-    return STAY_STATUS_LABELS[booking.stayStatus] ?? "Confirmed";
+    if (booking.stayStatus === "checked-in") {
+      return "Checked in";
+    }
+    if (booking.stayStatus === "checked-out") {
+      return "Checked out";
+    }
+    return "Confirmed";
   }
 
   if (booking.status === "pending_payment") {
     return "Awaiting payment";
   }
 
-  return "Confirmed";
+  return "Pending";
 }
 
-function websiteUrgency(booking: StaffBooking, needsRoom: boolean) {
-  if (isInventoryHoldBooking(booking)) {
-    return 10;
+export function classifyWebsiteLedgerStatus(
+  booking: StaffBooking,
+  todayIso: string = getTodayIso(),
+): LedgerStatus {
+  if (booking.status === "declined") {
+    return booking.stayEndReason === "no-show" ? "no-show" : "cancelled";
   }
-  if (booking.status === "needs-reply") {
-    return 15;
+
+  if (
+    isInventoryHoldBooking(booking) ||
+    booking.status === "pending_payment" ||
+    booking.status === "new" ||
+    booking.status === "needs-reply" ||
+    (booking.status === "awaiting" && !booking.depositPaid)
+  ) {
+    return "pending";
   }
-  if (needsRoom) {
-    return 20;
+
+  if (booking.stayStatus === "checked-out" || booking.departureDate <= todayIso) {
+    return "completed";
   }
-  if (booking.stayStatus === "checked-in") {
-    return 30;
+
+  if (booking.status === "confirmed" && booking.arrivalDate > todayIso) {
+    return "upcoming";
   }
-  return 50;
+
+  if (booking.status === "confirmed") {
+    return "confirmed";
+  }
+
+  if (booking.arrivalDate > todayIso) {
+    return "upcoming";
+  }
+
+  return "confirmed";
 }
 
-function calendarHrefForMonth(options: {
-  monthKey: string;
-  fromIso: string;
-  toIso: string;
-  booking?: string;
-  block?: string;
-}) {
-  return buildStaffCalendarHref({
-    month: options.monthKey,
-    from: options.fromIso,
-    to: options.toIso,
-    booking: options.booking,
-    block: options.block,
-  });
-}
-
-export function reservationNeedsAttention(row: ReservationRow) {
-  if (row.kind === "closure") {
-    return false;
+export function classifyChannelLedgerStatus(
+  block: StaffRoomBlock,
+  todayIso: string = getTodayIso(),
+): LedgerStatus {
+  if (block.endDate <= todayIso) {
+    return "completed";
   }
-  return row.isHold || row.needsRoom || row.statusLabel === "Needs staff reply";
+  if (block.startDate > todayIso) {
+    return "upcoming";
+  }
+  return "confirmed";
 }
 
 export function buildReservationRows({
   bookings,
   blocks,
   knownUnitIds,
-  monthKey,
   fromIso,
   toIso,
   currency,
-  roomShortNameById,
+  todayIso = getTodayIso(),
 }: {
   bookings: StaffBooking[];
   blocks: StaffRoomBlock[];
   knownUnitIds: ReadonlySet<string>;
-  monthKey: string;
   fromIso: string;
   toIso: string;
   currency?: PropertyCurrency;
-  roomShortNameById?: Map<string, string>;
+  todayIso?: string;
 }): ReservationRow[] {
   const rows: ReservationRow[] = [];
 
   for (const booking of bookings) {
+    if (!dateRangeOverlapsBooking(booking, fromIso, toIso)) {
+      continue;
+    }
+
     const needsRoom = stayNeedsRoomAssignment(booking, knownUnitIds);
-    const isHold = isInventoryHoldBooking(booking);
-    const isPaid = Boolean(booking.depositPaid) && !isHold;
+    const ledgerStatus = classifyWebsiteLedgerStatus(booking, todayIso);
     const key = getStaffBookingKey(booking);
-    const sourceLabel =
-      booking.bookingSource == null
-        ? "Website"
-        : formatBookingSource(booking.bookingSource);
 
     rows.push({
       id: key,
       kind: "website",
       label: booking.guest,
       sublabel: booking.room,
-      kindLabel: "Website",
       statusLabel: websiteStatusLabel(booking),
+      ledgerStatus,
       arrivalDate: booking.arrivalDate,
       departureDate: booking.departureDate,
-      datesLabel: formatStayDates(booking.arrivalDate, booking.departureDate),
+      checkInLabel: formatIsoDate(booking.arrivalDate),
+      checkOutLabel: formatIsoDate(booking.departureDate),
+      bookedLabel: booking.requestedAt === "Recently" ? null : booking.requestedAt,
       doorLabel: needsRoom
         ? null
         : booking.roomNumber
           ? `#${booking.roomNumber}`
           : null,
       needsRoom,
-      isHold,
-      isPaid,
-      sourceLabel,
+      sourceLabel: websiteSourceLabel(booking),
       moneyLabel:
         currency && booking.estimatedTotal > 0
           ? formatMoneySuffix(booking.estimatedTotal, currency)
           : null,
-      urgency: websiteUrgency(booking, needsRoom),
-      href: calendarHrefForMonth({
-        monthKey,
+      href: calendarHrefForRange({
         fromIso,
         toIso,
         booking: key,
@@ -210,66 +240,49 @@ export function buildReservationRows({
     });
   }
 
-  for (const item of blocks) {
-    const key = getStaffRoomBlockKey(item);
-    if (isChannelReservation(item)) {
-      const needsRoom = stayNeedsRoomAssignment(item, knownUnitIds);
-      const label = item.guestName.trim() || item.channelLabel || "Channel guest";
-      const sourceLabel =
-        formatBookingSource(item.bookingSource) !== "—"
-          ? formatBookingSource(item.bookingSource)
-          : item.channelLabel || "Channel";
-
-      rows.push({
-        id: key,
-        kind: "channel",
-        label,
-        sublabel: item.channelLabel || "Channel",
-        kindLabel: "Channel",
-        statusLabel: needsRoom ? "Needs room #" : "Channel stay",
-        arrivalDate: item.startDate,
-        departureDate: item.endDate,
-        datesLabel: formatStayDates(item.startDate, item.endDate),
-        doorLabel: needsRoom
-          ? null
-          : item.roomNumber
-            ? `#${item.roomNumber}`
-            : null,
-        needsRoom,
-        isHold: false,
-        isPaid: true,
-        sourceLabel,
-        moneyLabel: null,
-        urgency: needsRoom ? 20 : 55,
-        href: calendarHrefForMonth({
-          monthKey,
-          fromIso,
-          toIso,
-          block: key,
-        }),
-      });
+  for (const block of blocks) {
+    if (!isChannelReservation(block)) {
       continue;
     }
 
+    const stay = {
+      arrivalDate: block.startDate,
+      departureDate: block.endDate,
+    };
+    if (!dateRangeOverlapsBooking(stay, fromIso, toIso)) {
+      continue;
+    }
+
+    const needsRoom = stayNeedsRoomAssignment(block, knownUnitIds);
+    const ledgerStatus = classifyChannelLedgerStatus(block, todayIso);
+    const key = getStaffRoomBlockKey(block);
+    const label = block.guestName.trim() || block.channelLabel || "Channel guest";
+    const sourceLabel =
+      formatBookingSource(block.bookingSource) !== "—"
+        ? formatBookingSource(block.bookingSource)
+        : block.channelLabel || "Channel";
+
     rows.push({
       id: key,
-      kind: "closure",
-      label: item.reason.trim() || "Closed",
-      sublabel: roomShortNameById?.get(item.roomId) ?? "Type closed",
-      kindLabel: "Closed",
-      statusLabel: "Closed",
-      arrivalDate: item.startDate,
-      departureDate: item.endDate,
-      datesLabel: formatStayDates(item.startDate, item.endDate),
-      doorLabel: null,
-      needsRoom: false,
-      isHold: false,
-      isPaid: false,
-      sourceLabel: null,
+      kind: "channel",
+      label,
+      sublabel: block.channelLabel || "Channel",
+      statusLabel: needsRoom ? "Needs room #" : "Confirmed",
+      ledgerStatus,
+      arrivalDate: block.startDate,
+      departureDate: block.endDate,
+      checkInLabel: formatIsoDate(block.startDate),
+      checkOutLabel: formatIsoDate(block.endDate),
+      bookedLabel: null,
+      doorLabel: needsRoom
+        ? null
+        : block.roomNumber
+          ? `#${block.roomNumber}`
+          : null,
+      needsRoom,
+      sourceLabel,
       moneyLabel: null,
-      urgency: 40,
-      href: calendarHrefForMonth({
-        monthKey,
+      href: calendarHrefForRange({
         fromIso,
         toIso,
         block: key,
@@ -280,77 +293,72 @@ export function buildReservationRows({
   return rows;
 }
 
-export function countReservationSignals(rows: ReservationRow[]): ReservationSignals {
-  let unpaid = 0;
-  let noDoor = 0;
-  let closed = 0;
-  let needsAttention = 0;
+export function countLedgerStatuses(rows: ReservationRow[]): LedgerStatusCounts {
+  const counts: LedgerStatusCounts = {
+    all: rows.length,
+    upcoming: 0,
+    confirmed: 0,
+    pending: 0,
+    completed: 0,
+    cancelled: 0,
+    "no-show": 0,
+  };
 
   for (const row of rows) {
-    if (row.isHold) {
-      unpaid += 1;
-    }
-    if (row.needsRoom) {
-      noDoor += 1;
-    }
-    if (row.kind === "closure") {
-      closed += 1;
-    }
-    if (reservationNeedsAttention(row)) {
-      needsAttention += 1;
-    }
+    counts[row.ledgerStatus] += 1;
   }
 
-  return {
-    needsAttention,
-    unpaid,
-    noDoor,
-    closed,
-    total: rows.length,
-  };
+  return counts;
+}
+
+export function rowMatchesLedgerFilter(
+  row: ReservationRow,
+  filter: ReservationsLedgerFilter,
+  todayIso: string = getTodayIso(),
+) {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === row.ledgerStatus) {
+    return true;
+  }
+
+  if (filter === "confirmed" && row.ledgerStatus === "upcoming" && row.statusLabel === "Confirmed") {
+    return true;
+  }
+
+  if (
+    filter === "upcoming" &&
+    row.arrivalDate >= todayIso &&
+    row.ledgerStatus !== "cancelled" &&
+    row.ledgerStatus !== "no-show" &&
+    row.ledgerStatus !== "completed"
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 export function filterReservationRows(
   rows: ReservationRow[],
   filters: {
-    attention: ReservationsAttention;
-    kind: ReservationsKindFilter;
-    payment: ReservationsPaymentFilter;
+    ledger: ReservationsLedgerFilter;
     source?: BookingSource | "website" | "all";
+    todayIso?: string;
   },
 ) {
+  const todayIso = filters.todayIso ?? getTodayIso();
+
   return rows.filter((row) => {
-    if (filters.kind !== "all" && row.kind !== filters.kind) {
+    if (!rowMatchesLedgerFilter(row, filters.ledger, todayIso)) {
       return false;
-    }
-
-    if (filters.attention === "needs" && !reservationNeedsAttention(row)) {
-      return false;
-    }
-    if (filters.attention === "unpaid" && !row.isHold) {
-      return false;
-    }
-    if (filters.attention === "no-door" && !row.needsRoom) {
-      return false;
-    }
-    if (filters.attention === "closed" && row.kind !== "closure") {
-      return false;
-    }
-
-    if (filters.payment === "paid") {
-      if (row.kind === "closure" || !row.isPaid) {
-        return false;
-      }
-    }
-    if (filters.payment === "unpaid") {
-      if (!row.isHold) {
-        return false;
-      }
     }
 
     if (filters.source && filters.source !== "all") {
       if (filters.source === "website") {
-        if (row.kind !== "website" || row.sourceLabel !== "Website") {
+        if (row.sourceLabel !== "Website") {
           return false;
         }
       } else if (row.sourceLabel !== formatBookingSource(filters.source)) {
@@ -364,9 +372,6 @@ export function filterReservationRows(
 
 export function sortReservationRows(rows: ReservationRow[]) {
   return [...rows].sort((a, b) => {
-    if (a.urgency !== b.urgency) {
-      return a.urgency - b.urgency;
-    }
     if (a.arrivalDate !== b.arrivalDate) {
       return a.arrivalDate.localeCompare(b.arrivalDate);
     }
@@ -374,28 +379,15 @@ export function sortReservationRows(rows: ReservationRow[]) {
   });
 }
 
-export function parseReservationsAttention(value?: string): ReservationsAttention {
+export function parseReservationsLedgerFilter(value?: string): ReservationsLedgerFilter {
   if (
-    value === "unpaid" ||
-    value === "no-door" ||
-    value === "closed" ||
-    value === "all" ||
-    value === "needs"
+    value === "upcoming" ||
+    value === "confirmed" ||
+    value === "pending" ||
+    value === "completed" ||
+    value === "cancelled" ||
+    value === "no-show"
   ) {
-    return value;
-  }
-  return "needs";
-}
-
-export function parseReservationsKind(value?: string): ReservationsKindFilter {
-  if (value === "website" || value === "channel" || value === "closure") {
-    return value;
-  }
-  return "all";
-}
-
-export function parseReservationsPayment(value?: string): ReservationsPaymentFilter {
-  if (value === "paid" || value === "unpaid") {
     return value;
   }
   return "all";
@@ -416,23 +408,34 @@ export function parseReservationsSource(
   return "all";
 }
 
+export function parseReservationsDateRange(params: { from?: string; to?: string }) {
+  const { year, month } = parseCalendarMonth();
+  const { monthStart, monthEnd } = getCalendarMonthBounds(year, month);
+
+  let fromIso =
+    params.from && ISO_DATE.test(params.from) ? params.from : monthStart;
+  let toIso = params.to && ISO_DATE.test(params.to) ? params.to : monthEnd;
+
+  if (fromIso > toIso) {
+    const swap = fromIso;
+    fromIso = toIso;
+    toIso = swap;
+  }
+
+  return { fromIso, toIso };
+}
+
 export function reservationsListHref(options: {
-  month: string;
-  attention?: ReservationsAttention;
-  kind?: ReservationsKindFilter;
-  payment?: ReservationsPaymentFilter;
+  from: string;
+  to: string;
+  ledger?: ReservationsLedgerFilter;
   source?: BookingSource | "website" | "all";
 }) {
   const params = new URLSearchParams();
-  params.set("month", options.month);
-  if (options.attention && options.attention !== "needs") {
-    params.set("attention", options.attention);
-  }
-  if (options.kind && options.kind !== "all") {
-    params.set("kind", options.kind);
-  }
-  if (options.payment && options.payment !== "all") {
-    params.set("payment", options.payment);
+  params.set("from", options.from);
+  params.set("to", options.to);
+  if (options.ledger && options.ledger !== "all") {
+    params.set("ledger", options.ledger);
   }
   if (options.source && options.source !== "all") {
     params.set("source", options.source);
@@ -440,6 +443,33 @@ export function reservationsListHref(options: {
   return `/staff/reservations?${params.toString()}`;
 }
 
-export function reservationsMonthSelection(monthKey: string) {
-  return defaultStaffTimelineSelectionRange(monthKey);
+export function ledgerStatusLabel(status: LedgerStatus) {
+  switch (status) {
+    case "upcoming":
+      return "Upcoming";
+    case "confirmed":
+      return "Confirmed";
+    case "pending":
+      return "Pending";
+    case "completed":
+      return "Completed";
+    case "cancelled":
+      return "Cancelled";
+    case "no-show":
+      return "No-show";
+  }
+}
+
+export function ledgerFilterLabel(filter: ReservationsLedgerFilter) {
+  if (filter === "all") {
+    return "All";
+  }
+  return ledgerStatusLabel(filter);
+}
+
+export function reservationsRangeMonthKey(fromIso: string) {
+  return formatCalendarMonth(
+    Number(fromIso.slice(0, 4)),
+    Number(fromIso.slice(5, 7)),
+  );
 }

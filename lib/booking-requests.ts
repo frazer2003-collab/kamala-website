@@ -247,6 +247,61 @@ export async function getDeclinedBookings() {
   return fetchBookingsFromSupabase(["declined"], "updated_at");
 }
 
+/** Bookings overlapping a date range for the reservations ledger (includes declined). */
+export async function getBookingsForDateRange(fromIso: string, toIso: string) {
+  if (!hasStaffSupabaseConfig()) {
+    return {
+      bookings: [],
+      source: "sample" as const,
+      error: "Supabase is not configured. Connect the database to load live bookings.",
+    };
+  }
+
+  try {
+    const supabase = createStaffSupabaseClient();
+    const { data, error } = await supabase
+      .from("booking_requests")
+      .select("*")
+      .lte("arrival_date", toIso)
+      .gt("departure_date", fromIso)
+      .in("status", [
+        "confirmed",
+        "pending_payment",
+        "awaiting",
+        "needs-reply",
+        "declined",
+        "new",
+      ])
+      .order("arrival_date", { ascending: true })
+      .limit(500);
+
+    const unitMap =
+      error || !data ? new Map<string, string>() : await getBookingRoomUnitMap(supabase);
+
+    if (error || !data) {
+      return {
+        bookings: [],
+        source: "supabase" as const,
+        error: "Could not load bookings from Supabase.",
+      };
+    }
+
+    return {
+      bookings: data.map((row) =>
+        mapBookingRequest(row, unitMap.get(row.id) ?? row.room_unit_id ?? null),
+      ),
+      source: "supabase" as const,
+      error: null,
+    };
+  } catch {
+    return {
+      bookings: [],
+      source: "supabase" as const,
+      error: "Supabase is not configured correctly.",
+    };
+  }
+}
+
 export async function getStaffBookingById(bookingId: string) {
   if (!bookingId) {
     return null;
