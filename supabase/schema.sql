@@ -198,6 +198,10 @@ create table if not exists public.booking_requests (
   status text not null default 'new' check (
     status in ('new', 'pending_payment', 'awaiting', 'confirmed', 'needs-reply', 'declined')
   ),
+  stay_end_reason text check (
+    stay_end_reason is null
+    or stay_end_reason in ('cancellation', 'no-show')
+  ),
   deposit_amount integer check (deposit_amount is null or deposit_amount >= 0),
   deposit_paid_at timestamptz,
   booking_source text check (

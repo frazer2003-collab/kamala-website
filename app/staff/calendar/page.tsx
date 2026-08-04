@@ -312,6 +312,8 @@ export default async function StaffCalendarPage({
             ? "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates."
           : error === "invalid-source"
             ? "Choose a booking source."
+          : error === "cancel-reason"
+            ? "Choose whether this is a cancellation or a no-show before removing the stay."
           : error === "invalid-name"
             ? "Enter the guest name before saving."
             : error === "invalid-phone"

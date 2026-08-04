@@ -1,6 +1,7 @@
 import { type Booking, type BookingStatus } from "@/lib/content";
 import { parseBedSetup } from "@/lib/bed-setup";
 import { parseBookingSource } from "@/lib/booking-source";
+import { parseStayEndReason } from "@/lib/stay-end-reason";
 import { getCalendarMonthBounds, monthOverlapsBooking } from "@/lib/calendar";
 import {
   createStaffSupabaseClient,
@@ -97,6 +98,7 @@ export function mapBookingRequest(
     bookingSource: parseBookingSource(row.booking_source),
     bankTransferClaimed: Boolean(row.bank_transfer_claimed_at),
     stayStatus: row.stay_status ?? "expected",
+    stayEndReason: parseStayEndReason(row.stay_end_reason),
     staffNote: row.staff_note ?? "",
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
     roomNumber: null,

@@ -60,6 +60,7 @@ import { calculateStayQuote, type StayQuote } from "@/lib/pricing";
 import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 import { isRoomBookable } from "@/lib/room-availability";
 import { isStayStatus } from "@/lib/stay-status";
+import { parseStayEndReason } from "@/lib/stay-end-reason";
 import { getConfirmedBookings } from "@/lib/booking-requests";
 import {
   calculateStripeChargeAmount,
@@ -1579,13 +1580,24 @@ export async function cancelConfirmedBooking(
 
   const supabase = createStaffSupabaseClient();
 
+  const stayEndReason = parseStayEndReason(getValue(formData, "stay-end-reason"));
+  if (!stayEndReason) {
+    redirect(
+      calendarHrefFromFormData(formData, {
+        month,
+        booking: bookingId,
+        extras: { error: "cancel-reason" },
+      }),
+    );
+  }
+
   if (booking.deposit_paid_at) {
     await releaseBookingReservation(bookingId);
   }
 
   await supabase
     .from("booking_requests")
-    .update({ status: "declined" })
+    .update({ status: "declined", stay_end_reason: stayEndReason })
     .eq("id", bookingId);
 
   revalidatePath("/");
