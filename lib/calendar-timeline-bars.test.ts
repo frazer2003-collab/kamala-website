@@ -35,6 +35,7 @@ function booking(partial: {
     depositPaid: true,
     bookingSource: null,
     stayStatus: "expected",
+    stayEndReason: null,
     staffNote: "",
     roomUnitId: partial.roomUnitId ?? "unit-1",
     roomNumber: "1",

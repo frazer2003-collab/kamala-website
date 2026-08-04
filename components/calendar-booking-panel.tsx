@@ -2,6 +2,7 @@
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { BookingSourceField } from "@/components/booking-source-field";
 import { CalendarRangeFields } from "@/components/calendar-range-fields";
+import "@/app/calendar-cancel-reason.css";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import {
@@ -13,6 +14,7 @@ import type { BookingSource } from "@/lib/booking-source";
 import type { StayStatus } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
+import type { StayEndReason } from "@/lib/stay-end-reason";
 import { staffCapacityErrorMessage } from "@/lib/booking-overbook";
 import {
   calculateStayQuote,
@@ -97,6 +99,7 @@ export function CalendarBookingPanel({
 }: CalendarBookingPanelProps) {
   const initialEmail = guestEmail === WALK_IN_EMAIL_PLACEHOLDER ? "" : guestEmail;
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState<StayEndReason>("cancellation");
   const [fields, setFields] = useState({
     guestName,
     guestEmail: initialEmail,
@@ -114,6 +117,7 @@ export function CalendarBookingPanel({
 
   useEffect(() => {
     setConfirmCancel(false);
+    setCancelReason("cancellation");
     setFields({
       guestName,
       guestEmail: guestEmail === WALK_IN_EMAIL_PLACEHOLDER ? "" : guestEmail,
@@ -460,28 +464,65 @@ export function CalendarBookingPanel({
         confirmCancel ? (
           <div className="calendar-cancel-confirm">
             <p className="calendar-cancel-confirm__summary">
-              Cancel <strong>{fields.guestName || guestName}</strong> for{" "}
+              Remove <strong>{fields.guestName || guestName}</strong> for{" "}
               <strong>
                 {formatStayDates(
                   fields.arrivalDate || arrivalDate,
                   fields.departureDate || departureDate,
                 )}
               </strong>
-              ? This removes the stay from the calendar
+              ? This takes the stay off the calendar
               {depositPaid ? " and releases inventory held by the payment" : ""}.
             </p>
+            <fieldset className="calendar-cancel-reason">
+              <legend>What happened?</legend>
+              <label className="calendar-cancel-reason__option">
+                <input
+                  checked={cancelReason === "cancellation"}
+                  disabled={!canManage}
+                  name="stay-end-reason"
+                  onChange={() => setCancelReason("cancellation")}
+                  type="radio"
+                  value="cancellation"
+                />
+                <span>
+                  <strong>Cancellation</strong>
+                  <span>Guest or staff cancelled before or during the stay.</span>
+                </span>
+              </label>
+              <label className="calendar-cancel-reason__option">
+                <input
+                  checked={cancelReason === "no-show"}
+                  disabled={!canManage}
+                  name="stay-end-reason"
+                  onChange={() => setCancelReason("no-show")}
+                  type="radio"
+                  value="no-show"
+                />
+                <span>
+                  <strong>No-show</strong>
+                  <span>Guest did not arrive and the room was not used.</span>
+                </span>
+              </label>
+            </fieldset>
             <div className="calendar-cancel-confirm__actions">
               <form action={cancelAction}>
                 <StaffFormBusyBridge />
                 <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
+                <input name="stay-end-reason" type="hidden" value={cancelReason} />
                 <button className="button button--danger" disabled={!canManage} type="submit">
-                  Yes, cancel stay
+                  {cancelReason === "no-show"
+                    ? "Confirm no-show"
+                    : "Confirm cancellation"}
                 </button>
               </form>
               <button
                 className="button button--secondary"
                 disabled={!canManage}
-                onClick={() => setConfirmCancel(false)}
+                onClick={() => {
+                  setConfirmCancel(false);
+                  setCancelReason("cancellation");
+                }}
                 type="button"
               >
                 Keep stay

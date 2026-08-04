@@ -27,6 +27,7 @@ function booking(partial: Partial<StaffBooking> & Pick<StaffBooking, "roomId" | 
     depositPaid: true,
     bookingSource: null,
     stayStatus: "expected",
+    stayEndReason: null,
     staffNote: "",
     roomUnitId: null,
     roomNumber: null,

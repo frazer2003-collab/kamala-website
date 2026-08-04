@@ -32,6 +32,7 @@ export type BookingRequestRow = {
   note: string | null;
   staff_note: string | null;
   stay_status: "expected" | "checked-in" | "checked-out";
+  stay_end_reason?: "cancellation" | "no-show" | null;
   status:
     | "new"
     | "pending_payment"

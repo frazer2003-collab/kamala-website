@@ -24,6 +24,7 @@ import {
   parseOverlapDays,
 } from "@/lib/stay-overlap";
 import { formatBedSetup } from "@/lib/bed-setup";
+import { formatStayEndReason } from "@/lib/stay-end-reason";
 import type { BookingStatus } from "@/lib/content";
 
 const BookingChat = nextDynamic(
@@ -547,7 +548,8 @@ export default async function StaffBookingsPage({
                           </div>
                           <div className="staff-status staff-status--declined">
                             <span aria-hidden="true" />
-                            {statusCopy.declined}
+                            {formatStayEndReason(booking.stayEndReason) ??
+                              statusCopy.declined}
                           </div>
                         </Link>
                       </article>

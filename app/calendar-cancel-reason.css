@@ -1,0 +1,54 @@
+.calendar-cancel-reason {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.calendar-cancel-reason legend {
+  margin-bottom: var(--space-2);
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: var(--color-ink);
+}
+
+.calendar-cancel-reason__option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.calendar-cancel-reason__option strong {
+  display: block;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+}
+
+.calendar-cancel-reason__option span span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.calendar-cancel-reason__option:has(input:checked) {
+  border-color: color-mix(in srgb, var(--color-maroon) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-maroon-wash) 55%, var(--color-surface));
+}
+
+.calendar-cancel-reason__option input {
+  margin-top: 0.2rem;
+}
+
+.calendar-cancel-reason__option input:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}

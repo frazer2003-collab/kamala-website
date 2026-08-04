@@ -1,5 +1,6 @@
 import type { BedSetup } from "@/lib/bed-setup";
 import type { BookingSource } from "@/lib/booking-source";
+import type { StayEndReason } from "@/lib/stay-end-reason";
 
 export type Tour = {
   id: string;
@@ -60,6 +61,8 @@ export type Booking = {
   /** Staff channel label: walk-in, airbnb, expedia, booking. */
   bookingSource: BookingSource | null;
   stayStatus: StayStatus;
+  /** Set when a confirmed stay is removed: cancellation or no-show. */
+  stayEndReason: StayEndReason | null;
   staffNote: string;
   /** Physical door number assignment; null until staff assigns. */
   roomUnitId: string | null;
