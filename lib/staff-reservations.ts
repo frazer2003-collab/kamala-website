@@ -22,6 +22,7 @@ import {
   type StaffRoomBlock,
 } from "@/lib/room-blocks";
 import { formatStayEndReason } from "@/lib/stay-end-reason";
+import { resolveStayStatusFromDates } from "@/lib/stay-status";
 import { stayNeedsRoomAssignment } from "@/lib/room-units";
 
 export type ReservationRowKind = "website" | "channel";
@@ -115,10 +116,14 @@ function websiteStatusLabel(booking: StaffBooking) {
   }
 
   if (booking.status === "confirmed") {
-    if (booking.stayStatus === "checked-in") {
+    const stayStatus = resolveStayStatusFromDates(
+      booking.arrivalDate,
+      booking.departureDate,
+    );
+    if (stayStatus === "checked-in") {
       return "Checked in";
     }
-    if (booking.stayStatus === "checked-out") {
+    if (stayStatus === "checked-out") {
       return "Checked out";
     }
     return "Confirmed";
@@ -149,7 +154,12 @@ export function classifyWebsiteLedgerStatus(
     return "pending";
   }
 
-  if (booking.stayStatus === "checked-out" || booking.departureDate <= todayIso) {
+  const stayStatus = resolveStayStatusFromDates(
+    booking.arrivalDate,
+    booking.departureDate,
+    todayIso,
+  );
+  if (stayStatus === "checked-out") {
     return "completed";
   }
 

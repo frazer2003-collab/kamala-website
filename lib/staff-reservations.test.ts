@@ -121,6 +121,26 @@ describe("buildReservationRows", () => {
     );
   });
 
+  it("derives checked-in status label from stay dates", () => {
+    const rows = buildReservationRows({
+      bookings: [
+        websiteBooking({
+          id: "in",
+          guest: "In house",
+          arrivalDate: "2026-08-01",
+          departureDate: "2026-08-05",
+          status: "confirmed",
+        }),
+      ],
+      blocks: [],
+      knownUnitIds: new Set(["unit-1"]),
+      fromIso: "2026-08-01",
+      toIso: "2026-08-31",
+      todayIso: "2026-08-03",
+    });
+    assert.equal(rows[0]?.statusLabel, "Checked in");
+  });
+
   it("classifies declined stays as cancelled or no-show", () => {
     assert.equal(
       classifyWebsiteLedgerStatus(

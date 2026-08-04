@@ -11,7 +11,6 @@ import {
   type UpdateConfirmedBookingState,
 } from "@/app/actions";
 import type { BookingSource } from "@/lib/booking-source";
-import type { StayStatus } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
 import type { StayEndReason } from "@/lib/stay-end-reason";
@@ -41,7 +40,6 @@ type CalendarBookingPanelProps = {
   guestPhone: string;
   arrivalDate: string;
   departureDate: string;
-  stayStatus: StayStatus;
   note: string;
   staffNote: string;
   roomId: string;
@@ -81,7 +79,6 @@ export function CalendarBookingPanel({
   guestPhone,
   arrivalDate,
   departureDate,
-  stayStatus,
   note,
   staffNote,
   roomId,
@@ -106,7 +103,6 @@ export function CalendarBookingPanel({
     guestPhone,
     arrivalDate,
     departureDate,
-    stayStatus,
     staffNote,
     roomId,
     roomUnitId: roomUnitId ?? "",
@@ -124,7 +120,6 @@ export function CalendarBookingPanel({
       guestPhone,
       arrivalDate,
       departureDate,
-      stayStatus,
       staffNote,
       roomId,
       roomUnitId: roomUnitId ?? "",
@@ -139,7 +134,6 @@ export function CalendarBookingPanel({
     guestPhone,
     arrivalDate,
     departureDate,
-    stayStatus,
     staffNote,
     roomId,
     roomUnitId,
@@ -231,7 +225,6 @@ export function CalendarBookingPanel({
       <form action={formAction} className="calendar-manage-form">
         <StaffFormBusyBridge />
         <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
-        <input name="stay-status" type="hidden" value={fields.stayStatus} />
         <div className="field-pair">
           <label htmlFor={`calendar-room-type-${bookingKey}`}>Room type</label>
           <select

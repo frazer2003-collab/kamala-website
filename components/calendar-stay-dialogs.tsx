@@ -20,6 +20,7 @@ import {
 } from "@/lib/room-blocks";
 import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
 import { isStaffCalendarManageableStay } from "@/lib/staff-calendar-stay";
+import { STAY_STATUS_LABELS } from "@/lib/stay-status";
 
 type CalendarStayDialogsProps = {
   monthKey: string;
@@ -120,6 +121,10 @@ export function CalendarStayDialogs({
                   ? ` · #${selectedBooking.roomNumber}`
                   : " · No #"}
               </dd>
+            </div>
+            <div>
+              <dt>Stay status</dt>
+              <dd>{STAY_STATUS_LABELS[selectedBooking.stayStatus]}</dd>
             </div>
             <div>
               <dt>Source</dt>
@@ -225,7 +230,6 @@ export function CalendarStayDialogs({
               rate: room.rate,
             }))}
             staffNote={selectedBooking.staffNote}
-            stayStatus={selectedBooking.stayStatus}
           />
 
           <p className="detail-help">
@@ -252,6 +256,7 @@ export function CalendarStayDialogs({
                 Assign a room number so the stay appears on the room-number rows —
                 this still works after the stay dates have passed. Saving updates
                 guest details, dates, source, payment, assignment, and stay total.
+                Check-in status updates automatically from the stay dates.
                 Changing dates does not change the stay total unless you edit it or
                 leave it blank to use the usual rate for the new dates. To remove the
                 stay, use Cancel stay — you will be asked to confirm.

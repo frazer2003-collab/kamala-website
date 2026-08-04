@@ -59,7 +59,7 @@ import {
 import { calculateStayQuote, type StayQuote } from "@/lib/pricing";
 import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 import { isRoomBookable } from "@/lib/room-availability";
-import { isStayStatus } from "@/lib/stay-status";
+import { resolveStayStatusFromDates } from "@/lib/stay-status";
 import { parseStayEndReason } from "@/lib/stay-end-reason";
 import { getConfirmedBookings } from "@/lib/booking-requests";
 import {
@@ -1078,7 +1078,6 @@ export async function updateConfirmedBooking(
   const arrival = getValue(formData, "arrival");
   const departure = getValue(formData, "departure");
   const staffNote = getValue(formData, "staff-note");
-  const stayStatus = getValue(formData, "stay-status");
   const guestName = getValue(formData, "guest-name");
   const guestPhone = getValue(formData, "guest-phone");
   const guestEmailInput = getValue(formData, "guest-email").toLowerCase();
@@ -1120,10 +1119,6 @@ export async function updateConfirmedBooking(
   }
 
   const effectiveRoomUnitId = typeChange.roomUnitId;
-
-  if (!isStayStatus(stayStatus)) {
-    redirect(bookingHref);
-  }
 
   if (guestName.length < 2) {
     redirect(`${bookingHref}&error=invalid-name`);
@@ -1242,7 +1237,6 @@ export async function updateConfirmedBooking(
       deposit_paid_at: depositPaidAt,
       deposit_amount: depositAmount,
       staff_note: nextStaffNote,
-      stay_status: stayStatus,
       ...(typeChange.roomIdChanged
         ? {
             room_id: typeChange.roomId,
@@ -1791,7 +1785,7 @@ export async function createWalkInBooking(
       note: "New booking",
       staff_note: staffNote || null,
       status: "confirmed",
-      stay_status: "checked-in",
+      stay_status: resolveStayStatusFromDates(arrival, departure),
       deposit_amount: depositPaid ? estimatedTotal : null,
       deposit_paid_at: paidAt,
       conversation_token:
