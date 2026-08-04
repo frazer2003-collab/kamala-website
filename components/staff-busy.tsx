@@ -53,7 +53,19 @@ function messageForStaffUrl(url: URL) {
     }
     return "Opening calendar…";
   }
+<<<<<<< HEAD
 
+=======
+  if (path.startsWith("/staff/reservations")) {
+    return "Opening reservations…";
+  }
+  if (path.startsWith("/staff/sold")) {
+    return "Opening sold…";
+  }
+  if (path.startsWith("/staff/settings/calendars")) {
+    return "Opening channel calendars…";
+  }
+>>>>>>> cd53b04 (Add staff Reservations list with attention filters.)
   if (path.startsWith("/staff/settings/rooms")) {
     return "Opening rooms…";
   }
@@ -478,6 +490,8 @@ function StaffRoutePrefetch() {
     const routes = [
       "/staff",
       "/staff/calendar",
+      "/staff/reservations",
+      "/staff/sold",
       "/staff/promotions",
       "/staff/gallery",
       "/staff/settings",
