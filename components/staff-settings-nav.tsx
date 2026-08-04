@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type StaffSettingsNavProps = {
-  current: "general" | "rooms" | "calendars" | "tours";
+  current: "general" | "rooms" | "tours";
 };
 
 export function StaffSettingsNav({ current }: StaffSettingsNavProps) {
@@ -12,12 +12,6 @@ export function StaffSettingsNav({ current }: StaffSettingsNavProps) {
       </Link>
       <Link aria-current={current === "rooms" ? "page" : undefined} href="/staff/settings/rooms">
         Rooms
-      </Link>
-      <Link
-        aria-current={current === "calendars" ? "page" : undefined}
-        href="/staff/settings/calendars"
-      >
-        Calendars
       </Link>
       <Link aria-current={current === "tours" ? "page" : undefined} href="/staff/settings/tours">
         Tours

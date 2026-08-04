@@ -180,7 +180,7 @@ export function CalendarDayPanel({
           ) : (
             <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
               <strong>Book</strong>
-              <span>Confirmed stay</span>
+              <span>Walk-in or OTA stay</span>
             </Link>
           )}
         </div>
@@ -494,7 +494,7 @@ export function CalendarDayPanel({
         ) : (
           <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
             <strong>Book</strong>
-            <span>Confirmed stay</span>
+            <span>Walk-in or OTA stay</span>
           </Link>
         )}
         <Link className="calendar-day-choice" href={`${dayHref}&mode=allotment`}>

@@ -1,5 +1,7 @@
 import {
+  formatBookingSource,
   inferBookingSourceFromChannelLabel,
+  isOtaBookingSource,
   parseBookingSource,
   type BookingSource,
 } from "@/lib/booking-source";
@@ -35,10 +37,12 @@ function mapRoomBlock(
   roomUnitIdOverride?: string | null,
 ): StaffRoomBlock {
   const icalFeedId = row.ical_feed_id ?? null;
+  const staffSource = parseBookingSource(row.staff_booking_source);
   const channelLabel = icalFeedId
     ? (channelLabelById?.get(icalFeedId) ?? "Channel")
-    : null;
-  const staffSource = parseBookingSource(row.staff_booking_source);
+    : isOtaBookingSource(staffSource)
+      ? formatBookingSource(staffSource)
+      : null;
 
   return {
     id: row.id.slice(0, 8).toUpperCase(),
@@ -77,9 +81,9 @@ async function getBlockRoomUnitMap(
   return map;
 }
 
-/** OTA reservations imported from a channel calendar (Airbnb, Booking.com, …). */
+/** OTA reservations — legacy iCal imports or staff-tagged channel blocks. */
 export function isChannelReservation(block: StaffRoomBlock) {
-  return block.icalFeedId !== null;
+  return block.icalFeedId !== null || isOtaBookingSource(block.bookingSource);
 }
 
 export function getStaffRoomBlockKey(block: StaffRoomBlock) {

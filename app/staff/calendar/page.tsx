@@ -85,11 +85,6 @@ export default async function StaffCalendarPage({
     detail?: string;
     assignGuest?: string;
     assignUnit?: string;
-    "ical-synced"?: string;
-    "ical-feeds"?: string;
-    "ical-failed"?: string;
-    "ical-error"?: string;
-    "ical-warning"?: string;
     "confirm-email"?: string;
   }>;
 }) {
@@ -112,11 +107,6 @@ export default async function StaffCalendarPage({
     detail: errorDetail,
     assignGuest,
     assignUnit,
-    "ical-synced": icalSynced,
-    "ical-feeds": icalFeeds,
-    "ical-failed": icalFailed,
-    "ical-error": icalError,
-    "ical-warning": icalWarning,
     "confirm-email": confirmEmail,
   } = await searchParams;
   const timelineRange = parseStaffTimelineRange({
@@ -604,39 +594,6 @@ export default async function StaffCalendarPage({
             </Link>
           </p>
         ) : null}
-        {icalSynced !== undefined && !icalFailed ? (
-          <p className="form-message form-message--success" role="status">
-            Synced{icalFeeds ? ` · ${icalFeeds} feed${icalFeeds === "1" ? "" : "s"}` : ""}
-            {icalSynced ? ` · ${icalSynced} stay${icalSynced === "1" ? "" : "s"}` : ""}.{" "}
-            <Link className="form-message__dismiss" href={dismissFlashHref}>
-              Dismiss
-            </Link>
-          </p>
-        ) : null}
-        {icalFailed ? (
-          <p className="form-message form-message--error" role="alert">
-            Sync partial · {icalSynced ?? "0"} ok, {icalFailed} failed
-            {icalError ? ` · ${decodeURIComponent(icalError)}` : ""}.{" "}
-            <Link className="form-message__dismiss" href={dismissFlashHref}>
-              Dismiss
-            </Link>
-          </p>
-        ) : icalError ? (
-          <p className="form-message form-message--error" role="alert">
-            Sync failed · {decodeURIComponent(icalError)}.{" "}
-            <Link className="form-message__dismiss" href={dismissFlashHref}>
-              Dismiss
-            </Link>
-          </p>
-        ) : null}
-        {icalWarning ? (
-          <p className="form-message form-message--setup" role="status">
-            Sync note · {decodeURIComponent(icalWarning)}.{" "}
-            <Link className="form-message__dismiss" href={dismissFlashHref}>
-              Dismiss
-            </Link>
-          </p>
-        ) : null}
 
         <CalendarStaySelectionProvider
           key={`${monthKey}:${fromIso}:${toIso}`}
@@ -649,7 +606,6 @@ export default async function StaffCalendarPage({
           <div className="calendar-board calendar-board--timeline">
             <StaffCalendarToolbar
               calendarColors={settings.calendarColors}
-              canSyncOta={canManage}
               fromIso={fromIso}
               monthKey={monthKey}
               selectedBlockKey={selectedBlockKey || undefined}

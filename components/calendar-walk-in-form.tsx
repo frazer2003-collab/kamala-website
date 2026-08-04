@@ -173,6 +173,10 @@ export function CalendarWalkInForm({
       <p className="calendar-day-panel__intro">
         Book · <strong>{roomName}</strong>
       </p>
+      <p className="detail-help">
+        Enter every stay here — website, walk-in, Airbnb, Booking.com, or Expedia. Pick the source
+        below.
+      </p>
       {displayError ? (
         <p className="form-message form-message--error" role="alert">
           {displayError}
