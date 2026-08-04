@@ -159,6 +159,46 @@
   font-weight: 650;
 }
 
+.staff-reservations__status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.32rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-sm, 0.5rem);
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.staff-reservations__status-pill--upcoming,
+.staff-reservations__status-pill--confirmed {
+  border-color: color-mix(in srgb, var(--color-success) 22%, var(--color-border));
+  background: var(--color-success-wash);
+  color: var(--color-success);
+}
+
+.staff-reservations__status-pill--pending {
+  border-color: color-mix(in srgb, var(--color-warning) 26%, var(--color-border));
+  background: var(--color-warning-wash);
+  color: var(--color-warning-ink);
+}
+
+.staff-reservations__status-pill--completed {
+  border-color: var(--color-border);
+  background: var(--color-surface-strong);
+  color: var(--color-ink);
+}
+
+.staff-reservations__status-pill--cancelled,
+.staff-reservations__status-pill--no-show {
+  border-color: color-mix(in srgb, var(--color-danger) 24%, var(--color-border));
+  background: var(--color-danger-wash);
+  color: var(--color-danger);
+}
+
 .staff-reservations__door {
   display: block;
   margin-top: 0.15rem;

@@ -291,23 +291,13 @@ export default async function StaffReservationsPage({
                         <td>
                           <span
                             className={[
-                              "staff-status",
-                              row.ledgerStatus === "pending"
-                                ? "staff-status--pending_payment"
-                                : "",
-                              row.ledgerStatus === "cancelled" ||
-                              row.ledgerStatus === "no-show"
-                                ? "staff-status--declined"
-                                : "",
-                              row.ledgerStatus === "confirmed" ||
-                              row.ledgerStatus === "upcoming"
-                                ? "staff-status--confirmed"
-                                : "",
+                              "staff-reservations__status-pill",
+                              `staff-reservations__status-pill--${row.ledgerStatus}`,
                             ]
                               .filter(Boolean)
                               .join(" ")}
                           >
-                            <span>{ledgerStatusLabel(row.ledgerStatus)}</span>
+                            {ledgerStatusLabel(row.ledgerStatus)}
                           </span>
                           {row.statusLabel !== ledgerStatusLabel(row.ledgerStatus) ? (
                             <span className="staff-reservations__substatus">
