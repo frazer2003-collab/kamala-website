@@ -248,7 +248,7 @@ export async function getDeclinedBookings() {
   return fetchBookingsFromSupabase(["declined"], "updated_at");
 }
 
-/** Bookings overlapping a date range for the reservations ledger (includes declined). */
+/** Bookings with check-in inside a date range for the reservations ledger (includes declined). */
 export async function getBookingsForDateRange(fromIso: string, toIso: string) {
   if (!hasStaffSupabaseConfig()) {
     return {
@@ -263,8 +263,8 @@ export async function getBookingsForDateRange(fromIso: string, toIso: string) {
     const { data, error } = await supabase
       .from("booking_requests")
       .select("*")
+      .gte("arrival_date", fromIso)
       .lte("arrival_date", toIso)
-      .gt("departure_date", fromIso)
       .in("status", [
         "confirmed",
         "pending_payment",

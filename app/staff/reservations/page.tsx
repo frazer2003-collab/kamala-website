@@ -113,7 +113,8 @@ export default async function StaffReservationsPage({
             <h1 id="staff-reservations-title">Reservations</h1>
             <p>
               Cross-check bookings against Airbnb and other OTAs. Search a date
-              range, then filter by status or channel.
+              range to list stays with check-in in that period, then filter by
+              status or channel.
             </p>
           </div>
         </div>
@@ -167,7 +168,7 @@ export default async function StaffReservationsPage({
 
             <p className="staff-reservations__range-label" aria-live="polite">
               Showing <strong>{visibleRows.length}</strong> of {allRows.length}{" "}
-              reservations · {rangeLabel}
+              check-ins · {rangeLabel}
             </p>
 
             {warnings.map((message) => (

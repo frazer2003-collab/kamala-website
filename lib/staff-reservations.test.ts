@@ -141,6 +141,49 @@ describe("buildReservationRows", () => {
     assert.equal(rows[0]?.statusLabel, "Checked in");
   });
 
+  it("includes only stays whose check-in falls inside the range", () => {
+    const rows = buildReservationRows({
+      bookings: [
+        websiteBooking({
+          id: "in-range",
+          guest: "August arrival",
+          arrivalDate: "2026-08-15",
+          departureDate: "2026-09-05",
+        }),
+        websiteBooking({
+          id: "overlap-only",
+          guest: "July check-in",
+          arrivalDate: "2026-07-28",
+          departureDate: "2026-08-05",
+        }),
+      ],
+      blocks: [
+        channelBlock({
+          id: "before",
+          startDate: "2026-07-30",
+          endDate: "2026-08-02",
+          guestName: "Early channel",
+        }),
+        channelBlock({
+          id: "in-range",
+          startDate: "2026-08-20",
+          endDate: "2026-08-22",
+          guestName: "August channel",
+        }),
+      ],
+      knownUnitIds: new Set(["unit-1"]),
+      fromIso: "2026-08-01",
+      toIso: "2026-08-31",
+      todayIso: "2026-08-01",
+    });
+
+    assert.equal(rows.length, 2);
+    assert.deepEqual(
+      rows.map((row) => row.label).sort(),
+      ["August arrival", "August channel"],
+    );
+  });
+
   it("classifies declined stays as cancelled or no-show", () => {
     assert.equal(
       classifyWebsiteLedgerStatus(
