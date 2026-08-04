@@ -418,6 +418,15 @@ export function dateRangeOverlapsBooking(
   return booking.arrivalDate <= toIso && booking.departureDate > fromIso;
 }
 
+/** True when check-in (arrival) falls inside [fromIso, toIso] inclusive. */
+export function checkInDateWithinRange(
+  checkInIso: string,
+  fromIso: string,
+  toIso: string,
+) {
+  return checkInIso >= fromIso && checkInIso <= toIso;
+}
+
 export function buildCalendarDays(year: number, month: number): CalendarDay[] {
   const firstOfMonth = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();

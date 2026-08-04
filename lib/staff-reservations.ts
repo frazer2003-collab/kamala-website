@@ -1,6 +1,6 @@
 import {
   buildStaffCalendarHref,
-  dateRangeOverlapsBooking,
+  checkInDateWithinRange,
   formatCalendarMonth,
   getCalendarMonthBounds,
   getTodayIso,
@@ -201,7 +201,7 @@ export function buildReservationRows({
   const rows: ReservationRow[] = [];
 
   for (const booking of bookings) {
-    if (!dateRangeOverlapsBooking(booking, fromIso, toIso)) {
+    if (!checkInDateWithinRange(booking.arrivalDate, fromIso, toIso)) {
       continue;
     }
 
@@ -249,7 +249,7 @@ export function buildReservationRows({
       arrivalDate: block.startDate,
       departureDate: block.endDate,
     };
-    if (!dateRangeOverlapsBooking(stay, fromIso, toIso)) {
+    if (!checkInDateWithinRange(stay.arrivalDate, fromIso, toIso)) {
       continue;
     }
 
