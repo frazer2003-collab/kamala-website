@@ -165,8 +165,8 @@ export function StaffRoomEditForm({
       </form>
 
       <p className="detail-help">
-        OTA calendar imports (Airbnb, Booking.com, Expedia) live under{" "}
-        <Link href="/staff/settings/calendars">Settings → Calendars</Link>.
+        Add stays on the calendar — tap a day, then Book. Choose Airbnb, Booking.com, or Expedia
+        under Source when the guest booked elsewhere.
       </p>
     </article>
   );

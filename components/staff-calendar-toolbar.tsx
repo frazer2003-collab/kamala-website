@@ -1,9 +1,5 @@
 import Link from "next/link";
-import { syncAllRoomIcalFeedsAction } from "@/app/staff/auth-actions";
-import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
-import { StaffOtaSyncControls } from "@/components/staff-ota-sync-controls";
-import { CalendarRangeFields } from "@/components/calendar-range-fields";
 import {
   defaultStaffTimelineSelectionRange,
   formatCalendarMonth,
@@ -18,7 +14,6 @@ type StaffCalendarToolbarProps = {
   stats: CalendarMonthStats;
   unassignedCount: number;
   calendarColors: CalendarColors;
-  canSyncOta?: boolean;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
 };
@@ -51,7 +46,6 @@ export function StaffCalendarToolbar({
   stats,
   unassignedCount,
   calendarColors: _calendarColors,
-  canSyncOta = false,
   selectedBookingKey,
   selectedBlockKey,
 }: StaffCalendarToolbarProps) {
@@ -77,17 +71,6 @@ export function StaffCalendarToolbar({
         >
           Today
         </Link>
-        {canSyncOta ? (
-          <form
-            action={syncAllRoomIcalFeedsAction}
-            className="staff-calendar-toolbar__sync"
-            data-busy-message="Syncing…"
-          >
-            <StaffFormBusyBridge message="Syncing…" />
-            <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
-            <StaffOtaSyncControls />
-          </form>
-        ) : null}
       </div>
 
       <div className="staff-calendar-toolbar__meta" aria-label="Month summary">

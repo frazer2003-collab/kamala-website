@@ -34,6 +34,14 @@ export function formatBookingSource(source: BookingSource | null | undefined): s
   return BOOKING_SOURCE_LABELS[source];
 }
 
+const OTA_BOOKING_SOURCES = ["airbnb", "expedia", "booking"] as const satisfies readonly BookingSource[];
+
+export type OtaBookingSource = (typeof OTA_BOOKING_SOURCES)[number];
+
+export function isOtaBookingSource(source: BookingSource | null | undefined): source is OtaBookingSource {
+  return source !== null && source !== undefined && (OTA_BOOKING_SOURCES as readonly string[]).includes(source);
+}
+
 /** Infer a source from an iCal feed / channel label when staff have not set one. */
 export function inferBookingSourceFromChannelLabel(
   label: string | null | undefined,

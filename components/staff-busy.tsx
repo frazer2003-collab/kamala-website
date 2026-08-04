@@ -53,9 +53,7 @@ function messageForStaffUrl(url: URL) {
     }
     return "Opening calendar…";
   }
-  if (path.startsWith("/staff/settings/calendars")) {
-    return "Opening channel calendars…";
-  }
+
   if (path.startsWith("/staff/settings/rooms")) {
     return "Opening rooms…";
   }

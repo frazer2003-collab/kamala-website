@@ -4,6 +4,7 @@ import {
   formatBookingSource,
   inferBookingSourceFromChannelLabel,
   isBookingSource,
+  isOtaBookingSource,
   parseBookingSource,
 } from "./booking-source";
 
@@ -28,5 +29,11 @@ describe("booking source", () => {
     assert.equal(inferBookingSourceFromChannelLabel("Booking.com"), "booking");
     assert.equal(inferBookingSourceFromChannelLabel("Expedia feed"), "expedia");
     assert.equal(inferBookingSourceFromChannelLabel("Manual block"), null);
+  });
+
+  it("detects OTA booking sources", () => {
+    assert.equal(isOtaBookingSource("airbnb"), true);
+    assert.equal(isOtaBookingSource("walk-in"), false);
+    assert.equal(isOtaBookingSource(null), false);
   });
 });
