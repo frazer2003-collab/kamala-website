@@ -11,7 +11,6 @@ import {
   buildCalendarDays,
   buildStaffTimelineDays,
   formatCalendarMonthLabel,
-  isPastCalendarDate,
   parseStaffTimelineRange,
   dateRangeOverlapsBooking,
   bookingOccupiesDay,
@@ -356,8 +355,7 @@ export default async function StaffCalendarPage({
       selectedDate &&
       !selected &&
       !selectedBlock &&
-      mode !== "bulk-status" &&
-      !isPastCalendarDate(selectedDate),
+      mode !== "bulk-status",
   );
   const selectedNightSaleReason =
     selectedRoom && selectedDate

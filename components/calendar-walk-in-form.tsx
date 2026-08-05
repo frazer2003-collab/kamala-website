@@ -10,7 +10,6 @@ import { BookingSourceField } from "@/components/booking-source-field";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { staffCapacityErrorMessage } from "@/lib/booking-overbook";
 import type { BookingSource } from "@/lib/booking-source";
-import { getTodayIso } from "@/lib/calendar";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
 import {
@@ -48,7 +47,7 @@ function addIsoDays(iso: string, days: number) {
 function walkInErrorCopy(code?: string) {
   switch (code) {
     case "past-date":
-      return "Start from today.";
+      return "Could not save these dates. Try again.";
     case "invalid-name":
       return "Enter guest name.";
     case "invalid-phone":
@@ -88,7 +87,6 @@ export function CalendarWalkInForm({
   rateOverrides,
   errorMessage,
 }: CalendarWalkInFormProps) {
-  const todayIso = useMemo(() => getTodayIso(), []);
   const initialState = useMemo<WalkInBookingState>(
     () => ({
       status: "idle",
@@ -174,7 +172,8 @@ export function CalendarWalkInForm({
         Book · <strong>{roomName}</strong>
       </p>
       <p className="detail-help">
-        Enter every stay here — website, walk-in, Airbnb, Booking.com, or Expedia. Pick the source
+        Enter every stay here — website, walk-in, Airbnb, Booking.com, or Expedia.
+        Past dates are allowed when you need to backfill an old booking. Pick the source
         below.
       </p>
       {displayError ? (
@@ -222,7 +221,6 @@ export function CalendarWalkInForm({
             aria-invalid={datesInvalid || undefined}
             disabled={!canManage || pending}
             id="walk-in-arrival"
-            min={todayIso}
             name="arrival"
             onChange={(event) => setArrival(event.target.value)}
             required
@@ -236,7 +234,7 @@ export function CalendarWalkInForm({
             aria-invalid={datesInvalid || undefined}
             disabled={!canManage || pending}
             id="walk-in-departure"
-            min={todayIso}
+            min={arrival || undefined}
             name="departure"
             onChange={(event) => setDeparture(event.target.value)}
             required

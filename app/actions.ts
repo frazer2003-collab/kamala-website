@@ -1688,10 +1688,6 @@ export async function createWalkInBooking(
     return walkInError("invalid-dates", formData, fallbackArrival);
   }
 
-  if (isPastCalendarDate(arrival)) {
-    return walkInError("past-date", formData, arrival);
-  }
-
   if (guestName.length < 2) {
     return walkInError("invalid-name", formData, arrival);
   }
@@ -1798,7 +1794,7 @@ export async function createWalkInBooking(
     return walkInError("save-failed", formData, arrival);
   }
 
-  if (guestEmail !== walkInEmailFallback) {
+  if (guestEmail !== walkInEmailFallback && !isPastCalendarDate(arrival)) {
     const settings = await getPropertySettings();
     const propertyName = settings.propertyName || "Kamala";
     const arrivalLabel = formatBookingEmailDate(arrival);
