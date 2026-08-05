@@ -29,6 +29,7 @@ import {
   getStaffCalendarBlocks,
   getStaffRoomBlockKey,
   isChannelReservation,
+  purgeIcalSyncedChannelBlocks,
 } from "@/lib/room-blocks";
 import {
   buildInventoryLookup,
@@ -123,6 +124,8 @@ export default async function StaffCalendarPage({
   const boardToIso = timelineRange.boardToIso;
   const statsCalendarDays = buildCalendarDays(year, month);
   const calendarDays = buildStaffTimelineDays(boardFromIso, boardToIso);
+  // Drop leftover iCal-synced Airbnb/OTA stays staff cannot cancel like website bookings.
+  await purgeIcalSyncedChannelBlocks();
   const [
     confirmedBookingsParts,
     calendarBlockParts,

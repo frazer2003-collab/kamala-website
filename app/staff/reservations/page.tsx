@@ -4,7 +4,10 @@ import { getBookingsForDateRange } from "@/lib/booking-requests";
 import { BOOKING_SOURCE_LABELS, BOOKING_SOURCES } from "@/lib/booking-source";
 import { getTodayIso } from "@/lib/calendar";
 import { getPropertySettings } from "@/lib/property-settings";
-import { getChannelReservationsForRange } from "@/lib/room-blocks";
+import {
+  getChannelReservationsForRange,
+  purgeIcalSyncedChannelBlocks,
+} from "@/lib/room-blocks";
 import { requireStaffSession } from "@/lib/staff-auth";
 import {
   buildReservationRows,
@@ -68,6 +71,9 @@ export default async function StaffReservationsPage({
   const source = parseReservationsSource(params.source);
   const todayIso = getTodayIso();
   const rangeLabel = formatRangeLabel(fromIso, toIso);
+
+  // Drop leftover iCal-synced Airbnb/OTA stays staff cannot cancel like website bookings.
+  await purgeIcalSyncedChannelBlocks();
 
   const [bookingsResult, channelsResult, roomUnitsResult, settings, supabaseReady] =
     await Promise.all([

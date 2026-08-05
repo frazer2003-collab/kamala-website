@@ -313,3 +313,84 @@ export async function getChannelReservations() {
     };
   }
 }
+
+/**
+ * Delete leftover iCal-synced OTA stays (and their feed rows).
+ * Manual website bookings in booking_requests are not touched.
+ */
+export async function purgeIcalSyncedChannelBlocks() {
+  if (!hasStaffSupabaseConfig()) {
+    return { deletedBlocks: 0, deletedFeeds: 0, error: null as string | null };
+  }
+
+  try {
+    const supabase = createStaffSupabaseClient();
+
+    const { data: synced, error: listError } = await supabase
+      .from("room_blocks")
+      .select("id")
+      .not("ical_feed_id", "is", null);
+
+    if (listError) {
+      return {
+        deletedBlocks: 0,
+        deletedFeeds: 0,
+        error: listError.message,
+      };
+    }
+
+    const deletedBlocks = synced?.length ?? 0;
+
+    if (deletedBlocks > 0) {
+      const { error: deleteBlocksError } = await supabase
+        .from("room_blocks")
+        .delete()
+        .not("ical_feed_id", "is", null);
+
+      if (deleteBlocksError) {
+        return {
+          deletedBlocks: 0,
+          deletedFeeds: 0,
+          error: deleteBlocksError.message,
+        };
+      }
+    }
+
+    const { data: feeds, error: feedsListError } = await supabase
+      .from("room_ical_feeds")
+      .select("id");
+
+    if (feedsListError) {
+      return {
+        deletedBlocks,
+        deletedFeeds: 0,
+        error: feedsListError.message,
+      };
+    }
+
+    const deletedFeeds = feeds?.length ?? 0;
+
+    if (deletedFeeds > 0) {
+      const { error: deleteFeedsError } = await supabase
+        .from("room_ical_feeds")
+        .delete()
+        .not("id", "is", null);
+
+      if (deleteFeedsError) {
+        return {
+          deletedBlocks,
+          deletedFeeds: 0,
+          error: deleteFeedsError.message,
+        };
+      }
+    }
+
+    return { deletedBlocks, deletedFeeds, error: null as string | null };
+  } catch {
+    return {
+      deletedBlocks: 0,
+      deletedFeeds: 0,
+      error: "Supabase is not configured correctly.",
+    };
+  }
+}

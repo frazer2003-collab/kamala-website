@@ -323,10 +323,50 @@ export function CalendarBlockPanel({
             </button>
           </form>
 
+          {confirmReopen ? (
+            <div className="calendar-cancel-confirm">
+              <p className="calendar-cancel-confirm__summary">
+                Remove this channel stay from the calendar? It will no longer
+                block the room.
+              </p>
+              <div className="calendar-cancel-confirm__actions">
+                <form action={removeAction}>
+                  <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
+                  <StaffFormBusyBridge />
+                  <button
+                    className="button button--danger"
+                    disabled={!canManage}
+                    type="submit"
+                  >
+                    Confirm remove
+                  </button>
+                </form>
+                <button
+                  className="button button--secondary"
+                  disabled={!canManage}
+                  onClick={() => setConfirmReopen(false)}
+                  type="button"
+                >
+                  Keep stay
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="detail-actions">
+              <button
+                className="button button--secondary"
+                disabled={!canManage}
+                onClick={() => setConfirmReopen(true)}
+                type="button"
+              >
+                Remove stay
+              </button>
+            </div>
+          )}
+
           <p className="detail-help">
             Assign a room number so this OTA stay appears on the room-number
-            rows. Guest details, source, and assignment are kept when the calendar
-            syncs; dates may still update from the channel.
+            rows. Use Remove stay to take it off the calendar.
           </p>
         </>
       ) : (

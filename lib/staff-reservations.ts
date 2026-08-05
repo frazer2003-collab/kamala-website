@@ -95,7 +95,7 @@ function websiteSourceLabel(booking: StaffBooking) {
   return "Website";
 }
 
-function websiteStatusLabel(booking: StaffBooking) {
+function websiteStatusLabel(booking: StaffBooking, todayIso: string = getTodayIso()) {
   if (booking.status === "declined") {
     return formatStayEndReason(booking.stayEndReason) ?? "Cancelled";
   }
@@ -119,6 +119,7 @@ function websiteStatusLabel(booking: StaffBooking) {
     const stayStatus = resolveStayStatusFromDates(
       booking.arrivalDate,
       booking.departureDate,
+      todayIso,
     );
     if (stayStatus === "checked-in") {
       return "Checked in";
@@ -224,7 +225,7 @@ export function buildReservationRows({
       kind: "website",
       label: booking.guest,
       sublabel: booking.room,
-      statusLabel: websiteStatusLabel(booking),
+      statusLabel: websiteStatusLabel(booking, todayIso),
       ledgerStatus,
       arrivalDate: booking.arrivalDate,
       departureDate: booking.departureDate,
