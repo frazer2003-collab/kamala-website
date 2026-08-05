@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-/** Legacy path — Sold lives at /staff/sold. */
+/** Legacy path — Finance lives at /staff/sold. */
 export default async function StaffInsightsRedirectPage({
   searchParams,
 }: {

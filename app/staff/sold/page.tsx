@@ -132,7 +132,7 @@ export default async function StaffSoldPage({
       >
         <div className="staff-header staff-header--compact staff-sold__header">
           <div className="staff-sold__intro">
-            <h1 id="staff-sold-title">Sold</h1>
+            <h1 id="staff-sold-title">Finance</h1>
             <p>
               Which rooms sold this month — nights and money from website stays
               and quoted channel nights.
