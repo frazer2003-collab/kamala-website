@@ -57,7 +57,7 @@ function messageForStaffUrl(url: URL) {
     return "Opening reservations…";
   }
   if (path.startsWith("/staff/sold")) {
-    return "Opening sold…";
+    return "Opening Finance…";
   }
   if (path.startsWith("/staff/settings/rooms")) {
     return "Opening rooms…";
