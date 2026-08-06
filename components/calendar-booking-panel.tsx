@@ -467,60 +467,59 @@ export function CalendarBookingPanel({
               ? This takes the stay off the calendar
               {depositPaid ? " and releases inventory held by the payment" : ""}.
             </p>
-            <fieldset className="calendar-cancel-reason">
-              <legend>What happened?</legend>
-              <label className="calendar-cancel-reason__option">
-                <input
-                  checked={cancelReason === "cancellation"}
-                  disabled={!canManage}
-                  name="stay-end-reason"
-                  onChange={() => setCancelReason("cancellation")}
-                  type="radio"
-                  value="cancellation"
-                />
-                <span>
-                  <strong>Cancellation</strong>
-                  <span>Guest or staff cancelled before or during the stay.</span>
-                </span>
-              </label>
-              <label className="calendar-cancel-reason__option">
-                <input
-                  checked={cancelReason === "no-show"}
-                  disabled={!canManage}
-                  name="stay-end-reason"
-                  onChange={() => setCancelReason("no-show")}
-                  type="radio"
-                  value="no-show"
-                />
-                <span>
-                  <strong>No-show</strong>
-                  <span>Guest did not arrive and the room was not used.</span>
-                </span>
-              </label>
-            </fieldset>
-            <div className="calendar-cancel-confirm__actions">
-              <form action={cancelAction}>
-                <StaffFormBusyBridge />
-                <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
-                <input name="stay-end-reason" type="hidden" value={cancelReason} />
+            <form action={cancelAction} className="calendar-cancel-confirm__form">
+              <StaffFormBusyBridge />
+              <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
+              <fieldset className="calendar-cancel-reason">
+                <legend>What happened?</legend>
+                <label className="calendar-cancel-reason__option">
+                  <input
+                    checked={cancelReason === "cancellation"}
+                    disabled={!canManage}
+                    name="stay-end-reason"
+                    onChange={() => setCancelReason("cancellation")}
+                    type="radio"
+                    value="cancellation"
+                  />
+                  <span>
+                    <strong>Cancellation</strong>
+                    <span>Guest or staff cancelled before or during the stay.</span>
+                  </span>
+                </label>
+                <label className="calendar-cancel-reason__option">
+                  <input
+                    checked={cancelReason === "no-show"}
+                    disabled={!canManage}
+                    name="stay-end-reason"
+                    onChange={() => setCancelReason("no-show")}
+                    type="radio"
+                    value="no-show"
+                  />
+                  <span>
+                    <strong>No-show</strong>
+                    <span>Guest did not arrive and the room was not used.</span>
+                  </span>
+                </label>
+              </fieldset>
+              <div className="calendar-cancel-confirm__actions">
                 <button className="button button--danger" disabled={!canManage} type="submit">
                   {cancelReason === "no-show"
                     ? "Confirm no-show"
                     : "Confirm cancellation"}
                 </button>
-              </form>
-              <button
-                className="button button--secondary"
-                disabled={!canManage}
-                onClick={() => {
-                  setConfirmCancel(false);
-                  setCancelReason("cancellation");
-                }}
-                type="button"
-              >
-                Keep stay
-              </button>
-            </div>
+                <button
+                  className="button button--secondary"
+                  disabled={!canManage}
+                  onClick={() => {
+                    setConfirmCancel(false);
+                    setCancelReason("cancellation");
+                  }}
+                  type="button"
+                >
+                  Keep stay
+                </button>
+              </div>
+            </form>
           </div>
         ) : (
           <div className="detail-actions">

@@ -1559,18 +1559,33 @@ export async function cancelConfirmedBooking(
 ) {
   await requireStaffCalendarWrite();
 
+  const bookingHref = calendarHrefFromFormData(formData, {
+    month,
+    booking: bookingId || undefined,
+  });
+  const calendarHref = calendarHrefFromFormData(formData, { month });
+
   const booking = await getBookingForStaff(bookingId);
 
-  if (
-    !bookingId ||
-    !booking ||
-    booking.id !== bookingId ||
-    !isStaffCalendarManageableStay(booking)
-  ) {
-    redirect(calendarHrefFromFormData(formData, { month }));
+  if (!bookingId || !booking || booking.id !== bookingId) {
+    redirect(
+      appendCalendarError(calendarHref, "save-failed", "That stay could not be found."),
+    );
   }
 
-  const supabase = createStaffSupabaseClient();
+  if (!isStaffCalendarManageableStay(booking)) {
+    redirect(
+      appendCalendarError(
+        bookingHref,
+        "save-failed",
+        "This stay cannot be cancelled from the calendar.",
+      ),
+    );
+  }
+
+  if (booking.status === "declined") {
+    redirect(calendarHref);
+  }
 
   const stayEndReason = parseStayEndReason(getValue(formData, "stay-end-reason"));
   if (!stayEndReason) {
@@ -1587,15 +1602,33 @@ export async function cancelConfirmedBooking(
     await releaseBookingReservation(bookingId);
   }
 
-  await supabase
+  const supabase = createStaffSupabaseClient();
+  const { error } = await supabase
     .from("booking_requests")
     .update({ status: "declined", stay_end_reason: stayEndReason })
     .eq("id", bookingId);
 
+  if (error) {
+    // Older DBs may lack stay_end_reason — still remove the stay from the tape.
+    if (/stay_end_reason|schema cache|Could not find/i.test(error.message)) {
+      const { error: fallbackError } = await supabase
+        .from("booking_requests")
+        .update({ status: "declined" })
+        .eq("id", bookingId);
+
+      if (fallbackError) {
+        redirect(appendCalendarError(bookingHref, "save-failed", fallbackError.message));
+      }
+    } else {
+      redirect(appendCalendarError(bookingHref, "save-failed", error.message));
+    }
+  }
+
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
-  redirect(calendarHrefFromFormData(formData, { month }));
+  revalidatePath("/staff/reservations");
+  redirect(calendarHref);
 }
 
 const walkInEmailFallback = "walk-in@kamala.local";
