@@ -123,6 +123,75 @@
   overflow-wrap: anywhere;
 }
 
+.staff-sold__pie-block {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.staff-sold__pie-label {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.staff-sold__pie--room {
+  width: 2.75rem;
+  flex: none;
+}
+
+.staff-sold__room-pies {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.staff-sold__room-pies-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.staff-sold__room-pie-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-sold__room-pie-list > li {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.staff-sold__room-pie-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.staff-sold__room-pie-copy strong {
+  color: var(--color-ink);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.staff-sold__room-pie-copy span {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
 .staff-sold__summary {
   display: grid;
   gap: var(--space-2);

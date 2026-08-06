@@ -279,6 +279,12 @@ export default async function StaffSoldPage({
                 <FinanceSoldPie
                   nightsAvailable={nightsAvailable}
                   nightsSold={report.totals.nightsSold}
+                  rooms={report.rooms.map((row) => ({
+                    roomId: row.roomId,
+                    roomName: row.roomName,
+                    nightsSold: row.nightsSold,
+                    nightsAvailable: row.nightsAvailable,
+                  }))}
                 />
 
                 <div
