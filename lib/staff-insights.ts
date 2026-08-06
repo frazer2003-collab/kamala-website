@@ -2,8 +2,8 @@ import {
   formatCalendarMonthLabel,
   getCalendarMonthBounds,
   type CalendarDay,
+  bookingOccupiesDay,
 } from "@/lib/calendar";
-import { getCalendarMonthStats } from "@/lib/calendar-timeline";
 import type { StaffBooking } from "@/lib/booking-requests";
 import {
   BOOKING_SOURCE_LABELS,
@@ -29,10 +29,12 @@ export type StaffInsightsRoomRow = {
   roomId: string;
   roomName: string;
   nightsSold: number;
-  /** Door-nights that could have sold in the range (days × availableCount). */
+  /** Door-nights that could have sold (open days × doors; closed days excluded). */
   nightsAvailable: number;
-  /** nightsSold / nightsAvailable as 0–100; null when capacity is 0. */
+  /** nightsSold / nightsAvailable capped at 100; null when capacity is 0. */
   soldPercent: number | null;
+  /** Nights sold above capacity (overbook); 0 when within capacity. */
+  nightsOverCapacity: number;
   stayCount: number;
   websiteRevenue: number;
   channelRevenue: number;
@@ -56,9 +58,9 @@ export type StaffInsightsReport = {
     estimatedRevenue: number;
     averageNightlyRate: number | null;
     websiteStayCount: number;
-    occupancyPercent: number | null;
-    bookedNights: number;
-    availableNights: number;
+    nightsAvailable: number;
+    nightsOverCapacity: number;
+    soldPercent: number | null;
   };
   revenueNote: string;
 };
@@ -139,6 +141,82 @@ export function estimateQuotedMoneyInMonth({
   return total;
 }
 
+/**
+ * Allocate a saved full-stay total across only the nights that fall in range.
+ * Keeps Finance money aligned with clipped nightsSold.
+ */
+export function prorateStayMoneyInRange({
+  estimatedTotal,
+  arrival,
+  departure,
+  rangeStart,
+  rangeEnd,
+}: {
+  estimatedTotal: number;
+  arrival: string;
+  departure: string;
+  rangeStart: string;
+  rangeEnd: string;
+}) {
+  if (estimatedTotal <= 0) {
+    return 0;
+  }
+  const stayNights = eachStayNight(arrival, departure).length;
+  if (stayNights <= 0) {
+    return 0;
+  }
+  const nightsInRange = countNightsInMonth(
+    arrival,
+    departure,
+    rangeStart,
+    rangeEnd,
+  );
+  if (nightsInRange <= 0) {
+    return 0;
+  }
+  return Math.round(estimatedTotal * (nightsInRange / stayNights));
+}
+
+/** Door-nights that could sell: open days × doors (staff closes remove the day). */
+export function countSellableDoorNights({
+  availableCount,
+  calendarDays,
+  staffClosures,
+  roomId,
+}: {
+  availableCount: number;
+  calendarDays: CalendarDay[];
+  staffClosures: Array<{ roomId: string; startDate: string; endDate: string }>;
+  roomId: string;
+}) {
+  const doors = Math.max(0, availableCount);
+  if (doors <= 0 || calendarDays.length === 0) {
+    return 0;
+  }
+
+  const roomClosures = staffClosures.filter((block) => block.roomId === roomId);
+  let total = 0;
+  for (const day of calendarDays) {
+    const closed = roomClosures.some((block) =>
+      bookingOccupiesDay(
+        { arrivalDate: block.startDate, departureDate: block.endDate },
+        day.iso,
+      ),
+    );
+    if (!closed) {
+      total += doors;
+    }
+  }
+  return total;
+}
+
+function soldPercentOf(nightsSold: number, nightsAvailable: number) {
+  if (nightsAvailable <= 0) {
+    return null;
+  }
+  return Math.min(100, Math.round((nightsSold / nightsAvailable) * 100));
+}
+
 function websiteSourceLabel(source: BookingSource | null) {
   if (!source) {
     return "Website";
@@ -207,7 +285,7 @@ export function buildStaffInsightsReport({
   rooms: Room[];
   bookings: StaffBooking[];
   channelBlocks: StaffRoomBlock[];
-  /** Full window blocks; non-channel closed days are ignored for sold nights. */
+  /** Full window blocks; channel stays merge in, non-channel closes reduce capacity. */
   monthBlocks?: StaffRoomBlock[];
   promotions?: RoomPromotionRate[];
   rateOverrides?: Map<string, number>;
@@ -231,8 +309,8 @@ export function buildStaffInsightsReport({
     channelByKey.set(stay.databaseId ?? stay.id, stay);
   }
   const uniqueChannelStays = [...channelByKey.values()];
+  const staffClosures = monthBlocks.filter((block) => !isChannelReservation(block));
   const calendarDays = buildRangeDays(rangeStart, rangeEnd);
-  const rangeDayCount = calendarDays.length;
 
   const rows = rooms.map((room) => {
     const roomBookings = bookings.filter((booking) => booking.roomId === room.id);
@@ -242,7 +320,12 @@ export function buildStaffInsightsReport({
     let stayCount = 0;
     let websiteRevenue = 0;
     let channelRevenue = 0;
-    const nightsAvailable = Math.max(0, room.availableCount) * rangeDayCount;
+    const nightsAvailable = countSellableDoorNights({
+      availableCount: room.availableCount,
+      calendarDays,
+      staffClosures,
+      roomId: room.id,
+    });
 
     for (const booking of roomBookings) {
       const nights = countNightsInMonth(
@@ -258,7 +341,13 @@ export function buildStaffInsightsReport({
       stayCount += 1;
       bumpSource(sources, websiteSourceLabel(booking.bookingSource));
       if (booking.estimatedTotal > 0) {
-        websiteRevenue += booking.estimatedTotal;
+        websiteRevenue += prorateStayMoneyInRange({
+          estimatedTotal: booking.estimatedTotal,
+          arrival: booking.arrivalDate,
+          departure: booking.departureDate,
+          rangeStart,
+          rangeEnd,
+        });
       } else {
         websiteRevenue += estimateQuotedMoneyInMonth({
           roomId: room.id,
@@ -299,17 +388,15 @@ export function buildStaffInsightsReport({
     }
 
     const estimatedRevenue = websiteRevenue + channelRevenue;
-    const soldPercent =
-      nightsAvailable > 0
-        ? Math.round((nightsSold / nightsAvailable) * 100)
-        : null;
+    const nightsOverCapacity = Math.max(0, nightsSold - nightsAvailable);
 
     return {
       roomId: room.id,
       roomName: room.name,
       nightsSold,
       nightsAvailable,
-      soldPercent,
+      soldPercent: soldPercentOf(nightsSold, nightsAvailable),
+      nightsOverCapacity,
       stayCount,
       websiteRevenue,
       channelRevenue,
@@ -327,15 +414,13 @@ export function buildStaffInsightsReport({
       a.roomName.localeCompare(b.roomName),
   );
 
-  const monthStats = getCalendarMonthStats({
-    bookings,
-    blocks: uniqueChannelStays,
-    calendarDays,
-    rooms,
-  });
-
   const estimatedRevenue = rows.reduce((sum, row) => sum + row.estimatedRevenue, 0);
   const nightsSold = rows.reduce((sum, row) => sum + row.nightsSold, 0);
+  const nightsAvailable = rows.reduce((sum, row) => sum + row.nightsAvailable, 0);
+  const nightsOverCapacity = rows.reduce(
+    (sum, row) => sum + row.nightsOverCapacity,
+    0,
+  );
 
   const totals = {
     nightsSold,
@@ -353,10 +438,9 @@ export function buildStaffInsightsReport({
           rangeEnd,
         ) > 0 && booking.estimatedTotal > 0,
     ).length,
-    occupancyPercent:
-      monthStats.availableNights > 0 ? monthStats.occupancyPercent : null,
-    bookedNights: monthStats.bookedNights,
-    availableNights: monthStats.availableNights,
+    nightsAvailable,
+    nightsOverCapacity,
+    soldPercent: soldPercentOf(nightsSold, nightsAvailable),
   };
 
   return {
@@ -369,6 +453,6 @@ export function buildStaffInsightsReport({
     rooms: rows,
     totals,
     revenueNote:
-      "Website money uses the full stay total when a stay overlaps this range. Channel nights use the website quote for nights in this range (room rate, day rates, promotions) — not the OTA payout.",
+      "Website money counts only nights in this range (prorated from the stay total, or quoted when no total is saved). Channel nights use the website quote for nights in this range — not the OTA payout.",
   };
 }

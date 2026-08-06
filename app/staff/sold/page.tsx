@@ -14,7 +14,7 @@ import {
   buildRateLookup,
   getRoomDayRatesForMonth,
 } from "@/lib/room-day-rates";
-import { getChannelBlocksOverlappingRange } from "@/lib/room-blocks";
+import { getChannelBlocksOverlappingRange, getStaffClosureBlocksOverlappingRange } from "@/lib/room-blocks";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
@@ -50,12 +50,12 @@ function moneyCaption(row: {
     return null;
   }
   if (row.websiteRevenue > 0 && row.channelRevenue > 0) {
-    return "Website total + quoted channels";
+    return "Website + quoted channels";
   }
   if (row.channelRevenue > 0) {
     return "Quoted estimate";
   }
-  return "Website stay total";
+  return "Website (in range)";
 }
 
 function calendarRoomHref(fromIso: string, toIso: string, roomId: string) {
@@ -90,6 +90,7 @@ export default async function StaffSoldPage({
     rooms,
     bookingsResult,
     channelsResult,
+    closuresResult,
     settings,
     promotions,
     dayRatesParts,
@@ -98,6 +99,7 @@ export default async function StaffSoldPage({
     getStaffRooms(),
     getConfirmedBookingsOverlappingRange(fromIso, toIso),
     getChannelBlocksOverlappingRange(fromIso, toIso),
+    getStaffClosureBlocksOverlappingRange(fromIso, toIso),
     getPropertySettings(),
     getStaffRoomPromotions(),
     Promise.all(
@@ -111,6 +113,7 @@ export default async function StaffSoldPage({
   const warnings = [
     bookingsResult.error,
     channelsResult.error,
+    closuresResult.error,
     dayRatesParts.find((part) => part.error)?.error ?? null,
   ].filter((message): message is string => Boolean(message));
 
@@ -122,6 +125,7 @@ export default async function StaffSoldPage({
     rooms,
     bookings: bookingsResult.bookings,
     channelBlocks: channelsResult.blocks,
+    monthBlocks: closuresResult.blocks,
     promotions,
     rateOverrides: buildRateLookup(dayRatesParts.flatMap((part) => part.entries)),
   });
@@ -129,10 +133,6 @@ export default async function StaffSoldPage({
   const soldRooms = report.rooms.filter((row) => row.nightsSold > 0);
   const quietRooms = report.rooms.filter((row) => row.nightsSold === 0);
   const noRoomsConfigured = rooms.length === 0;
-  const nightsAvailable = report.rooms.reduce(
-    (sum, row) => sum + row.nightsAvailable,
-    0,
-  );
 
   return (
     <StaffShell current="sold">
@@ -224,6 +224,20 @@ export default async function StaffSoldPage({
                                 <span>{nightLabel(row.nightsSold)}</span>
                                 <span aria-hidden="true">·</span>
                                 <span>{stayLabel(row.stayCount)}</span>
+                                {row.soldPercent !== null ? (
+                                  <>
+                                    <span aria-hidden="true">·</span>
+                                    <span>{row.soldPercent}% sold</span>
+                                  </>
+                                ) : null}
+                                {row.nightsOverCapacity > 0 ? (
+                                  <>
+                                    <span aria-hidden="true">·</span>
+                                    <span>
+                                      {row.nightsOverCapacity} over capacity
+                                    </span>
+                                  </>
+                                ) : null}
                               </p>
                               {row.sources.length > 0 ? (
                                 <p className="staff-sold__sources">
@@ -277,14 +291,9 @@ export default async function StaffSoldPage({
                 </div>
 
                 <FinanceSoldPie
-                  nightsAvailable={nightsAvailable}
+                  nightsAvailable={report.totals.nightsAvailable}
+                  nightsOverCapacity={report.totals.nightsOverCapacity}
                   nightsSold={report.totals.nightsSold}
-                  rooms={report.rooms.map((row) => ({
-                    roomId: row.roomId,
-                    roomName: row.roomName,
-                    nightsSold: row.nightsSold,
-                    nightsAvailable: row.nightsAvailable,
-                  }))}
                 />
 
                 <div

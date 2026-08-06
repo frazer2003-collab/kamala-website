@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import {
   buildStaffInsightsReport,
   countNightsInMonth,
+  countSellableDoorNights,
+  prorateStayMoneyInRange,
 } from "@/lib/staff-insights";
 import type { StaffBooking } from "@/lib/booking-requests";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
@@ -158,12 +160,105 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.totals.channelRevenue, 3500);
     assert.equal(report.totals.estimatedRevenue, 7600);
     assert.equal(report.totals.averageNightlyRate, 760);
-    assert.ok(report.totals.occupancyPercent !== null);
     // July = 31 days; Superior ×2 doors, Family ×1.
     assert.equal(report.rooms[0]?.nightsAvailable, 62);
     assert.equal(report.rooms[0]?.soldPercent, Math.round((7 / 62) * 100));
+    assert.equal(report.rooms[0]?.nightsOverCapacity, 0);
     assert.equal(report.rooms[1]?.nightsAvailable, 31);
     assert.equal(report.rooms[1]?.soldPercent, Math.round((3 / 31) * 100));
+    assert.equal(report.totals.nightsAvailable, 93);
+    assert.equal(report.totals.soldPercent, Math.round((10 / 93) * 100));
+  });
+
+  it("prorates website stay totals to nights inside the range", () => {
+    const report = buildStaffInsightsReport({
+      year: 2026,
+      month: 7,
+      rooms,
+      bookings: [
+        booking({
+          roomId: "superior",
+          arrivalDate: "2026-06-28",
+          departureDate: "2026-07-03",
+          estimatedTotal: 3500, // 5 × 700
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.rooms[0]?.nightsSold, 2);
+    assert.equal(report.rooms[0]?.websiteRevenue, 1400); // 3500 × 2/5
+    assert.equal(report.totals.averageNightlyRate, 700);
+  });
+
+  it("reduces capacity for staff-closed nights", () => {
+    const report = buildStaffInsightsReport({
+      fromIso: "2026-07-01",
+      toIso: "2026-07-10",
+      rooms: [rooms[0]!],
+      bookings: [],
+      channelBlocks: [],
+      monthBlocks: [
+        {
+          id: "closed",
+          databaseId: "closed-db",
+          roomId: "superior",
+          startDate: "2026-07-01",
+          endDate: "2026-07-06",
+          reason: "Paint",
+          staffNote: "",
+          guestName: "",
+          guestEmail: "",
+          guestPhone: "",
+          bookingSource: null,
+          icalFeedId: null,
+          channelLabel: null,
+          roomUnitId: null,
+          roomNumber: null,
+        },
+      ],
+    });
+
+    // 10 days − 5 closed = 5 open × 2 doors = 10
+    assert.equal(report.rooms[0]?.nightsAvailable, 10);
+  });
+
+  it("caps sold percent and reports nights over capacity", () => {
+    const report = buildStaffInsightsReport({
+      fromIso: "2026-07-01",
+      toIso: "2026-07-03",
+      rooms: [
+        {
+          ...rooms[1]!,
+          availableCount: 1,
+        },
+      ],
+      bookings: [
+        booking({
+          id: "a",
+          databaseId: "da",
+          roomId: "family",
+          arrivalDate: "2026-07-01",
+          departureDate: "2026-07-03",
+          estimatedTotal: 1800,
+        }),
+        booking({
+          id: "b",
+          databaseId: "db",
+          roomId: "family",
+          arrivalDate: "2026-07-01",
+          departureDate: "2026-07-03",
+          estimatedTotal: 1800,
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    // Capacity 3 door-nights; 4 sold nights
+    assert.equal(report.rooms[0]?.nightsAvailable, 3);
+    assert.equal(report.rooms[0]?.nightsSold, 4);
+    assert.equal(report.rooms[0]?.soldPercent, 100);
+    assert.equal(report.rooms[0]?.nightsOverCapacity, 1);
   });
 
   it("estimates channel money with the website quote rules and ignores closed blocks", () => {
