@@ -226,7 +226,10 @@ function DoorReservationRow({
           const isOccupied = occupiedColumns.has(column);
           const dayHref =
             !isOccupied && primaryRoomId
-              ? getTimelineDayHref(primaryRoomId, day.iso, monthKey, rangeQuery)
+              ? getTimelineDayHref(primaryRoomId, day.iso, monthKey, rangeQuery, {
+                  unitId: unit.id,
+                  mode: "walk-in",
+                })
               : undefined;
           const overrideKey = primaryRoomId ? `${primaryRoomId}:${day.iso}` : "";
           const hasAllotmentOverride =

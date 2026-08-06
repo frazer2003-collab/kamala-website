@@ -49,6 +49,9 @@ type CalendarDayPanelProps = {
   soldOutForNight?: boolean;
   /** Plain-language reason when the type night is not bookable. */
   soldOutReason?: string | null;
+  /** Door clicked on the timeline — assign on Book. */
+  roomUnitId?: string | null;
+  roomUnitNumber?: string | null;
 };
 
 function addIsoDays(iso: string, days: number) {
@@ -106,6 +109,14 @@ function getErrorMessage(error?: string, overlap?: string) {
     return staffCapacityErrorMessage(error);
   }
 
+  if (error === "invalid-room-number") {
+    return "That door number is not available for this room type.";
+  }
+
+  if (error === "room-number-taken") {
+    return "That door is already taken for these dates.";
+  }
+
   if (error === "save-failed") {
     return "Could not save. Try again.";
   }
@@ -133,6 +144,8 @@ export function CalendarDayPanel({
   dayStays = [],
   soldOutForNight = false,
   soldOutReason = null,
+  roomUnitId = null,
+  roomUnitNumber = null,
 }: CalendarDayPanelProps) {
   const defaultDeparture = useMemo(() => addIsoDays(date, 1), [date]);
   const todayIso = useMemo(() => getTodayIso(), []);
@@ -142,6 +155,7 @@ export function CalendarDayPanel({
     to: toIso,
     room: room.id,
     date,
+    unit: roomUnitId ?? undefined,
   });
   const errorMessage = getErrorMessage(error, overlap);
   const fullStatus = (
@@ -387,6 +401,8 @@ export function CalendarDayPanel({
         roomId={room.id}
         roomName={room.name}
         roomRate={room.rate}
+        roomUnitId={roomUnitId}
+        roomUnitNumber={roomUnitNumber}
         toIso={toIso}
       />
     );

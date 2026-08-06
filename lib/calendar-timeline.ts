@@ -621,11 +621,18 @@ export function getTimelineDayHref(
   iso: string,
   monthKey: string,
   range?: TimelineRangeQuery,
+  options?: { unitId?: string; mode?: string },
 ) {
   const params = new URLSearchParams();
   withTimelineRangeParams(params, monthKey, range);
   params.set("room", roomId);
   params.set("date", iso);
+  if (options?.unitId) {
+    params.set("unit", options.unitId);
+  }
+  if (options?.mode) {
+    params.set("mode", options.mode);
+  }
   return `/staff/calendar?${params.toString()}`;
 }
 

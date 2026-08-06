@@ -190,6 +190,8 @@ export type StaffCalendarHrefOptions = {
   room?: string;
   date?: string;
   mode?: string;
+  /** Door (room unit) id when booking from a timeline door cell. */
+  unit?: string;
   extras?: Record<string, string | undefined | null>;
 };
 
@@ -203,6 +205,7 @@ export function buildStaffCalendarHref({
   room,
   date,
   mode,
+  unit,
   extras,
 }: StaffCalendarHrefOptions) {
   const params = new URLSearchParams();
@@ -229,6 +232,9 @@ export function buildStaffCalendarHref({
   }
   if (mode) {
     params.set("mode", mode);
+  }
+  if (unit) {
+    params.set("unit", unit);
   }
   if (extras) {
     for (const [key, value] of Object.entries(extras)) {

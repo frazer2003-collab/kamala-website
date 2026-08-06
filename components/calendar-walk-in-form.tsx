@@ -33,6 +33,8 @@ type CalendarWalkInFormProps = {
   promotions: RoomPromotionRate[];
   rateOverrides: Record<string, number>;
   errorMessage?: string | null;
+  roomUnitId?: string | null;
+  roomUnitNumber?: string | null;
 };
 
 function addIsoDays(iso: string, days: number) {
@@ -65,6 +67,10 @@ function walkInErrorCopy(code?: string) {
     case "no-assignable-door":
     case "overbook":
       return staffCapacityErrorMessage(code);
+    case "invalid-room-number":
+      return "That door number is not available for this room type.";
+    case "room-number-taken":
+      return "That door is already taken for these dates.";
     case "save-failed":
       return "Could not save. Try again, or ask whoever set up the site if the problem continues.";
     default:
@@ -86,6 +92,8 @@ export function CalendarWalkInForm({
   promotions,
   rateOverrides,
   errorMessage,
+  roomUnitId = null,
+  roomUnitNumber = null,
 }: CalendarWalkInFormProps) {
   const initialState = useMemo<WalkInBookingState>(
     () => ({
@@ -170,11 +178,20 @@ export function CalendarWalkInForm({
     <>
       <p className="calendar-day-panel__intro">
         Book · <strong>{roomName}</strong>
+        {roomUnitNumber ? (
+          <>
+            {" "}
+            · <strong>#{roomUnitNumber}</strong>
+          </>
+        ) : null}
       </p>
       <p className="detail-help">
         Enter every stay here — website, walk-in, Airbnb, Booking.com, or Expedia.
         Past dates are allowed when you need to backfill an old booking. Pick the source
         below.
+        {roomUnitNumber
+          ? ` This stay will be assigned to door #${roomUnitNumber}.`
+          : ""}
       </p>
       {displayError ? (
         <p className="form-message form-message--error" role="alert">
@@ -185,6 +202,9 @@ export function CalendarWalkInForm({
         <StaffFormBusyBridge />
         <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
         <input name="room-id" type="hidden" value={roomId} />
+        {roomUnitId ? (
+          <input name="room-unit-id" type="hidden" value={roomUnitId} />
+        ) : null}
         {showEmail ? <input name="show-email" type="hidden" value="1" /> : null}
         {showTotal ? <input name="show-total" type="hidden" value="1" /> : null}
         <div className="field-pair">

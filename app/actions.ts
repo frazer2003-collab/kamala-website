@@ -1757,6 +1757,7 @@ export async function createWalkInBooking(
 
   const depositPaid = getValue(formData, "deposit-paid") === "1";
   const paidAt = depositPaid ? new Date().toISOString() : null;
+  const requestedRoomUnitId = getValue(formData, "room-unit-id");
 
   const capacity = await checkStayCapacity(
     room.id,
@@ -1781,15 +1782,35 @@ export async function createWalkInBooking(
     ...confirmed.bookings.map(occupancyFromBooking),
     ...channels.blocks.map(occupancyFromChannelBlock),
   ];
-  const hasDoor = hasAssignableUnitForStay({
-    units,
-    roomId: room.id,
-    arrivalDate: arrival,
-    departureDate: departure,
-    occupancies,
-  });
-  if (!hasDoor) {
-    return walkInError("no-assignable-door", formData, arrival);
+
+  let assignRoomUnitId: string | null = null;
+  if (requestedRoomUnitId) {
+    const unit = getRoomUnitById(units, requestedRoomUnitId);
+    if (!unit || !isUnitEligibleForRoom(unit, room.id)) {
+      return walkInError("invalid-room-number", formData, arrival);
+    }
+    const conflict = findUnitAssignmentConflict({
+      units,
+      unitId: requestedRoomUnitId,
+      arrivalDate: arrival,
+      departureDate: departure,
+      occupancies,
+    });
+    if (conflict) {
+      return walkInError("room-number-taken", formData, arrival);
+    }
+    assignRoomUnitId = requestedRoomUnitId;
+  } else {
+    const hasDoor = hasAssignableUnitForStay({
+      units,
+      roomId: room.id,
+      arrivalDate: arrival,
+      departureDate: departure,
+      occupancies,
+    });
+    if (!hasDoor) {
+      return walkInError("no-assignable-door", formData, arrival);
+    }
   }
 
   const supabase = createStaffSupabaseClient();
@@ -1823,6 +1844,29 @@ export async function createWalkInBooking(
       return walkInError("invalid-dates", formData, arrival);
     }
     return walkInError("save-failed", formData, arrival);
+  }
+
+  if (assignRoomUnitId) {
+    const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
+      p_booking_id: data.id,
+      p_room_unit_id: assignRoomUnitId,
+    });
+
+    if (unitError) {
+      let assignFailed = true;
+      if (/Could not find the function|schema cache|PGRST202/i.test(unitError.message)) {
+        const { error: fallbackError } = await supabase
+          .from("booking_requests")
+          .update({ room_unit_id: assignRoomUnitId })
+          .eq("id", data.id);
+        assignFailed = Boolean(fallbackError);
+      }
+
+      if (assignFailed) {
+        await supabase.from("booking_requests").delete().eq("id", data.id);
+        return walkInError("save-failed", formData, arrival);
+      }
+    }
   }
 
   if (guestEmail !== walkInEmailFallback && !isPastCalendarDate(arrival)) {

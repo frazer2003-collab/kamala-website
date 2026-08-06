@@ -46,6 +46,7 @@ import { getStaffRooms } from "@/lib/rooms";
 import {
   attachRoomNumbers,
   getKnownUnitIdSet,
+  getRoomUnitById,
   getStaffRoomUnits,
   occupancyFromBooking,
   occupancyFromChannelBlock,
@@ -79,6 +80,7 @@ export default async function StaffCalendarPage({
     room?: string;
     date?: string;
     mode?: string;
+    unit?: string;
     saved?: string;
     created?: string;
     error?: string;
@@ -101,6 +103,7 @@ export default async function StaffCalendarPage({
     room: selectedRoomId,
     date: selectedDate,
     mode,
+    unit: selectedUnitId,
     saved,
     created,
     error,
@@ -216,6 +219,7 @@ export default async function StaffCalendarPage({
   };
 
   const roomUnits = roomUnitsResult.units;
+  const selectedDoorUnit = getRoomUnitById(roomUnits, selectedUnitId);
   const allAssignmentBookings = attachRoomNumbers(confirmedBookings.bookings, roomUnits);
   const calendarBookings = allAssignmentBookings.filter((booking) =>
     dateRangeOverlapsBooking(booking, boardFromIso, boardToIso),
@@ -690,7 +694,11 @@ export default async function StaffCalendarPage({
           <CalendarBookingDialog
             closeHref={closeHref}
             open
-            title={`${selectedRoom.shortName} · ${selectedDate}`}
+            title={
+              selectedDoorUnit
+                ? `${selectedRoom.shortName} · #${selectedDoorUnit.number} · ${selectedDate}`
+                : `${selectedRoom.shortName} · ${selectedDate}`
+            }
           >
             <CalendarDayPanel
               canManage={mode === "rate" ? canManageRates : canManage}
@@ -733,6 +741,8 @@ export default async function StaffCalendarPage({
               promotions={promotions}
               rateOverrides={Object.fromEntries(rateLookup)}
               room={selectedRoom}
+              roomUnitId={selectedDoorUnit?.id ?? null}
+              roomUnitNumber={selectedDoorUnit?.number ?? null}
               soldOutForNight={soldOutForSelectedNight}
               soldOutReason={soldOutReason}
             />
