@@ -88,7 +88,7 @@ import {
 import {
   resolveBedSetupForRoom,
 } from "@/lib/bed-setup";
-import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS, isStayLengthAllowed } from "@/lib/stay-dates";
+import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS, countStayNights, isStayLengthAllowed } from "@/lib/stay-dates";
 
 export type BookingFormValues = {
   guestName: string;
@@ -380,11 +380,9 @@ export async function createBookingRequest(
     );
   }
 
-  const nights = Math.round(
-    (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const nights = countStayNights(arrival, departure);
 
-  if (!isStayLengthAllowed(nights)) {
+  if (nights === null || !isStayLengthAllowed(nights)) {
     return bookingErrorState(
       `Stays can be requested for ${MIN_STAY_NIGHTS} to ${MAX_STAY_NIGHTS} nights.`,
       formData,
@@ -1139,11 +1137,8 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-dates`);
   }
 
-  const nights = Math.round(
-    (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (!isStayLengthAllowed(nights)) {
+  const nights = countStayNights(arrival, departure);
+  if (nights === null || !isStayLengthAllowed(nights)) {
     redirect(`${bookingHref}&error=invalid-dates`);
   }
 
@@ -1247,6 +1242,9 @@ export async function updateConfirmedBooking(
     .eq("id", bookingId);
 
   if (error) {
+    if (error.message.includes("booking_requests_nights_check")) {
+      redirect(`${bookingHref}&error=invalid-dates`);
+    }
     redirect(appendCalendarError(bookingHref, "save-failed", error.message));
   }
 
@@ -1700,11 +1698,8 @@ export async function createWalkInBooking(
     return walkInError("invalid-phone", formData, arrival);
   }
 
-  const nights = Math.round(
-    (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (!isStayLengthAllowed(nights)) {
+  const nights = countStayNights(arrival, departure);
+  if (nights === null || !isStayLengthAllowed(nights)) {
     return walkInError("invalid-dates", formData, arrival);
   }
 
@@ -1791,6 +1786,9 @@ export async function createWalkInBooking(
     .single();
 
   if (error || !data) {
+    if (error?.message?.includes("booking_requests_nights_check")) {
+      return walkInError("invalid-dates", formData, arrival);
+    }
     return walkInError("save-failed", formData, arrival);
   }
 
@@ -1981,11 +1979,8 @@ export async function updateChannelReservation(
     redirect(`${blockHref}&error=invalid-dates`);
   }
 
-  const nights = Math.round(
-    (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (nights < 1 || nights > 60) {
+  const nights = countStayNights(arrival, departure);
+  if (nights === null || !isStayLengthAllowed(nights)) {
     redirect(`${blockHref}&error=invalid-dates`);
   }
 

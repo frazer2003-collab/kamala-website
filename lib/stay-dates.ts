@@ -9,7 +9,8 @@ export type StayDates = {
 
 /** Inclusive guest/staff stay length bounds (nights between arrival and departure). */
 export const MIN_STAY_NIGHTS = 1;
-export const MAX_STAY_NIGHTS = 31;
+/** Keep in sync with booking_requests_nights_check in supabase/schema.sql */
+export const MAX_STAY_NIGHTS = 60;
 
 export function isStayLengthAllowed(nights: number): boolean {
   return (
@@ -25,21 +26,30 @@ function isIsoDate(value: string | undefined): value is string {
   return Boolean(value && ISO_DATE.test(value));
 }
 
+/** Whole nights between ISO dates (UTC calendar math; exclusive departure). */
+export function countStayNights(arrival: string, departure: string): number | null {
+  if (!isIsoDate(arrival) || !isIsoDate(departure)) {
+    return null;
+  }
+
+  const [ay, am, ad] = arrival.split("-").map(Number);
+  const [dy, dm, dd] = departure.split("-").map(Number);
+  const arrivalUtc = Date.UTC(ay, am - 1, ad);
+  const departureUtc = Date.UTC(dy, dm - 1, dd);
+
+  if (!Number.isFinite(arrivalUtc) || !Number.isFinite(departureUtc)) {
+    return null;
+  }
+
+  if (departureUtc <= arrivalUtc) {
+    return null;
+  }
+
+  return Math.round((departureUtc - arrivalUtc) / (1000 * 60 * 60 * 24));
+}
+
 function nightsBetween(arrival: string, departure: string): number | null {
-  const arrivalDate = new Date(`${arrival}T00:00:00`);
-  const departureDate = new Date(`${departure}T00:00:00`);
-
-  if (Number.isNaN(arrivalDate.getTime()) || Number.isNaN(departureDate.getTime())) {
-    return null;
-  }
-
-  if (departureDate <= arrivalDate) {
-    return null;
-  }
-
-  return Math.round(
-    (departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  return countStayNights(arrival, departure);
 }
 
 export function parseStayDates(arrival?: string, departure?: string): StayDates | null {

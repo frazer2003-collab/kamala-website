@@ -45,48 +45,41 @@ function booking(partial: {
   };
 }
 
-describe("getClippedBarRange half-cell stay geometry", () => {
+describe("getClippedBarRange last-night stay geometry", () => {
   const days = buildStaffTimelineDays("2026-07-01", "2026-07-05");
 
-  it("spans check-in through departure with mid-cell insets", () => {
+  it("spans check-in through the night before checkout", () => {
     const range = getClippedBarRange("2026-07-01", "2026-07-03", days);
 
     assert.deepEqual(range, {
       startCol: 1,
-      span: 3,
+      span: 2,
       startInset: 0.5,
-      endInset: 0.5,
+      endInset: 0,
       continuesLeft: false,
       continuesRight: false,
     });
     assert.equal(timelineBarStartEdge(range!), 0.5);
-    assert.equal(timelineBarEndEdge(range!), 2.5);
+    assert.equal(timelineBarEndEdge(range!), 2);
   });
 
-  it("keeps one-night stays one cell wide (mid to mid)", () => {
+  it("keeps one-night stays on the arrival day only (noon to midnight)", () => {
     const range = getClippedBarRange("2026-07-02", "2026-07-03", days);
 
     assert.equal(range?.startCol, 2);
-    assert.equal(range?.span, 2);
+    assert.equal(range?.span, 1);
     assert.equal(range?.startInset, 0.5);
-    assert.equal(range?.endInset, 0.5);
-    assert.equal(timelineBarEndEdge(range!) - timelineBarStartEdge(range!), 1);
+    assert.equal(range?.endInset, 0);
+    assert.equal(timelineBarEndEdge(range!) - timelineBarStartEdge(range!), 0.5);
   });
 
-  it("shows a checkout-only morning when the stay arrives before the board", () => {
+  it("hides checkout-only mornings when the last night is before the board", () => {
     const range = getClippedBarRange("2026-06-28", "2026-07-01", days);
 
-    assert.deepEqual(range, {
-      startCol: 1,
-      span: 1,
-      startInset: 0,
-      endInset: 0.5,
-      continuesLeft: true,
-      continuesRight: false,
-    });
+    assert.equal(range, null);
   });
 
-  it("fills to the board edge when checkout is the morning after the last day", () => {
+  it("fills the last board day when that night is the final night of the stay", () => {
     const range = getClippedBarRange("2026-07-04", "2026-07-06", days);
 
     assert.equal(range?.startCol, 4);
@@ -148,6 +141,6 @@ describe("buildUnitTimelineBars same-day turnover lanes", () => {
     });
 
     assert.equal(bars[0]?.compact, true);
-    assert.equal(bars[0]?.span, 2);
+    assert.equal(bars[0]?.span, 1);
   });
 });

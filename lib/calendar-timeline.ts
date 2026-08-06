@@ -39,7 +39,7 @@ export type TimelineBarRange = {
   span: number;
   /** Fraction of the first grid cell left empty (0 or 0.5). */
   startInset: number;
-  /** Fraction of the last grid cell left empty (0 or 0.5). */
+  /** Fraction of the last grid cell left empty (0 when filled through last night). */
   endInset: number;
   continuesLeft: boolean;
   continuesRight: boolean;
@@ -73,7 +73,7 @@ export function timelineBarStartEdge(
   return bar.startCol - 1 + bar.startInset;
 }
 
-/** Right edge of a stay bar in 0-based day fractions (checkout noon = n + 0.5). */
+/** Right edge of a stay bar in 0-based day fractions (end of last night = n + 1). */
 export function timelineBarEndEdge(
   bar: Pick<TimelineBarRange, "startCol" | "span" | "endInset">,
 ) {
@@ -86,7 +86,7 @@ export function timelineBarVisualSpan(
   return bar.span - bar.startInset - bar.endInset;
 }
 
-/** CSS grid placement with mid-cell check-in / checkout insets. */
+/** CSS grid placement with mid-cell check-in and full last-night end. */
 export function getTimelineBarPlacementStyle(
   bar: Pick<TimelineBarRange, "startCol" | "span" | "startInset" | "endInset"> & {
     lane: number;
@@ -106,7 +106,7 @@ export function getTimelineBarPlacementStyle(
 
 /**
  * Night columns a stay occupies for empty-day actions (arrival through last night).
- * Departure-day morning halves do not block the afternoon cell action.
+ * Checkout day is outside the bar.
  */
 export function timelineBarNightColumns(
   bar: Pick<TimelineBarRange, "startCol" | "span" | "endInset">,
@@ -129,7 +129,8 @@ function addIsoDays(iso: string, days: number) {
 }
 
 /**
- * Stay bars run mid check-in cell → mid departure cell (hotel noon turnover).
+ * Stay bars run mid check-in cell through the end of the last night
+ * (the calendar day before checkout). Checkout morning is left clear.
  * When clipped at the board edge, the open side fills the cell (no inset).
  */
 export function getClippedBarRange(
@@ -140,12 +141,24 @@ export function getClippedBarRange(
   const firstIso = calendarDays[0]?.iso;
   const lastIso = calendarDays[calendarDays.length - 1]?.iso;
 
-  if (!firstIso || !lastIso || departure < firstIso || arrival > lastIso || arrival >= departure) {
+  if (
+    !firstIso ||
+    !lastIso ||
+    departure <= firstIso ||
+    arrival > lastIso ||
+    arrival >= departure
+  ) {
+    return null;
+  }
+
+  // Last occupied night — checkout day is not part of the bar.
+  const lastNight = addIsoDays(departure, -1);
+  if (lastNight < arrival) {
     return null;
   }
 
   const visibleStart = arrival < firstIso ? firstIso : arrival;
-  const visibleEnd = departure > lastIso ? lastIso : departure;
+  const visibleEnd = lastNight > lastIso ? lastIso : lastNight;
 
   if (visibleStart > visibleEnd) {
     return null;
@@ -159,13 +172,13 @@ export function getClippedBarRange(
   }
 
   const continuesLeft = arrival < firstIso;
-  const continuesRight = departure > addIsoDays(lastIso, 1);
+  const continuesRight = lastNight > lastIso;
 
   return {
     startCol: startIdx + 1,
     span: endIdx - startIdx + 1,
     startInset: continuesLeft ? 0 : 0.5,
-    endInset: departure > lastIso ? 0 : 0.5,
+    endInset: 0,
     continuesLeft,
     continuesRight,
   };
