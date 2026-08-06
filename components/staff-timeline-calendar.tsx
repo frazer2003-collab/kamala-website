@@ -279,6 +279,7 @@ function DoorReservationRow({
 
           if (dayHref) {
             const ariaParts = [
+              "book",
               isClosed ? "closed" : null,
               cueTitle ? cueTitle.toLowerCase() : null,
             ].filter(Boolean);
@@ -293,7 +294,7 @@ function DoorReservationRow({
                 title={dayTitle || undefined}
               >
                 {cues}
-                <span className="sr-only">Day actions</span>
+                <span className="sr-only">Book this door</span>
               </Link>
             );
           }
