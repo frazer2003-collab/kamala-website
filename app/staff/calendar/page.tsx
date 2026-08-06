@@ -30,6 +30,7 @@ import {
   isChannelReservation,
   purgeIcalSyncedChannelBlocks,
 } from "@/lib/room-blocks";
+import { purgeUnassignedJuly2026Stays } from "@/lib/purge-unassigned-july";
 import {
   buildInventoryLookup,
   getRoomDayInventoryForMonth,
@@ -125,6 +126,8 @@ export default async function StaffCalendarPage({
   const calendarDays = buildStaffTimelineDays(boardFromIso, boardToIso);
   // Drop leftover iCal-synced Airbnb/OTA stays staff cannot cancel like website bookings.
   await purgeIcalSyncedChannelBlocks();
+  // Clear leftover No # stays that overlap July 2026.
+  await purgeUnassignedJuly2026Stays();
   const [
     confirmedBookingsParts,
     calendarBlockParts,

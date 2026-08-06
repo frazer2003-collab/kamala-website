@@ -8,6 +8,7 @@ import {
   getChannelReservationsForRange,
   purgeIcalSyncedChannelBlocks,
 } from "@/lib/room-blocks";
+import { purgeUnassignedJuly2026Stays } from "@/lib/purge-unassigned-july";
 import { requireStaffSession } from "@/lib/staff-auth";
 import {
   buildReservationRows,
@@ -74,6 +75,8 @@ export default async function StaffReservationsPage({
 
   // Drop leftover iCal-synced Airbnb/OTA stays staff cannot cancel like website bookings.
   await purgeIcalSyncedChannelBlocks();
+  // Clear leftover No # stays that overlap July 2026.
+  await purgeUnassignedJuly2026Stays();
 
   const [bookingsResult, channelsResult, roomUnitsResult, settings, supabaseReady] =
     await Promise.all([
