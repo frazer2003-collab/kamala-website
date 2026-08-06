@@ -596,6 +596,39 @@ export default async function StaffCalendarPage({
             </Link>
           </p>
         ) : null}
+        {saved === "bulk-rate" ? (
+          <p className="form-message form-message--success" role="status">
+            Temporary rate saved for every room type. Defaults are unchanged.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {saved === "bulk-rate-reset" ? (
+          <p className="form-message form-message--success" role="status">
+            Rates for every room type reset to default or promo.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {saved === "bulk-allotment" ? (
+          <p className="form-message form-message--success" role="status">
+            Temporary allotment saved for every room type. Defaults are
+            unchanged.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {saved === "bulk-allotment-reset" ? (
+          <p className="form-message form-message--success" role="status">
+            Allotment for every room type reset to each type’s default.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
         {dayRates.error ? (
           <p className="form-message form-message--error" role="alert">
             {dayRates.error}{" "}

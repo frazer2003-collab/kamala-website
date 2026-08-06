@@ -228,7 +228,6 @@ function DoorReservationRow({
             !isOccupied && primaryRoomId
               ? getTimelineDayHref(primaryRoomId, day.iso, monthKey, rangeQuery, {
                   unitId: unit.id,
-                  mode: "walk-in",
                 })
               : undefined;
           const overrideKey = primaryRoomId ? `${primaryRoomId}:${day.iso}` : "";
@@ -279,7 +278,7 @@ function DoorReservationRow({
 
           if (dayHref) {
             const ariaParts = [
-              "book",
+              "day actions",
               isClosed ? "closed" : null,
               cueTitle ? cueTitle.toLowerCase() : null,
             ].filter(Boolean);
@@ -294,7 +293,7 @@ function DoorReservationRow({
                 title={dayTitle || undefined}
               >
                 {cues}
-                <span className="sr-only">Book this door</span>
+                <span className="sr-only">Day actions</span>
               </Link>
             );
           }

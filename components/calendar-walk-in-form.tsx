@@ -177,7 +177,7 @@ export function CalendarWalkInForm({
   return (
     <>
       <p className="calendar-day-panel__intro">
-        Book · <strong>{roomName}</strong>
+        New booking · <strong>{roomName}</strong>
         {roomUnitNumber ? (
           <>
             {" "}

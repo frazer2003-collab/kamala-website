@@ -13,12 +13,11 @@ describe("getTimelineDayHref", () => {
     assert.doesNotMatch(href, /mode=/);
   });
 
-  it("passes the door unit and opens Book when staff taps a door cell", () => {
+  it("passes the door unit and opens the choice sheet when staff taps a door cell", () => {
     const href = getTimelineDayHref("courtyard", "2026-08-10", "2026-08", undefined, {
       unitId: "unit-116",
-      mode: "walk-in",
     });
     assert.match(href, /unit=unit-116/);
-    assert.match(href, /mode=walk-in/);
+    assert.doesNotMatch(href, /mode=/);
   });
 });

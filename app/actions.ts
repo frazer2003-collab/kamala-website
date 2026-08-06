@@ -2508,3 +2508,188 @@ export async function updateRoomDayRate(formData: FormData) {
     }),
   );
 }
+
+export async function bulkUpdateRoomDayRate(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const month = getValue(formData, "month");
+  const roomId = getValue(formData, "room-id");
+  const startDate = getValue(formData, "start-date");
+  const endDateInclusive = getValue(formData, "end-date");
+  const action = getValue(formData, "rate-action");
+  const nightlyRate = parseMoneyAmount(getValue(formData, "nightly-rate"));
+  const start = parseDate(startDate);
+  const endInclusive = parseDate(endDateInclusive);
+
+  const rateHref = calendarHrefFromFormData(formData, {
+    month,
+    room: roomId || undefined,
+    date: startDate || undefined,
+    mode: "bulk-rate",
+  });
+
+  if (!start || !endInclusive || endInclusive < start) {
+    redirect(`${rateHref}&error=invalid-dates`);
+  }
+
+  if (isPastCalendarDate(startDate)) {
+    redirect(`${rateHref}&error=past-date`);
+  }
+
+  if (action !== "set" && action !== "reset") {
+    redirect(`${rateHref}&error=invalid-dates`);
+  }
+
+  const rooms = await getStaffRooms();
+  if (rooms.length === 0) {
+    redirect(`${rateHref}&error=save-failed`);
+  }
+
+  const days = eachIsoDayInclusive(startDate, endDateInclusive);
+  const supabase = createStaffSupabaseClient();
+
+  if (action === "reset") {
+    const { error } = await supabase
+      .from("room_day_rates")
+      .delete()
+      .gte("date", startDate)
+      .lte("date", endDateInclusive);
+
+    if (error) {
+      redirect(`${rateHref}&error=save-failed`);
+    }
+
+    revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+    revalidatePath("/");
+    revalidatePath("/staff/calendar");
+    redirect(
+      calendarHrefFromFormData(formData, {
+        month,
+        extras: { saved: "bulk-rate-reset" },
+      }),
+    );
+  }
+
+  if (nightlyRate === null) {
+    redirect(`${rateHref}&error=invalid-rate`);
+  }
+
+  const rows = rooms.flatMap((room) =>
+    days.map((date) => ({
+      room_id: room.id,
+      date,
+      nightly_rate: nightlyRate,
+    })),
+  );
+
+  const { error } = await supabase.from("room_day_rates").upsert(rows, {
+    onConflict: "room_id,date",
+  });
+
+  if (error) {
+    redirect(`${rateHref}&error=save-failed`);
+  }
+
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+  revalidatePath("/");
+  revalidatePath("/staff/calendar");
+  redirect(
+    calendarHrefFromFormData(formData, {
+      month,
+      extras: { saved: "bulk-rate" },
+    }),
+  );
+}
+
+export async function bulkUpdateRoomDayAllotment(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const month = getValue(formData, "month");
+  const roomId = getValue(formData, "room-id");
+  const startDate = getValue(formData, "start-date");
+  const endDateInclusive = getValue(formData, "end-date");
+  const action = getValue(formData, "allotment-action");
+  const roomsToSellRaw = Number.parseInt(getValue(formData, "rooms-to-sell"), 10);
+  const start = parseDate(startDate);
+  const endInclusive = parseDate(endDateInclusive);
+
+  const allotmentHref = calendarHrefFromFormData(formData, {
+    month,
+    room: roomId || undefined,
+    date: startDate || undefined,
+    mode: "bulk-allotment",
+  });
+
+  if (!start || !endInclusive || endInclusive < start) {
+    redirect(`${allotmentHref}&error=invalid-dates`);
+  }
+
+  if (isPastCalendarDate(startDate)) {
+    redirect(`${allotmentHref}&error=past-date`);
+  }
+
+  if (action !== "set" && action !== "reset") {
+    redirect(`${allotmentHref}&error=invalid-dates`);
+  }
+
+  const rooms = await getStaffRooms();
+  if (rooms.length === 0) {
+    redirect(`${allotmentHref}&error=save-failed`);
+  }
+
+  const days = eachIsoDayInclusive(startDate, endDateInclusive);
+  const supabase = createStaffSupabaseClient();
+
+  if (action === "reset") {
+    const { error } = await supabase
+      .from("room_day_inventory")
+      .delete()
+      .gte("date", startDate)
+      .lte("date", endDateInclusive);
+
+    if (error) {
+      redirect(`${allotmentHref}&error=save-failed`);
+    }
+
+    revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+    revalidatePath("/");
+    revalidatePath("/staff/calendar");
+    redirect(
+      calendarHrefFromFormData(formData, {
+        month,
+        extras: { saved: "bulk-allotment-reset" },
+      }),
+    );
+  }
+
+  if (!Number.isFinite(roomsToSellRaw) || roomsToSellRaw < 0) {
+    redirect(`${allotmentHref}&error=invalid-allotment`);
+  }
+
+  const rows = rooms.flatMap((room) => {
+    const roomsToSell = Math.min(roomsToSellRaw, room.availableCount);
+    return days.map((date) => ({
+      room_id: room.id,
+      date,
+      rooms_to_sell: roomsToSell,
+    }));
+  });
+
+  const { error } = await supabase.from("room_day_inventory").upsert(rows, {
+    onConflict: "room_id,date",
+  });
+
+  if (error) {
+    redirect(`${allotmentHref}&error=save-failed`);
+  }
+
+  revalidatePublicCache(PUBLIC_CACHE_TAGS.publicRooms);
+  revalidatePath("/");
+  revalidatePath("/staff/calendar");
+  redirect(
+    calendarHrefFromFormData(formData, {
+      month,
+      extras: { saved: "bulk-allotment" },
+    }),
+  );
+}

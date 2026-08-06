@@ -4,6 +4,8 @@ import { StaffFormBusyBridge } from "@/components/staff-busy";
 import Link from "next/link";
 import { useMemo } from "react";
 import {
+  bulkUpdateRoomDayAllotment,
+  bulkUpdateRoomDayRate,
   createRoomBlock,
   updateRoomDayAllotment,
   updateRoomDayRate,
@@ -105,7 +107,12 @@ function getErrorMessage(error?: string, overlap?: string) {
     return "Stay total must be 0 or more, or leave blank.";
   }
 
-  if (error === "overbook" || error === "unavailable" || error === "no-assignable-door" || error === "capacity-verify-failed") {
+  if (
+    error === "overbook" ||
+    error === "unavailable" ||
+    error === "no-assignable-door" ||
+    error === "capacity-verify-failed"
+  ) {
     return staffCapacityErrorMessage(error);
   }
 
@@ -122,6 +129,10 @@ function getErrorMessage(error?: string, overlap?: string) {
   }
 
   return null;
+}
+
+function modeHref(dayHref: string, mode: string) {
+  return `${dayHref}&mode=${encodeURIComponent(mode)}`;
 }
 
 export function CalendarDayPanel({
@@ -157,6 +168,8 @@ export function CalendarDayPanel({
     date,
     unit: roomUnitId ?? undefined,
   });
+  const rateMenuHref = modeHref(dayHref, "rate-menu");
+  const closeMenuHref = modeHref(dayHref, "close-menu");
   const errorMessage = getErrorMessage(error, overlap);
   const fullStatus = (
     <p className="detail-help" role="status">
@@ -170,11 +183,14 @@ export function CalendarDayPanel({
     </p>
   );
 
+  const doorBit = roomUnitNumber ? ` · #${roomUnitNumber}` : "";
+
   if (mode === "stays") {
     return (
       <>
         <p className="calendar-day-panel__intro">
           {formatDisplayDate(date)} · <strong>{room.name}</strong>
+          {doorBit}
         </p>
         {dayStays.length === 0 ? (
           <p className="detail-help">No stays.</p>
@@ -192,9 +208,13 @@ export function CalendarDayPanel({
           {soldOutForNight ? (
             fullStatus
           ) : (
-            <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-              <strong>Book</strong>
-              <span>Walk-in or OTA stay</span>
+            <Link className="calendar-day-choice" href={modeHref(dayHref, "walk-in")}>
+              <strong>New booking</strong>
+              <span>
+                {roomUnitNumber
+                  ? `Assign to #${roomUnitNumber}`
+                  : "Walk-in or OTA stay"}
+              </span>
             </Link>
           )}
         </div>
@@ -205,19 +225,86 @@ export function CalendarDayPanel({
     );
   }
 
-  if (mode === "allotment") {
+  if (mode === "rate-menu") {
     return (
       <>
         <p className="calendar-day-panel__intro">
-          Allotment · <strong>{room.name}</strong> · default{" "}
-          <strong>{room.availableCount}</strong>
+          Change rate · <strong>{room.name}</strong>
+          {doorBit} · {formatDisplayDate(date)}
+        </p>
+        <div className="calendar-day-panel__choices">
+          <Link className="calendar-day-choice" href={modeHref(dayHref, "rate")}>
+            <strong>{room.name}</strong>
+            <span>
+              Nightly price for this type
+              {hasRateOverride ? ` · now ${currentRate}` : ` · default ${room.rate}`}
+            </span>
+          </Link>
+          <Link className="calendar-day-choice" href={modeHref(dayHref, "bulk-rate")}>
+            <strong>All room types</strong>
+            <span>Set one nightly rate across every type for these dates</span>
+          </Link>
+        </div>
+        <p className="detail-help">
+          <Link href={dayHref}>Back</Link>
+        </p>
+      </>
+    );
+  }
+
+  if (mode === "close-menu") {
+    return (
+      <>
+        <p className="calendar-day-panel__intro">
+          Close date · <strong>{room.name}</strong>
+          {doorBit} · {formatDisplayDate(date)}
+        </p>
+        <div className="calendar-day-panel__choices">
+          <Link className="calendar-day-choice" href={modeHref(dayHref, "block")}>
+            <strong>Close {room.name}</strong>
+            <span>Not for sale for this type</span>
+          </Link>
+          <Link
+            className="calendar-day-choice"
+            href={modeHref(dayHref, "bulk-allotment")}
+          >
+            <strong>Bulk allotment</strong>
+            <span>Rooms to sell for every room type on these dates</span>
+          </Link>
+        </div>
+        <p className="detail-help">
+          <Link href={dayHref}>Back</Link>
+        </p>
+      </>
+    );
+  }
+
+  if (mode === "allotment" || mode === "bulk-allotment") {
+    const isBulk = mode === "bulk-allotment";
+    const backHref = isBulk ? closeMenuHref : dayHref;
+    return (
+      <>
+        <p className="calendar-day-panel__intro">
+          {isBulk ? (
+            <>
+              Bulk allotment · all room types · {formatDisplayDate(date)}
+            </>
+          ) : (
+            <>
+              Allotment · <strong>{room.name}</strong> · default{" "}
+              <strong>{room.availableCount}</strong>
+            </>
+          )}
         </p>
         {errorMessage ? (
           <p className="form-message form-message--error" role="alert">
             {errorMessage}
           </p>
         ) : null}
-        <form action={updateRoomDayAllotment} className="calendar-manage-form">
+        <form
+          action={isBulk ? bulkUpdateRoomDayAllotment : updateRoomDayAllotment}
+          className="calendar-manage-form"
+        >
           <StaffFormBusyBridge />
           <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
           <input name="room-id" type="hidden" value={room.id} />
@@ -248,21 +335,24 @@ export function CalendarDayPanel({
           <div className="field-pair">
             <label htmlFor="allotment-rooms-to-sell">Rooms to sell</label>
             <input
-              defaultValue={currentAllotment}
+              defaultValue={isBulk ? 0 : currentAllotment}
               disabled={!canManage}
               id="allotment-rooms-to-sell"
-              max={room.availableCount}
+              max={isBulk ? undefined : room.availableCount}
               min={0}
               name="rooms-to-sell"
               type="number"
             />
             <span className="field-help">
-              Max {room.availableCount}. 0 = stop selling.
-              {hasAllotmentOverride ? ` Now ${currentAllotment}.` : ""}
+              {isBulk
+                ? "Applied to every room type, capped at each type’s door count. 0 = stop selling."
+                : `Max ${room.availableCount}. 0 = stop selling.${
+                    hasAllotmentOverride ? ` Now ${currentAllotment}.` : ""
+                  }`}
             </span>
           </div>
           <div className="calendar-day-panel__actions">
-            <Link className="button button--quiet" href={dayHref}>
+            <Link className="button button--quiet" href={backHref}>
               Back
             </Link>
             <div className="calendar-day-panel__actions-end">
@@ -270,7 +360,7 @@ export function CalendarDayPanel({
                 className="button button--quiet"
                 disabled={!canManage}
                 name="allotment-action"
-                title={`Reset to ${room.availableCount}`}
+                title={isBulk ? "Reset every type to default" : `Reset to ${room.availableCount}`}
                 type="submit"
                 value="reset"
               >
@@ -295,18 +385,30 @@ export function CalendarDayPanel({
     );
   }
 
-  if (mode === "rate") {
+  if (mode === "rate" || mode === "bulk-rate") {
+    const isBulk = mode === "bulk-rate";
+    const backHref = rateMenuHref;
     return (
       <>
         <p className="calendar-day-panel__intro">
-          Rate · <strong>{room.name}</strong> · default <strong>{room.rate}</strong>
+          {isBulk ? (
+            <>Bulk rate · all room types · {formatDisplayDate(date)}</>
+          ) : (
+            <>
+              Rate · <strong>{room.name}</strong> · default{" "}
+              <strong>{room.rate}</strong>
+            </>
+          )}
         </p>
         {errorMessage ? (
           <p className="form-message form-message--error" role="alert">
             {errorMessage}
           </p>
         ) : null}
-        <form action={updateRoomDayRate} className="calendar-manage-form">
+        <form
+          action={isBulk ? bulkUpdateRoomDayRate : updateRoomDayRate}
+          className="calendar-manage-form"
+        >
           <StaffFormBusyBridge />
           <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
           <input name="room-id" type="hidden" value={room.id} />
@@ -337,23 +439,24 @@ export function CalendarDayPanel({
           <div className="field-pair">
             <label htmlFor="rate-nightly-rate">Nightly rate</label>
             <input
-              defaultValue={currentRate}
+              defaultValue={isBulk ? room.rate : currentRate}
               disabled={!canManage}
               id="rate-nightly-rate"
               inputMode="decimal"
               min={0}
               name="nightly-rate"
-              required
+              required={!isBulk}
               step="any"
               type="number"
             />
             <span className="field-help">
-              Default {room.rate}.
-              {hasRateOverride ? ` Now ${currentRate}.` : ""}
+              {isBulk
+                ? "Same amount for every room type on these nights."
+                : `Default ${room.rate}.${hasRateOverride ? ` Now ${currentRate}.` : ""}`}
             </span>
           </div>
           <div className="calendar-day-panel__actions">
-            <Link className="button button--quiet" href={dayHref}>
+            <Link className="button button--quiet" href={backHref}>
               Back
             </Link>
             <div className="calendar-day-panel__actions-end">
@@ -361,7 +464,7 @@ export function CalendarDayPanel({
                 className="button button--quiet"
                 disabled={!canManage}
                 name="rate-action"
-                title={`Reset to ${room.rate}`}
+                title={isBulk ? "Reset every type to its default" : `Reset to ${room.rate}`}
                 type="submit"
                 value="reset"
               >
@@ -469,7 +572,7 @@ export function CalendarDayPanel({
             />
           </div>
           <div className="calendar-day-panel__actions">
-            <Link className="button button--quiet" href={dayHref}>
+            <Link className="button button--quiet" href={closeMenuHref}>
               Back
             </Link>
             <button className="button button--primary" disabled={!canManage} type="submit">
@@ -488,6 +591,7 @@ export function CalendarDayPanel({
     <>
       <p className="calendar-day-panel__intro">
         {formatDisplayDate(date)} · <strong>{room.name}</strong>
+        {doorBit}
       </p>
       {dayStays.length > 0 ? (
         <>
@@ -508,8 +612,8 @@ export function CalendarDayPanel({
         {soldOutForNight ? (
           fullStatus
         ) : (
-          <Link className="calendar-day-choice" href={`${dayHref}&mode=walk-in`}>
-            <strong>Book</strong>
+          <Link className="calendar-day-choice" href={modeHref(dayHref, "walk-in")}>
+            <strong>New booking</strong>
             <span>
               {roomUnitNumber
                 ? `Assign to #${roomUnitNumber}`
@@ -517,23 +621,16 @@ export function CalendarDayPanel({
             </span>
           </Link>
         )}
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=allotment`}>
-          <strong>Allotment</strong>
+        <Link className="calendar-day-choice" href={rateMenuHref}>
+          <strong>Change rate</strong>
           <span>
-            Rooms to sell · default {room.availableCount}
-            {hasAllotmentOverride ? ` · now ${currentAllotment}` : ""}
-          </span>
-        </Link>
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=rate`}>
-          <strong>Rate</strong>
-          <span>
-            Nightly price · default {room.rate}
+            This type or all types
             {hasRateOverride ? ` · now ${currentRate}` : ""}
           </span>
         </Link>
-        <Link className="calendar-day-choice" href={`${dayHref}&mode=block`}>
-          <strong>Close</strong>
-          <span>Not for sale</span>
+        <Link className="calendar-day-choice" href={closeMenuHref}>
+          <strong>Close date</strong>
+          <span>Close this type or set bulk allotment</span>
         </Link>
       </div>
     </>
