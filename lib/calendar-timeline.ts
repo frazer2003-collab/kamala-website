@@ -37,7 +37,7 @@ function inventoryHoldLabel(booking: StaffBooking) {
 export type TimelineBarRange = {
   startCol: number;
   span: number;
-  /** Fraction of the first grid cell left empty (0 or 0.5). */
+  /** Fraction of the first grid cell left empty (0 = full check-in day). */
   startInset: number;
   /** Fraction of the last grid cell left empty (0 when filled through last night). */
   endInset: number;
@@ -66,7 +66,7 @@ export type TimelineBar = {
   needsRoom?: boolean;
 };
 
-/** Left edge of a stay bar in 0-based day fractions (check-in noon = n + 0.5). */
+/** Left edge of a stay bar in 0-based day fractions (check-in day start = n). */
 export function timelineBarStartEdge(
   bar: Pick<TimelineBarRange, "startCol" | "startInset">,
 ) {
@@ -86,7 +86,7 @@ export function timelineBarVisualSpan(
   return bar.span - bar.startInset - bar.endInset;
 }
 
-/** CSS grid placement with mid-cell check-in and full last-night end. */
+/** CSS grid placement for full-day stay cells (optional edge insets). */
 export function getTimelineBarPlacementStyle(
   bar: Pick<TimelineBarRange, "startCol" | "span" | "startInset" | "endInset"> & {
     lane: number;
@@ -129,9 +129,8 @@ function addIsoDays(iso: string, days: number) {
 }
 
 /**
- * Stay bars run mid check-in cell through the end of the last night
- * (the calendar day before checkout). Checkout morning is left clear.
- * When clipped at the board edge, the open side fills the cell (no inset).
+ * Stay bars fill each occupied night cell: full check-in day through the
+ * last night (the calendar day before checkout). Checkout day is left clear.
  */
 export function getClippedBarRange(
   arrival: string,
@@ -177,7 +176,7 @@ export function getClippedBarRange(
   return {
     startCol: startIdx + 1,
     span: endIdx - startIdx + 1,
-    startInset: continuesLeft ? 0 : 0.5,
+    startInset: 0,
     endInset: 0,
     continuesLeft,
     continuesRight,
