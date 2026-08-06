@@ -1,25 +1,27 @@
 import Link from "next/link";
+import { CalendarDateStrip } from "@/components/calendar-date-strip";
+import { FinanceRevenuePie } from "@/components/finance-revenue-pie";
+import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffShell } from "@/components/staff-shell";
 import {
   defaultStaffTimelineSelectionRange,
-  formatCalendarMonth,
-  formatCalendarMonthLabel,
-  parseCalendarMonth,
-  shiftCalendarMonth,
+  monthsOverlappingDateRange,
+  parseStaffTimelineRange,
 } from "@/lib/calendar";
-import { getConfirmedBookings } from "@/lib/booking-requests";
+import { getConfirmedBookingsOverlappingRange } from "@/lib/booking-requests";
 import { formatMoneySuffix } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import {
   buildRateLookup,
   getRoomDayRatesForMonth,
 } from "@/lib/room-day-rates";
-import { getStaffCalendarBlocks } from "@/lib/room-blocks";
+import { getChannelBlocksOverlappingRange } from "@/lib/room-blocks";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
 import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
+import "@/app/staff-sold.css";
 
 export const dynamic = "force-dynamic";
 
@@ -57,12 +59,30 @@ function moneyCaption(row: {
   return "Website stay total";
 }
 
-function calendarRoomHref(monthKey: string, roomId: string) {
-  const selection = defaultStaffTimelineSelectionRange(monthKey);
+function financeHref(options: {
+  month?: string;
+  from?: string;
+  to?: string;
+}) {
+  const params = new URLSearchParams();
+  if (options.month) {
+    params.set("month", options.month);
+  }
+  if (options.from) {
+    params.set("from", options.from);
+  }
+  if (options.to) {
+    params.set("to", options.to);
+  }
+  const query = params.toString();
+  return query ? `/staff/sold?${query}` : "/staff/sold";
+}
+
+function calendarRoomHref(fromIso: string, toIso: string, roomId: string) {
   const params = new URLSearchParams({
-    month: monthKey,
-    from: selection.fromIso,
-    to: selection.toIso,
+    month: fromIso.slice(0, 7),
+    from: fromIso,
+    to: toIso,
     room: roomId,
   });
   return `/staff/calendar?${params.toString()}`;
@@ -71,58 +91,87 @@ function calendarRoomHref(monthKey: string, roomId: string) {
 export default async function StaffSoldPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; from?: string; to?: string }>;
 }) {
   await requireStaffCalendarWrite();
 
-  const { month: monthParam } = await searchParams;
-  const { year, month } = parseCalendarMonth(monthParam);
-  const monthKey = formatCalendarMonth(year, month);
-  const prev = shiftCalendarMonth(year, month, -1);
-  const next = shiftCalendarMonth(year, month, 1);
-  const prevKey = formatCalendarMonth(prev.year, prev.month);
-  const nextKey = formatCalendarMonth(next.year, next.month);
-  const prevLabel = formatCalendarMonthLabel(prev.year, prev.month);
-  const nextLabel = formatCalendarMonthLabel(next.year, next.month);
+  const { month: monthParam, from: fromParam, to: toParam } = await searchParams;
+  const timelineRange = parseStaffTimelineRange({
+    month: monthParam,
+    from: fromParam,
+    to: toParam,
+  });
+  const monthKey = timelineRange.monthKey;
+  const fromIso = timelineRange.fromIso;
+  const toIso = timelineRange.toIso;
+  const overlappingMonths = monthsOverlappingDateRange(fromIso, toIso);
 
   const [
     rooms,
     bookingsResult,
-    blocksResult,
+    channelsResult,
     settings,
     promotions,
-    dayRatesResult,
+    dayRatesParts,
     supabaseReady,
   ] = await Promise.all([
     getStaffRooms(),
-    getConfirmedBookings({ year, month }),
-    getStaffCalendarBlocks({ year, month }),
+    getConfirmedBookingsOverlappingRange(fromIso, toIso),
+    getChannelBlocksOverlappingRange(fromIso, toIso),
     getPropertySettings(),
     getStaffRoomPromotions(),
-    getRoomDayRatesForMonth({ year, month }),
+    Promise.all(
+      overlappingMonths.map((entry) =>
+        getRoomDayRatesForMonth({ year: entry.year, month: entry.month }),
+      ),
+    ),
     Promise.resolve(hasStaffSupabaseConfig()),
   ]);
 
   const warnings = [
     bookingsResult.error,
-    blocksResult.error,
-    dayRatesResult.error,
+    channelsResult.error,
+    dayRatesParts.find((part) => part.error)?.error ?? null,
   ].filter((message): message is string => Boolean(message));
 
   const report = buildStaffInsightsReport({
-    year,
-    month,
+    year: timelineRange.start.year,
+    month: timelineRange.start.month,
+    fromIso,
+    toIso,
     rooms,
     bookings: bookingsResult.bookings,
-    channelBlocks: blocksResult.channelBlocks,
-    monthBlocks: blocksResult.monthBlocks,
+    channelBlocks: channelsResult.blocks,
     promotions,
-    rateOverrides: buildRateLookup(dayRatesResult.entries),
+    rateOverrides: buildRateLookup(dayRatesParts.flatMap((part) => part.entries)),
   });
   const currency = settings.currency;
   const soldRooms = report.rooms.filter((row) => row.nightsSold > 0);
   const quietRooms = report.rooms.filter((row) => row.nightsSold === 0);
   const noRoomsConfigured = rooms.length === 0;
+  const pieSlices = soldRooms
+    .filter((row) => row.estimatedRevenue > 0)
+    .map((row) => ({
+      roomId: row.roomId,
+      roomName: row.roomName,
+      amount: row.estimatedRevenue,
+    }));
+
+  const monthHref = (nextMonthKey: string) => {
+    const selection = defaultStaffTimelineSelectionRange(nextMonthKey);
+    return financeHref({
+      month: nextMonthKey,
+      from: selection.fromIso,
+      to: selection.toIso,
+    });
+  };
+
+  const rangeHref = (nextFrom: string, nextTo: string) =>
+    financeHref({
+      month: nextFrom.slice(0, 7),
+      from: nextFrom,
+      to: nextTo,
+    });
 
   return (
     <StaffShell current="sold">
@@ -134,31 +183,23 @@ export default async function StaffSoldPage({
           <div className="staff-sold__intro">
             <h1 id="staff-sold-title">Finance</h1>
             <p>
-              Which rooms sold this month — nights and money from website stays
-              and quoted channel nights.
+              Nights and money sold for the selected dates — website stays and
+              quoted channel nights.
             </p>
           </div>
-          <nav className="staff-sold__month" aria-label="Choose month">
-            <Link
-              aria-label={`Previous month, ${prevLabel}`}
-              className="button button--quiet staff-sold__month-btn"
-              href={`/staff/sold?month=${prevKey}`}
-            >
-              <span aria-hidden="true">‹</span>
-              <span className="staff-sold__month-btn-text">{prevLabel}</span>
-            </Link>
-            <p className="staff-sold__month-label" aria-live="polite">
-              {report.monthLabel}
-            </p>
-            <Link
-              aria-label={`Next month, ${nextLabel}`}
-              className="button button--quiet staff-sold__month-btn"
-              href={`/staff/sold?month=${nextKey}`}
-            >
-              <span className="staff-sold__month-btn-text">{nextLabel}</span>
-              <span aria-hidden="true">›</span>
-            </Link>
-          </nav>
+          <div className="staff-sold__dates">
+            <StaffCalendarMonthPicker
+              buildHref={monthHref}
+              fromIso={fromIso}
+              monthKey={monthKey}
+              toIso={toIso}
+            />
+            <CalendarDateStrip
+              buildHref={rangeHref}
+              fromIso={fromIso}
+              toIso={toIso}
+            />
+          </div>
         </div>
 
         {!supabaseReady ? (
@@ -189,8 +230,8 @@ export default async function StaffSoldPage({
                 <div className="staff-sold__sold">
                   {soldRooms.length === 0 ? (
                     <p className="staff-sold__empty" role="status">
-                      Nothing sold in {report.monthLabel} yet. Confirmed stays
-                      that land in this month will appear here.
+                      Nothing sold in {report.rangeLabel} yet. Confirmed stays
+                      that land in this range will appear here.
                     </p>
                   ) : (
                     <ol
@@ -206,11 +247,15 @@ export default async function StaffSoldPage({
                               <h2>
                                 <Link
                                   className="staff-sold__room-link"
-                                  href={calendarRoomHref(monthKey, row.roomId)}
+                                  href={calendarRoomHref(
+                                    fromIso,
+                                    toIso,
+                                    row.roomId,
+                                  )}
                                 >
                                   {row.roomName}
                                   <span className="sr-only">
-                                    {` (open on calendar for ${report.monthLabel})`}
+                                    {` (open on calendar for ${report.rangeLabel})`}
                                   </span>
                                 </Link>
                               </h2>
@@ -248,50 +293,71 @@ export default async function StaffSoldPage({
                     </ol>
                   )}
 
-                  <div
-                    className="staff-sold__summary"
-                    role="region"
-                    aria-label="Month totals"
-                  >
-                    <p className="staff-sold__summary-line">
-                      <span>
-                        {nightLabel(report.totals.nightsSold)}
-                        <span aria-hidden="true"> · </span>
-                        {stayLabel(report.totals.stayCount)}
-                      </span>
-                      {report.totals.estimatedRevenue > 0 ? (
-                        <span>
-                          {formatMoneySuffix(
-                            report.totals.estimatedRevenue,
-                            currency,
-                          )}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="staff-sold__note">{report.revenueNote}</p>
-                  </div>
+                  {soldRooms.length > 0 && quietRooms.length > 0 ? (
+                    <div className="staff-sold__quiet">
+                      <h2>Didn’t sell in this range</h2>
+                      <ul role="list">
+                        {quietRooms.map((row) => (
+                          <li key={row.roomId}>
+                            <Link
+                              className="staff-sold__quiet-link"
+                              href={calendarRoomHref(fromIso, toIso, row.roomId)}
+                            >
+                              {row.roomName}
+                              <span className="sr-only">
+                                {` (open on calendar for ${report.rangeLabel})`}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
 
-                {soldRooms.length > 0 && quietRooms.length > 0 ? (
-                  <div className="staff-sold__quiet">
-                    <h2>Didn’t sell this month</h2>
-                    <ul role="list">
-                      {quietRooms.map((row) => (
-                        <li key={row.roomId}>
-                          <Link
-                            className="staff-sold__quiet-link"
-                            href={calendarRoomHref(monthKey, row.roomId)}
-                          >
-                            {row.roomName}
-                            <span className="sr-only">
-                              {` (open on calendar for ${report.monthLabel})`}
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+                <FinanceRevenuePie
+                  currency={currency}
+                  slices={pieSlices}
+                  total={report.totals.estimatedRevenue}
+                />
+
+                <div
+                  className="staff-sold__summary"
+                  role="region"
+                  aria-label="Range totals"
+                >
+                  <p className="staff-sold__summary-line">
+                    <span>
+                      {nightLabel(report.totals.nightsSold)}
+                      <span aria-hidden="true"> · </span>
+                      {stayLabel(report.totals.stayCount)}
+                    </span>
+                    {report.totals.estimatedRevenue > 0 ? (
+                      <span>
+                        {formatMoneySuffix(
+                          report.totals.estimatedRevenue,
+                          currency,
+                        )}
+                      </span>
+                    ) : null}
+                  </p>
+                  {report.totals.averageNightlyRate !== null ? (
+                    <p className="staff-sold__summary-avg">
+                      Avg nightly rate{" "}
+                      <strong>
+                        {formatMoneySuffix(
+                          report.totals.averageNightlyRate,
+                          currency,
+                        )}
+                      </strong>
+                      <span aria-hidden="true"> · </span>
+                      <span>
+                        total ÷ {nightLabel(report.totals.nightsSold)}
+                      </span>
+                    </p>
+                  ) : null}
+                  <p className="staff-sold__note">{report.revenueNote}</p>
+                </div>
               </div>
             )}
           </>

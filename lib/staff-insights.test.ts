@@ -157,6 +157,7 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.totals.websiteRevenue, 4100);
     assert.equal(report.totals.channelRevenue, 3500);
     assert.equal(report.totals.estimatedRevenue, 7600);
+    assert.equal(report.totals.averageNightlyRate, 760);
     assert.ok(report.totals.occupancyPercent !== null);
   });
 

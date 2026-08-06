@@ -15,6 +15,8 @@ type CalendarDateStripProps = {
   toIso: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
+  /** Defaults to staff calendar range links. */
+  buildHref?: (fromIso: string, toIso: string) => string;
 };
 
 export function CalendarDateStrip({
@@ -22,6 +24,7 @@ export function CalendarDateStrip({
   toIso,
   selectedBookingKey,
   selectedBlockKey,
+  buildHref,
 }: CalendarDateStripProps) {
   const router = useRouter();
   const staySelection = useCalendarStaySelection();
@@ -46,15 +49,16 @@ export function CalendarDateStrip({
     const clamped = clampStaffTimelineDateRange(nextFrom, nextTo);
     setFromValue(clamped.fromIso);
     setToValue(clamped.toIso);
-    router.push(
-      buildStaffCalendarHref({
-        month: clamped.fromIso.slice(0, 7),
-        from: clamped.fromIso,
-        to: clamped.toIso,
-        booking: activeBookingKey,
-        block: activeBookingKey ? undefined : activeBlockKey,
-      }),
-    );
+    const href = buildHref
+      ? buildHref(clamped.fromIso, clamped.toIso)
+      : buildStaffCalendarHref({
+          month: clamped.fromIso.slice(0, 7),
+          from: clamped.fromIso,
+          to: clamped.toIso,
+          booking: activeBookingKey,
+          block: activeBookingKey ? undefined : activeBlockKey,
+        });
+    router.push(href);
   }
 
   return (

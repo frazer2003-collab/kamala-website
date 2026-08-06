@@ -1,0 +1,209 @@
+/* Finance (/staff/sold) — overrides shared staff-sold rules from globals where needed. */
+
+.staff-main--sold .staff-header--compact,
+.staff-sold__header {
+  align-items: flex-end;
+  gap: var(--space-4) var(--space-6);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
+
+.staff-sold__intro {
+  min-width: 0;
+  flex: 1 1 16rem;
+  max-width: 36rem;
+}
+
+.staff-sold__intro p {
+  max-width: 42ch;
+  overflow-wrap: anywhere;
+}
+
+.staff-sold__dates {
+  display: grid;
+  gap: var(--space-3);
+  width: min(100%, 24rem);
+  flex: 0 1 24rem;
+  justify-items: end;
+}
+
+.staff-sold__dates .calendar-date-strip {
+  width: 100%;
+}
+
+.staff-sold__month {
+  display: none;
+}
+
+.staff-sold__body {
+  display: grid;
+  gap: var(--space-8) var(--space-10);
+  width: min(100%, 56rem);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.staff-sold__sold {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.staff-sold__chart {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  min-width: 0;
+}
+
+.staff-sold__chart-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.staff-sold__pie {
+  width: min(100%, 12.5rem);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-strong);
+}
+
+.staff-sold__chart-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.staff-sold__chart-legend {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-sold__chart-legend > li {
+  display: grid;
+  grid-template-columns: 0.7rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.staff-sold__chart-legend > li::before {
+  content: none;
+}
+
+.staff-sold__chart-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: 0.28rem;
+  border-radius: var(--radius-sm);
+}
+
+.staff-sold__chart-legend-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.staff-sold__chart-legend-copy strong {
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.staff-sold__chart-legend-copy span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.staff-sold__summary {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 52ch;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
+}
+
+.staff-sold__summary-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.staff-sold__summary-line span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.staff-sold__summary-avg {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.staff-sold__summary-avg strong {
+  font-weight: 800;
+}
+
+.staff-sold__note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  max-width: 62ch;
+}
+
+@media (min-width: 920px) {
+  .staff-sold__body {
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 17rem);
+  }
+
+  .staff-sold__chart {
+    position: sticky;
+    top: var(--space-4);
+  }
+
+  .staff-sold__summary {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .staff-main--sold .staff-header--compact,
+  .staff-sold__header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+
+  .staff-sold__intro {
+    max-width: none;
+  }
+
+  .staff-sold__dates {
+    width: 100%;
+    flex: none;
+    justify-items: stretch;
+  }
+
+  .staff-sold__body {
+    gap: var(--space-8);
+    width: 100%;
+  }
+}

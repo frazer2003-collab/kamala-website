@@ -267,6 +267,63 @@ export async function getChannelReservationsForRange(fromIso: string, toIso: str
   }
 }
 
+/** Channel stays whose nights overlap [fromIso, toIso] inclusive (for Finance). */
+export async function getChannelBlocksOverlappingRange(
+  fromIso: string,
+  toIso: string,
+) {
+  if (!hasStaffSupabaseConfig()) {
+    return {
+      blocks: [] as StaffRoomBlock[],
+      source: "sample" as const,
+      error: null,
+    };
+  }
+
+  try {
+    const supabase = createStaffSupabaseClient();
+    const [{ data, error }, channelLabelById, unitMap] = await Promise.all([
+      supabase
+        .from("room_blocks")
+        .select("*")
+        .lte("start_date", toIso)
+        .gt("end_date", fromIso)
+        .order("start_date", { ascending: true })
+        .limit(500),
+      getChannelLabelMap(supabase),
+      getBlockRoomUnitMap(supabase),
+    ]);
+
+    if (error || !data) {
+      return {
+        blocks: [] as StaffRoomBlock[],
+        source: "sample" as const,
+        error: "Could not load channel reservations.",
+      };
+    }
+
+    return {
+      blocks: data
+        .map((row) =>
+          mapRoomBlock(
+            row,
+            channelLabelById,
+            unitMap.get(row.id) ?? row.room_unit_id ?? null,
+          ),
+        )
+        .filter(isChannelReservation),
+      source: "supabase" as const,
+      error: null,
+    };
+  } catch {
+    return {
+      blocks: [] as StaffRoomBlock[],
+      source: "sample" as const,
+      error: "Supabase is not configured correctly.",
+    };
+  }
+}
+
 /** All OTA/channel reservations (for room-number conflict checks). */
 export async function getChannelReservations() {
   if (!hasStaffSupabaseConfig()) {

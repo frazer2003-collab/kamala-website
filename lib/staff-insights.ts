@@ -40,6 +40,7 @@ export type StaffInsightsReport = {
   year: number;
   month: number;
   monthLabel: string;
+  rangeLabel: string;
   monthStart: string;
   monthEnd: string;
   rooms: StaffInsightsRoomRow[];
@@ -49,6 +50,7 @@ export type StaffInsightsReport = {
     websiteRevenue: number;
     channelRevenue: number;
     estimatedRevenue: number;
+    averageNightlyRate: number | null;
     websiteStayCount: number;
     occupancyPercent: number | null;
     bookedNights: number;
@@ -57,26 +59,29 @@ export type StaffInsightsReport = {
   revenueNote: string;
 };
 
-function addIsoDays(iso: string, days: number) {
+function addIsoDay(iso: string, days: number) {
   const date = new Date(`${iso}T00:00:00`);
   date.setDate(date.getDate() + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-/** Count stay nights that fall inside [monthStart, monthEnd] inclusive. */
+/** Count stay nights that fall inside [rangeStart, rangeEnd] inclusive. */
 export function countNightsInMonth(
   arrival: string,
   departure: string,
-  monthStart: string,
-  monthEnd: string,
+  rangeStart: string,
+  rangeEnd: string,
 ) {
   if (!arrival || !departure || departure <= arrival) {
     return 0;
   }
 
-  const lastNight = addIsoDays(departure, -1);
-  const visibleStart = arrival < monthStart ? monthStart : arrival;
-  const visibleLastNight = lastNight > monthEnd ? monthEnd : lastNight;
+  const lastNight = addIsoDay(departure, -1);
+  const visibleStart = arrival < rangeStart ? rangeStart : arrival;
+  const visibleLastNight = lastNight > rangeEnd ? rangeEnd : lastNight;
 
   if (visibleStart > visibleLastNight) {
     return 0;
@@ -88,7 +93,7 @@ export function countNightsInMonth(
 }
 
 /**
- * Sum nightly rates for stay nights that fall inside the month,
+ * Sum nightly rates for stay nights that fall inside the range,
  * using the same quote rules as website bookings (day override → promo → base).
  */
 export function estimateQuotedMoneyInMonth({
@@ -148,24 +153,40 @@ function bumpSource(map: Map<string, number>, label: string) {
   map.set(label, (map.get(label) ?? 0) + 1);
 }
 
-function buildMonthDays(monthStart: string, monthEnd: string): CalendarDay[] {
+function buildRangeDays(rangeStart: string, rangeEnd: string): CalendarDay[] {
   const days: CalendarDay[] = [];
-  let cursor = monthStart;
-  while (cursor <= monthEnd) {
+  let cursor = rangeStart;
+  while (cursor <= rangeEnd) {
     const date = new Date(`${cursor}T00:00:00`);
     days.push({
       iso: cursor,
       date,
       inCurrentMonth: true,
     });
-    cursor = addIsoDays(cursor, 1);
+    cursor = addIsoDay(cursor, 1);
   }
   return days;
+}
+
+function formatRangeLabel(fromIso: string, toIso: string) {
+  const formatter = new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const from = formatter.format(new Date(`${fromIso}T00:00:00`));
+  const to = formatter.format(new Date(`${toIso}T00:00:00`));
+  if (fromIso === toIso) {
+    return from;
+  }
+  return `${from} – ${to}`;
 }
 
 export function buildStaffInsightsReport({
   year,
   month,
+  fromIso,
+  toIso,
   rooms,
   bookings,
   channelBlocks,
@@ -173,17 +194,29 @@ export function buildStaffInsightsReport({
   promotions = [],
   rateOverrides,
 }: {
-  year: number;
-  month: number;
+  year?: number;
+  month?: number;
+  /** Inclusive start of the reporting window (defaults to calendar month). */
+  fromIso?: string;
+  /** Inclusive end of the reporting window (defaults to calendar month). */
+  toIso?: string;
   rooms: Room[];
   bookings: StaffBooking[];
   channelBlocks: StaffRoomBlock[];
-  /** Full month blocks; non-channel closed days are ignored for sold nights. */
+  /** Full window blocks; non-channel closed days are ignored for sold nights. */
   monthBlocks?: StaffRoomBlock[];
   promotions?: RoomPromotionRate[];
   rateOverrides?: Map<string, number>;
 }): StaffInsightsReport {
-  const { monthStart, monthEnd } = getCalendarMonthBounds(year, month);
+  const resolvedYear = year ?? Number((fromIso ?? "1970-01-01").slice(0, 4));
+  const resolvedMonth =
+    month ?? Number((fromIso ?? "1970-01-01").slice(5, 7));
+  const monthLabel = formatCalendarMonthLabel(resolvedYear, resolvedMonth);
+
+  const monthBounds = getCalendarMonthBounds(resolvedYear, resolvedMonth);
+  const rangeStart = fromIso ?? monthBounds.monthStart;
+  const rangeEnd = toIso ?? monthBounds.monthEnd;
+
   const channelStays = [
     ...channelBlocks.filter(isChannelReservation),
     ...monthBlocks.filter(isChannelReservation),
@@ -208,8 +241,8 @@ export function buildStaffInsightsReport({
       const nights = countNightsInMonth(
         booking.arrivalDate,
         booking.departureDate,
-        monthStart,
-        monthEnd,
+        rangeStart,
+        rangeEnd,
       );
       if (nights <= 0) {
         continue;
@@ -225,8 +258,8 @@ export function buildStaffInsightsReport({
           baseRate: room.rate,
           arrival: booking.arrivalDate,
           departure: booking.departureDate,
-          monthStart,
-          monthEnd,
+          monthStart: rangeStart,
+          monthEnd: rangeEnd,
           promotions,
           rateOverrides,
         });
@@ -237,8 +270,8 @@ export function buildStaffInsightsReport({
       const nights = countNightsInMonth(
         stay.startDate,
         stay.endDate,
-        monthStart,
-        monthEnd,
+        rangeStart,
+        rangeEnd,
       );
       if (nights <= 0) {
         continue;
@@ -251,8 +284,8 @@ export function buildStaffInsightsReport({
         baseRate: room.rate,
         arrival: stay.startDate,
         departure: stay.endDate,
-        monthStart,
-        monthEnd,
+        monthStart: rangeStart,
+        monthEnd: rangeEnd,
         promotions,
         rateOverrides,
       });
@@ -281,7 +314,7 @@ export function buildStaffInsightsReport({
       a.roomName.localeCompare(b.roomName),
   );
 
-  const calendarDays = buildMonthDays(monthStart, monthEnd);
+  const calendarDays = buildRangeDays(rangeStart, rangeEnd);
   const monthStats = getCalendarMonthStats({
     bookings,
     blocks: uniqueChannelStays,
@@ -289,35 +322,41 @@ export function buildStaffInsightsReport({
     rooms,
   });
 
+  const estimatedRevenue = rows.reduce((sum, row) => sum + row.estimatedRevenue, 0);
+  const nightsSold = rows.reduce((sum, row) => sum + row.nightsSold, 0);
+
   const totals = {
-    nightsSold: rows.reduce((sum, row) => sum + row.nightsSold, 0),
+    nightsSold,
     stayCount: rows.reduce((sum, row) => sum + row.stayCount, 0),
     websiteRevenue: rows.reduce((sum, row) => sum + row.websiteRevenue, 0),
     channelRevenue: rows.reduce((sum, row) => sum + row.channelRevenue, 0),
-    estimatedRevenue: rows.reduce((sum, row) => sum + row.estimatedRevenue, 0),
+    estimatedRevenue,
+    averageNightlyRate: nightsSold > 0 ? estimatedRevenue / nightsSold : null,
     websiteStayCount: bookings.filter(
       (booking) =>
         countNightsInMonth(
           booking.arrivalDate,
           booking.departureDate,
-          monthStart,
-          monthEnd,
+          rangeStart,
+          rangeEnd,
         ) > 0 && booking.estimatedTotal > 0,
     ).length,
-    occupancyPercent: monthStats.availableNights > 0 ? monthStats.occupancyPercent : null,
+    occupancyPercent:
+      monthStats.availableNights > 0 ? monthStats.occupancyPercent : null,
     bookedNights: monthStats.bookedNights,
     availableNights: monthStats.availableNights,
   };
 
   return {
-    year,
-    month,
-    monthLabel: formatCalendarMonthLabel(year, month),
-    monthStart,
-    monthEnd,
+    year: resolvedYear,
+    month: resolvedMonth,
+    monthLabel,
+    rangeLabel: formatRangeLabel(rangeStart, rangeEnd),
+    monthStart: rangeStart,
+    monthEnd: rangeEnd,
     rooms: rows,
     totals,
     revenueNote:
-      "Website money uses the full stay total when a stay overlaps this month. Channel nights use the website quote for nights in this month (room rate, day rates, promotions) — not the OTA payout.",
+      "Website money uses the full stay total when a stay overlaps this range. Channel nights use the website quote for nights in this range (room rate, day rates, promotions) — not the OTA payout.",
   };
 }

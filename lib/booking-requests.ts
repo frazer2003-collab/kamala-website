@@ -383,6 +383,59 @@ export async function getConfirmedBookings(month?: { year: number; month: number
   }
 }
 
+/** Confirmed/calendar stays whose nights overlap [fromIso, toIso] inclusive. */
+export async function getConfirmedBookingsOverlappingRange(
+  fromIso: string,
+  toIso: string,
+) {
+  if (!hasStaffSupabaseConfig()) {
+    return {
+      bookings: [],
+      source: "sample" as const,
+      error: "Supabase is not configured. Connect the database to load the calendar.",
+    };
+  }
+
+  try {
+    const supabase = createStaffSupabaseClient();
+    const { data, error } = await supabase
+      .from("booking_requests")
+      .select("*")
+      .or(CALENDAR_BOOKING_FILTER)
+      .lte("arrival_date", toIso)
+      .gt("departure_date", fromIso)
+      .order("arrival_date", { ascending: true })
+      .limit(500);
+
+    const unitMap =
+      error || !data ? new Map<string, string>() : await getBookingRoomUnitMap(supabase);
+
+    if (error || !data) {
+      return {
+        bookings: [],
+        source: "supabase" as const,
+        error: "Could not load bookings from Supabase.",
+      };
+    }
+
+    return {
+      bookings: data
+        .map((row) =>
+          mapBookingRequest(row, unitMap.get(row.id) ?? row.room_unit_id ?? null),
+        )
+        .filter(isCalendarBooking),
+      source: "supabase" as const,
+      error: null,
+    };
+  } catch {
+    return {
+      bookings: [],
+      source: "supabase" as const,
+      error: "Supabase is not configured correctly.",
+    };
+  }
+}
+
 export async function getConfirmedBookingById(bookingId: string) {
   if (!bookingId) {
     return null;

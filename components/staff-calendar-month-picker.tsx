@@ -16,9 +16,11 @@ type StaffCalendarMonthPickerProps = {
   toIso?: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
+  /** Defaults to staff calendar month links. */
+  buildHref?: (monthKey: string) => string;
 };
 
-function buildMonthHref(
+function defaultBuildMonthHref(
   monthKey: string,
   selectedBookingKey?: string,
   selectedBlockKey?: string,
@@ -43,6 +45,7 @@ export function StaffCalendarMonthPicker({
   monthKey,
   selectedBookingKey,
   selectedBlockKey,
+  buildHref,
 }: StaffCalendarMonthPickerProps) {
   const router = useRouter();
   const { year, month } = parseCalendarMonth(monthKey);
@@ -53,13 +56,17 @@ export function StaffCalendarMonthPicker({
   const nextKey = formatCalendarMonth(next.year, next.month);
   const prevLabel = formatCalendarMonthLabel(prev.year, prev.month);
   const nextLabel = formatCalendarMonthLabel(next.year, next.month);
+  const hrefFor = (key: string) =>
+    buildHref
+      ? buildHref(key)
+      : defaultBuildMonthHref(key, selectedBookingKey, selectedBlockKey);
 
   return (
     <div className="staff-calendar-toolbar__month-nav">
       <Link
         aria-label={`Previous month, ${prevLabel}`}
         className="staff-calendar-toolbar__month-step"
-        href={buildMonthHref(prevKey, selectedBookingKey, selectedBlockKey)}
+        href={hrefFor(prevKey)}
       >
         <span aria-hidden="true">‹</span>
       </Link>
@@ -75,9 +82,7 @@ export function StaffCalendarMonthPicker({
             if (!nextValue || !/^\d{4}-\d{2}$/.test(nextValue)) {
               return;
             }
-            router.push(
-              buildMonthHref(nextValue, selectedBookingKey, selectedBlockKey),
-            );
+            router.push(hrefFor(nextValue));
           }}
           type="month"
           value={monthKey}
@@ -86,7 +91,7 @@ export function StaffCalendarMonthPicker({
       <Link
         aria-label={`Next month, ${nextLabel}`}
         className="staff-calendar-toolbar__month-step"
-        href={buildMonthHref(nextKey, selectedBookingKey, selectedBlockKey)}
+        href={hrefFor(nextKey)}
       >
         <span aria-hidden="true">›</span>
       </Link>

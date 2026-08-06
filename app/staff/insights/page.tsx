@@ -6,9 +6,19 @@ export const dynamic = "force-dynamic";
 export default async function StaffInsightsRedirectPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; from?: string; to?: string }>;
 }) {
-  const { month } = await searchParams;
-  const query = month ? `?month=${encodeURIComponent(month)}` : "";
-  redirect(`/staff/sold${query}`);
+  const { month, from, to } = await searchParams;
+  const params = new URLSearchParams();
+  if (month) {
+    params.set("month", month);
+  }
+  if (from) {
+    params.set("from", from);
+  }
+  if (to) {
+    params.set("to", to);
+  }
+  const query = params.toString();
+  redirect(query ? `/staff/sold?${query}` : "/staff/sold");
 }
