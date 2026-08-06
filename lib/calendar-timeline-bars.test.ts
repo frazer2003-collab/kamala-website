@@ -45,32 +45,32 @@ function booking(partial: {
   };
 }
 
-describe("getClippedBarRange last-night stay geometry", () => {
+describe("getClippedBarRange full-night stay geometry", () => {
   const days = buildStaffTimelineDays("2026-07-01", "2026-07-05");
 
-  it("spans check-in through the night before checkout", () => {
+  it("fills check-in through the night before checkout", () => {
     const range = getClippedBarRange("2026-07-01", "2026-07-03", days);
 
     assert.deepEqual(range, {
       startCol: 1,
       span: 2,
-      startInset: 0.5,
+      startInset: 0,
       endInset: 0,
       continuesLeft: false,
       continuesRight: false,
     });
-    assert.equal(timelineBarStartEdge(range!), 0.5);
+    assert.equal(timelineBarStartEdge(range!), 0);
     assert.equal(timelineBarEndEdge(range!), 2);
   });
 
-  it("keeps one-night stays on the arrival day only (noon to midnight)", () => {
+  it("keeps one-night stays as one full arrival-day cell", () => {
     const range = getClippedBarRange("2026-07-02", "2026-07-03", days);
 
     assert.equal(range?.startCol, 2);
     assert.equal(range?.span, 1);
-    assert.equal(range?.startInset, 0.5);
+    assert.equal(range?.startInset, 0);
     assert.equal(range?.endInset, 0);
-    assert.equal(timelineBarEndEdge(range!) - timelineBarStartEdge(range!), 0.5);
+    assert.equal(timelineBarEndEdge(range!) - timelineBarStartEdge(range!), 1);
   });
 
   it("hides checkout-only mornings when the last night is before the board", () => {
@@ -84,7 +84,7 @@ describe("getClippedBarRange last-night stay geometry", () => {
 
     assert.equal(range?.startCol, 4);
     assert.equal(range?.span, 2);
-    assert.equal(range?.startInset, 0.5);
+    assert.equal(range?.startInset, 0);
     assert.equal(range?.endInset, 0);
     assert.equal(range?.continuesRight, false);
   });
@@ -94,6 +94,7 @@ describe("getClippedBarRange last-night stay geometry", () => {
 
     assert.equal(range?.continuesRight, true);
     assert.equal(range?.endInset, 0);
+    assert.equal(range?.startInset, 0);
     assert.equal(range?.startCol, 4);
     assert.equal(range?.span, 2);
   });
