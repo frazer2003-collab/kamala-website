@@ -15,16 +15,33 @@ type CalendarDateStripProps = {
   toIso: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
-  /** Defaults to staff calendar range links. */
-  buildHref?: (fromIso: string, toIso: string) => string;
+  /**
+   * Staff page path for range links (e.g. `/staff/sold`).
+   * Defaults to the calendar. Must be a string — not a function — so server
+   * pages can pass it into this client component.
+   */
+  pathname?: string;
 };
+
+function buildPathHref(
+  pathname: string,
+  fromIso: string,
+  toIso: string,
+) {
+  const params = new URLSearchParams({
+    month: fromIso.slice(0, 7),
+    from: fromIso,
+    to: toIso,
+  });
+  return `${pathname}?${params.toString()}`;
+}
 
 export function CalendarDateStrip({
   fromIso,
   toIso,
   selectedBookingKey,
   selectedBlockKey,
-  buildHref,
+  pathname,
 }: CalendarDateStripProps) {
   const router = useRouter();
   const staySelection = useCalendarStaySelection();
@@ -49,8 +66,8 @@ export function CalendarDateStrip({
     const clamped = clampStaffTimelineDateRange(nextFrom, nextTo);
     setFromValue(clamped.fromIso);
     setToValue(clamped.toIso);
-    const href = buildHref
-      ? buildHref(clamped.fromIso, clamped.toIso)
+    const href = pathname
+      ? buildPathHref(pathname, clamped.fromIso, clamped.toIso)
       : buildStaffCalendarHref({
           month: clamped.fromIso.slice(0, 7),
           from: clamped.fromIso,

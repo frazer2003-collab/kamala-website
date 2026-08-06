@@ -4,7 +4,6 @@ import { FinanceRevenuePie } from "@/components/finance-revenue-pie";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffShell } from "@/components/staff-shell";
 import {
-  defaultStaffTimelineSelectionRange,
   monthsOverlappingDateRange,
   parseStaffTimelineRange,
 } from "@/lib/calendar";
@@ -57,25 +56,6 @@ function moneyCaption(row: {
     return "Quoted estimate";
   }
   return "Website stay total";
-}
-
-function financeHref(options: {
-  month?: string;
-  from?: string;
-  to?: string;
-}) {
-  const params = new URLSearchParams();
-  if (options.month) {
-    params.set("month", options.month);
-  }
-  if (options.from) {
-    params.set("from", options.from);
-  }
-  if (options.to) {
-    params.set("to", options.to);
-  }
-  const query = params.toString();
-  return query ? `/staff/sold?${query}` : "/staff/sold";
 }
 
 function calendarRoomHref(fromIso: string, toIso: string, roomId: string) {
@@ -157,22 +137,6 @@ export default async function StaffSoldPage({
       amount: row.estimatedRevenue,
     }));
 
-  const monthHref = (nextMonthKey: string) => {
-    const selection = defaultStaffTimelineSelectionRange(nextMonthKey);
-    return financeHref({
-      month: nextMonthKey,
-      from: selection.fromIso,
-      to: selection.toIso,
-    });
-  };
-
-  const rangeHref = (nextFrom: string, nextTo: string) =>
-    financeHref({
-      month: nextFrom.slice(0, 7),
-      from: nextFrom,
-      to: nextTo,
-    });
-
   return (
     <StaffShell current="sold">
       <section
@@ -189,14 +153,14 @@ export default async function StaffSoldPage({
           </div>
           <div className="staff-sold__dates">
             <StaffCalendarMonthPicker
-              buildHref={monthHref}
               fromIso={fromIso}
               monthKey={monthKey}
+              pathname="/staff/sold"
               toIso={toIso}
             />
             <CalendarDateStrip
-              buildHref={rangeHref}
               fromIso={fromIso}
+              pathname="/staff/sold"
               toIso={toIso}
             />
           </div>

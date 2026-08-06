@@ -16,11 +16,16 @@ type StaffCalendarMonthPickerProps = {
   toIso?: string;
   selectedBookingKey?: string;
   selectedBlockKey?: string;
-  /** Defaults to staff calendar month links. */
-  buildHref?: (monthKey: string) => string;
+  /**
+   * Staff page path for month links (e.g. `/staff/sold`).
+   * Defaults to the calendar. Must be a string — not a function — so server
+   * pages can pass it into this client component.
+   */
+  pathname?: string;
 };
 
-function defaultBuildMonthHref(
+function buildMonthHref(
+  pathname: string | undefined,
   monthKey: string,
   selectedBookingKey?: string,
   selectedBlockKey?: string,
@@ -32,20 +37,23 @@ function defaultBuildMonthHref(
     to: selection.toIso,
   });
 
-  if (selectedBookingKey) {
-    params.set("booking", selectedBookingKey);
-  } else if (selectedBlockKey) {
-    params.set("block", selectedBlockKey);
+  if (!pathname || pathname === "/staff/calendar") {
+    if (selectedBookingKey) {
+      params.set("booking", selectedBookingKey);
+    } else if (selectedBlockKey) {
+      params.set("block", selectedBlockKey);
+    }
+    return `/staff/calendar?${params.toString()}`;
   }
 
-  return `/staff/calendar?${params.toString()}`;
+  return `${pathname}?${params.toString()}`;
 }
 
 export function StaffCalendarMonthPicker({
   monthKey,
   selectedBookingKey,
   selectedBlockKey,
-  buildHref,
+  pathname,
 }: StaffCalendarMonthPickerProps) {
   const router = useRouter();
   const { year, month } = parseCalendarMonth(monthKey);
@@ -57,9 +65,7 @@ export function StaffCalendarMonthPicker({
   const prevLabel = formatCalendarMonthLabel(prev.year, prev.month);
   const nextLabel = formatCalendarMonthLabel(next.year, next.month);
   const hrefFor = (key: string) =>
-    buildHref
-      ? buildHref(key)
-      : defaultBuildMonthHref(key, selectedBookingKey, selectedBlockKey);
+    buildMonthHref(pathname, key, selectedBookingKey, selectedBlockKey);
 
   return (
     <div className="staff-calendar-toolbar__month-nav">
