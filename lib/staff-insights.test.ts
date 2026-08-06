@@ -3,8 +3,6 @@ import { describe, it } from "node:test";
 import {
   buildStaffInsightsReport,
   countNightsInMonth,
-  countSellableDoorNights,
-  prorateStayMoneyInRange,
 } from "@/lib/staff-insights";
 import type { StaffBooking } from "@/lib/booking-requests";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
