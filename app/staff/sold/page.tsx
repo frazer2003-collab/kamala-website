@@ -316,10 +316,6 @@ export default async function StaffSoldPage({
                           currency,
                         )}
                       </strong>
-                      <span aria-hidden="true"> · </span>
-                      <span>
-                        total ÷ {nightLabel(report.totals.nightsSold)}
-                      </span>
                     </p>
                   ) : null}
                   <p className="staff-sold__note">{report.revenueNote}</p>
