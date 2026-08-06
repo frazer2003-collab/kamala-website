@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarDateStrip } from "@/components/calendar-date-strip";
-import { FinanceRevenuePie } from "@/components/finance-revenue-pie";
+import { FinanceSoldPie } from "@/components/finance-revenue-pie";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffShell } from "@/components/staff-shell";
 import {
@@ -129,13 +129,10 @@ export default async function StaffSoldPage({
   const soldRooms = report.rooms.filter((row) => row.nightsSold > 0);
   const quietRooms = report.rooms.filter((row) => row.nightsSold === 0);
   const noRoomsConfigured = rooms.length === 0;
-  const pieSlices = soldRooms
-    .filter((row) => row.estimatedRevenue > 0)
-    .map((row) => ({
-      roomId: row.roomId,
-      roomName: row.roomName,
-      amount: row.estimatedRevenue,
-    }));
+  const nightsAvailable = report.rooms.reduce(
+    (sum, row) => sum + row.nightsAvailable,
+    0,
+  );
 
   return (
     <StaffShell current="sold">
@@ -279,17 +276,9 @@ export default async function StaffSoldPage({
                   ) : null}
                 </div>
 
-                <FinanceRevenuePie
-                  currency={currency}
-                  occupancy={report.rooms.map((row) => ({
-                    roomId: row.roomId,
-                    roomName: row.roomName,
-                    nightsSold: row.nightsSold,
-                    nightsAvailable: row.nightsAvailable,
-                    soldPercent: row.soldPercent,
-                  }))}
-                  slices={pieSlices}
-                  total={report.totals.estimatedRevenue}
+                <FinanceSoldPie
+                  nightsAvailable={nightsAvailable}
+                  nightsSold={report.totals.nightsSold}
                 />
 
                 <div
