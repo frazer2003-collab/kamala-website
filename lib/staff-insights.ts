@@ -29,6 +29,10 @@ export type StaffInsightsRoomRow = {
   roomId: string;
   roomName: string;
   nightsSold: number;
+  /** Door-nights that could have sold in the range (days × availableCount). */
+  nightsAvailable: number;
+  /** nightsSold / nightsAvailable as 0–100; null when capacity is 0. */
+  soldPercent: number | null;
   stayCount: number;
   websiteRevenue: number;
   channelRevenue: number;
@@ -227,6 +231,8 @@ export function buildStaffInsightsReport({
     channelByKey.set(stay.databaseId ?? stay.id, stay);
   }
   const uniqueChannelStays = [...channelByKey.values()];
+  const calendarDays = buildRangeDays(rangeStart, rangeEnd);
+  const rangeDayCount = calendarDays.length;
 
   const rows = rooms.map((room) => {
     const roomBookings = bookings.filter((booking) => booking.roomId === room.id);
@@ -236,6 +242,7 @@ export function buildStaffInsightsReport({
     let stayCount = 0;
     let websiteRevenue = 0;
     let channelRevenue = 0;
+    const nightsAvailable = Math.max(0, room.availableCount) * rangeDayCount;
 
     for (const booking of roomBookings) {
       const nights = countNightsInMonth(
@@ -292,11 +299,17 @@ export function buildStaffInsightsReport({
     }
 
     const estimatedRevenue = websiteRevenue + channelRevenue;
+    const soldPercent =
+      nightsAvailable > 0
+        ? Math.round((nightsSold / nightsAvailable) * 100)
+        : null;
 
     return {
       roomId: room.id,
       roomName: room.name,
       nightsSold,
+      nightsAvailable,
+      soldPercent,
       stayCount,
       websiteRevenue,
       channelRevenue,
@@ -314,7 +327,6 @@ export function buildStaffInsightsReport({
       a.roomName.localeCompare(b.roomName),
   );
 
-  const calendarDays = buildRangeDays(rangeStart, rangeEnd);
   const monthStats = getCalendarMonthStats({
     bookings,
     blocks: uniqueChannelStays,

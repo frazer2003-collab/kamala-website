@@ -281,6 +281,13 @@ export default async function StaffSoldPage({
 
                 <FinanceRevenuePie
                   currency={currency}
+                  occupancy={report.rooms.map((row) => ({
+                    roomId: row.roomId,
+                    roomName: row.roomName,
+                    nightsSold: row.nightsSold,
+                    nightsAvailable: row.nightsAvailable,
+                    soldPercent: row.soldPercent,
+                  }))}
                   slices={pieSlices}
                   total={report.totals.estimatedRevenue}
                 />

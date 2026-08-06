@@ -6,6 +6,14 @@ export type FinanceRevenueSlice = {
   amount: number;
 };
 
+export type FinanceOccupancyRow = {
+  roomId: string;
+  roomName: string;
+  nightsSold: number;
+  nightsAvailable: number;
+  soldPercent: number | null;
+};
+
 /** Calm hospitality swatches — labels carry identity; color is secondary. */
 const PIE_COLORS = [
   "oklch(48% 0.14 12)",
@@ -18,12 +26,14 @@ const PIE_COLORS = [
 
 type FinanceRevenuePieProps = {
   slices: FinanceRevenueSlice[];
+  occupancy: FinanceOccupancyRow[];
   currency: PropertyCurrency;
   total: number;
 };
 
 export function FinanceRevenuePie({
   slices,
+  occupancy,
   currency,
   total,
 }: FinanceRevenuePieProps) {
@@ -79,6 +89,41 @@ export function FinanceRevenuePie({
           })}
         </ul>
       )}
+
+      {occupancy.length > 0 ? (
+        <div className="staff-sold__occupancy">
+          <h3 className="staff-sold__occupancy-title" id="finance-occupancy-title">
+            Sold of available
+          </h3>
+          <p className="staff-sold__occupancy-hint">
+            Nights sold ÷ door-nights that could have sold in this range.
+          </p>
+          <ul
+            className="staff-sold__occupancy-list"
+            role="list"
+            aria-labelledby="finance-occupancy-title"
+          >
+            {occupancy.map((row) => (
+              <li key={row.roomId}>
+                <span className="staff-sold__occupancy-name">{row.roomName}</span>
+                <span className="staff-sold__occupancy-stat">
+                  {row.soldPercent === null ? (
+                    <span>No capacity</span>
+                  ) : (
+                    <>
+                      <strong>{row.soldPercent}%</strong>
+                      <span aria-hidden="true"> · </span>
+                      <span>
+                        {row.nightsSold} of {row.nightsAvailable} nights
+                      </span>
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </figure>
   );
 }

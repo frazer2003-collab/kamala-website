@@ -159,6 +159,11 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.totals.estimatedRevenue, 7600);
     assert.equal(report.totals.averageNightlyRate, 760);
     assert.ok(report.totals.occupancyPercent !== null);
+    // July = 31 days; Superior ×2 doors, Family ×1.
+    assert.equal(report.rooms[0]?.nightsAvailable, 62);
+    assert.equal(report.rooms[0]?.soldPercent, Math.round((7 / 62) * 100));
+    assert.equal(report.rooms[1]?.nightsAvailable, 31);
+    assert.equal(report.rooms[1]?.soldPercent, Math.round((3 / 31) * 100));
   });
 
   it("estimates channel money with the website quote rules and ignores closed blocks", () => {
