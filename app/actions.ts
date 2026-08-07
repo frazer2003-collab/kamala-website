@@ -1397,6 +1397,10 @@ export async function assignStayRoomUnit(formData: FormData) {
       redirect(fallbackHref);
     }
 
+    if (!isStaffCalendarManageableStay(booking)) {
+      redirect(appendCalendarError(fallbackHref, "invalid-stay"));
+    }
+
     const unit = getRoomUnitById(units, roomUnitId);
     if (!unit || !isUnitEligibleForRoom(unit, booking.roomId)) {
       redirect(appendCalendarError(fallbackHref, "invalid-room-number"));

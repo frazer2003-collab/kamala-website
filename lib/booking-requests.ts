@@ -13,11 +13,12 @@ import {
 export const PENDING_BOOKING_STATUSES = ["awaiting", "needs-reply", "new"] as const;
 
 /**
- * Stays that hold guest inventory — must match `bookingReservesRoom` /
- * `isCalendarBooking` so the tape never looks empty while the site says Full.
+ * Stays fetched for the staff calendar tape.
+ * Unverified Thai bank claims (`bank_transfer_claimed`, unpaid) stay in Requests
+ * until staff confirm — they still hold guest inventory via `bookingReservesRoom`.
  */
 export const CALENDAR_BOOKING_FILTER =
-  "status.eq.confirmed,status.eq.pending_payment,deposit_paid_at.not.is.null,bank_transfer_claimed_at.not.is.null";
+  "status.eq.confirmed,status.eq.pending_payment,deposit_paid_at.not.is.null";
 
 export type StaffBooking = Booking & {
   databaseId: string | null;
@@ -136,8 +137,9 @@ export function isPendingBooking(booking: StaffBooking) {
 }
 
 /**
- * Visible on the staff calendar tape. Keep in lockstep with
- * `bookingReservesRoom` so payment holds are not invisible inventory.
+ * Visible on the staff calendar tape for room assignment.
+ * Unverified bank-transfer claims stay off the tape until Requests approval.
+ * Guest inventory is held separately by `bookingReservesRoom`.
  */
 export function isCalendarBooking(
   booking: Pick<Booking, "status" | "depositPaid"> & {
@@ -148,15 +150,16 @@ export function isCalendarBooking(
     return false;
   }
 
+  // Waiting in Requests — not assignable on the calendar yet.
+  if (booking.bankTransferClaimed && !booking.depositPaid) {
+    return false;
+  }
+
   if (booking.status === "pending_payment" || booking.status === "confirmed") {
     return true;
   }
 
   if (booking.depositPaid) {
-    return true;
-  }
-
-  if (booking.bankTransferClaimed) {
     return true;
   }
 
@@ -169,7 +172,7 @@ export function isInventoryHoldBooking(
     bankTransferClaimed?: boolean;
   },
 ) {
-  if (!isCalendarBooking(booking)) {
+  if (booking.status === "declined") {
     return false;
   }
 

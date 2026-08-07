@@ -73,7 +73,7 @@ describe("staff booking requests", () => {
     assert.equal(isCalendarBooking(unpaid), false);
   });
 
-  it("puts payment holds on the calendar so they match guest Full", () => {
+  it("keeps unverified bank claims off the calendar until Requests approval", () => {
     const pendingPayment = mapBookingRequest({
       ...bankClaimRow,
       status: "pending_payment",
@@ -82,9 +82,11 @@ describe("staff booking requests", () => {
     });
     const bankHold = mapBookingRequest(bankClaimRow);
 
+    // Card checkout holds can still show on the tape as awaiting payment.
     assert.equal(isCalendarBooking(pendingPayment), true);
     assert.equal(isInventoryHoldBooking(pendingPayment), true);
-    assert.equal(isCalendarBooking(bankHold), true);
+    // Thai bank “I’ve paid” — Requests only until staff confirm.
+    assert.equal(isCalendarBooking(bankHold), false);
     assert.equal(isInventoryHoldBooking(bankHold), true);
     assert.equal(
       bookingReservesRoom({
@@ -102,5 +104,17 @@ describe("staff booking requests", () => {
       }),
       true,
     );
+  });
+
+  it("puts confirmed bank transfers on the calendar after approval", () => {
+    const approved = mapBookingRequest({
+      ...bankClaimRow,
+      status: "confirmed",
+      deposit_paid_at: "2026-07-18T09:00:00.000Z",
+      bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z",
+    });
+
+    assert.equal(isCalendarBooking(approved), true);
+    assert.equal(isInventoryHoldBooking(approved), false);
   });
 });
