@@ -123,7 +123,7 @@ const messages = {
       "{property} will review your dates and reply with confirmation details. No card payment was taken online.",
     requestedChatHint:
       "You can message Kamala now — save your private conversation link from the next page.",
-    openBookingConversation: "Open your conversation",
+    openBookingConversation: "Open conversation",
     backToHome: "Back to home",
     cancelledTitle: "No payment was taken.",
     cancelledBody:

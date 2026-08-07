@@ -1892,7 +1892,7 @@ export async function createWalkInBooking(
       `Nights: ${nights}`,
       settings.checkInFrom ? `Check-in time: from ${settings.checkInFrom}` : "",
       "",
-      "If any of these details look wrong, message us with the conversation link below.",
+      "If any of these details look wrong, do not reply to this email — click Open conversation below to message us.",
     ]
       .filter(Boolean)
       .join("\n");

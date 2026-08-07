@@ -1,4 +1,8 @@
 import { formatBedSetup, parseBedSetup } from "@/lib/bed-setup";
+import {
+  GUEST_CONVERSATION_BUTTON,
+  guestConversationBlockText,
+} from "@/lib/guest-email-conversation";
 import { getStaffNotificationRecipients } from "@/lib/staff-notification-emails";
 
 type StaffBookingEmail = {
@@ -27,16 +31,22 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;");
 }
 
-const GUEST_CONVERSATION_BUTTON = "Open your conversation";
-const GUEST_CONVERSATION_FOOTER =
-  "Use your private conversation link to read and reply — replies to this email are not monitored.";
+const EMAIL_FONT = "Georgia, 'Times New Roman', Times, serif";
 
 function guestConversationButtonHtml(chatUrl: string) {
-  return `<a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: #5c2f35; color: #fff; text-decoration: none; border-radius: 8px;">${GUEST_CONVERSATION_BUTTON}</a>`;
+  return `<a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: oklch(48% 0.18 12); color: #fff; text-decoration: none; border-radius: 8px; font-family: ${EMAIL_FONT};">${GUEST_CONVERSATION_BUTTON}</a>`;
 }
 
-function guestConversationFooterHtml() {
-  return `<p style="color: #6b5559; font-size: 14px;">${escapeHtml(GUEST_CONVERSATION_FOOTER)}</p>`;
+function guestConversationBlockHtml(chatUrl: string) {
+  return `
+      <p style="margin-top: 24px; padding: 12px 14px; background: oklch(96.5% 0.025 12); color: oklch(22% 0.025 12); font-size: 1rem; line-height: 1.45; font-family: ${EMAIL_FONT};">
+        <strong>Please do not reply to this email</strong> — we will not see it.
+        Click <strong>Open conversation</strong> to message us about your stay.
+      </p>
+      <p style="margin-top: 16px;">
+        ${guestConversationButtonHtml(chatUrl)}
+      </p>
+    `;
 }
 
 export async function sendStaffBookingEmail(
@@ -85,27 +95,27 @@ export async function sendStaffBookingEmail(
     .join("\n");
 
   const html = `
-    <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5;">
-      <h1 style="font-size: 22px;">${escapeHtml(headline)}</h1>
+    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5;">
+      <h1 style="font-size: 1.25rem;">${escapeHtml(headline)}</h1>
       <p>${escapeHtml(intro)}</p>
       <table style="border-collapse: collapse; width: 100%; max-width: 560px;">
-        <tr><td style="padding: 8px 0; color: #6b5559;">Guest</td><td>${escapeHtml(booking.guestName)}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b5559;">Email</td><td>${escapeHtml(booking.guestEmail)}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b5559;">Phone</td><td>${escapeHtml(booking.guestPhone)}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b5559;">Room</td><td>${escapeHtml(booking.roomName)}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b5559;">Dates</td><td>${escapeHtml(booking.arrivalDate)} to ${escapeHtml(booking.departureDate)}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b5559;">Nights</td><td>${booking.nights}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Guest</td><td>${escapeHtml(booking.guestName)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Email</td><td>${escapeHtml(booking.guestEmail)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Phone</td><td>${escapeHtml(booking.guestPhone)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Room</td><td>${escapeHtml(booking.roomName)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Dates</td><td>${escapeHtml(booking.arrivalDate)} to ${escapeHtml(booking.departureDate)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Nights</td><td>${booking.nights}</td></tr>
         ${
           bedSetupLabel
-            ? `<tr><td style="padding: 8px 0; color: #6b5559;">Bed setup</td><td>${escapeHtml(
+            ? `<tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Bed setup</td><td>${escapeHtml(
                 formatBedSetup(bedSetupLabel),
               )}</td></tr>`
             : ""
         }
-        <tr><td style="padding: 8px 0; color: #6b5559;">Stay total</td><td>$${booking.estimatedTotal}</td></tr>
-        ${booking.depositPaid ? `<tr><td style="padding: 8px 0; color: #6b5559;">Amount paid</td><td>$${booking.depositPaid}</td></tr>` : ""}
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Stay total</td><td>$${booking.estimatedTotal}</td></tr>
+        ${booking.depositPaid ? `<tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Amount paid</td><td>$${booking.depositPaid}</td></tr>` : ""}
       </table>
-      <h2 style="font-size: 16px; margin-top: 24px;">Guest note</h2>
+      <h2 style="font-size: 1rem; margin-top: 24px;">Guest note</h2>
       <p>${escapeHtml(note)}</p>
     </div>
   `;
@@ -169,15 +179,15 @@ export async function sendStaffContactMessageEmail({
   ].join("\n");
 
   const html = `
-    <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
-      <h1 style="font-size: 20px;">Website message</h1>
+    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
+      <h1 style="font-size: 1.25rem;">Website message</h1>
       <p>A guest wrote through the ${escapeHtml(propertyName)} contact page.</p>
       <table style="border-collapse: collapse; width: 100%; max-width: 560px;">
-        <tr><td style="padding: 8px 0; color: #6b5559;">Guest</td><td>${escapeHtml(guestName)}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b5559;">Email</td><td>${escapeHtml(guestEmail)}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b5559;">Phone</td><td>${escapeHtml(phoneLine)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Guest</td><td>${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Email</td><td>${escapeHtml(guestEmail)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Phone</td><td>${escapeHtml(phoneLine)}</td></tr>
       </table>
-      <h2 style="font-size: 16px; margin-top: 24px;">Message</h2>
+      <h2 style="font-size: 1rem; margin-top: 24px;">Message</h2>
       <p style="white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</p>
     </div>
   `;
@@ -224,24 +234,10 @@ export async function sendGuestBookingEmail({
   }
 
   const text = chatUrl
-    ? [
-        body,
-        "",
-        GUEST_CONVERSATION_BUTTON + ":",
-        chatUrl,
-        "",
-        GUEST_CONVERSATION_FOOTER,
-      ].join("\n")
+    ? [body, "", guestConversationBlockText(chatUrl)].join("\n")
     : body;
 
-  const chatHtml = chatUrl
-    ? `
-      <p style="margin-top: 24px;">
-        ${guestConversationButtonHtml(chatUrl)}
-      </p>
-      ${guestConversationFooterHtml()}
-    `
-    : "";
+  const chatHtml = chatUrl ? guestConversationBlockHtml(chatUrl) : "";
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -255,7 +251,7 @@ export async function sendGuestBookingEmail({
       subject,
       text,
       html: `
-        <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
+        <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
           <p>${escapeHtml(body).replaceAll("\n", "<br />")}</p>
           ${chatHtml}
         </div>
@@ -309,8 +305,8 @@ export async function sendStaffChatNotificationEmail({
   ].join("\n");
 
   const html = `
-    <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
-      <h1 style="font-size: 20px;">New guest message</h1>
+    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
+      <h1 style="font-size: 1.25rem;">New guest message</h1>
       <p><strong>${escapeHtml(guestName)}</strong> · ${escapeHtml(roomName)}<br />
       ${escapeHtml(arrivalDate)} to ${escapeHtml(departureDate)}</p>
       <p style="white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</p>
@@ -376,10 +372,7 @@ export async function sendGuestChatNotificationEmail({
           "",
           message,
           "",
-          GUEST_CONVERSATION_BUTTON + ":",
-          chatUrl,
-          "",
-          GUEST_CONVERSATION_FOOTER,
+          guestConversationBlockText(chatUrl),
         ].join("\n")
       : kind === "confirmation"
         ? [
@@ -389,10 +382,7 @@ export async function sendGuestChatNotificationEmail({
             "",
             message,
             "",
-            GUEST_CONVERSATION_BUTTON + ":",
-            chatUrl,
-            "",
-            GUEST_CONVERSATION_FOOTER,
+            guestConversationBlockText(chatUrl),
           ].join("\n")
         : [
             `Hello ${guestName},`,
@@ -401,39 +391,33 @@ export async function sendGuestChatNotificationEmail({
             "",
             message,
             "",
-            GUEST_CONVERSATION_BUTTON + ":",
-            chatUrl,
-            "",
-            GUEST_CONVERSATION_FOOTER,
+            guestConversationBlockText(chatUrl),
           ].join("\n");
 
   const html =
     kind === "welcome"
       ? `
-    <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
+    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
       <p>Hello ${escapeHtml(guestName)},</p>
       <p style="white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</p>
-      <p>${guestConversationButtonHtml(chatUrl)}</p>
-      ${guestConversationFooterHtml()}
+      ${guestConversationBlockHtml(chatUrl)}
     </div>
   `
       : kind === "confirmation"
         ? `
-    <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
-      <h1 style="font-size: 20px;">Your stay is confirmed</h1>
+    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
+      <h1 style="font-size: 1.25rem;">Your stay is confirmed</h1>
       <p>Hello ${escapeHtml(guestName)}, your <strong>${escapeHtml(roomName)}</strong> booking is confirmed.</p>
-      <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid #d9c5c8; background: #f8f3f4; white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
-      <p>${guestConversationButtonHtml(chatUrl)}</p>
-      ${guestConversationFooterHtml()}
+      <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid oklch(89% 0.01 12); background: oklch(96.5% 0.025 12); white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
+      ${guestConversationBlockHtml(chatUrl)}
     </div>
   `
         : `
-    <div style="font-family: Arial, sans-serif; color: #24191b; line-height: 1.5; max-width: 620px;">
-      <h1 style="font-size: 20px;">You have a new message</h1>
+    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
+      <h1 style="font-size: 1.25rem;">You have a new message</h1>
       <p>Hello ${escapeHtml(guestName)}, Kamala sent you a message about your ${escapeHtml(roomName)} stay.</p>
-      <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid #d9c5c8; background: #f8f3f4; white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
-      <p>${guestConversationButtonHtml(chatUrl)}</p>
-      ${guestConversationFooterHtml()}
+      <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid oklch(89% 0.01 12); background: oklch(96.5% 0.025 12); white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
+      ${guestConversationBlockHtml(chatUrl)}
     </div>
   `;
 
