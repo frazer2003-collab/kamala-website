@@ -283,9 +283,9 @@ export function CalendarStayDialogs({
         >
           {selectedBlock.channelLabel ? (
             <p className="form-message form-message--setup" role="status">
-              Leftover channel stay — reload the calendar to promote it to a
-              normal booking (same Conversation as walk-ins). Or remove it and
-              re-enter via New booking with Airbnb / Booking.com / Expedia.
+              Leftover channel stay that could not be promoted. Remove it and
+              re-enter via New booking with Airbnb / Booking.com / Expedia —
+              those stays get the same Conversation as walk-ins.
             </p>
           ) : null}
           <CalendarBlockPanel
