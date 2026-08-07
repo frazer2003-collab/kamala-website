@@ -1,0 +1,44 @@
+/* Stay dialog — Open conversation launch (calendar booking detail). */
+
+.reservation-detail__conversation {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.reservation-detail__conversation-launch {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.reservation-detail__conversation-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.reservation-detail__conversation-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  color: var(--color-soft);
+  background: var(--color-surface-strong);
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+
+.reservation-detail__conversation-button:disabled:hover {
+  transform: none;
+  filter: none;
+}
+
+.reservation-detail__conversation-button--open {
+  border-color: color-mix(in oklab, var(--color-maroon) 28%, var(--color-border));
+  background: color-mix(in oklab, var(--color-maroon-wash) 70%, var(--color-surface));
+}
+
+.reservation-detail__conversation .staff-request-chat {
+  margin-top: 0;
+}
+
+.reservation-detail .detail-list--stay-meta {
+  margin-bottom: var(--space-4);
+}
