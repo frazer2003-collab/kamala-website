@@ -6,7 +6,7 @@ import { ToursCatalog } from "@/components/tours-catalog";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getPublicTours } from "@/lib/tours";
 
-export const revalidate = 120;
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();

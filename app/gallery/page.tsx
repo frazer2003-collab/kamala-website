@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { getGuestGallerySections } from "@/lib/gallery-sections";
 import { getPropertySettings } from "@/lib/property-settings";
 
-export const revalidate = 120;
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();

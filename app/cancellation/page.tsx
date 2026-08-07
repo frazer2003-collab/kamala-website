@@ -4,7 +4,8 @@ import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { getPropertySettings } from "@/lib/property-settings";
 
-export const dynamic = "force-dynamic";
+/** Cancellation copy changes rarely; staff settings save already revalidatePath's this route. */
+export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: "Cancellation policy" };

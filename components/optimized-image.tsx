@@ -16,6 +16,9 @@ type OptimizedImageProps = Omit<ImageProps, "src"> & {
   src: string | null | undefined;
 };
 
+/** Single default quality keeps the image CDN cache key from forking. */
+const DEFAULT_IMAGE_QUALITY = 70;
+
 export function OptimizedImage({
   src,
   alt,
@@ -26,7 +29,7 @@ export function OptimizedImage({
   width,
   height,
   loading,
-  quality,
+  quality = DEFAULT_IMAGE_QUALITY,
 }: OptimizedImageProps) {
   if (!src) {
     return null;
