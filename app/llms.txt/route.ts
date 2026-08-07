@@ -6,7 +6,7 @@ export const revalidate = 3600;
 
 export async function GET() {
   const settings = await getPropertySettings();
-  const base = getMetadataBase()?.toString().replace(/\/$/, "") ?? "https://kamalaguesthouse.com";
+  const base = getMetadataBase()?.toString().replace(/\/$/, "") ?? "https://www.kamalaguesthouse.com";
   const description = buildHomePageDescription(settings);
 
   const body = `# ${settings.propertyName}

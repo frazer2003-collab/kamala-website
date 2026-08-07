@@ -3,6 +3,7 @@ import {
   buildHomePageDescription,
   buildHomePageTitle,
 } from "@/lib/home-seo";
+import { normalizeSiteUrl } from "@/lib/site-url";
 
 export type SiteMetadataCopy = {
   defaultTitle: string;
@@ -21,6 +22,9 @@ export function buildSiteMetadataCopy(settings: PropertySettings): SiteMetadataC
 }
 
 export function getMetadataBase() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  return appUrl ? new URL(`${appUrl}/`) : undefined;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (!appUrl) {
+    return undefined;
+  }
+  return new URL(`${normalizeSiteUrl(appUrl)}/`);
 }

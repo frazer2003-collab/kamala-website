@@ -34,7 +34,7 @@ After swapping keys: redeploy (or restart `npm run dev`), and confirm property c
    - `STAFF_NOTIFICATION_EMAIL` (fallback until staff settings are saved)
 
 4. **Hosting** — deploy to Vercel (or similar) and set:
-   - `NEXT_PUBLIC_APP_URL=https://www.kamalaguesthouse.com`
+   - `NEXT_PUBLIC_APP_URL=https://www.kamalaguesthouse.com` (use **www** — apex has no DNS and breaks guest conversation email links)
    - `STAFF_ADMIN_USERNAME` / `STAFF_ADMIN_PASSWORD` / `STAFF_SESSION_SECRET`
 
 ## 2. Run the database schema

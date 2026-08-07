@@ -1,10 +1,9 @@
 import type { Locale } from "@/lib/i18n";
+import { getSiteUrl } from "@/lib/site-url";
 
 export function getBookingPaymentReturnUrl(bookingId: string, locale?: Locale) {
   const base =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
+    typeof window !== "undefined" ? window.location.origin : getSiteUrl();
 
   const params = new URLSearchParams({
     booking_id: bookingId,
