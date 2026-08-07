@@ -94,8 +94,10 @@ export async function getStaffNotificationEmailByAddress(
   return mapRow(data);
 }
 
-export async function getStaffNotificationRecipients(): Promise<string[]> {
-  const emails = await getStaffNotificationEmails();
+export function resolveStaffNotificationRecipients(
+  emails: StaffNotificationEmail[],
+  envFallback?: string | null,
+): string[] {
   const writable = emails
     .filter((entry) => entry.calendarAccess === "read_write")
     .map((entry) => entry.email);
@@ -104,11 +106,19 @@ export async function getStaffNotificationRecipients(): Promise<string[]> {
     return writable;
   }
 
-  // No read/write staff saved yet — keep the env fallback for ops.
-  if (emails.length === 0) {
-    const fallback = process.env.STAFF_NOTIFICATION_EMAIL?.trim();
-    return fallback ? [fallback] : [];
+  // Prefer every saved staff address over silence when none are marked read/write.
+  if (emails.length > 0) {
+    return emails.map((entry) => entry.email);
   }
 
-  return [];
+  const fallback = envFallback?.trim();
+  return fallback ? [fallback] : [];
+}
+
+export async function getStaffNotificationRecipients(): Promise<string[]> {
+  const emails = await getStaffNotificationEmails();
+  return resolveStaffNotificationRecipients(
+    emails,
+    process.env.STAFF_NOTIFICATION_EMAIL,
+  );
 }

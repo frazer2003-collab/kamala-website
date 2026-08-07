@@ -558,21 +558,10 @@ export async function recordGuestChatMessage({
 
   await markNeedsReply(booking);
 
+  // Always email staff. Presence only skips guest-side mail — staff often leave
+  // Requests or calendar chat open, which would otherwise suppress every alert.
   let emailSent: boolean | null = null;
-  const { data: presenceRow } = await supabase
-    .from("booking_requests")
-    .select("staff_chat_present_at")
-    .eq("id", booking.id)
-    .maybeSingle();
-  const staffPresent = isRecipientPresentOnChat(
-    {
-      staff_chat_present_at: presenceRow?.staff_chat_present_at ?? booking.staff_chat_present_at,
-      guest_chat_present_at: booking.guest_chat_present_at,
-    },
-    "staff",
-  );
-
-  if (!skipNotify && !staffPresent) {
+  if (!skipNotify) {
     const notify = await sendStaffChatNotificationEmail({
       bookingRef: getBookingRef(booking.id),
       guestName: booking.guest_name,
@@ -583,15 +572,12 @@ export async function recordGuestChatMessage({
       staffUrl: staffChatDeepLink(booking),
     });
     emailSent = notify.ok;
-  } else if (staffPresent) {
-    emailSent = null;
   }
 
   return {
     ok: true as const,
     message: mapChatMessage(message),
     emailSent,
-    recipientPresent: staffPresent,
   };
 }
 

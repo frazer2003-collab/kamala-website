@@ -267,14 +267,14 @@ export function BookingChat(props: BookingChatProps) {
     };
   }, [refreshMessages]);
 
-  // Presence heartbeat — email is skipped while this chat is open and visible.
+  // Presence heartbeat — guest email is skipped while they are on the chat page.
+  // Staff are always emailed on guest messages (Requests/calendar often stay open).
   useEffect(() => {
-    const viewer = props.variant === "staff" ? "staff" : "guest";
-
     function pulse() {
       if (document.visibilityState !== "visible") {
         return;
       }
+      // Staff pulse kept for future in-thread cues; it no longer suppresses email.
       if (props.variant === "staff") {
         void pulseChatPresence({ viewer: "staff", bookingId: props.bookingId });
       } else {

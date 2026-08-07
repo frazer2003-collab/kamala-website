@@ -35,4 +35,14 @@ describe("chat presence", () => {
     assert.equal(isRecipientPresentOnChat(booking, "guest"), true);
     assert.equal(isRecipientPresentOnChat(booking, "staff"), false);
   });
+
+  it("documents that staff presence no longer blocks guest-message email", () => {
+    // Guest→staff mail always sends; only guest←staff mail uses presence.
+    // See recordGuestChatMessage — staffPresent is not consulted for notify.
+    const staffLooksPresent = {
+      guest_chat_present_at: null,
+      staff_chat_present_at: new Date().toISOString(),
+    };
+    assert.equal(isRecipientPresentOnChat(staffLooksPresent, "staff"), true);
+  });
 });
