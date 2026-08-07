@@ -187,6 +187,7 @@ export function CalendarWalkInForm({
       </p>
       <p className="detail-help">
         Enter every stay here — website, walk-in, Airbnb, Booking.com, or Expedia.
+        OTA stays get the same Conversation as walk-ins once saved.
         Past dates are allowed when you need to backfill an old booking. Pick the source
         below.
         {roomUnitNumber

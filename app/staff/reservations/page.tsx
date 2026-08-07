@@ -73,7 +73,7 @@ export default async function StaffReservationsPage({
   const todayIso = getTodayIso();
   const rangeLabel = formatRangeLabel(fromIso, toIso);
 
-  // Drop leftover iCal-synced Airbnb/OTA stays staff cannot cancel like website bookings.
+  // Promote leftover iCal/OTA room_blocks into booking_requests (Conversation + cancel).
   await purgeIcalSyncedChannelBlocks();
   // Clear leftover No # stays that overlap July 2026.
   await purgeUnassignedJuly2026Stays();

@@ -282,14 +282,11 @@ export function CalendarStayDialogs({
           }
         >
           {selectedBlock.channelLabel ? (
-            <div className="staff-request-chat" id="booking-chat" tabIndex={-1}>
-              <h3 className="staff-request-chat__title">Conversation</h3>
-              <p className="detail-help staff-request-chat__hint">
-                In-app chat is for website bookings only. Channel stays keep
-                guest email for your records — message them in{" "}
-                {selectedBlock.channelLabel}, not here.
-              </p>
-            </div>
+            <p className="form-message form-message--setup" role="status">
+              Leftover channel stay — reload the calendar to promote it to a
+              normal booking (same Conversation as walk-ins). Or remove it and
+              re-enter via New booking with Airbnb / Booking.com / Expedia.
+            </p>
           ) : null}
           <CalendarBlockPanel
             block={selectedBlock}
