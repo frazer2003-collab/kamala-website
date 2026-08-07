@@ -3,7 +3,7 @@
 import { CalendarBlockPanel } from "@/components/calendar-block-panel";
 import { CalendarBookingDialog } from "@/components/calendar-booking-dialog";
 import { CalendarBookingPanel } from "@/components/calendar-booking-panel";
-import { BookingChat } from "@/components/staff-lazy";
+import { StayOpenConversation } from "@/components/stay-open-conversation";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import { formatBedSetup } from "@/lib/bed-setup";
 import { formatBookingSource } from "@/lib/booking-source";
@@ -95,9 +95,6 @@ export function CalendarStayDialogs({
       {selectedBooking ? (
         <CalendarBookingDialog
           focusReturnKey={selectedKey || undefined}
-          initialFocusSelector={
-            selectedBooking.databaseId ? "#booking-chat" : undefined
-          }
           onClose={staySelection.close}
           open
           title={selectedBooking.guest}
@@ -159,35 +156,15 @@ export function CalendarStayDialogs({
           </dl>
 
           {selectedBooking.databaseId ? (
-            <div
-              className={`staff-request-chat${
-                selectedBooking.status === "needs-reply"
-                  ? " staff-request-chat--priority"
-                  : ""
-              }`}
-              id="booking-chat"
-              tabIndex={-1}
-            >
-              <h3 className="staff-request-chat__title">
-                {selectedBooking.status === "needs-reply"
-                  ? "Conversation — reply needed"
-                  : "Conversation"}
-              </h3>
-              {!hasGuestEmail ? (
-                <p className="detail-help staff-request-chat__hint">
-                  No guest email on this stay yet. Save an email in the form
-                  below to notify them when you reply.
-                </p>
-              ) : null}
-              <BookingChat
-                bookingId={selectedBooking.databaseId}
-                disabled={!canManageSelected}
-                guestLabel={selectedBooking.guest}
-                readOnly={selectedBooking.status === "declined"}
-                showHeading={false}
-                variant="staff"
-              />
-            </div>
+            <StayOpenConversation
+              bookingId={selectedBooking.databaseId}
+              canManage={canManageSelected}
+              guestLabel={selectedBooking.guest}
+              hasGuestEmail={hasGuestEmail}
+              key={selectedKey}
+              priority={selectedBooking.status === "needs-reply"}
+              readOnly={selectedBooking.status === "declined"}
+            />
           ) : (
             <p className="form-message form-message--setup" role="status">
               Conversation is unavailable for this stay — the booking record is
@@ -246,9 +223,9 @@ export function CalendarStayDialogs({
               </>
             ) : selectedBooking.status === "needs-reply" ? (
               <>
-                Guest is waiting on a reply above. You can still assign a door
-                number and edit dates or details here — conversation triage does
-                not lock the tape.
+                Guest is waiting on a reply. Open conversation above when you
+                are ready — you can still assign a door number and edit dates
+                here.
               </>
             ) : selectedBooking.status === "awaiting" ? (
               <>
