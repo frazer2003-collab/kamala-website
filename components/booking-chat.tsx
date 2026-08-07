@@ -238,22 +238,35 @@ export function BookingChat(props: BookingChatProps) {
   ]);
 
   useEffect(() => {
-    function getPollInterval() {
-      return document.visibilityState === "visible" ? 5000 : 20000;
+    // Visible tabs: gentle poll. Hidden tabs: stop entirely (refresh on focus).
+    const VISIBLE_POLL_MS = 8000;
+    let intervalId: number | null = null;
+
+    function stopPolling() {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
     }
 
-    let intervalId = window.setInterval(() => {
-      void refreshMessages(false);
-    }, getPollInterval());
-
-    function handleVisibilityChange() {
-      window.clearInterval(intervalId);
+    function startPolling() {
+      stopPolling();
+      if (document.visibilityState !== "visible") {
+        return;
+      }
       intervalId = window.setInterval(() => {
         void refreshMessages(false);
-      }, getPollInterval());
+      }, VISIBLE_POLL_MS);
+    }
 
+    startPolling();
+
+    function handleVisibilityChange() {
       if (document.visibilityState === "visible") {
         void refreshMessages(false);
+        startPolling();
+      } else {
+        stopPolling();
       }
     }
 
@@ -261,7 +274,7 @@ export function BookingChat(props: BookingChatProps) {
 
     return () => {
       loadGenerationRef.current += 1;
-      window.clearInterval(intervalId);
+      stopPolling();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [refreshMessages]);

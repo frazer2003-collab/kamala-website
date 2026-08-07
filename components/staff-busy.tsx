@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { useFormStatus } from "react-dom";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { formatCalendarMonthLabel, parseCalendarMonth } from "@/lib/calendar";
 
 const DEFAULT_BUSY_MESSAGE = "Working…";
@@ -475,32 +475,6 @@ export function StaffBusyEffect({
   return null;
 }
 
-/** Warm common staff routes so page switches feel immediate. */
-function StaffRoutePrefetch() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const routes = [
-      "/staff",
-      "/staff/calendar",
-      "/staff/reservations",
-      "/staff/sold",
-      "/staff/promotions",
-      "/staff/gallery",
-      "/staff/settings",
-    ];
-    for (const href of routes) {
-      try {
-        router.prefetch(href);
-      } catch {
-        // Prefetch is best-effort.
-      }
-    }
-  }, [router]);
-
-  return null;
-}
-
 export function StaffBusyRoot({ children }: { children: ReactNode }) {
   return (
     <StaffBusyProvider>
@@ -508,7 +482,6 @@ export function StaffBusyRoot({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <StaffNavBusyListener />
         <StaffFormSubmitListener />
-        <StaffRoutePrefetch />
       </Suspense>
       <StaffBusyOverlay />
     </StaffBusyProvider>
