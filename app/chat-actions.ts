@@ -7,10 +7,8 @@ import {
   recordGuestChatMessage,
   recordStaffChatMessage,
   toGuestChatContext,
-  touchChatPresence,
   type ChatMessage,
 } from "@/lib/booking-chat";
-import type { ChatViewerRole } from "@/lib/chat-presence";
 import { requireStaffSession } from "@/lib/staff-auth";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 
@@ -74,32 +72,6 @@ export async function loadGuestBookingMessages(
     readOnly: isChatReadOnly(booking.status),
     error: result.error ?? undefined,
   };
-}
-
-/** Keep presence warm while this booking’s chat is open and visible. */
-export async function pulseChatPresence(input: {
-  viewer: ChatViewerRole;
-  bookingId?: string;
-  token?: string;
-}): Promise<{ ok: boolean }> {
-  if (input.viewer === "staff") {
-    await requireStaffSession();
-    const bookingId = String(input.bookingId ?? "").trim();
-    if (!bookingId) {
-      return { ok: false };
-    }
-    return touchChatPresence({ bookingId, viewer: "staff" });
-  }
-
-  const token = String(input.token ?? "").trim();
-  if (!token) {
-    return { ok: false };
-  }
-  const booking = await getBookingByConversationToken(token);
-  if (!booking) {
-    return { ok: false };
-  }
-  return touchChatPresence({ bookingId: booking.id, viewer: "guest" });
 }
 
 export async function sendStaffChatMessage(

@@ -1,8 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-  isChatViewerPresent,
-  type ChatViewerRole,
-} from "@/lib/chat-presence";
+import { shouldNotifyChatCounterpart } from "@/lib/chat-notify";
 import {
   sendGuestChatNotificationEmail,
   sendStaffChatNotificationEmail,
@@ -461,51 +458,25 @@ function staffChatDeepLink(booking: BookingRequestRow) {
   return `${getAppBaseUrl()}/staff/calendar?${params.toString()}`;
 }
 
-/** Heartbeat while the booking chat UI is open and visible. */
-export async function touchChatPresence({
-  bookingId,
-  viewer,
-}: {
-  bookingId: string;
-  viewer: ChatViewerRole;
-}) {
+async function getLatestMessageSender(bookingId: string) {
   if (!hasStaffSupabaseConfig() || !bookingId) {
-    return { ok: false as const };
+    return null;
   }
 
   const supabase = createStaffSupabaseClient();
-  const now = new Date().toISOString();
-  const { error } =
-    viewer === "guest"
-      ? await supabase
-          .from("booking_requests")
-          .update({ guest_chat_present_at: now })
-          .eq("id", bookingId)
-      : await supabase
-          .from("booking_requests")
-          .update({ staff_chat_present_at: now })
-          .eq("id", bookingId);
+  const { data, error } = await supabase
+    .from("booking_messages")
+    .select("sender")
+    .eq("booking_request_id", bookingId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (error) {
-    // Column may be missing before migrate-booking-chat-presence.sql runs.
-    return { ok: false as const };
+  if (error || !data) {
+    return null;
   }
 
-  return { ok: true as const };
-}
-
-export function isRecipientPresentOnChat(
-  booking: Pick<
-    BookingRequestRow,
-    "guest_chat_present_at" | "staff_chat_present_at"
-  >,
-  recipient: ChatViewerRole,
-) {
-  const lastSeen =
-    recipient === "guest"
-      ? booking.guest_chat_present_at
-      : booking.staff_chat_present_at;
-  return isChatViewerPresent(lastSeen);
+  return data.sender as BookingMessageRow["sender"];
 }
 
 export async function recordGuestChatMessage({
@@ -540,6 +511,14 @@ export async function recordGuestChatMessage({
     }
   }
 
+  const latestPriorSender = await getLatestMessageSender(booking.id);
+  const shouldNotify =
+    !skipNotify &&
+    shouldNotifyChatCounterpart({
+      sender: "guest",
+      latestPriorSender,
+    });
+
   const { data: message, error } = await supabase
     .from("booking_messages")
     .insert({
@@ -559,20 +538,7 @@ export async function recordGuestChatMessage({
   await markNeedsReply(booking);
 
   let emailSent: boolean | null = null;
-  const { data: presenceRow } = await supabase
-    .from("booking_requests")
-    .select("staff_chat_present_at")
-    .eq("id", booking.id)
-    .maybeSingle();
-  const staffPresent = isRecipientPresentOnChat(
-    {
-      staff_chat_present_at: presenceRow?.staff_chat_present_at ?? booking.staff_chat_present_at,
-      guest_chat_present_at: booking.guest_chat_present_at,
-    },
-    "staff",
-  );
-
-  if (!skipNotify && !staffPresent) {
+  if (shouldNotify) {
     const notify = await sendStaffChatNotificationEmail({
       bookingRef: getBookingRef(booking.id),
       guestName: booking.guest_name,
@@ -583,15 +549,12 @@ export async function recordGuestChatMessage({
       staffUrl: staffChatDeepLink(booking),
     });
     emailSent = notify.ok;
-  } else if (staffPresent) {
-    emailSent = null;
   }
 
   return {
     ok: true as const,
     message: mapChatMessage(message),
     emailSent,
-    recipientPresent: staffPresent,
   };
 }
 
@@ -614,6 +577,18 @@ export async function recordStaffChatMessage({
   }
 
   const supabase = createStaffSupabaseClient();
+  const latestPriorSender = await getLatestMessageSender(booking.id);
+  // Confirmation / welcome always email — they carry the chat link.
+  const mustEmail = emailKind === "confirmation" || emailKind === "welcome";
+  const shouldNotify =
+    !skipNotify &&
+    guestHasConversationLink(booking.guest_email) &&
+    (mustEmail ||
+      shouldNotifyChatCounterpart({
+        sender: "staff",
+        latestPriorSender,
+      }));
+
   const { data: message, error } = await supabase
     .from("booking_messages")
     .insert({
@@ -633,26 +608,7 @@ export async function recordStaffChatMessage({
   await markStaffReplied(booking);
 
   let emailSent: boolean | null = null;
-  const { data: presenceRow } = await supabase
-    .from("booking_requests")
-    .select("guest_chat_present_at")
-    .eq("id", booking.id)
-    .maybeSingle();
-  const guestPresent = isRecipientPresentOnChat(
-    {
-      guest_chat_present_at: presenceRow?.guest_chat_present_at ?? booking.guest_chat_present_at,
-      staff_chat_present_at: booking.staff_chat_present_at,
-    },
-    "guest",
-  );
-  // Confirmation / welcome emails always send — they carry the chat link.
-  const mustEmail = emailKind === "confirmation" || emailKind === "welcome";
-
-  if (
-    !skipNotify &&
-    guestHasConversationLink(booking.guest_email) &&
-    (mustEmail || !guestPresent)
-  ) {
+  if (shouldNotify) {
     const token = await ensureConversationToken(booking.id);
     if (!token) {
       emailSent = false;
@@ -667,15 +623,12 @@ export async function recordStaffChatMessage({
       });
       emailSent = notify.ok;
     }
-  } else if (guestPresent && !mustEmail) {
-    emailSent = null;
   }
 
   return {
     ok: true as const,
     message: mapChatMessage(message),
     emailSent,
-    recipientPresent: guestPresent,
   };
 }
 
