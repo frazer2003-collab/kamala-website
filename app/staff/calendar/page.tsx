@@ -337,6 +337,8 @@ export default async function StaffCalendarPage({
                       ? "That room number cannot be used for this room type."
                       : error === "room-number-taken"
                         ? "That room number is already assigned for overlapping dates."
+                        : error === "invalid-stay"
+                          ? "Confirm this booking in Requests before assigning a room."
                         : error === "room-unit-cache"
                           ? "Room assignment isn’t available right now. Ask whoever set up the site to refresh the connection."
                           : error === "room-unit-rpc"
