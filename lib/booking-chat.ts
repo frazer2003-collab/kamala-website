@@ -160,7 +160,12 @@ export type GuestChatContext = {
 export const WALK_IN_GUEST_EMAIL = "walk-in@kamala.local";
 
 export function guestHasConversationLink(email: string) {
-  return email.trim().toLowerCase() !== WALK_IN_GUEST_EMAIL;
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || normalized === WALK_IN_GUEST_EMAIL) {
+    return false;
+  }
+  // Minimal shape check — avoids treating blank/placeholder as a real guest inbox.
+  return normalized.includes("@") && normalized.includes(".");
 }
 
 const CHAT_ACTIVE_STATUSES: BookingRequestRow["status"][] = [

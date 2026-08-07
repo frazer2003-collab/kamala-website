@@ -25,6 +25,8 @@ describe("guest chat access", () => {
   it("does not give walk-in placeholder guests a conversation link", () => {
     assert.equal(guestHasConversationLink(WALK_IN_GUEST_EMAIL), false);
     assert.equal(guestHasConversationLink(" Walk-In@kamala.local "), false);
+    assert.equal(guestHasConversationLink(""), false);
+    assert.equal(guestHasConversationLink("not-an-email"), false);
     assert.equal(guestHasConversationLink("guest@example.com"), true);
   });
 });

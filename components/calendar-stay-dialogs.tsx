@@ -95,6 +95,9 @@ export function CalendarStayDialogs({
       {selectedBooking ? (
         <CalendarBookingDialog
           focusReturnKey={selectedKey || undefined}
+          initialFocusSelector={
+            selectedBooking.databaseId ? "#booking-chat" : undefined
+          }
           onClose={staySelection.close}
           open
           title={selectedBooking.guest}
@@ -163,6 +166,7 @@ export function CalendarStayDialogs({
                   : ""
               }`}
               id="booking-chat"
+              tabIndex={-1}
             >
               <h3 className="staff-request-chat__title">
                 {selectedBooking.status === "needs-reply"
@@ -277,6 +281,16 @@ export function CalendarStayDialogs({
               : (selectedBlock.reason ?? "Room closure")
           }
         >
+          {selectedBlock.channelLabel ? (
+            <div className="staff-request-chat" id="booking-chat" tabIndex={-1}>
+              <h3 className="staff-request-chat__title">Conversation</h3>
+              <p className="detail-help staff-request-chat__hint">
+                In-app chat is for website bookings only. Channel stays keep
+                guest email for your records — message them in{" "}
+                {selectedBlock.channelLabel}, not here.
+              </p>
+            </div>
+          ) : null}
           <CalendarBlockPanel
             block={selectedBlock}
             canManage={canManageBlock}

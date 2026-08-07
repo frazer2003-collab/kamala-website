@@ -13,6 +13,12 @@ type CalendarBookingDialogProps = {
   title: string;
   /** Timeline bar/cell key to refocus after close (deep links + Escape). */
   focusReturnKey?: string;
+  /**
+   * Keep this selector in view on open (e.g. `#booking-chat`).
+   * Form fields still receive focus; scrolling to them is prevented so this
+   * block is not pushed off-screen.
+   */
+  initialFocusSelector?: string;
   children: React.ReactNode;
 };
 
@@ -75,6 +81,7 @@ export function CalendarBookingDialog({
   onClose,
   title,
   focusReturnKey,
+  initialFocusSelector,
   children,
 }: CalendarBookingDialogProps) {
   const router = useRouter();
@@ -115,15 +122,26 @@ export function CalendarBookingDialog({
       shell?.setAttribute("inert", "");
     }
 
-    dialogRef.current?.scrollTo({ top: 0 });
-
+    // Panel (drawer) is the scroll container on desktop; the shell scrolls on mobile.
     const panel = panelRef.current;
+    const scrollRoot = panel?.closest(".calendar-dialog--drawer")
+      ? panel
+      : dialogRef.current;
+    scrollRoot?.scrollTo({ top: 0 });
+
     if (panel) {
+      const preferred = initialFocusSelector
+        ? panel.querySelector<HTMLElement>(initialFocusSelector)
+        : null;
       const firstField = panel.querySelector<HTMLElement>(
         'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
       );
       const focusable = getFocusableElements(panel);
-      (firstField ?? focusable[0] ?? panel).focus();
+      // Focus the form for editing, but never scroll Conversation out of view.
+      (firstField ?? preferred ?? focusable[0] ?? panel).focus({
+        preventScroll: true,
+      });
+      preferred?.scrollIntoView({ block: "nearest", behavior: "auto" });
     }
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -167,7 +185,15 @@ export function CalendarBookingDialog({
       window.removeEventListener("keydown", handleKeyDown);
       restoreCalendarFocus(previousFocusRef.current, returnKey);
     };
-  }, [closeHref, focusReturnKey, isDesktopDrawer, onClose, open, router]);
+  }, [
+    closeHref,
+    focusReturnKey,
+    initialFocusSelector,
+    isDesktopDrawer,
+    onClose,
+    open,
+    router,
+  ]);
 
   if (!open || !isClient) {
     return null;

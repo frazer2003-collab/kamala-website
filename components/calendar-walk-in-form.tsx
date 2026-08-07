@@ -285,7 +285,8 @@ export function CalendarWalkInForm({
               value={guestEmail}
             />
             <span className="field-help" id={emailHelpId}>
-              Leave blank if the guest has no email.
+              Leave blank if the guest has no email. After you save, Conversation
+              opens on the stay so you can message them here.
             </span>
           </div>
         ) : (
