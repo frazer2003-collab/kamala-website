@@ -214,6 +214,8 @@ create table if not exists public.booking_requests (
   conversation_token text unique,
   room_unit_id uuid references public.room_units(id) on delete set null,
   bed_setup text check (bed_setup is null or bed_setup in ('double', 'twin')),
+  guest_chat_present_at timestamptz,
+  staff_chat_present_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

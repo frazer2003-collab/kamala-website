@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
 import {
+  isChatViewerPresent,
+  type ChatViewerRole,
+} from "@/lib/chat-presence";
+import {
   sendGuestChatNotificationEmail,
   sendStaffChatNotificationEmail,
 } from "@/lib/email";
@@ -441,6 +445,64 @@ async function markStaffReplied(booking: BookingRequestRow) {
     .eq("id", booking.id);
 }
 
+function staffChatDeepLink(booking: BookingRequestRow) {
+  const month = booking.arrival_date.slice(0, 7);
+  const params = new URLSearchParams({
+    month,
+    from: booking.arrival_date,
+    to: booking.departure_date,
+    booking: booking.id,
+  });
+  return `${getAppBaseUrl()}/staff/calendar?${params.toString()}`;
+}
+
+/** Heartbeat while the booking chat UI is open and visible. */
+export async function touchChatPresence({
+  bookingId,
+  viewer,
+}: {
+  bookingId: string;
+  viewer: ChatViewerRole;
+}) {
+  if (!hasStaffSupabaseConfig() || !bookingId) {
+    return { ok: false as const };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const now = new Date().toISOString();
+  const { error } =
+    viewer === "guest"
+      ? await supabase
+          .from("booking_requests")
+          .update({ guest_chat_present_at: now })
+          .eq("id", bookingId)
+      : await supabase
+          .from("booking_requests")
+          .update({ staff_chat_present_at: now })
+          .eq("id", bookingId);
+
+  if (error) {
+    // Column may be missing before migrate-booking-chat-presence.sql runs.
+    return { ok: false as const };
+  }
+
+  return { ok: true as const };
+}
+
+export function isRecipientPresentOnChat(
+  booking: Pick<
+    BookingRequestRow,
+    "guest_chat_present_at" | "staff_chat_present_at"
+  >,
+  recipient: ChatViewerRole,
+) {
+  const lastSeen =
+    recipient === "guest"
+      ? booking.guest_chat_present_at
+      : booking.staff_chat_present_at;
+  return isChatViewerPresent(lastSeen);
+}
+
 export async function recordGuestChatMessage({
   booking,
   body,
@@ -492,8 +554,20 @@ export async function recordGuestChatMessage({
   await markNeedsReply(booking);
 
   let emailSent: boolean | null = null;
+  const { data: presenceRow } = await supabase
+    .from("booking_requests")
+    .select("staff_chat_present_at")
+    .eq("id", booking.id)
+    .maybeSingle();
+  const staffPresent = isRecipientPresentOnChat(
+    {
+      staff_chat_present_at: presenceRow?.staff_chat_present_at ?? booking.staff_chat_present_at,
+      guest_chat_present_at: booking.guest_chat_present_at,
+    },
+    "staff",
+  );
 
-  if (!skipNotify) {
+  if (!skipNotify && !staffPresent) {
     const notify = await sendStaffChatNotificationEmail({
       bookingRef: getBookingRef(booking.id),
       guestName: booking.guest_name,
@@ -501,15 +575,18 @@ export async function recordGuestChatMessage({
       arrivalDate: booking.arrival_date,
       departureDate: booking.departure_date,
       message: trimmed,
-      staffUrl: `${getAppBaseUrl()}/staff?booking=${encodeURIComponent(booking.id)}#booking-chat`,
+      staffUrl: staffChatDeepLink(booking),
     });
     emailSent = notify.ok;
+  } else if (staffPresent) {
+    emailSent = null;
   }
 
   return {
     ok: true as const,
     message: mapChatMessage(message),
     emailSent,
+    recipientPresent: staffPresent,
   };
 }
 
@@ -551,8 +628,26 @@ export async function recordStaffChatMessage({
   await markStaffReplied(booking);
 
   let emailSent: boolean | null = null;
+  const { data: presenceRow } = await supabase
+    .from("booking_requests")
+    .select("guest_chat_present_at")
+    .eq("id", booking.id)
+    .maybeSingle();
+  const guestPresent = isRecipientPresentOnChat(
+    {
+      guest_chat_present_at: presenceRow?.guest_chat_present_at ?? booking.guest_chat_present_at,
+      staff_chat_present_at: booking.staff_chat_present_at,
+    },
+    "guest",
+  );
+  // Confirmation / welcome emails always send — they carry the chat link.
+  const mustEmail = emailKind === "confirmation" || emailKind === "welcome";
 
-  if (!skipNotify && guestHasConversationLink(booking.guest_email)) {
+  if (
+    !skipNotify &&
+    guestHasConversationLink(booking.guest_email) &&
+    (mustEmail || !guestPresent)
+  ) {
     const token = await ensureConversationToken(booking.id);
     if (!token) {
       emailSent = false;
@@ -567,12 +662,15 @@ export async function recordStaffChatMessage({
       });
       emailSent = notify.ok;
     }
+  } else if (guestPresent && !mustEmail) {
+    emailSent = null;
   }
 
   return {
     ok: true as const,
     message: mapChatMessage(message),
     emailSent,
+    recipientPresent: guestPresent,
   };
 }
 

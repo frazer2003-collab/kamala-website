@@ -13,11 +13,16 @@ import {
 import {
   loadGuestBookingMessages,
   loadStaffBookingMessages,
+  pulseChatPresence,
   sendGuestChatMessage,
   sendStaffChatMessage,
   type ChatActionState,
 } from "@/app/chat-actions";
 import type { ChatMessage } from "@/lib/booking-chat";
+import {
+  playChatAlertSound,
+  unlockChatAlertSound,
+} from "@/lib/chat-alert-sound";
 
 type BookingChatProps = {
   /** When true, compose is blocked. History still loads. */
@@ -262,6 +267,53 @@ export function BookingChat(props: BookingChatProps) {
     };
   }, [refreshMessages]);
 
+  // Presence heartbeat — email is skipped while this chat is open and visible.
+  useEffect(() => {
+    const viewer = props.variant === "staff" ? "staff" : "guest";
+
+    function pulse() {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      if (props.variant === "staff") {
+        void pulseChatPresence({ viewer: "staff", bookingId: props.bookingId });
+      } else {
+        void pulseChatPresence({ viewer: "guest", token: props.token });
+      }
+    }
+
+    pulse();
+    const intervalId = window.setInterval(pulse, 12_000);
+
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        pulse();
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [
+    props.variant,
+    props.variant === "staff" ? props.bookingId : props.token,
+  ]);
+
+  // Unlock audio on first gesture so later alerts can play.
+  useEffect(() => {
+    function unlock() {
+      void unlockChatAlertSound();
+    }
+    document.addEventListener("pointerdown", unlock, { once: true });
+    document.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      document.removeEventListener("pointerdown", unlock);
+      document.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
   useEffect(() => {
     if (props.variant !== "guest") {
       return;
@@ -311,6 +363,17 @@ export function BookingChat(props: BookingChatProps) {
               : "You";
         setLiveAnnouncement(`New message from ${who}`);
         scrollToLatest(false);
+
+        const fromOther =
+          (props.variant === "staff" && newest.sender === "guest") ||
+          (props.variant === "guest" && newest.sender === "staff");
+        if (
+          fromOther &&
+          typeof document !== "undefined" &&
+          document.visibilityState === "visible"
+        ) {
+          void playChatAlertSound();
+        }
       }
     }
     messageCountRef.current = messages.length;

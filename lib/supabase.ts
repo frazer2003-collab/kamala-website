@@ -49,6 +49,10 @@ export type BookingRequestRow = {
   conversation_token: string | null;
   room_unit_id: string | null;
   bed_setup?: string | null;
+  /** Last time guest had this booking’s chat open and visible. */
+  guest_chat_present_at?: string | null;
+  /** Last time staff had this booking’s chat open and visible. */
+  staff_chat_present_at?: string | null;
   created_at: string;
   updated_at: string;
 };
