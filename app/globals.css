@@ -5768,41 +5768,9 @@ textarea:focus {
   font-size: 0.82rem;
 }
 
-.booking-chat-page__link-tools {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-5);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-muted);
-}
 
-.booking-chat-page__link-tools p {
-  margin: 0;
-  color: var(--color-ink);
-  font-size: 0.92rem;
-}
 
-.booking-chat-page__link-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
-}
 
-.booking-chat-page__link {
-  flex: 1 1 14rem;
-  min-width: 0;
-  padding: 0.55rem 0.7rem;
-  overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-size: 0.82rem;
-  white-space: nowrap;
-}
 
 .detail-actions form {
   display: contents;
@@ -5977,14 +5945,7 @@ textarea:focus {
     margin-bottom: 0;
   }
 
-  .booking-chat-page__link-tools {
-    margin-bottom: 0;
-  }
 
-  .booking-chat-page__link-row .button {
-    flex: 1 1 8rem;
-    min-height: 2.75rem;
-  }
 
   .booking-chat-page__chat {
     flex: 1;

@@ -1,12 +1,10 @@
 import type { Viewport } from "next";
 import Link from "next/link";
 import { BookingChat } from "@/components/booking-chat";
-import { CopyConversationLink } from "@/components/copy-conversation-link";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import {
   getBookingByConversationToken,
-  getGuestChatUrl,
   isChatReadOnly,
 } from "@/lib/booking-chat";
 import { getPropertySettings } from "@/lib/property-settings";
@@ -55,9 +53,8 @@ export default async function BookingMessagesPage({
             {booking.room_name} · {booking.arrival_date} to {booking.departure_date}
           </p>
           <p className="booking-chat-page__intro">
-            Private messages about your stay. Kamala emails you when they reply.
+            Private messages about your stay. We email you when there is a reply.
           </p>
-          <CopyConversationLink url={getGuestChatUrl(token)} />
         </header>
         <div className="booking-chat-page__chat">
           <BookingChat
