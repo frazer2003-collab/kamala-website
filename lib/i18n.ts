@@ -117,12 +117,12 @@ const messages = {
     confirmedOverbookedBody:
       "We received your full payment for {room}. Our staff will check your dates and message you shortly with confirmation and arrival details. Your payment is safe.",
     confirmedChatHint:
-      "Save your private conversation link — it is the only way to message Kamala about this booking.",
+      "Message Kamala below about your stay. We email you when there is a reply — open the conversation from that email anytime.",
     requestedTitle: "We received your booking request.",
     requestedBody:
       "{property} will review your dates and reply with confirmation details. No card payment was taken online.",
     requestedChatHint:
-      "You can message Kamala now — save your private conversation link from the next page.",
+      "You can message Kamala on the next page. We email you when there is a reply — open the conversation from that email anytime.",
     openBookingConversation: "Open conversation",
     backToHome: "Back to home",
     cancelledTitle: "No payment was taken.",
@@ -239,12 +239,12 @@ const messages = {
     confirmedOverbookedBody:
       "เราได้รับชำระเต็มจำนวนสำหรับ {room} แล้ว เจ้าหน้าที่จะตรวจสอบวันที่พักและส่งข้อความยืนยันพร้อมรายละเอียดการเข้าพักในไม่ช้า การชำระเงินของคุณปลอดภัย",
     confirmedChatHint:
-      "บันทึกลิงก์สนทนาส่วนตัวไว้ — นี่คือช่องทางเดียวสำหรับติดต่อ Kamala เรื่องการจองนี้",
+      "ส่งข้อความถึง Kamala ด้านล่างเกี่ยวกับการเข้าพักของคุณ เราจะส่งอีเมลเมื่อมีการตอบกลับ — เปิดสนทนาจากอีเมลนั้นได้ทุกเมื่อ",
     requestedTitle: "เราได้รับคำขอจองของคุณแล้ว",
     requestedBody:
       "{property} จะตรวจสอบวันที่พักและตอบกลับพร้อมรายละเอียดการยืนยัน ไม่มีการชำระด้วยบัตรออนไลน์",
     requestedChatHint:
-      "คุณสามารถส่งข้อความถึง Kamala ได้แล้ว — บันทึกลิงก์สนทนาส่วนตัวจากหน้าถัดไป",
+      "คุณสามารถส่งข้อความถึง Kamala ได้ในหน้าถัดไป เราจะส่งอีเมลเมื่อมีการตอบกลับ — เปิดสนทนาจากอีเมลนั้นได้ทุกเมื่อ",
     openBookingConversation: "เปิดสนทนาของคุณ",
     backToHome: "กลับหน้าแรก",
     cancelledTitle: "ไม่มีการชำระเงิน",
