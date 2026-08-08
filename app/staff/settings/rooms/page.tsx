@@ -6,7 +6,7 @@ import { StaffShell } from "@/components/staff-shell";
 import { MAX_ROOM_TYPES } from "@/lib/room-catalog";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRooms } from "@/lib/rooms";
-import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
+import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function StaffSettingsRoomsPage({
     room?: string;
   }>;
 }) {
-  await requireStaffSensitiveAccess("/staff/settings/rooms");
+  await requireStaffCalendarWrite();
 
   const { error, removed } = await searchParams;
   const [rooms, settings, supabaseReady] = await Promise.all([

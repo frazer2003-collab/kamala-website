@@ -8,7 +8,7 @@ import { StaffSettingsAddForm } from "@/components/staff-settings-add-form";
 import { StaffSettingsNav } from "@/components/staff-settings-nav";
 import { StaffShell } from "@/components/staff-shell";
 import { getPropertySettings } from "@/lib/property-settings";
-import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
+import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { getStaffNotificationEmails } from "@/lib/staff-notification-emails";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 
@@ -27,7 +27,7 @@ export default async function StaffSettingsPage({
 }: {
   searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   const { saved, error } = await searchParams;
   const [emails, settings, supabaseReady] = await Promise.all([

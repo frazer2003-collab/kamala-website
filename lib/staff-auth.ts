@@ -5,9 +5,7 @@ import { getStaffNotificationEmailByAddress } from "@/lib/staff-notification-ema
 import type { StaffCalendarAccess } from "@/lib/supabase";
 
 export const STAFF_SESSION_COOKIE_NAME = "kamala_staff_session";
-export const STAFF_SENSITIVE_COOKIE_NAME = "kamala_staff_sensitive";
 const COOKIE_NAME = STAFF_SESSION_COOKIE_NAME;
-const SENSITIVE_COOKIE_NAME = STAFF_SENSITIVE_COOKIE_NAME;
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 export type StaffSession = {
@@ -220,97 +218,4 @@ export async function setStaffSessionCookie(session: StaffSession) {
 export async function clearStaffSessionCookie() {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
-  cookieStore.delete(SENSITIVE_COOKIE_NAME);
-}
-
-/** Passcode for Finance and Settings (override with STAFF_SENSITIVE_PASSCODE). */
-export function getStaffSensitivePasscode() {
-  const fromEnv = process.env.STAFF_SENSITIVE_PASSCODE?.trim();
-  return fromEnv || "3135";
-}
-
-export function verifyStaffSensitivePasscode(input: string) {
-  const expected = getStaffSensitivePasscode();
-  const normalized = input.trim();
-  if (!normalized) {
-    return false;
-  }
-  // Length mismatch must not throw in timingSafeEqual.
-  if (normalized.length !== expected.length) {
-    return false;
-  }
-  return safeCompare(normalized, expected);
-}
-
-function createSensitiveUnlockToken() {
-  const payload = Buffer.from(
-    JSON.stringify({ exp: Date.now() + SESSION_MAX_AGE_SECONDS * 1000 }),
-    "utf8",
-  ).toString("base64url");
-  return `${payload}.${signSessionPayload(payload)}`;
-}
-
-function readSensitiveUnlockFromToken(token: string | undefined) {
-  if (!token || !hasStaffAuthConfig()) {
-    return false;
-  }
-
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature) {
-    return false;
-  }
-
-  try {
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
-      exp?: unknown;
-    };
-    if (typeof parsed.exp !== "number" || !Number.isFinite(parsed.exp)) {
-      return false;
-    }
-    if (parsed.exp < Date.now()) {
-      return false;
-    }
-  } catch {
-    return false;
-  }
-
-  return safeCompare(signature, signSessionPayload(payload));
-}
-
-export async function hasStaffSensitiveUnlock() {
-  const cookieStore = await cookies();
-  return readSensitiveUnlockFromToken(cookieStore.get(SENSITIVE_COOKIE_NAME)?.value);
-}
-
-export async function setStaffSensitiveUnlockCookie() {
-  const cookieStore = await cookies();
-  cookieStore.set(SENSITIVE_COOKIE_NAME, createSensitiveUnlockToken(), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-}
-
-export async function clearStaffSensitiveUnlockCookie() {
-  const cookieStore = await cookies();
-  cookieStore.delete(SENSITIVE_COOKIE_NAME);
-}
-
-/**
- * Finance and Settings only. Requires calendar write, then a passcode unlock.
- * Redirects to /staff/passcode when locked.
- */
-export async function requireStaffSensitiveAccess(nextPath: string) {
-  await requireStaffCalendarWrite();
-  if (await hasStaffSensitiveUnlock()) {
-    return;
-  }
-
-  const safeNext =
-    nextPath.startsWith("/staff/") && !nextPath.startsWith("/staff/passcode")
-      ? nextPath
-      : "/staff";
-  redirect(`/staff/passcode?next=${encodeURIComponent(safeNext)}`);
 }
