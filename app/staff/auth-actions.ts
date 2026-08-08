@@ -4,12 +4,9 @@ import {
   clearStaffSessionCookie,
   hasStaffAuthConfig,
   requireStaffCalendarWrite,
-  requireStaffSensitiveAccess,
-  setStaffSensitiveUnlockCookie,
   setStaffSessionCookie,
   verifyAdminCredentials,
   verifySharedStaffPassword,
-  verifyStaffSensitivePasscode,
 } from "@/lib/staff-auth";
 import {
   getStaffNotificationEmailByAddress,
@@ -45,10 +42,6 @@ import {
 import { ALL_ROOMS_PROMOTION_ID } from "@/lib/room-promotion-constants";
 
 export type StaffLoginState = {
-  error?: string;
-};
-
-export type StaffPasscodeState = {
   error?: string;
 };
 
@@ -96,11 +89,7 @@ function getValue(formData: FormData, key: string) {
 }
 
 function safeStaffPath(value: string) {
-  if (
-    !value.startsWith("/staff") ||
-    value.startsWith("/staff/login") ||
-    value.startsWith("/staff/passcode")
-  ) {
+  if (!value.startsWith("/staff") || value.startsWith("/staff/login")) {
     return "/staff";
   }
 
@@ -152,30 +141,11 @@ export async function logoutStaff() {
   redirect("/staff/login");
 }
 
-export async function unlockStaffSensitive(
-  _prevState: StaffPasscodeState,
-  formData: FormData,
-): Promise<StaffPasscodeState> {
-  await requireStaffCalendarWrite();
-
-  const passcode = getValue(formData, "passcode");
-  if (!passcode) {
-    return { error: "Enter the passcode to continue." };
-  }
-
-  if (!verifyStaffSensitivePasscode(passcode)) {
-    return { error: "That passcode didn’t match. Try again." };
-  }
-
-  await setStaffSensitiveUnlockCookie();
-  redirect(safeStaffPath(getValue(formData, "next")));
-}
-
 export async function addStaffNotificationEmail(
   _prevState: StaffSettingsState,
   formData: FormData,
 ): Promise<StaffSettingsState> {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -230,7 +200,7 @@ export async function addStaffNotificationEmail(
 }
 
 export async function updateStaffNotificationCalendarAccess(formData: FormData) {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   const emailId = getValue(formData, "email-id");
   const calendarAccessRaw = getValue(formData, "calendar-access");
@@ -254,7 +224,7 @@ export async function updateStaffNotificationCalendarAccess(formData: FormData) 
 }
 
 export async function removeStaffNotificationEmail(formData: FormData) {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   const emailId = getValue(formData, "email-id");
   if (!emailId || !hasStaffSupabaseConfig()) {
@@ -402,7 +372,7 @@ export async function updatePropertySettings(
   _prevState: StaffSettingsState,
   formData: FormData,
 ): Promise<StaffSettingsState> {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -467,7 +437,7 @@ export async function removeHeroImage(
   _prevState: StaffSettingsState,
   _formData: FormData,
 ): Promise<StaffSettingsState> {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -505,7 +475,7 @@ export async function updateRoomDetails(
   _prevState: StaffRoomState,
   formData: FormData,
 ): Promise<StaffRoomState> {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -590,7 +560,7 @@ export async function addRoom(
   _prevState: StaffRoomState,
   formData: FormData,
 ): Promise<StaffRoomState> {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -653,7 +623,7 @@ export async function addRoom(
 }
 
 export async function removeRoom(formData: FormData) {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   const roomId = getValue(formData, "room-id");
   if (!roomId || !hasStaffSupabaseConfig()) {
@@ -896,7 +866,7 @@ export async function addTour(
   _prevState: StaffTourState,
   formData: FormData,
 ): Promise<StaffTourState> {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -944,7 +914,7 @@ export async function updateTour(
   _prevState: StaffTourState,
   formData: FormData,
 ): Promise<StaffTourState> {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   if (!hasStaffSupabaseConfig()) {
     return { error: "Supabase is not configured yet." };
@@ -1026,7 +996,7 @@ export async function updateTour(
 }
 
 export async function removeTour(formData: FormData) {
-  await requireStaffSensitiveAccess("/staff/settings");
+  await requireStaffCalendarWrite();
 
   const tourId = getValue(formData, "tour-id");
   if (!tourId || !hasStaffSupabaseConfig()) {
