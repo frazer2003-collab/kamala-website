@@ -1,10 +1,12 @@
 "use server";
 
 import {
+  clearStaffSensitiveUnlockCookie,
   clearStaffSessionCookie,
   hasStaffAuthConfig,
   requireStaffCalendarWrite,
   requireStaffSensitiveAccess,
+  requireStaffSession,
   setStaffSensitiveUnlockCookie,
   setStaffSessionCookie,
   staffSensitiveScopeForPath,
@@ -151,6 +153,12 @@ export async function loginStaff(
 export async function logoutStaff() {
   await clearStaffSessionCookie();
   redirect("/staff/login");
+}
+
+/** Clears Finance/Settings unlock after staff leave those pages. */
+export async function clearStaffSensitiveUnlockIfAway() {
+  await requireStaffSession();
+  await clearStaffSensitiveUnlockCookie();
 }
 
 export async function unlockStaffSensitive(

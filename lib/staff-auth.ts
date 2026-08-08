@@ -334,25 +334,9 @@ export async function clearStaffSensitiveUnlockCookie() {
 }
 
 /**
- * Drop Finance/Settings unlock when staff leave those areas so the next
- * entry always asks for the passcode again — including read & write accounts.
- */
-export async function clearStaffSensitiveUnlockOutsideScope(
-  current: "sold" | "settings" | "other",
-) {
-  if (current === "other") {
-    await clearStaffSensitiveUnlockCookie();
-    return;
-  }
-  if (!(await hasStaffSensitiveUnlock(current))) {
-    await clearStaffSensitiveUnlockCookie();
-  }
-}
-
-/**
  * Finance and Settings only. Requires calendar write, then a passcode unlock
  * for that area. Unlock does not carry over between Finance and Settings,
- * or after leaving those pages.
+ * or after leaving those pages (cleared via StaffSensitiveUnlockJanitor).
  */
 export async function requireStaffSensitiveAccess(nextPath: string) {
   await requireStaffCalendarWrite();
