@@ -31,6 +31,8 @@ type StaffRequestDecisionPanelProps = {
   canManage: boolean;
   /** Guest message waiting — reply in conversation before confirming. */
   needsReply?: boolean;
+  /** Stay is already confirmed — Confirm/Decline are not available. */
+  alreadyConfirmed?: boolean;
   /** Sample inbox: full decide UI without writing to Supabase or emailing guests. */
   practiceMode?: boolean;
 };
@@ -45,6 +47,7 @@ export function StaffRequestDecisionPanel({
   currency = "thb",
   canManage,
   needsReply = false,
+  alreadyConfirmed = false,
   practiceMode = false,
 }: StaffRequestDecisionPanelProps) {
   const depositLabel = formatMoneySuffix(depositAmount, currency);
@@ -54,11 +57,13 @@ export function StaffRequestDecisionPanel({
   const [practiceResult, setPracticeResult] = useState<PracticeResult>(null);
   const [transferVerified, setTransferVerified] = useState(false);
 
-  const needsTransferGate = bankTransferClaimed && !depositPaid;
+  const needsTransferGate = bankTransferClaimed && !depositPaid && !alreadyConfirmed;
   const confirmBlockedByTransfer = needsTransferGate && !transferVerified;
-  const confirmBlocked = confirmBlockedByTransfer;
+  const decisionsLocked = alreadyConfirmed;
+  const confirmBlocked = decisionsLocked || confirmBlockedByTransfer;
+  const declineBlocked = decisionsLocked;
   /** Need-reply is finished via Close conversation — Confirm stays for booking gates. */
-  const confirmIsSecondary = needsReply || needsTransferGate;
+  const confirmIsSecondary = !alreadyConfirmed && (needsReply || needsTransferGate);
 
   if (!canManage && !practiceMode) {
     return (
@@ -114,7 +119,14 @@ export function StaffRequestDecisionPanel({
     setMode("confirm");
   }
 
-  if (mode === "confirm") {
+  function openDecline() {
+    if (declineBlocked) {
+      return;
+    }
+    setMode("decline");
+  }
+
+  if (mode === "confirm" && !alreadyConfirmed) {
     return (
       <div className="staff-decide staff-decide--confirming">
         <h3 className="staff-decide__title">Confirm stay</h3>
@@ -175,7 +187,7 @@ export function StaffRequestDecisionPanel({
     );
   }
 
-  if (mode === "decline") {
+  if (mode === "decline" && !alreadyConfirmed) {
     return (
       <div className="staff-decide staff-decide--declining">
         <h3 className="staff-decide__title">Decline request</h3>
@@ -251,7 +263,14 @@ export function StaffRequestDecisionPanel({
           guest.
         </p>
       ) : null}
-      {needsReply ? (
+      {alreadyConfirmed ? (
+        <p className="staff-decide__summary" role="status">
+          This stay is already on the calendar as confirmed. Confirm stay and
+          Decline are unavailable — reply in the conversation above
+          {needsReply ? ", then Close conversation when finished" : ""}.
+        </p>
+      ) : null}
+      {!alreadyConfirmed && needsReply ? (
         <p className="staff-decide__summary" role="status">
           Guest is waiting on a reply above. When you are finished, use{" "}
           <strong>Close conversation</strong> — that clears the message history
@@ -264,13 +283,14 @@ export function StaffRequestDecisionPanel({
           confirming.
         </p>
       ) : null}
-      {!needsReply && !needsTransferGate ? (
+      {!alreadyConfirmed && !needsReply && !needsTransferGate ? (
         <p className="detail-help">
           {depositPaid
             ? "Card-paid stays are already on the calendar. Confirm emails the guest and closes this inbox request. Decline refunds and emails them. You will review the message before it sends."
             : "Confirm verifies payment when needed, moves the stay to the calendar, and emails the guest. Decline closes the request and emails them. You will review the message before it sends."}
         </p>
-      ) : (
+      ) : null}
+      {!alreadyConfirmed && (needsReply || needsTransferGate) ? (
         <p className="detail-help">
           {needsReply
             ? "Confirm stay is only for booking confirmation (for example after verifying a bank transfer). Decline still closes the request"
@@ -278,7 +298,7 @@ export function StaffRequestDecisionPanel({
           {depositPaid ? ", refunds their payment," : ""} and emails them when
           you are ready.
         </p>
-      )}
+      ) : null}
       {needsTransferGate ? (
         <fieldset className="staff-decide__gates">
           <legend className="sr-only">Before confirming</legend>
@@ -296,17 +316,33 @@ export function StaffRequestDecisionPanel({
         <button
           aria-disabled={confirmBlocked || undefined}
           className={
-            confirmIsSecondary ? "button button--secondary" : "button button--primary"
+            confirmBlocked
+              ? "button button--secondary"
+              : confirmIsSecondary
+                ? "button button--secondary"
+                : "button button--primary"
           }
           disabled={confirmBlocked}
           onClick={openConfirm}
+          title={
+            alreadyConfirmed
+              ? "This stay is already confirmed"
+              : confirmBlockedByTransfer
+                ? "Verify the bank transfer first"
+                : undefined
+          }
           type="button"
         >
           Confirm stay…
         </button>
         <button
+          aria-disabled={declineBlocked || undefined}
           className="button button--quiet"
-          onClick={() => setMode("decline")}
+          disabled={declineBlocked}
+          onClick={openDecline}
+          title={
+            alreadyConfirmed ? "This stay is already confirmed" : undefined
+          }
           type="button"
         >
           Decline…

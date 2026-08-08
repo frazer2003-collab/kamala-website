@@ -708,6 +708,10 @@ export default async function StaffBookingsPage({
 
               {!isClosedConversation ? (
                 <StaffRequestDecisionPanel
+                  alreadyConfirmed={
+                    selected.status === "confirmed" ||
+                    (selected.status === "needs-reply" && selected.depositPaid)
+                  }
                   bookingId={selected.databaseId ?? ""}
                   canManage={canManageSelected}
                   currency={settings.currency}
