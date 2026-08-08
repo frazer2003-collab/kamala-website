@@ -38,8 +38,8 @@ export function nextStatusAfterGuestMessage(
 }
 
 /**
- * After staff reply: paid stays return to confirmed; unpaid bank/open
- * requests return to awaiting.
+ * After staff reply or closing the conversation: paid stays return to
+ * confirmed; unpaid bank/open requests return to awaiting.
  */
 export function nextStatusAfterStaffReply(
   status: BookingStatus,
@@ -50,4 +50,12 @@ export function nextStatusAfterStaffReply(
   }
 
   return depositPaid ? "confirmed" : "awaiting";
+}
+
+/** Alias kept for call sites that close a thread (same status restore). */
+export function nextStatusAfterClosingConversation(
+  status: BookingStatus,
+  depositPaid: boolean,
+): BookingStatus | null {
+  return nextStatusAfterStaffReply(status, depositPaid);
 }

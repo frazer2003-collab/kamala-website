@@ -1,0 +1,30 @@
+.staff-close-conversation {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.staff-close-conversation--confirm {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.staff-close-conversation--confirm p {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.staff-close-conversation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.staff-close-conversation__actions .button {
+  min-height: 2.75rem;
+}

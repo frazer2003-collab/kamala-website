@@ -447,6 +447,51 @@ async function markStaffReplied(booking: BookingRequestRow) {
     .eq("id", booking.id);
 }
 
+/**
+ * Staff closes a finished conversation: wipe message history and clear
+ * needs-reply. Does not email the guest.
+ */
+export async function closeBookingConversation(booking: BookingRequestRow) {
+  if (!hasStaffSupabaseConfig() || !booking.id) {
+    return { ok: false as const, reason: "missing-config" as const };
+  }
+
+  if (booking.status === "declined") {
+    return { ok: false as const, reason: "closed" as const };
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { error: deleteError } = await supabase
+    .from("booking_messages")
+    .delete()
+    .eq("booking_request_id", booking.id);
+
+  if (deleteError) {
+    return { ok: false as const, reason: "delete-failed" as const };
+  }
+
+  const nextStatus = nextStatusAfterStaffReply(
+    booking.status,
+    Boolean(booking.deposit_paid_at),
+  );
+
+  if (nextStatus) {
+    const { error: statusError } = await supabase
+      .from("booking_requests")
+      .update({ status: nextStatus })
+      .eq("id", booking.id);
+
+    if (statusError) {
+      return { ok: false as const, reason: "status-failed" as const };
+    }
+  }
+
+  return {
+    ok: true as const,
+    nextStatus: nextStatus ?? booking.status,
+  };
+}
+
 function staffChatDeepLink(booking: BookingRequestRow) {
   const month = booking.arrival_date.slice(0, 7);
   const params = new URLSearchParams({

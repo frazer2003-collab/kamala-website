@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  closeBookingConversation,
   getBookingByConversationToken,
   isChatReadOnly,
   listBookingMessages,
@@ -9,8 +10,12 @@ import {
   toGuestChatContext,
   type ChatMessage,
 } from "@/lib/booking-chat";
-import { requireStaffSession } from "@/lib/staff-auth";
+import {
+  requireStaffCalendarWrite,
+  requireStaffSession,
+} from "@/lib/staff-auth";
 import { createStaffSupabaseClient } from "@/lib/supabase";
+import { revalidatePath } from "next/cache";
 
 export type ChatActionState = {
   error?: string;
@@ -72,6 +77,40 @@ export async function loadGuestBookingMessages(
     readOnly: isChatReadOnly(booking.status),
     error: result.error ?? undefined,
   };
+}
+
+export async function closeStaffConversation(bookingId: string): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  await requireStaffCalendarWrite();
+
+  const id = bookingId.trim();
+  if (!id) {
+    return { ok: false, error: "Missing booking." };
+  }
+
+  const booking = await getStaffBooking(id);
+  if (!booking) {
+    return { ok: false, error: "Could not find this booking." };
+  }
+
+  const result = await closeBookingConversation(booking);
+  if (!result.ok) {
+    return {
+      ok: false,
+      error:
+        result.reason === "closed"
+          ? "This conversation is already closed."
+          : "Could not close the conversation. Try again.",
+    };
+  }
+
+  revalidatePath("/staff");
+  revalidatePath("/staff/calendar");
+  revalidatePath("/booking/messages");
+
+  return { ok: true };
 }
 
 export async function sendStaffChatMessage(
