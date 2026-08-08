@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { StaffBusyRoot } from "@/components/staff-busy";
 import { StaffPasscodeForm } from "@/components/staff-passcode-form";
+import { StaffSessionIdleGuard } from "@/components/staff-session-idle";
 import {
   hasStaffSensitiveUnlock,
   requireStaffCalendarWrite,
@@ -60,6 +61,7 @@ export default async function StaffPasscodePage({
           <StaffPasscodeForm nextPath={nextPath} />
         </section>
       </main>
+      <StaffSessionIdleGuard />
     </StaffBusyRoot>
   );
 }

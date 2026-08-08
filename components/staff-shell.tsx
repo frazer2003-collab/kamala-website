@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { StaffBusyRoot } from "@/components/staff-busy";
+import { StaffSessionIdleGuard } from "@/components/staff-session-idle";
 import { StaffSidebar } from "@/components/staff-sidebar";
 
 type StaffShellProps = {
@@ -21,6 +22,7 @@ export function StaffShell({ current, children }: StaffShellProps) {
         <StaffSidebar current={current} />
         {children}
       </main>
+      <StaffSessionIdleGuard />
     </StaffBusyRoot>
   );
 }
