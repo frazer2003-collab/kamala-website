@@ -585,8 +585,9 @@ export default async function StaffBookingsPage({
               <h2 id="detail-title">{selected.guest}</h2>
               {selectedNeedsReply ? (
                 <p className="staff-request-urgency" role="status">
-                  Guest is waiting for a reply — answer in the conversation
-                  above, then confirm or decline when ready.
+                  Guest is waiting for a reply — answer in the conversation,
+                  then Close conversation when finished (clears history, no
+                  confirmation email).
                 </p>
               ) : null}
 

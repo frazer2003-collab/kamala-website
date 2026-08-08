@@ -223,9 +223,9 @@ export function CalendarStayDialogs({
               </>
             ) : selectedBooking.status === "needs-reply" ? (
               <>
-                Guest is waiting on a reply. Open conversation above when you
-                are ready — you can still assign a door number and edit dates
-                here.
+                Guest is waiting on a reply. Open conversation above, then Close
+                conversation when finished to clear the thread. You can still
+                assign a door number and edit dates here.
               </>
             ) : selectedBooking.status === "awaiting" ? (
               <>

@@ -17,6 +17,7 @@ import {
   sendStaffChatMessage,
   type ChatActionState,
 } from "@/app/chat-actions";
+import { StaffCloseConversation } from "@/components/staff-close-conversation";
 import type { ChatMessage } from "@/lib/booking-chat";
 import {
   playChatAlertSound,
@@ -613,6 +614,19 @@ export function BookingChat(props: BookingChatProps) {
           </button>
         </form>
       )}
+
+      {props.variant === "staff" && canCompose ? (
+        <StaffCloseConversation
+          bookingId={props.bookingId}
+          onClosed={() => {
+            setMessages([]);
+            lastTimestampRef.current = null;
+            messageCountRef.current = 0;
+            setSendStatus(null);
+            setLiveAnnouncement("Conversation closed. Message history cleared.");
+          }}
+        />
+      ) : null}
     </section>
   );
 }

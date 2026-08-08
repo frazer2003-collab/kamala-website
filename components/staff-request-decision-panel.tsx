@@ -53,12 +53,11 @@ export function StaffRequestDecisionPanel({
   const [declineMessage, setDeclineMessage] = useState(DECLINE_DEFAULT);
   const [practiceResult, setPracticeResult] = useState<PracticeResult>(null);
   const [transferVerified, setTransferVerified] = useState(false);
-  const [replyHandled, setReplyHandled] = useState(false);
 
   const needsTransferGate = bankTransferClaimed && !depositPaid;
   const confirmBlockedByTransfer = needsTransferGate && !transferVerified;
-  const confirmBlockedByReply = needsReply && !replyHandled;
-  const confirmBlocked = confirmBlockedByTransfer || confirmBlockedByReply;
+  const confirmBlocked = confirmBlockedByTransfer;
+  /** Need-reply is finished via Close conversation — Confirm stays for booking gates. */
   const confirmIsSecondary = needsReply || needsTransferGate;
 
   if (!canManage && !practiceMode) {
@@ -254,8 +253,9 @@ export function StaffRequestDecisionPanel({
       ) : null}
       {needsReply ? (
         <p className="staff-decide__summary" role="status">
-          Guest is waiting on a reply in the conversation above. Answer them
-          before confirming.
+          Guest is waiting on a reply above. When you are finished, use{" "}
+          <strong>Close conversation</strong> — that clears the message history
+          and removes Need reply. No confirmation email is sent.
         </p>
       ) : null}
       {needsTransferGate ? (
@@ -272,37 +272,24 @@ export function StaffRequestDecisionPanel({
         </p>
       ) : (
         <p className="detail-help">
-          Decline still closes the request
+          {needsReply
+            ? "Confirm stay is only for booking confirmation (for example after verifying a bank transfer). Decline still closes the request"
+            : "Decline still closes the request"}
           {depositPaid ? ", refunds their payment," : ""} and emails them when
           you are ready.
-          {depositPaid
-            ? " Reply in the conversation above to clear needs-reply without using Confirm."
-            : ""}
         </p>
       )}
-      {needsReply || needsTransferGate ? (
+      {needsTransferGate ? (
         <fieldset className="staff-decide__gates">
           <legend className="sr-only">Before confirming</legend>
-          {needsReply ? (
-            <label className="staff-decide__gate">
-              <input
-                checked={replyHandled}
-                onChange={(event) => setReplyHandled(event.target.checked)}
-                type="checkbox"
-              />
-              <span>I replied in the conversation, or a reply is not needed</span>
-            </label>
-          ) : null}
-          {needsTransferGate ? (
-            <label className="staff-decide__gate">
-              <input
-                checked={transferVerified}
-                onChange={(event) => setTransferVerified(event.target.checked)}
-                type="checkbox"
-              />
-              <span>I verified this transfer in the bank app</span>
-            </label>
-          ) : null}
+          <label className="staff-decide__gate">
+            <input
+              checked={transferVerified}
+              onChange={(event) => setTransferVerified(event.target.checked)}
+              type="checkbox"
+            />
+            <span>I verified this transfer in the bank app</span>
+          </label>
         </fieldset>
       ) : null}
       <div className="staff-decide__actions">

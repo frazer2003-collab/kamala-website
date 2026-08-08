@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   isStaffCalendarManageableStay,
+  nextStatusAfterClosingConversation,
   nextStatusAfterGuestMessage,
   nextStatusAfterStaffReply,
 } from "./staff-calendar-stay";
@@ -53,5 +54,16 @@ describe("conversation status transitions", () => {
     assert.equal(nextStatusAfterStaffReply("needs-reply", true), "confirmed");
     assert.equal(nextStatusAfterStaffReply("needs-reply", false), "awaiting");
     assert.equal(nextStatusAfterStaffReply("confirmed", true), null);
+  });
+
+  it("uses the same restore when closing a conversation", () => {
+    assert.equal(
+      nextStatusAfterClosingConversation("needs-reply", true),
+      "confirmed",
+    );
+    assert.equal(
+      nextStatusAfterClosingConversation("needs-reply", false),
+      "awaiting",
+    );
   });
 });
