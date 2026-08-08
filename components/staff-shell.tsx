@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { StaffBusyRoot } from "@/components/staff-busy";
 import { StaffSessionIdleGuard } from "@/components/staff-session-idle";
 import { StaffSidebar } from "@/components/staff-sidebar";
+import { clearStaffSensitiveUnlockOutsideScope } from "@/lib/staff-auth";
 
 type StaffShellProps = {
   current:
@@ -15,7 +16,11 @@ type StaffShellProps = {
   children: ReactNode;
 };
 
-export function StaffShell({ current, children }: StaffShellProps) {
+export async function StaffShell({ current, children }: StaffShellProps) {
+  await clearStaffSensitiveUnlockOutsideScope(
+    current === "sold" || current === "settings" ? current : "other",
+  );
+
   return (
     <StaffBusyRoot>
       <main className="staff-shell">
