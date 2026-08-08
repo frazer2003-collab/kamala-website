@@ -18,7 +18,7 @@ import { getChannelBlocksOverlappingRange, getStaffClosureBlocksOverlappingRange
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
-import { requireStaffCalendarWrite } from "@/lib/staff-auth";
+import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 import "@/app/staff-sold.css";
 
@@ -73,7 +73,7 @@ export default async function StaffSoldPage({
 }: {
   searchParams: Promise<{ month?: string; from?: string; to?: string }>;
 }) {
-  await requireStaffCalendarWrite();
+  await requireStaffSensitiveAccess("/staff/sold");
 
   const { month: monthParam, from: fromParam, to: toParam } = await searchParams;
   const timelineRange = parseStaffTimelineRange({

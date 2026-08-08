@@ -5,8 +5,14 @@ import { getStaffNotificationEmailByAddress } from "@/lib/staff-notification-ema
 import type { StaffCalendarAccess } from "@/lib/supabase";
 
 export const STAFF_SESSION_COOKIE_NAME = "kamala_staff_session";
+export const STAFF_SENSITIVE_COOKIE_NAME = "kamala_staff_sensitive";
 const COOKIE_NAME = STAFF_SESSION_COOKIE_NAME;
+const SENSITIVE_COOKIE_NAME = STAFF_SENSITIVE_COOKIE_NAME;
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+/** Unlock lasts only while working in that area — not a long-lived desk unlock. */
+const SENSITIVE_UNLOCK_MAX_AGE_SECONDS = 30 * 60;
+
+export type StaffSensitiveScope = "sold" | "settings";
 
 export type StaffSession = {
   calendarAccess: StaffCalendarAccess;
@@ -218,4 +224,151 @@ export async function setStaffSessionCookie(session: StaffSession) {
 export async function clearStaffSessionCookie() {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
+  cookieStore.delete(SENSITIVE_COOKIE_NAME);
+}
+
+/** Passcode for Finance and Settings (override with STAFF_SENSITIVE_PASSCODE). */
+export function getStaffSensitivePasscode() {
+  const fromEnv = process.env.STAFF_SENSITIVE_PASSCODE?.trim();
+  return fromEnv || "3135";
+}
+
+export function verifyStaffSensitivePasscode(input: string) {
+  const expected = getStaffSensitivePasscode();
+  const normalized = input.trim();
+  if (!normalized) {
+    return false;
+  }
+  if (normalized.length !== expected.length) {
+    return false;
+  }
+  return safeCompare(normalized, expected);
+}
+
+export function staffSensitiveScopeForPath(
+  path: string,
+): StaffSensitiveScope | null {
+  if (path === "/staff/sold" || path.startsWith("/staff/sold?")) {
+    return "sold";
+  }
+  if (path === "/staff/settings" || path.startsWith("/staff/settings/")) {
+    return "settings";
+  }
+  return null;
+}
+
+function createSensitiveUnlockToken(scope: StaffSensitiveScope) {
+  const payload = Buffer.from(
+    JSON.stringify({
+      exp: Date.now() + SENSITIVE_UNLOCK_MAX_AGE_SECONDS * 1000,
+      scope,
+    }),
+    "utf8",
+  ).toString("base64url");
+  return `${payload}.${signSessionPayload(payload)}`;
+}
+
+function readSensitiveUnlockFromToken(
+  token: string | undefined,
+): { scope: StaffSensitiveScope } | null {
+  if (!token || !hasStaffAuthConfig()) {
+    return null;
+  }
+
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      exp?: unknown;
+      scope?: unknown;
+    };
+    if (typeof parsed.exp !== "number" || !Number.isFinite(parsed.exp)) {
+      return null;
+    }
+    if (parsed.exp < Date.now()) {
+      return null;
+    }
+    if (parsed.scope !== "sold" && parsed.scope !== "settings") {
+      return null;
+    }
+    if (!safeCompare(signature, signSessionPayload(payload))) {
+      return null;
+    }
+    return { scope: parsed.scope };
+  } catch {
+    return null;
+  }
+}
+
+export async function hasStaffSensitiveUnlock(scope?: StaffSensitiveScope) {
+  const cookieStore = await cookies();
+  const unlock = readSensitiveUnlockFromToken(
+    cookieStore.get(SENSITIVE_COOKIE_NAME)?.value,
+  );
+  if (!unlock) {
+    return false;
+  }
+  if (scope && unlock.scope !== scope) {
+    return false;
+  }
+  return true;
+}
+
+export async function setStaffSensitiveUnlockCookie(scope: StaffSensitiveScope) {
+  const cookieStore = await cookies();
+  cookieStore.set(SENSITIVE_COOKIE_NAME, createSensitiveUnlockToken(scope), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SENSITIVE_UNLOCK_MAX_AGE_SECONDS,
+  });
+}
+
+export async function clearStaffSensitiveUnlockCookie() {
+  const cookieStore = await cookies();
+  cookieStore.delete(SENSITIVE_COOKIE_NAME);
+}
+
+/**
+ * Drop Finance/Settings unlock when staff leave those areas so the next
+ * entry always asks for the passcode again — including read & write accounts.
+ */
+export async function clearStaffSensitiveUnlockOutsideScope(
+  current: "sold" | "settings" | "other",
+) {
+  if (current === "other") {
+    await clearStaffSensitiveUnlockCookie();
+    return;
+  }
+  if (!(await hasStaffSensitiveUnlock(current))) {
+    await clearStaffSensitiveUnlockCookie();
+  }
+}
+
+/**
+ * Finance and Settings only. Requires calendar write, then a passcode unlock
+ * for that area. Unlock does not carry over between Finance and Settings,
+ * or after leaving those pages.
+ */
+export async function requireStaffSensitiveAccess(nextPath: string) {
+  await requireStaffCalendarWrite();
+
+  const scope = staffSensitiveScopeForPath(nextPath);
+  if (!scope) {
+    redirect("/staff/passcode?next=/staff/sold");
+  }
+
+  if (await hasStaffSensitiveUnlock(scope)) {
+    return;
+  }
+
+  const safeNext =
+    nextPath.startsWith("/staff/") && !nextPath.startsWith("/staff/passcode")
+      ? nextPath
+      : "/staff/sold";
+  redirect(`/staff/passcode?next=${encodeURIComponent(safeNext)}`);
 }

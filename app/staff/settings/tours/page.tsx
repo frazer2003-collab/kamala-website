@@ -3,7 +3,7 @@ import { StaffSettingsNav } from "@/components/staff-settings-nav";
 import { StaffShell } from "@/components/staff-shell";
 import { StaffTourAddForm } from "@/components/staff-tour-add-form";
 import { StaffTourEditForm } from "@/components/staff-tour-edit-form";
-import { requireStaffCalendarWrite } from "@/lib/staff-auth";
+import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 import { getStaffTours } from "@/lib/tours";
 
@@ -14,7 +14,7 @@ export default async function StaffSettingsToursPage({
 }: {
   searchParams: Promise<{ removed?: string }>;
 }) {
-  await requireStaffCalendarWrite();
+  await requireStaffSensitiveAccess("/staff/settings/tours");
 
   const { removed } = await searchParams;
   const [tours, supabaseReady] = await Promise.all([
