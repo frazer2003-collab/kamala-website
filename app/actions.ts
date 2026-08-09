@@ -2123,7 +2123,8 @@ export async function updateChannelReservation(
         ...(typeChange.roomIdChanged
           ? {
               room_id: typeChange.roomId,
-              room_unit_id: null,
+              // Keep the door the RPC just saved (or Unassigned).
+              room_unit_id: effectiveRoomUnitId,
             }
           : {}),
       })

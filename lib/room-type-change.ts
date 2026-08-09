@@ -40,6 +40,8 @@ export function resolveRoomTypeChange(input: {
     roomId: room.id,
     roomName: room.name,
     roomIdChanged,
-    roomUnitId: roomIdChanged ? null : input.formRoomUnitId,
+    // Keep the door the form sent (including Unassigned). Callers validate
+    // eligibility and stay conflicts before persisting.
+    roomUnitId: input.formRoomUnitId,
   };
 }
