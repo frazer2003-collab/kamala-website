@@ -50,12 +50,28 @@ describe("resolveRoomTypeChange", () => {
     });
   });
 
-  it("clears unit when type changes even if form sends a unit", () => {
+  it("keeps the door the form sent when type changes", () => {
     const result = resolveRoomTypeChange({
       currentRoomId: "courtyard",
       requestedRoomId: "garden",
       rooms,
-      formRoomUnitId: "unit-1",
+      formRoomUnitId: "unit-new",
+    });
+    assert.deepEqual(result, {
+      ok: true,
+      roomId: "garden",
+      roomName: "Deluxe",
+      roomIdChanged: true,
+      roomUnitId: "unit-new",
+    });
+  });
+
+  it("clears the door when type changes and form leaves Unassigned", () => {
+    const result = resolveRoomTypeChange({
+      currentRoomId: "courtyard",
+      requestedRoomId: "garden",
+      rooms,
+      formRoomUnitId: null,
     });
     assert.deepEqual(result, {
       ok: true,

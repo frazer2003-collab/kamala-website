@@ -247,8 +247,9 @@ export function CalendarBookingPanel({
             ))}
           </select>
           <span className="field-help">
-            Room number clears when the type changes. Stay total stays as entered
-            unless you change or clear it.
+            Room number clears when the type changes — pick a door for the new
+            type before saving if you want one assigned. Stay total stays as
+            entered unless you change or clear it.
           </span>
         </div>
         <div className="field-pair">
