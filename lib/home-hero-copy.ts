@@ -148,7 +148,7 @@ export function buildAtmosphereLede(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `A garden guesthouse among hotels in Chiang Mai Old City. Shaded rooms, included breakfast, and a short walk to temples and markets — book here and we reply to confirm.`;
+    return `A family-run garden guesthouse among hotels in Chiang Mai Old City. Breakfast is included — book here and we reply to confirm your stay.`;
   }
 
   return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast — book here and we reply to confirm.`;
@@ -163,7 +163,7 @@ export function buildStayStoryHeading(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return "A Chiang Mai guesthouse in the Old City";
+    return "A family-run guesthouse in Chiang Mai Old City";
   }
 
   return `A garden hotel and guesthouse in ${locationLabel}`;
@@ -181,7 +181,7 @@ export function buildStayStoryLede(
   const atmosphereLine = buildStayStoryAtmosphereLine(locationLabel);
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `${propertyName} is a Chiang Mai guesthouse among hotels in Chiang Mai Old City — wooden rooms around a courtyard garden, not a resort block. ${atmosphereLine}`;
+    return `${propertyName} is family-run: wooden rooms around a courtyard garden in Chiang Mai Old City. ${atmosphereLine}`;
   }
 
   if (isCoastalLocation(locationLabel)) {
@@ -216,14 +216,14 @@ export function buildRoomsSectionSubhead(
   const types = roomCount === 1 ? "1 room type" : `${roomCount} room types`;
 
   if (addressLine && isNearThaPhaeGate(addressLine)) {
-    return `${types} · breakfast included · book directly with us`;
+    return `${types} near ${THAE_PHAE_GATE_NAME}`;
   }
 
   if (addressLine && /chiang\s*mai/i.test(addressLine)) {
-    return `${types} in Chiang Mai Old City · breakfast included · book directly with us`;
+    return `${types} in Chiang Mai Old City`;
   }
 
-  return `${types} · breakfast included · you book directly with us`;
+  return types;
 }
 
 export function buildStayStoryCheckInDetails(

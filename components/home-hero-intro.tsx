@@ -31,6 +31,15 @@ export function HomeHeroIntro({ propertyName, addressLine }: HomeHeroIntroProps)
     <div className="hero-atmosphere__copy">
       <p className="hero-atmosphere__brand">
         <span className="hero-atmosphere__property">{propertyName}</span>
+        {locationLabel &&
+        locationLabel.toLowerCase() !== propertyName.toLowerCase() ? (
+          <>
+            <span aria-hidden="true" className="hero-atmosphere__brand-sep">
+              ·
+            </span>
+            <span>{locationLabel}</span>
+          </>
+        ) : null}
         {mapsUrl ? (
           <>
             <span aria-hidden="true" className="hero-atmosphere__brand-sep">
@@ -50,22 +59,8 @@ export function HomeHeroIntro({ propertyName, addressLine }: HomeHeroIntroProps)
               >
                 <path d="M8 1.5a4.5 4.5 0 0 0-4.5 4.5c0 3.15 4.5 8.5 4.5 8.5s4.5-5.35 4.5-8.5A4.5 4.5 0 0 0 8 1.5zm0 6.25a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5z" />
               </svg>
-              <span>
-                Google Maps
-                {locationLabel &&
-                locationLabel.toLowerCase() !== propertyName.toLowerCase()
-                  ? ` · ${locationLabel}`
-                  : ""}
-              </span>
+              Open in Google Maps
             </a>
-          </>
-        ) : locationLabel &&
-          locationLabel.toLowerCase() !== propertyName.toLowerCase() ? (
-          <>
-            <span aria-hidden="true" className="hero-atmosphere__brand-sep">
-              ·
-            </span>
-            <span>{locationLabel}</span>
           </>
         ) : null}
       </p>

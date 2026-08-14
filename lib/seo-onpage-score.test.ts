@@ -8,7 +8,7 @@ describe("scoreThaPaeSeoPage", () => {
       title: "Hotels in Chiang Mai Old City — Guesthouse",
       description:
         "Kamala's Boutique Guesthouse: hotels in Chiang Mai Old City — a garden guesthouse with breakfast. Two-minute walk to the Old City gate near Tha Pae (Thae Phae).",
-      h1: "Hotels in Chiang Mai Old City",
+      h1: "A garden guesthouse in Chiang Mai Old City",
       bodyText:
         "Among hotels in Chiang Mai Old City, we are a Chiang Mai guesthouse near Thae Phae Gate.",
       keywords: ["hotels in Chiang Mai", "Chiang Mai guesthouse"],

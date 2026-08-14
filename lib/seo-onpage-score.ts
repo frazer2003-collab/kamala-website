@@ -43,10 +43,6 @@ function includesHotelsInChiangMai(text: string) {
   return includesNormalized(text, HOTEL_SEO_QUERY);
 }
 
-function includesGuesthouseQuery(text: string) {
-  return includesNormalized(text, GUESTHOUSE_SEO_QUERY);
-}
-
 export type SeoScoreResult = {
   score: number;
   grade: "A" | "B" | "C" | "D" | "F";
@@ -89,15 +85,19 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   push("h1-present", page.h1.trim().length > 0, 6, "H1 present");
   push(
     "h1-keyword",
-    includesHotelsInChiangMai(page.h1),
+    /guesthouse/i.test(page.h1) &&
+      /chiang\s*mai/i.test(page.h1) &&
+      /old city/i.test(page.h1),
     16,
-    "H1 includes “hotels in Chiang Mai”",
+    "H1 names a guesthouse in Chiang Mai Old City",
   );
   push(
     "body-guesthouse",
-    includesGuesthouseQuery(combined),
+    includesNormalized(combined, GUESTHOUSE_SEO_QUERY) ||
+      (includesNormalized(combined, "guesthouse") &&
+        includesNormalized(combined, "chiang mai")),
     10,
-    "Page includes “Chiang Mai guesthouse”",
+    "Page names a Chiang Mai guesthouse",
   );
   push(
     "old-city",

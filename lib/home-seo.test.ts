@@ -48,7 +48,7 @@ describe("Tha Pae Gate SEO copy", () => {
     assert.match(description, /guesthouse/i);
   });
 
-  it("uses hotels in Chiang Mai Old City in H1 and a natural hero lede", () => {
+  it("uses a host-voiced H1 and a natural hero lede that still names hotels in Chiang Mai Old City", () => {
     const h1 = buildAtmosphereHeadline(
       "Chiang Mai",
       thaPhaeSettings.propertyName,
@@ -61,7 +61,8 @@ describe("Tha Pae Gate SEO copy", () => {
     );
 
     assert.equal(h1, THA_PHAE_PRIMARY_HEADLINE);
-    assert.match(h1, /hotels in Chiang Mai Old City/i);
+    assert.match(h1, /garden guesthouse in Chiang Mai Old City/i);
+    assert.doesNotMatch(h1, /^hotels in/i);
     assert.match(lede, /hotels in Chiang Mai Old City/i);
     assert.match(lede, /guesthouse/i);
     assert.match(lede, /Thae Phae Gate a two-minute walk/i);
