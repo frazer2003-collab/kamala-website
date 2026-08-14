@@ -5,6 +5,7 @@ import { getPropertySettings } from "@/lib/property-settings";
 import { buildSiteMetadataCopy, getMetadataBase } from "@/lib/site-metadata";
 import "./globals.css";
 import "./home-landing.css";
+import "./room-summary.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],

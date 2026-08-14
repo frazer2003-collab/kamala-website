@@ -5,6 +5,7 @@ import type { BookingQuoteResult } from "@/app/actions";
 import { BookRoomLink } from "@/components/book-room-link";
 import { OptimizedImage } from "@/components/optimized-image";
 import { RoomDetailDialog } from "@/components/room-detail-dialog";
+import { RoomSummaryList } from "@/components/room-summary-list";
 import type { Room } from "@/lib/content";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
 import { getPropertyTodayIso } from "@/lib/calendar";
@@ -274,7 +275,7 @@ function RoomListingCard({
           </div>
           {priceBlock}
           {room.summary.trim() ? (
-            <p className="listing-card__summary">{room.summary}</p>
+            <RoomSummaryList summary={room.summary} variant="listing" />
           ) : null}
           {statusBlock}
         </div>
