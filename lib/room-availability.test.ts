@@ -13,13 +13,13 @@ describe("room availability labels", () => {
   });
 
   it("uses calm stay-date labels without scarcity wording", () => {
-    assert.equal(formatRoomTypeAvailabilityCount(0), "Full for these dates");
-    assert.equal(formatRoomTypeAvailabilityCount(1), "1 room free");
-    assert.equal(formatRoomTypeAvailabilityCount(3), "3 rooms free");
+    assert.equal(formatRoomTypeAvailabilityCount(0), "Fully booked");
+    assert.equal(formatRoomTypeAvailabilityCount(1), "1 room available");
+    assert.equal(formatRoomTypeAvailabilityCount(3), "3 rooms available");
   });
 
   it("keeps generic inventory labels when dates are not set", () => {
-    assert.equal(getRoomAvailabilityLabel(0), "Full");
+    assert.equal(getRoomAvailabilityLabel(0), "Fully booked");
     assert.equal(getRoomAvailabilityLabel(1), "1 room available");
     assert.equal(getRoomAvailabilityLabel(4), "4 rooms available");
   });

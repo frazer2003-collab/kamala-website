@@ -6,6 +6,7 @@ import { HomeBookingSection } from "@/components/home-booking-section";
 import { HomeHeroShell } from "@/components/home-hero-shell";
 import { HomeDateSearchSection } from "@/components/home-date-search-section";
 import { HomeRoomCatalog } from "@/components/home-room-catalog";
+import { HomeStayAssurances } from "@/components/home-stay-assurances";
 import { HomeStayStory } from "@/components/home-stay-story";
 import { SiteFooter } from "@/components/site-footer";
 import { isLocale } from "@/lib/i18n";
@@ -119,6 +120,8 @@ export default async function Home({
       />
 
       <div className="site-shell home-body">
+        <HomeStayAssurances checkInFrom={settings.checkInFrom} />
+
         <HomeRoomCatalog
           addressLine={settings.addressLine}
           availabilityByRoomId={availabilityByRoomId}

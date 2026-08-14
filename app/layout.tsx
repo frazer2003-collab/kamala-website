@@ -4,6 +4,7 @@ import { Libre_Baskerville, Plus_Jakarta_Sans } from "next/font/google";
 import { getPropertySettings } from "@/lib/property-settings";
 import { buildSiteMetadataCopy, getMetadataBase } from "@/lib/site-metadata";
 import "./globals.css";
+import "./home-landing.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],

@@ -1,0 +1,87 @@
+/* Homepage trust polish — overrides guest landing surfaces only. */
+
+.home-stay-assurances {
+  padding-block: clamp(var(--space-5), 3vw, var(--space-6));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.home-stay-assurances-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.home-stay-assurances-list li:not(:last-child)::after {
+  content: "·";
+  margin-inline: 0.65rem;
+  color: var(--color-soft);
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .home-stay-assurances-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-2) var(--space-4);
+  }
+
+  .home-stay-assurances-list li:not(:last-child)::after {
+    content: none;
+    margin: 0;
+  }
+}
+
+.stay-story__aside {
+  background: var(--color-surface-muted);
+}
+
+.stay-story__lede {
+  color: var(--color-ink);
+}
+
+.stay-story__details {
+  color: var(--color-muted);
+}
+
+.guest-site .stay-story__lede {
+  color: var(--color-ink);
+}
+
+.guest-site .stay-story__details {
+  color: var(--color-muted);
+}
+
+.guest-site .stay-story__aside {
+  background: var(--color-surface-muted);
+}
+
+.booking-panel--prompt,
+.guest-site .booking-panel--prompt {
+  background: var(--color-surface-muted);
+  box-shadow: none;
+}
+
+.guest-site .home-hero--atmosphere .home-hero__overlay {
+  background:
+    linear-gradient(
+      115deg,
+      color-mix(in oklch, var(--color-ink) 72%, transparent) 0%,
+      color-mix(in oklch, var(--color-ink) 40%, transparent) 38%,
+      color-mix(in oklch, var(--color-ink) 14%, transparent) 58%,
+      transparent 78%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--color-ink) 45%, transparent) 0%,
+      color-mix(in oklch, var(--color-ink) 14%, transparent) 42%,
+      var(--color-canvas) 100%
+    );
+}

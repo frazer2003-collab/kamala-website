@@ -184,7 +184,7 @@ function RoomListingCard({
         disabled
         type="button"
       >
-        Full
+        Fully booked
       </button>
     );
   } else if (bookable) {

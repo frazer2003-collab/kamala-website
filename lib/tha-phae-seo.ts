@@ -19,7 +19,9 @@ export const THAE_PHAE_GATE_NAME = "Thae Phae Gate";
  */
 export const THA_PHAE_PRIMARY_TITLE = "Hotels in Chiang Mai Old City — Guesthouse";
 
-export const THA_PHAE_PRIMARY_HEADLINE = "Hotels in Chiang Mai Old City";
+/** Guest-facing H1 — host voice, still names Chiang Mai Old City. */
+export const THA_PHAE_PRIMARY_HEADLINE =
+  "A garden guesthouse in Chiang Mai Old City";
 
 export const THA_PHAE_LOCATION_HEADLINE = `Near ${THAE_PHAE_GATE_NAME}, Chiang Mai`;
 
@@ -27,7 +29,7 @@ export const THA_PHAE_ROOMS_HEADING = `Rooms near ${THAE_PHAE_GATE_NAME}`;
 
 export const THA_PHAE_BOOKING_HEADING = `Book your stay near ${THAE_PHAE_GATE_NAME}`;
 
-export const THA_PHAE_ABOUT_HEADING = "A Chiang Mai guesthouse in the Old City";
+export const THA_PHAE_ABOUT_HEADING = "How we run the house";
 
 export const THA_PHAE_SEO_KEYWORDS = [
   "hotels in Chiang Mai",
@@ -83,9 +85,9 @@ export function buildThaPhaeMetaDescription(propertyName: string): string {
 }
 
 export function buildThaPhaeHeroLede(): string {
-  return `Among hotels in Chiang Mai Old City, we are a garden guesthouse on Tha Phae Road Soi 6 — just across from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} a two-minute walk away.`;
+  return `A family-run garden guesthouse among hotels in Chiang Mai Old City. Breakfast is included. We are on Tha Phae Road Soi 6 — just across from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} a two-minute walk away.`;
 }
 
 export function buildThaPhaeStayStoryLede(propertyName: string): string {
-  return `${propertyName} is a Chiang Mai guesthouse travellers choose among hotels in Chiang Mai Old City — wooden rooms around a courtyard garden, not a resort block. Feel at home here — we sit just across the street from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market are about six minutes away.`;
+  return `${propertyName} is family-run: wooden rooms around a courtyard garden in Chiang Mai Old City. We sit just across the street from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market are about six minutes away.`;
 }
