@@ -27,6 +27,9 @@ export function HomeStayStory({
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
   const heading = buildStayStoryHeading(locationLabel, addressLine);
   const lede = buildStayStoryLede(propertyName, locationLabel, addressLine);
+  const visibleHouseRules = houseRules.filter(
+    (rule) => !/breakfast/i.test(rule),
+  );
   const checkInDetails = buildStayStoryCheckInDetails(
     houseRules,
     checkInFrom,
@@ -56,11 +59,11 @@ export function HomeStayStory({
             </Link>
           </p>
         </div>
-        {houseRules.length > 0 ? (
+        {visibleHouseRules.length > 0 ? (
           <aside className="stay-story__aside" aria-labelledby="stay-rules-title">
             <h3 id="stay-rules-title">House rules</h3>
             <ul>
-              {houseRules.map((rule) => (
+              {visibleHouseRules.map((rule) => (
                 <li key={rule}>{rule}</li>
               ))}
             </ul>

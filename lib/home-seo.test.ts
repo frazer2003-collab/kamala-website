@@ -66,6 +66,7 @@ describe("Tha Pae Gate SEO copy", () => {
     assert.match(lede, /hotels in Chiang Mai Old City/i);
     assert.match(lede, /guesthouse/i);
     assert.match(lede, /Thae Phae Gate a two-minute walk/i);
+    assert.doesNotMatch(lede, /breakfast/i);
   });
 
   it("scores highly against hotels in Chiang Mai", () => {
