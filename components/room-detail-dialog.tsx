@@ -5,6 +5,7 @@ import type { BookingQuoteResult } from "@/app/actions";
 import { BookRoomLink } from "@/components/book-room-link";
 import { PhotoCarousel } from "@/components/photo-carousel";
 import { RoomAmenitiesList } from "@/components/room-amenities-list";
+import { RoomSummaryList } from "@/components/room-summary-list";
 import type { Room } from "@/lib/content";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
 import { getPropertyTodayIso } from "@/lib/calendar";
@@ -228,7 +229,7 @@ export function RoomDetailDialog({
 
   return (
     <dialog
-      aria-describedby={summaryId}
+      aria-describedby={room.summary.trim() ? summaryId : undefined}
       aria-labelledby={titleId}
       className="room-detail-dialog"
       onCancel={(event) => {
@@ -297,7 +298,7 @@ export function RoomDetailDialog({
             {outlookDetails ? (
               <p className="room-detail-dialog__outlook">{outlookDetails}</p>
             ) : null}
-            <p id={summaryId}>{room.summary}</p>
+            <RoomSummaryList id={summaryId} summary={room.summary} variant="detail" />
             <RoomAmenitiesList amenities={room.amenities} label={`${room.name} amenities`} />
 
             <div
