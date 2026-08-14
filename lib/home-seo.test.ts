@@ -43,6 +43,8 @@ describe("Tha Pae Gate SEO copy", () => {
       `description length ${description.length}`,
     );
     assert.match(description, /Thae Phae Gate/i);
+    assert.match(description, /hotel/i);
+    assert.match(title, /hotel/i);
   });
 
   it("uses Thae Phae Gate in H1 and hero copy", () => {
@@ -58,6 +60,7 @@ describe("Tha Pae Gate SEO copy", () => {
     );
 
     assert.equal(h1, THA_PHAE_PRIMARY_HEADLINE);
+    assert.match(lede, /hotels in Chiang Mai/i);
     assert.match(lede, /Chiang Mai guesthouses near Thae Phae Gate/i);
     assert.match(lede, /Thae Phae Gate a two-minute walk/i);
   });
@@ -93,6 +96,9 @@ describe("Tha Pae Gate SEO copy", () => {
     assert.equal(jsonLd.address?.streetAddress, "2/7 Tha Phae Rd Soi 6");
     assert.ok(Array.isArray(jsonLd.knowsAbout));
     assert.ok(jsonLd.knowsAbout?.includes("Thae Phae Gate"));
+    assert.ok(jsonLd.knowsAbout?.includes("Hotels in Chiang Mai"));
+    assert.ok(Array.isArray(jsonLd["@type"]));
+    assert.ok(jsonLd["@type"]?.includes("Hotel"));
     assert.deepEqual(jsonLd.sameAs, [
       "https://line.me/R/ti/p/@example",
       "https://wa.me/66986494996",

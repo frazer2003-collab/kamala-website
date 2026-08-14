@@ -167,10 +167,10 @@ export function buildStayStoryHeading(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return "A garden guesthouse in Chiang Mai Old City";
+    return "A garden hotel and guesthouse in Chiang Mai Old City";
   }
 
-  return `A garden guesthouse in ${locationLabel}`;
+  return `A garden hotel and guesthouse in ${locationLabel}`;
 }
 
 export function buildStayStoryLede(
@@ -185,7 +185,7 @@ export function buildStayStoryLede(
   const atmosphereLine = buildStayStoryAtmosphereLine(locationLabel);
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `${propertyName} is family-run — wooden rooms around a courtyard garden in Chiang Mai Old City, not a resort block. ${atmosphereLine}`;
+    return `${propertyName} is a family-run hotel — wooden rooms around a courtyard garden in Chiang Mai Old City, not a resort block. ${atmosphereLine}`;
   }
 
   if (isCoastalLocation(locationLabel)) {

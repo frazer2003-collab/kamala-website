@@ -60,10 +60,10 @@ export function buildHomePageTitle(settings: PropertySettings): string {
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `${propertyName} — Guesthouse in Chiang Mai Old City`;
+    return `${propertyName} — Hotel in Chiang Mai Old City`;
   }
 
-  return `${propertyName} — Garden guesthouse in ${locationLabel}`;
+  return `${propertyName} — Garden hotel and guesthouse in ${locationLabel}`;
 }
 
 export function buildHomePageDescription(settings: PropertySettings): string {
@@ -75,7 +75,7 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `Book a room at ${propertyName} in Chiang Mai Old City. Family-run guesthouse with garden rooms and included breakfast — request dates on this site and we reply to confirm.`;
+    return `Book a room at ${propertyName} in Chiang Mai Old City. Family-run hotel and guesthouse with garden rooms and included breakfast — request dates on this site and we reply to confirm.`;
   }
 
   return `Book a room at ${propertyName} in ${locationLabel}. Garden rooms, breakfast included — request dates on this site and staff confirm every stay.`;
@@ -88,14 +88,14 @@ function buildOpenGraphImageAlt(settings: PropertySettings): string {
   );
 
   if (isThaPhaeSeoContext(locationLabel, settings.addressLine)) {
-    return `${settings.propertyName} — Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}`;
+    return `${settings.propertyName} — hotels in Chiang Mai near ${THAE_PHAE_GATE_NAME}`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `${settings.propertyName} garden guesthouse in Chiang Mai Old City`;
+    return `${settings.propertyName} hotel and garden guesthouse in Chiang Mai Old City`;
   }
 
-  return `${settings.propertyName} garden guesthouse in ${locationLabel}`;
+  return `${settings.propertyName} hotel and garden guesthouse in ${locationLabel}`;
 }
 
 function buildSameAsProfiles(settings: PropertySettings) {
@@ -218,7 +218,7 @@ export function buildHomePageJsonLd(
 
   return {
     "@context": "https://schema.org",
-    "@type": ["LodgingBusiness", "Organization"],
+    "@type": ["LodgingBusiness", "Hotel", "Organization"],
     "@id": siteUrl ? `${siteUrl}/#lodging` : undefined,
     name: propertyName,
     description,
@@ -282,9 +282,10 @@ export function buildHomePageJsonLd(
           "Thapae Gate",
           "Chiang Mai Old City",
           "Sunday Walking Street",
+          "Hotels in Chiang Mai",
         ]
       : isChiangMaiLocation(locationLabel)
-        ? ["Chiang Mai Old City"]
+        ? ["Chiang Mai Old City", "Hotels in Chiang Mai"]
         : undefined,
     makesOffer: rooms.map((room) => ({
       "@type": "Offer",

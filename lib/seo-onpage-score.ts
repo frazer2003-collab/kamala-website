@@ -17,6 +17,7 @@ export type SeoPageSnapshot = {
 };
 
 export const TARGET_SEO_QUERY = "chiangmai guesthouses near tha pae gate";
+export const HOTEL_SEO_QUERY = "hotels in chiangmai";
 
 function normalize(text: string) {
   return text
@@ -40,6 +41,18 @@ function includesQuery(text: string, query = TARGET_SEO_QUERY) {
   return haystack.includes(needle.replace("chiangmai", "chiang mai"));
 }
 
+function includesHotelQuery(text: string) {
+  const haystack = normalize(text);
+  return (
+    haystack.includes(normalize(HOTEL_SEO_QUERY)) ||
+    (haystack.includes("hotel") && haystack.includes("chiangmai"))
+  );
+}
+
+function includesTitleIntent(text: string) {
+  return includesQuery(text) || includesHotelQuery(text);
+}
+
 export type SeoScoreResult = {
   score: number;
   grade: "A" | "B" | "C" | "D" | "F";
@@ -61,9 +74,9 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "title-keyword",
-    includesQuery(page.title),
+    includesTitleIntent(page.title),
     18,
-    "Title includes target query intent",
+    "Title includes guesthouse or hotel query intent",
   );
   push(
     "description-length",
@@ -89,6 +102,12 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
     includesQuery(page.bodyText),
     10,
     "Body copy includes target query intent",
+  );
+  push(
+    "hotel-keyword",
+    includesHotelQuery(`${page.title} ${page.description} ${page.bodyText}`),
+    8,
+    "Page names hotel with Chiang Mai for hotel-search intent",
   );
   push(
     "spelling-variants",
