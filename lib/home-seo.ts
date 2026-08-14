@@ -75,7 +75,7 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `Book a hotel in Chiang Mai at ${propertyName} — a Chiang Mai guesthouse with garden rooms and included breakfast. Request dates here and we reply to confirm.`;
+    return `Book ${propertyName} among hotels in Chiang Mai Old City — a garden guesthouse with breakfast included. Request dates here and we reply to confirm.`;
   }
 
   return `Book a room at ${propertyName} in ${locationLabel}. Garden rooms, breakfast included — request dates on this site and staff confirm every stay.`;
@@ -88,7 +88,7 @@ function buildOpenGraphImageAlt(settings: PropertySettings): string {
   );
 
   if (isThaPhaeSeoContext(locationLabel, settings.addressLine)) {
-    return `${settings.propertyName} — a hotel in Chiang Mai and Chiang Mai guesthouse near ${THAE_PHAE_GATE_NAME}`;
+    return `${settings.propertyName} — hotels in Chiang Mai Old City, near ${THAE_PHAE_GATE_NAME}`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
@@ -221,7 +221,7 @@ export function buildHomePageJsonLd(
     "@type": ["LodgingBusiness", "Hotel", "Organization"],
     "@id": siteUrl ? `${siteUrl}/#lodging` : undefined,
     name: propertyName,
-    alternateName: ["Hotel in Chiang Mai", "Chiang Mai guesthouse"],
+    alternateName: ["Chiang Mai guesthouse", "Hotels in Chiang Mai Old City"],
     description,
     url: siteUrl,
     image: imageUrl,
@@ -284,11 +284,11 @@ export function buildHomePageJsonLd(
           "Chiang Mai Old City",
           "Sunday Walking Street",
           "Hotels in Chiang Mai",
-          "Hotel in Chiang Mai",
+          "Hotels in Chiang Mai Old City",
           "Chiang Mai guesthouse",
         ]
       : isChiangMaiLocation(locationLabel)
-        ? ["Chiang Mai Old City", "Hotel in Chiang Mai", "Chiang Mai guesthouse"]
+        ? ["Chiang Mai Old City", "Hotels in Chiang Mai", "Chiang Mai guesthouse"]
         : undefined,
     makesOffer: rooms.map((room) => ({
       "@type": "Offer",
@@ -332,10 +332,10 @@ export function buildLocationPageFaqJsonLd(propertyName: string) {
     mainEntity: [
       {
         "@type": "Question",
-        name: "Are you a hotel in Chiang Mai?",
+        name: "Are there hotels in Chiang Mai Old City near Tha Pae Gate?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Yes. ${propertyName} is a hotel in Chiang Mai — a small stay in the Old City, about a two-minute walk from Tha Pae Gate on Tha Phae Road Soi 6.`,
+          text: `Yes. ${propertyName} is among hotels in Chiang Mai Old City — a garden guesthouse about a two-minute walk from Tha Pae Gate (also spelled Tha Phae / Thapae) on Tha Phae Road Soi 6.`,
         },
       },
       {
@@ -343,15 +343,7 @@ export function buildLocationPageFaqJsonLd(propertyName: string) {
         name: "Is this a Chiang Mai guesthouse?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Yes. ${propertyName} is a Chiang Mai guesthouse near Tha Pae Gate (also spelled Tha Phae / Thapae), with garden rooms and included breakfast.`,
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Are there Chiang Mai guesthouses near Tha Pae Gate?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `Yes. ${propertyName} is a Chiang Mai guesthouse near Tha Pae Gate (also spelled Tha Phae / Thapae), about a two-minute walk from the Old City gate on Tha Phae Road Soi 6.`,
+          text: `Yes. ${propertyName} is a Chiang Mai guesthouse near Tha Pae Gate, with garden rooms and included breakfast.`,
         },
       },
       {

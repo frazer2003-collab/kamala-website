@@ -80,7 +80,7 @@ export default async function LocationPage() {
         </h1>
         <p>
           {nearThaPhae
-            ? "Looking for a hotel in Chiang Mai, or a Chiang Mai guesthouse near Tha Pae Gate? We are on Tha Phae Road Soi 6 in Changklan — a two-minute walk to Tha Pae Gate (also spelled Tha Phae / Thapae), just across from the Sunday Walking Street."
+            ? "Looking for hotels in Chiang Mai Old City? We are a garden guesthouse on Tha Phae Road Soi 6 in Changklan — a two-minute walk to Tha Pae Gate (also spelled Tha Phae / Thapae), just across from the Sunday Walking Street."
             : `Visit ${settings.propertyName} in ${locationLabel}.`}
         </p>
       </div>
@@ -117,10 +117,11 @@ export default async function LocationPage() {
           <h2 id="location-faq-title">Common questions</h2>
           <dl className="location-page__faq-list">
             <div>
-              <dt>Are you a hotel in Chiang Mai?</dt>
+              <dt>Are there hotels in Chiang Mai Old City near Tha Pae Gate?</dt>
               <dd>
-                Yes. {settings.propertyName} is a hotel in Chiang Mai — a small
-                stay in the Old City, about a two-minute walk from Tha Pae Gate.
+                Yes. {settings.propertyName} is among hotels in Chiang Mai Old
+                City — a garden guesthouse about a two-minute walk from Tha Pae
+                Gate.
               </dd>
             </div>
             <div>
@@ -128,13 +129,6 @@ export default async function LocationPage() {
               <dd>
                 Yes. {settings.propertyName} is a Chiang Mai guesthouse near Tha
                 Pae Gate, with garden rooms and included breakfast.
-              </dd>
-            </div>
-            <div>
-              <dt>Are there Chiang Mai guesthouses near Tha Pae Gate?</dt>
-              <dd>
-                Yes. {settings.propertyName} is a Chiang Mai guesthouse near Tha Pae
-                Gate, about a two-minute walk from the Old City gate.
               </dd>
             </div>
             <div>

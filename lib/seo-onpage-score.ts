@@ -1,6 +1,6 @@
 /**
- * Lightweight on-page SEO score for the two homepage target queries.
- * Used in tests and local iteration; complements external checkers.
+ * On-page SEO score for lodging queries with real search interest
+ * (Google autocomplete / average Trends), not stuffed variants.
  */
 
 export type SeoPageSnapshot = {
@@ -16,10 +16,12 @@ export type SeoPageSnapshot = {
   hasRobotsIndex: boolean;
 };
 
-export const GUESTHOUSE_SEO_QUERY = "chiangmai guesthouse";
-export const HOTEL_SEO_QUERY = "hotel in chiangmai";
-/** @deprecated Use GUESTHOUSE_SEO_QUERY — kept so older test names still read. */
-export const TARGET_SEO_QUERY = GUESTHOUSE_SEO_QUERY;
+/** Highest-interest lodging query for this city (Google “hotels in [city]”). */
+export const HOTEL_SEO_QUERY = "hotels in chiang mai";
+/** Related query with steady interest. */
+export const GUESTHOUSE_SEO_QUERY = "chiang mai guesthouse";
+/** @deprecated Use HOTEL_SEO_QUERY. */
+export const TARGET_SEO_QUERY = HOTEL_SEO_QUERY;
 
 function normalize(text: string) {
   return text
@@ -37,16 +39,12 @@ function includesNormalized(text: string, query: string) {
   return normalize(text).includes(normalize(query));
 }
 
-function includesGuesthouseQuery(text: string) {
-  return includesNormalized(text, GUESTHOUSE_SEO_QUERY);
-}
-
-function includesHotelQuery(text: string) {
+function includesHotelsInChiangMai(text: string) {
   return includesNormalized(text, HOTEL_SEO_QUERY);
 }
 
-function includesBothQueries(text: string) {
-  return includesGuesthouseQuery(text) && includesHotelQuery(text);
+function includesGuesthouseQuery(text: string) {
+  return includesNormalized(text, GUESTHOUSE_SEO_QUERY);
 }
 
 export type SeoScoreResult = {
@@ -62,6 +60,8 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
     checks.push({ id, passed, weight, detail });
   };
 
+  const combined = `${page.title} ${page.description} ${page.h1} ${page.bodyText}`;
+
   push(
     "title-length",
     page.title.length >= 30 && page.title.length <= 60,
@@ -70,9 +70,9 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "title-keyword",
-    includesBothQueries(page.title),
+    includesHotelsInChiangMai(page.title),
     20,
-    "Title includes “hotel in Chiang Mai” and “Chiang Mai guesthouse”",
+    "Title includes “hotels in Chiang Mai”",
   );
   push(
     "description-length",
@@ -82,39 +82,41 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "description-keyword",
-    includesBothQueries(page.description),
-    14,
-    "Description includes both target queries",
+    includesHotelsInChiangMai(page.description),
+    12,
+    "Description includes “hotels in Chiang Mai”",
   );
   push("h1-present", page.h1.trim().length > 0, 6, "H1 present");
   push(
     "h1-keyword",
-    includesBothQueries(page.h1),
+    includesHotelsInChiangMai(page.h1),
     16,
-    "H1 includes both target queries",
+    "H1 includes “hotels in Chiang Mai”",
   );
   push(
-    "body-keyword",
-    includesBothQueries(page.bodyText),
-    12,
-    "Body copy includes both target queries",
+    "body-guesthouse",
+    includesGuesthouseQuery(combined),
+    10,
+    "Page includes “Chiang Mai guesthouse”",
+  );
+  push(
+    "old-city",
+    /old city/i.test(combined),
+    6,
+    "Page names Old City (hotels in Chiang Mai old city)",
   );
   push(
     "spelling-variants",
-    /tha\s*pae/i.test(
-      `${page.title} ${page.description} ${page.h1} ${page.bodyText} ${page.keywords.join(" ")}`,
-    ) &&
-      /thae\s*phae/i.test(`${page.title} ${page.description} ${page.h1} ${page.bodyText}`),
+    /tha\s*pae/i.test(`${combined} ${page.keywords.join(" ")}`) &&
+      /thae\s*phae/i.test(combined),
     4,
     "Uses Thae Phae Gate spelling with search-friendly Tha Pae variants",
   );
   push(
     "keywords-meta",
-    page.keywords.some((keyword) => includesBothQueries(keyword)) ||
-      (page.keywords.some((keyword) => includesHotelQuery(keyword)) &&
-        page.keywords.some((keyword) => includesGuesthouseQuery(keyword))),
+    page.keywords.some((keyword) => includesHotelsInChiangMai(keyword)),
     4,
-    "Keywords meta includes both target queries",
+    "Keywords meta includes “hotels in Chiang Mai”",
   );
   push("canonical", Boolean(page.canonical), 2, "Canonical URL present");
   push("open-graph", page.hasOpenGraph, 2, "Open Graph tags present");
