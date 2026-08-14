@@ -120,7 +120,7 @@ export default async function Home({
       />
 
       <div className="site-shell home-body">
-        <HomeStayAssurances checkInFrom={settings.checkInFrom} />
+        <HomeStayAssurances />
 
         <HomeRoomCatalog
           addressLine={settings.addressLine}
