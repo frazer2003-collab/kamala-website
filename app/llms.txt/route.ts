@@ -13,7 +13,7 @@ export async function GET() {
 
 > ${description}
 
-${settings.propertyName} is a small hotel and boutique guesthouse in Chiang Mai Old City, near Tha Pae Gate (also spelled Tha Phae / Thapae). Guests book rooms directly on this website.
+${settings.propertyName} is a hotel in Chiang Mai and a Chiang Mai guesthouse in the Old City, near Tha Pae Gate (also spelled Tha Phae / Thapae). Guests book rooms directly on this website.
 
 ## Main pages
 

@@ -13,7 +13,7 @@ import {
   buildThaPhaeMetaDescription,
   isThaPhaeSeoContext,
   THA_PHAE_GATE_GEO,
-  THA_PHAE_PRIMARY_TITLE,
+  THA_PHAE_LOCATION_HEADLINE,
 } from "@/lib/tha-phae-seo";
 import { getGuesthouseLocationLabel } from "@/lib/home-hero-copy";
 
@@ -75,12 +75,12 @@ export default async function LocationPage() {
         <p className="section-note">Location</p>
         <h1>
           {nearThaPhae
-            ? THA_PHAE_PRIMARY_TITLE
+            ? THA_PHAE_LOCATION_HEADLINE
             : `Find ${settings.propertyName}`}
         </h1>
         <p>
           {nearThaPhae
-            ? "Looking for Chiang Mai guesthouses near Tha Pae Gate? We are on Tha Phae Road Soi 6 in Changklan — a two-minute walk to Tha Pae Gate (also spelled Tha Phae / Thapae), just across from the Sunday Walking Street."
+            ? "Looking for a hotel in Chiang Mai, or a Chiang Mai guesthouse near Tha Pae Gate? We are on Tha Phae Road Soi 6 in Changklan — a two-minute walk to Tha Pae Gate (also spelled Tha Phae / Thapae), just across from the Sunday Walking Street."
             : `Visit ${settings.propertyName} in ${locationLabel}.`}
         </p>
       </div>
@@ -116,6 +116,20 @@ export default async function LocationPage() {
         <section className="location-page__faq" aria-labelledby="location-faq-title">
           <h2 id="location-faq-title">Common questions</h2>
           <dl className="location-page__faq-list">
+            <div>
+              <dt>Are you a hotel in Chiang Mai?</dt>
+              <dd>
+                Yes. {settings.propertyName} is a hotel in Chiang Mai — a small
+                stay in the Old City, about a two-minute walk from Tha Pae Gate.
+              </dd>
+            </div>
+            <div>
+              <dt>Is this a Chiang Mai guesthouse?</dt>
+              <dd>
+                Yes. {settings.propertyName} is a Chiang Mai guesthouse near Tha
+                Pae Gate, with garden rooms and included breakfast.
+              </dd>
+            </div>
             <div>
               <dt>Are there Chiang Mai guesthouses near Tha Pae Gate?</dt>
               <dd>

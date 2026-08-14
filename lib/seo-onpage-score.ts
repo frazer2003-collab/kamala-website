@@ -1,5 +1,5 @@
 /**
- * Lightweight on-page SEO score for the Tha Pae Gate target query.
+ * Lightweight on-page SEO score for the two homepage target queries.
  * Used in tests and local iteration; complements external checkers.
  */
 
@@ -16,8 +16,10 @@ export type SeoPageSnapshot = {
   hasRobotsIndex: boolean;
 };
 
-export const TARGET_SEO_QUERY = "chiangmai guesthouses near tha pae gate";
-export const HOTEL_SEO_QUERY = "hotels in chiangmai";
+export const GUESTHOUSE_SEO_QUERY = "chiangmai guesthouse";
+export const HOTEL_SEO_QUERY = "hotel in chiangmai";
+/** @deprecated Use GUESTHOUSE_SEO_QUERY — kept so older test names still read. */
+export const TARGET_SEO_QUERY = GUESTHOUSE_SEO_QUERY;
 
 function normalize(text: string) {
   return text
@@ -31,26 +33,20 @@ function normalize(text: string) {
     .trim();
 }
 
-function includesQuery(text: string, query = TARGET_SEO_QUERY) {
-  const haystack = normalize(text);
-  const needle = normalize(query);
-  if (haystack.includes(needle)) {
-    return true;
-  }
-  // Allow spaced Chiang Mai form after normalization collapse.
-  return haystack.includes(needle.replace("chiangmai", "chiang mai"));
+function includesNormalized(text: string, query: string) {
+  return normalize(text).includes(normalize(query));
+}
+
+function includesGuesthouseQuery(text: string) {
+  return includesNormalized(text, GUESTHOUSE_SEO_QUERY);
 }
 
 function includesHotelQuery(text: string) {
-  const haystack = normalize(text);
-  return (
-    haystack.includes(normalize(HOTEL_SEO_QUERY)) ||
-    (haystack.includes("hotel") && haystack.includes("chiangmai"))
-  );
+  return includesNormalized(text, HOTEL_SEO_QUERY);
 }
 
-function includesTitleIntent(text: string) {
-  return includesQuery(text) || includesHotelQuery(text);
+function includesBothQueries(text: string) {
+  return includesGuesthouseQuery(text) && includesHotelQuery(text);
 }
 
 export type SeoScoreResult = {
@@ -74,9 +70,9 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "title-keyword",
-    includesTitleIntent(page.title),
-    18,
-    "Title includes guesthouse or hotel query intent",
+    includesBothQueries(page.title),
+    20,
+    "Title includes “hotel in Chiang Mai” and “Chiang Mai guesthouse”",
   );
   push(
     "description-length",
@@ -86,28 +82,22 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "description-keyword",
-    includesQuery(page.description),
+    includesBothQueries(page.description),
     14,
-    "Description includes target query intent",
+    "Description includes both target queries",
   );
   push("h1-present", page.h1.trim().length > 0, 6, "H1 present");
   push(
     "h1-keyword",
-    includesQuery(page.h1),
-    14,
-    "H1 includes target query intent",
+    includesBothQueries(page.h1),
+    16,
+    "H1 includes both target queries",
   );
   push(
     "body-keyword",
-    includesQuery(page.bodyText),
-    10,
-    "Body copy includes target query intent",
-  );
-  push(
-    "hotel-keyword",
-    includesHotelQuery(`${page.title} ${page.description} ${page.bodyText}`),
-    8,
-    "Page names hotel with Chiang Mai for hotel-search intent",
+    includesBothQueries(page.bodyText),
+    12,
+    "Body copy includes both target queries",
   );
   push(
     "spelling-variants",
@@ -115,14 +105,16 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
       `${page.title} ${page.description} ${page.h1} ${page.bodyText} ${page.keywords.join(" ")}`,
     ) &&
       /thae\s*phae/i.test(`${page.title} ${page.description} ${page.h1} ${page.bodyText}`),
-    6,
+    4,
     "Uses Thae Phae Gate spelling with search-friendly Tha Pae variants",
   );
   push(
     "keywords-meta",
-    page.keywords.some((keyword) => includesQuery(keyword)),
+    page.keywords.some((keyword) => includesBothQueries(keyword)) ||
+      (page.keywords.some((keyword) => includesHotelQuery(keyword)) &&
+        page.keywords.some((keyword) => includesGuesthouseQuery(keyword))),
     4,
-    "Keywords meta includes target query",
+    "Keywords meta includes both target queries",
   );
   push("canonical", Boolean(page.canonical), 2, "Canonical URL present");
   push("open-graph", page.hasOpenGraph, 2, "Open Graph tags present");

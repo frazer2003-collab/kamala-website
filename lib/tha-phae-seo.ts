@@ -8,37 +8,28 @@ export const THA_PHAE_GATE_GEO = {
 /** Canonical gate name for guest-facing copy. */
 export const THAE_PHAE_GATE_NAME = "Thae Phae Gate";
 
-/** Primary SERP title target (keep 30–60 chars). Hotel + guesthouse for both search intents. */
-export const THA_PHAE_PRIMARY_TITLE = `Chiang Mai Hotel & Guesthouse Near ${THAE_PHAE_GATE_NAME}`;
+/** Primary SERP title — exact phrases for “hotel in chiangmai” and “chiangmai guesthouse”. */
+export const THA_PHAE_PRIMARY_TITLE = "Hotel in Chiang Mai — Chiang Mai Guesthouse";
 
-/** On-page H1 — keep the guesthouse phrase guests already search. */
-export const THA_PHAE_PRIMARY_HEADLINE = `Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}`;
+/** On-page H1 — both target phrases, then location lives in the lede. */
+export const THA_PHAE_PRIMARY_HEADLINE =
+  "A Chiang Mai guesthouse and a hotel in Chiang Mai";
+
+export const THA_PHAE_LOCATION_HEADLINE = `Near ${THAE_PHAE_GATE_NAME}, Chiang Mai`;
 
 export const THA_PHAE_ROOMS_HEADING = `Rooms near ${THAE_PHAE_GATE_NAME}`;
 
 export const THA_PHAE_BOOKING_HEADING = `Book your stay near ${THAE_PHAE_GATE_NAME}`;
 
-export const THA_PHAE_ABOUT_HEADING = `A small hotel and guesthouse by ${THAE_PHAE_GATE_NAME}`;
+export const THA_PHAE_ABOUT_HEADING = `A Chiang Mai guesthouse by ${THAE_PHAE_GATE_NAME}`;
 
 export const THA_PHAE_SEO_KEYWORDS = [
-  "hotels in Chiang Mai",
-  "hotels in chiangmai",
-  "Chiang Mai hotels",
   "hotel in Chiang Mai",
+  "hotel in chiangmai",
+  "Chiang Mai guesthouse",
+  "chiangmai guesthouse",
   "hotel in Chiang Mai Old City",
-  "small hotel Chiang Mai",
-  "chiangmai guesthouses near tha pae gate",
-  `Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}`,
-  `guesthouses near ${THAE_PHAE_GATE_NAME} Chiang Mai`,
-  `guesthouse near ${THAE_PHAE_GATE_NAME} Chiang Mai`,
-  "guesthouses near Tha Phae Gate Chiang Mai",
-  "guesthouse near Tha Phae Gate",
-  "Thapae Gate guesthouse Chiang Mai",
-  "accommodation near Tha Pae Gate Chiang Mai",
-  "hotel near Tha Pae Gate Chiang Mai",
-  "Chiang Mai Old City guesthouse",
-  "boutique guesthouse Chiang Mai Old City",
-  "book guesthouse Chiang Mai",
+  `Chiang Mai guesthouse near ${THAE_PHAE_GATE_NAME}`,
 ] as const;
 
 export function isThaPhaeSeoContext(
@@ -81,13 +72,13 @@ export function normalizeTelHref(phone: string): string {
 }
 
 export function buildThaPhaeMetaDescription(propertyName: string): string {
-  return `${propertyName}: a small hotel among Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}. Two-minute walk to the Old City gate.`;
+  return `${propertyName} is a hotel in Chiang Mai and a Chiang Mai guesthouse near ${THAE_PHAE_GATE_NAME}. Garden rooms, two minutes to the Old City gate.`;
 }
 
 export function buildThaPhaeHeroLede(): string {
-  return `Looking for hotels in Chiang Mai, or Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME}? We are a friendly, cozy stay on Tha Phae Road Soi 6 — just across from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} a two-minute walk away.`;
+  return `Looking for a hotel in Chiang Mai, or a Chiang Mai guesthouse near the Old City? We are a small stay on Tha Phae Road Soi 6 — just across from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} a two-minute walk away.`;
 }
 
 export function buildThaPhaeStayStoryLede(propertyName: string): string {
-  return `${propertyName} is one of the Chiang Mai guesthouses near ${THAE_PHAE_GATE_NAME} that travellers choose for an easy Old City base. Feel at home here — we sit just across the street from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market are about six minutes away.`;
+  return `${propertyName} is a hotel in Chiang Mai that travellers choose as a Chiang Mai guesthouse base — wooden rooms around a courtyard garden, not a resort block. Feel at home here — we sit just across the street from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market are about six minutes away.`;
 }
