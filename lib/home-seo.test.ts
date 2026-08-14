@@ -32,7 +32,7 @@ const thaPhaeSettings = {
 } as PropertySettings;
 
 describe("Tha Pae Gate SEO copy", () => {
-  it("keeps title and description in SERP-friendly lengths with the target query", () => {
+  it("targets hotels in Chiang Mai Old City at SERP-friendly lengths", () => {
     const title = buildHomePageTitle(thaPhaeSettings);
     const description = buildHomePageDescription(thaPhaeSettings);
 
@@ -42,10 +42,13 @@ describe("Tha Pae Gate SEO copy", () => {
       description.length >= 120 && description.length <= 155,
       `description length ${description.length}`,
     );
-    assert.match(description, /Thae Phae Gate/i);
+    assert.match(title, /hotels in Chiang Mai/i);
+    assert.match(title, /guesthouse/i);
+    assert.match(description, /hotels in Chiang Mai Old City/i);
+    assert.match(description, /guesthouse/i);
   });
 
-  it("uses Thae Phae Gate in H1 and hero copy", () => {
+  it("uses hotels in Chiang Mai Old City in H1 and a natural hero lede", () => {
     const h1 = buildAtmosphereHeadline(
       "Chiang Mai",
       thaPhaeSettings.propertyName,
@@ -58,11 +61,13 @@ describe("Tha Pae Gate SEO copy", () => {
     );
 
     assert.equal(h1, THA_PHAE_PRIMARY_HEADLINE);
-    assert.match(lede, /Chiang Mai guesthouses near Thae Phae Gate/i);
+    assert.match(h1, /hotels in Chiang Mai Old City/i);
+    assert.match(lede, /hotels in Chiang Mai Old City/i);
+    assert.match(lede, /guesthouse/i);
     assert.match(lede, /Thae Phae Gate a two-minute walk/i);
   });
 
-  it("scores highly against the target Chiang Mai / Tha Pae query", () => {
+  it("scores highly against hotels in Chiang Mai", () => {
     const title = buildHomePageTitle(thaPhaeSettings);
     const description = buildHomePageDescription(thaPhaeSettings);
     const h1 = THA_PHAE_PRIMARY_HEADLINE;
@@ -93,6 +98,14 @@ describe("Tha Pae Gate SEO copy", () => {
     assert.equal(jsonLd.address?.streetAddress, "2/7 Tha Phae Rd Soi 6");
     assert.ok(Array.isArray(jsonLd.knowsAbout));
     assert.ok(jsonLd.knowsAbout?.includes("Thae Phae Gate"));
+    assert.ok(jsonLd.knowsAbout?.includes("Hotels in Chiang Mai"));
+    assert.ok(jsonLd.knowsAbout?.includes("Chiang Mai guesthouse"));
+    assert.deepEqual(jsonLd.alternateName, [
+      "Chiang Mai guesthouse",
+      "Hotels in Chiang Mai Old City",
+    ]);
+    assert.ok(Array.isArray(jsonLd["@type"]));
+    assert.ok(jsonLd["@type"]?.includes("Hotel"));
     assert.deepEqual(jsonLd.sameAs, [
       "https://line.me/R/ti/p/@example",
       "https://wa.me/66986494996",

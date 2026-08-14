@@ -117,12 +117,8 @@ export function buildAtmosphereHeadline(
     return `Sleep under the palms in ${place}.`;
   }
 
-  if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
-    return THA_PHAE_PRIMARY_HEADLINE;
-  }
-
   if (isChiangMaiLocation(locationLabel)) {
-    return `Slow mornings in ${place}.`;
+    return THA_PHAE_PRIMARY_HEADLINE;
   }
 
   return `A calm stay in ${place}.`;
@@ -152,7 +148,7 @@ export function buildAtmosphereLede(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `A family-run ${typeLabel} in Chiang Mai Old City. Shaded garden rooms, included breakfast, and a short walk to temples and markets — book here and we reply to confirm.`;
+    return `A garden guesthouse among hotels in Chiang Mai Old City. Shaded rooms, included breakfast, and a short walk to temples and markets — book here and we reply to confirm.`;
   }
 
   return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms, included breakfast — book here and we reply to confirm.`;
@@ -167,10 +163,10 @@ export function buildStayStoryHeading(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return "A garden guesthouse in Chiang Mai Old City";
+    return "A Chiang Mai guesthouse in the Old City";
   }
 
-  return `A garden guesthouse in ${locationLabel}`;
+  return `A garden hotel and guesthouse in ${locationLabel}`;
 }
 
 export function buildStayStoryLede(
@@ -185,7 +181,7 @@ export function buildStayStoryLede(
   const atmosphereLine = buildStayStoryAtmosphereLine(locationLabel);
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `${propertyName} is family-run — wooden rooms around a courtyard garden in Chiang Mai Old City, not a resort block. ${atmosphereLine}`;
+    return `${propertyName} is a Chiang Mai guesthouse among hotels in Chiang Mai Old City — wooden rooms around a courtyard garden, not a resort block. ${atmosphereLine}`;
   }
 
   if (isCoastalLocation(locationLabel)) {
