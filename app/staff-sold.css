@@ -1,4 +1,9 @@
-/* Finance (/staff/sold) — overrides shared staff-sold rules from globals where needed. */
+/* Finance (/staff/sold) — single source for sold-page layout and chart. */
+
+.staff-main--sold {
+  --finance-pie-sold: var(--color-maroon);
+  --finance-pie-unsold: var(--color-surface-strong);
+}
 
 .staff-main--sold .staff-header--compact,
 .staff-sold__header {
@@ -31,6 +36,18 @@
   width: 100%;
 }
 
+.staff-sold__dates .calendar-date-strip__field-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.staff-sold__dates .calendar-date-strip__apply {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding-inline: 1rem;
+}
+
 .staff-sold__month {
   display: none;
 }
@@ -47,85 +64,6 @@
   display: grid;
   gap: var(--space-5);
   min-width: 0;
-}
-
-.staff-sold__chart {
-  display: grid;
-  gap: var(--space-4);
-  margin: 0;
-  min-width: 0;
-}
-
-.staff-sold__chart-title {
-  margin: 0;
-  color: var(--color-ink);
-  font-size: 0.92rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.staff-sold__pie {
-  width: min(100%, 12.5rem);
-  aspect-ratio: 1;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-strong);
-}
-
-.staff-sold__chart-empty {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.88rem;
-}
-
-.staff-sold__chart-legend {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.staff-sold__chart-legend > li {
-  display: grid;
-  grid-template-columns: 0.7rem minmax(0, 1fr);
-  gap: 0.55rem;
-  align-items: start;
-}
-
-.staff-sold__chart-legend > li::before {
-  content: none;
-}
-
-.staff-sold__chart-swatch {
-  width: 0.7rem;
-  height: 0.7rem;
-  margin-top: 0.28rem;
-  border-radius: var(--radius-sm);
-}
-
-.staff-sold__chart-legend-copy {
-  display: grid;
-  gap: 0.1rem;
-  min-width: 0;
-}
-
-.staff-sold__chart-legend-copy strong {
-  color: var(--color-ink);
-  font-size: 0.88rem;
-  font-weight: 750;
-}
-
-.staff-sold__chart-legend-copy span {
-  color: var(--color-muted);
-  font-size: 0.82rem;
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-
-.staff-sold__chart-swatch--quiet {
-  background: transparent;
-  border: 1px solid var(--color-border);
 }
 
 .staff-sold__summary {
@@ -168,8 +106,273 @@
   margin: 0;
   color: var(--color-muted);
   font-size: 0.88rem;
+  font-weight: 600;
   line-height: 1.5;
   max-width: 62ch;
+  text-wrap: pretty;
+}
+
+.staff-sold__empty {
+  margin: 0;
+  max-width: 42ch;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.staff-sold__empty a {
+  color: var(--color-maroon-deep);
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
+.staff-sold__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.staff-sold__list > li::before,
+.staff-sold__quiet ul > li::before {
+  content: "\200B";
+}
+
+.staff-sold__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, max-content);
+  gap: var(--space-3) var(--space-5);
+  align-items: start;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.staff-sold__row:first-child {
+  padding-top: var(--space-5);
+}
+
+.staff-sold__row-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.staff-sold__row-main h3 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.staff-sold__room-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-border) 80%, transparent);
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 1px;
+}
+
+.staff-sold__room-link:hover {
+  color: var(--color-maroon-deep);
+  text-decoration-color: color-mix(in oklab, var(--color-maroon) 45%, transparent);
+}
+
+.staff-sold__room-link:focus-visible,
+.staff-sold__quiet-link:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-maroon-light) 45%, transparent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.staff-sold__row-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.45rem;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.staff-sold__sources {
+  margin: 0.15rem 0 0;
+  max-width: 48ch;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.staff-sold__row-money {
+  min-width: 0;
+  justify-self: end;
+  text-align: right;
+}
+
+.staff-sold__row-money p {
+  margin: 0;
+  display: grid;
+  gap: 0.1rem;
+  color: var(--color-ink);
+  font-size: 0.92rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.staff-sold__row-money strong {
+  overflow-wrap: anywhere;
+}
+
+.staff-sold__row-money span {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.staff-sold__row-money--quiet span {
+  color: var(--color-muted);
+}
+
+.staff-sold__quiet {
+  max-width: 36ch;
+  padding-top: var(--space-1);
+}
+
+.staff-sold__quiet h2 {
+  margin: 0 0 var(--space-3);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.staff-sold__quiet ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.staff-sold__quiet li {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.staff-sold__quiet-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.14em;
+}
+
+.staff-sold__quiet-link:hover {
+  color: var(--color-maroon-deep);
+  text-decoration-color: color-mix(in oklab, var(--color-maroon) 40%, transparent);
+}
+
+.staff-sold__chart {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  min-width: 0;
+}
+
+.staff-sold__chart-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.staff-sold__pie {
+  width: min(100%, 12.5rem);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--finance-pie-unsold);
+}
+
+.staff-sold__pie--over-capacity {
+  box-shadow: 0 0 0 3px var(--color-maroon-deep);
+}
+
+.staff-sold__chart-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.staff-sold__chart-legend {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-sold__chart-legend > li {
+  display: grid;
+  grid-template-columns: 0.7rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.staff-sold__chart-legend > li::before {
+  content: none;
+}
+
+.staff-sold__chart-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: 0.28rem;
+  border-radius: var(--radius-sm);
+}
+
+.staff-sold__chart-swatch--sold {
+  background: var(--finance-pie-sold);
+}
+
+.staff-sold__chart-swatch--unsold {
+  background: var(--finance-pie-unsold);
+}
+
+.staff-sold__chart-swatch--over {
+  background: transparent;
+  border: 1px solid var(--color-border);
+}
+
+.staff-sold__chart-legend-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.staff-sold__chart-legend-copy strong {
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.staff-sold__chart-legend-copy span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
 }
 
 @media (min-width: 920px) {
@@ -210,5 +413,16 @@
   .staff-sold__body {
     gap: var(--space-8);
     width: 100%;
+  }
+
+  .staff-sold__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    padding-block: var(--space-5);
+  }
+
+  .staff-sold__row-money {
+    justify-self: start;
+    text-align: left;
   }
 }
