@@ -52,11 +52,21 @@ function calendarHrefFromFormData(
   });
 }
 import { addIsoDays, eachIsoDayInclusive } from "@/lib/room-day-inventory";
+import { getTodayIso } from "@/lib/calendar";
+import {
+  discountCodeValidationMessage,
+  getDiscountCodeByNormalizedCode,
+  isDiscountCodeFormatValid,
+  normalizeDiscountCodeInput,
+  releaseDiscountCodeUse,
+  validateDiscountCodeForBooking,
+  type DiscountCode,
+} from "@/lib/discount-codes";
 import {
   buildRateLookup,
   getRoomDayRatesForRange,
 } from "@/lib/room-day-rates";
-import { calculateStayQuote, type StayQuote } from "@/lib/pricing";
+import { calculateStayQuoteWithOptionalCode, type StayQuote } from "@/lib/pricing";
 import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 import { isRoomBookable } from "@/lib/room-availability";
 import { resolveStayStatusFromDates } from "@/lib/stay-status";
@@ -119,6 +129,10 @@ export type BookingQuoteResult = StayQuote & {
   baseNightlyRate: number;
   effectiveNightlyRate: number | null;
   promoLabel: string | null;
+  discountCodeApplied: boolean;
+  discountCodeError: string | null;
+  discountCodeId: string | null;
+  discountCodeText: string | null;
 };
 
 const emptyQuote: BookingQuoteResult = {
@@ -130,6 +144,10 @@ const emptyQuote: BookingQuoteResult = {
   baseNightlyRate: 0,
   effectiveNightlyRate: null,
   promoLabel: null,
+  discountCodeApplied: false,
+  discountCodeError: null,
+  discountCodeId: null,
+  discountCodeText: null,
 };
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -248,6 +266,7 @@ export async function getBookingQuote(
   roomId: string,
   arrival: string,
   departure: string,
+  discountCodeInput?: string,
 ): Promise<BookingQuoteResult> {
   const room = await getRoomForBooking(roomId);
   if (!room) {
@@ -261,29 +280,95 @@ export async function getBookingQuote(
     };
   }
 
+  return buildBookingQuote({
+    roomId,
+    baseRate: room.rate,
+    arrival,
+    departure,
+    discountCodeInput,
+  });
+}
+
+async function buildBookingQuote({
+  roomId,
+  baseRate,
+  arrival,
+  departure,
+  discountCodeInput,
+}: {
+  roomId: string;
+  baseRate: number;
+  arrival: string;
+  departure: string;
+  discountCodeInput?: string;
+}): Promise<BookingQuoteResult> {
   const [promotions, dayRates] = await Promise.all([
     getRoomPromotionsForStay(roomId, arrival, departure),
     getRoomDayRatesForRange(roomId, arrival, departure),
   ]);
   const rateOverrides = buildRateLookup(dayRates);
-  const quote = calculateStayQuote({
+  const todayIso = getTodayIso();
+
+  let codePercentOff: number | null = null;
+  let discountCodeError: string | null = null;
+  let discountCodeId: string | null = null;
+  let discountCodeText: string | null = null;
+  let matchedCode: DiscountCode | null = null;
+
+  const normalizedInput = discountCodeInput
+    ? normalizeDiscountCodeInput(discountCodeInput)
+    : "";
+
+  if (normalizedInput) {
+    if (!isDiscountCodeFormatValid(normalizedInput)) {
+      discountCodeError = discountCodeValidationMessage("not_found");
+    } else {
+      const code = await getDiscountCodeByNormalizedCode(normalizedInput);
+      if (!code) {
+        discountCodeError = discountCodeValidationMessage("not_found");
+      } else {
+        const validation = validateDiscountCodeForBooking(code, roomId, todayIso);
+        if (!validation.ok) {
+          discountCodeError = discountCodeValidationMessage(validation.reason);
+        } else {
+          matchedCode = validation.code;
+          codePercentOff = validation.code.percentOff;
+          discountCodeId = validation.code.id;
+          discountCodeText = validation.code.code;
+        }
+      }
+    }
+  }
+
+  const quote = calculateStayQuoteWithOptionalCode({
     roomId,
-    baseRate: room.rate,
+    baseRate,
     arrival,
     departure,
     promotions,
     rateOverrides,
+    codePercentOff,
   });
+
+  let promoLabel: string | null = null;
+  if (quote.codeApplied && matchedCode) {
+    promoLabel = matchedCode.label ?? `${matchedCode.percentOff}% off · ${matchedCode.code}`;
+  } else if (quote.hasPromotion) {
+    promoLabel =
+      promotions.find((promotion) => promotion.label)?.label ??
+      `${Math.round(((quote.baseTotal - quote.total) / quote.baseTotal) * 100)}% off`;
+  }
 
   return {
     ...quote,
-    baseNightlyRate: room.rate,
+    baseNightlyRate: baseRate,
     effectiveNightlyRate:
       quote.nights > 0 ? Math.round(quote.total / quote.nights) : null,
-    promoLabel: quote.hasPromotion
-      ? promotions.find((promotion) => promotion.label)?.label ??
-        `${Math.round(((quote.baseTotal - quote.total) / quote.baseTotal) * 100)}% off`
-      : null,
+    promoLabel,
+    discountCodeApplied: quote.codeApplied,
+    discountCodeError,
+    discountCodeId,
+    discountCodeText,
   };
 }
 
@@ -292,19 +377,26 @@ async function quoteRoomStay(
   baseRate: number,
   arrival: string,
   departure: string,
+  discountCodeInput?: string,
 ) {
-  const [promotions, dayRates] = await Promise.all([
-    getRoomPromotionsForStay(roomId, arrival, departure),
-    getRoomDayRatesForRange(roomId, arrival, departure),
-  ]);
-  return calculateStayQuote({
+  const quote = await buildBookingQuote({
     roomId,
     baseRate,
     arrival,
     departure,
-    promotions,
-    rateOverrides: buildRateLookup(dayRates),
+    discountCodeInput,
   });
+
+  return {
+    nights: quote.nights,
+    total: quote.total,
+    baseTotal: quote.baseTotal,
+    promoNights: quote.promoNights,
+    hasPromotion: quote.hasPromotion,
+    discountCodeId: quote.discountCodeId,
+    discountCodeText: quote.discountCodeText,
+    discountCodeError: quote.discountCodeError,
+  };
 }
 
 export async function createBookingRequest(
@@ -404,7 +496,15 @@ export async function createBookingRequest(
     selectedRoom.rate,
     arrival,
     departure,
+    getValue(formData, "discount-code"),
   );
+
+  if (quote.discountCodeError) {
+    return bookingErrorState(quote.discountCodeError, formData, {
+      "discount-code": quote.discountCodeError,
+    });
+  }
+
   const estimatedTotal = quote.total;
   const stripeCharge = calculateStripeChargeAmount(estimatedTotal);
   const depositAmount = estimatedTotal;
@@ -489,6 +589,8 @@ export async function createBookingRequest(
         p_conversation_token: conversationToken,
         p_available_count: selectedRoom.availableCount,
         p_bed_setup: bedSetup,
+        p_discount_code_id: quote.discountCodeId,
+        p_discount_code_text: quote.discountCodeText,
       },
     );
 
@@ -506,6 +608,16 @@ export async function createBookingRequest(
             formData,
             {
               room: "We couldn’t confirm availability for these dates. Please try again.",
+            },
+          );
+        }
+
+        if (payload.reason === "code_unavailable") {
+          return bookingErrorState(
+            "This promo code can't be used for this stay. Try again or continue without it.",
+            formData,
+            {
+              "discount-code": "This promo code can't be used for this stay.",
             },
           );
         }
@@ -645,7 +757,7 @@ export async function cancelPendingBooking(
   const supabase = createStaffSupabaseClient();
   const { data: booking } = await supabase
     .from("booking_requests")
-    .select("id, stripe_payment_intent_id, status, conversation_token")
+    .select("id, stripe_payment_intent_id, status, conversation_token, discount_code_id")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -663,6 +775,10 @@ export async function cancelPendingBooking(
     } catch {
       // Intent may already be canceled or completed.
     }
+  }
+
+  if (booking.discount_code_id) {
+    await releaseDiscountCodeUse(booking.discount_code_id);
   }
 
   await supabase

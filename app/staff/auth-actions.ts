@@ -413,6 +413,98 @@ export async function removeRoomPromotion(formData: FormData) {
   redirect("/staff/promotions");
 }
 
+export type StaffDiscountCodeState = {
+  error?: string;
+  success?: string;
+};
+
+export async function addDiscountCode(
+  _prevState: StaffDiscountCodeState,
+  formData: FormData,
+): Promise<StaffDiscountCodeState> {
+  await requireStaffCalendarWrite();
+
+  if (!hasStaffSupabaseConfig()) {
+    return { error: "Supabase is not configured yet." };
+  }
+
+  const {
+    isDiscountCodeFormatValid,
+    normalizeDiscountCodeInput,
+  } = await import("@/lib/discount-codes");
+  const rawCode = normalizeDiscountCodeInput(getValue(formData, "code"));
+  const roomId = getValue(formData, "room-id");
+  const validUntil = getValue(formData, "valid-until") || null;
+  const maxUsesRaw = getValue(formData, "max-uses");
+  const percentOff = Number.parseInt(getValue(formData, "percent-off"), 10);
+  const label = getValue(formData, "label") || null;
+
+  if (!isDiscountCodeFormatValid(rawCode)) {
+    return { error: "Use 3–20 letters or numbers for the code." };
+  }
+
+  if (!roomId) {
+    return { error: "Choose which rooms this code applies to." };
+  }
+
+  if (!Number.isFinite(percentOff) || percentOff < 1 || percentOff > 90) {
+    return { error: "Enter a discount between 1% and 90%." };
+  }
+
+  let maxUses: number | null = null;
+  if (maxUsesRaw) {
+    const parsedMaxUses = Number.parseInt(maxUsesRaw, 10);
+    if (!Number.isFinite(parsedMaxUses) || parsedMaxUses < 1) {
+      return { error: "Max uses must be at least 1, or leave blank for unlimited." };
+    }
+    maxUses = parsedMaxUses;
+  }
+
+  const supabase = createStaffSupabaseClient();
+  let resolvedRoomId: string | null = roomId;
+
+  if (roomId === ALL_ROOMS_PROMOTION_ID) {
+    resolvedRoomId = null;
+  }
+
+  const { error } = await supabase.from("discount_codes").insert({
+    code: rawCode,
+    percent_off: percentOff,
+    room_id: resolvedRoomId,
+    valid_until: validUntil,
+    max_uses: maxUses,
+    label,
+  });
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "That code already exists. Choose another." };
+    }
+    if (error.code === "42P01") {
+      return { error: "Run supabase/migrate-discount-codes.sql before adding codes." };
+    }
+    return { error: "Could not save that code. Try again." };
+  }
+
+  revalidatePath("/staff/promotions");
+  return { success: `Code ${rawCode} saved. Guests can enter it at checkout.` };
+}
+
+export async function deactivateDiscountCode(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const codeId = getValue(formData, "code-id");
+  if (!codeId || !hasStaffSupabaseConfig()) {
+    redirect("/staff/promotions?tab=codes");
+  }
+
+  const supabase = createStaffSupabaseClient();
+  await supabase.from("discount_codes").update({ active: false }).eq("id", codeId);
+
+  revalidatePath("/staff/promotions");
+  redirect("/staff/promotions?tab=codes&updated=1");
+}
+
 export async function updatePropertySettings(
   _prevState: StaffSettingsState,
   formData: FormData,

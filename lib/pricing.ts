@@ -15,6 +15,13 @@ export type StayQuote = {
   hasPromotion: boolean;
 };
 
+export type StayDiscountSource = "none" | "promo" | "code";
+
+export type StayQuoteWithDiscount = StayQuote & {
+  discountSource: StayDiscountSource;
+  codeApplied: boolean;
+};
+
 function formatIsoDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -181,5 +188,98 @@ export function calculateStayQuote({
     baseTotal,
     promoNights,
     hasPromotion: promoNights > 0,
+  };
+}
+
+function calculateCodeStayTotal({
+  roomId,
+  baseRate,
+  arrival,
+  departure,
+  rateOverrides,
+  codePercentOff,
+}: {
+  roomId: string;
+  baseRate: number;
+  arrival: string;
+  departure: string;
+  rateOverrides?: Map<string, number>;
+  codePercentOff: number;
+}) {
+  const stayNights = eachStayNight(arrival, departure);
+  let total = 0;
+
+  for (const night of stayNights) {
+    const override = rateOverrides?.get(`${roomId}:${night}`);
+    if (override !== undefined) {
+      total += override;
+    } else {
+      total += applyPercentOff(baseRate, codePercentOff);
+    }
+  }
+
+  return total;
+}
+
+/** Stay-level best-of: automatic promos vs guest code percent (day overrides win on both paths). */
+export function calculateStayQuoteWithOptionalCode({
+  roomId,
+  baseRate,
+  arrival,
+  departure,
+  promotions,
+  rateOverrides,
+  codePercentOff,
+}: {
+  roomId: string;
+  baseRate: number;
+  arrival: string;
+  departure: string;
+  promotions: RoomPromotionRate[];
+  rateOverrides?: Map<string, number>;
+  codePercentOff?: number | null;
+}): StayQuoteWithDiscount {
+  const promoQuote = calculateStayQuote({
+    roomId,
+    baseRate,
+    arrival,
+    departure,
+    promotions,
+    rateOverrides,
+  });
+
+  if (!codePercentOff || codePercentOff <= 0 || promoQuote.nights === 0) {
+    return {
+      ...promoQuote,
+      discountSource: promoQuote.hasPromotion ? "promo" : "none",
+      codeApplied: false,
+    };
+  }
+
+  const codeTotal = calculateCodeStayTotal({
+    roomId,
+    baseRate,
+    arrival,
+    departure,
+    rateOverrides,
+    codePercentOff,
+  });
+
+  if (codeTotal < promoQuote.total) {
+    return {
+      nights: promoQuote.nights,
+      total: codeTotal,
+      baseTotal: promoQuote.baseTotal,
+      promoNights: promoQuote.nights,
+      hasPromotion: true,
+      discountSource: "code",
+      codeApplied: true,
+    };
+  }
+
+  return {
+    ...promoQuote,
+    discountSource: promoQuote.hasPromotion ? "promo" : "none",
+    codeApplied: false,
   };
 }

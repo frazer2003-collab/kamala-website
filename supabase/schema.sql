@@ -342,6 +342,32 @@ create table if not exists public.room_promotions (
 create index if not exists room_promotions_room_dates_idx
   on public.room_promotions (room_id, start_date, end_date);
 
+create table if not exists public.discount_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null check (length(trim(code)) between 3 and 32),
+  percent_off integer not null check (percent_off between 1 and 90),
+  room_id text references public.rooms(id) on delete cascade,
+  valid_until date,
+  max_uses integer check (max_uses is null or max_uses > 0),
+  uses_count integer not null default 0 check (uses_count >= 0),
+  label text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  constraint discount_codes_uses_within_max check (
+    max_uses is null or uses_count <= max_uses
+  )
+);
+
+create unique index if not exists discount_codes_code_lower_idx
+  on public.discount_codes (lower(code));
+
+create index if not exists discount_codes_active_idx
+  on public.discount_codes (active, valid_until);
+
+alter table public.booking_requests
+  add column if not exists discount_code_id uuid references public.discount_codes(id) on delete set null,
+  add column if not exists discount_code_text text;
+
 create table if not exists public.property_settings (
   id text primary key default 'default',
   property_name text not null default 'Kamala''s Boutique Guesthouse',
@@ -463,7 +489,9 @@ create or replace function public.create_guest_booking_if_capacity(
   p_note text,
   p_conversation_token text,
   p_available_count integer,
-  p_bed_setup text default null
+  p_bed_setup text default null,
+  p_discount_code_id uuid default null,
+  p_discount_code_text text default null
 )
 returns jsonb
 language plpgsql
@@ -477,6 +505,7 @@ declare
   v_closed boolean;
   v_booking public.booking_requests%rowtype;
   v_bed_setup text;
+  v_code public.discount_codes%rowtype;
 begin
   v_bed_setup := nullif(trim(lower(coalesce(p_bed_setup, ''))), '');
   if v_bed_setup is not null and v_bed_setup not in ('double', 'twin') then
@@ -497,6 +526,26 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'unavailable');
   end if;
 
+  if p_discount_code_id is not null then
+    select *
+    into v_code
+    from public.discount_codes
+    where id = p_discount_code_id
+    for update;
+
+    if not found
+       or v_code.active is not true
+       or (v_code.valid_until is not null and v_code.valid_until < current_date)
+       or (v_code.max_uses is not null and v_code.uses_count >= v_code.max_uses)
+       or (v_code.room_id is not null and v_code.room_id <> p_room_id) then
+      return jsonb_build_object('ok', false, 'reason', 'code_unavailable');
+    end if;
+
+    update public.discount_codes
+    set uses_count = uses_count + 1
+    where id = p_discount_code_id;
+  end if;
+
   perform pg_advisory_xact_lock(hashtext(p_room_id));
 
   v_night := p_arrival_date;
@@ -511,6 +560,11 @@ begin
     );
 
     if v_closed then
+      if p_discount_code_id is not null then
+        update public.discount_codes
+        set uses_count = greatest(0, uses_count - 1)
+        where id = p_discount_code_id;
+      end if;
       return jsonb_build_object('ok', false, 'reason', 'unavailable');
     end if;
 
@@ -552,6 +606,11 @@ begin
     into v_net;
 
     if v_net >= v_rooms_to_sell then
+      if p_discount_code_id is not null then
+        update public.discount_codes
+        set uses_count = greatest(0, uses_count - 1)
+        where id = p_discount_code_id;
+      end if;
       return jsonb_build_object('ok', false, 'reason', 'unavailable');
     end if;
 
@@ -572,7 +631,9 @@ begin
     note,
     status,
     conversation_token,
-    bed_setup
+    bed_setup,
+    discount_code_id,
+    discount_code_text
   )
   values (
     p_guest_name,
@@ -588,7 +649,9 @@ begin
     nullif(trim(p_note), ''),
     'pending_payment',
     p_conversation_token,
-    v_bed_setup
+    v_bed_setup,
+    p_discount_code_id,
+    nullif(trim(p_discount_code_text), '')
   )
   returning * into v_booking;
 
@@ -598,6 +661,11 @@ begin
   );
 exception
   when others then
+    if p_discount_code_id is not null then
+      update public.discount_codes
+      set uses_count = greatest(0, uses_count - 1)
+      where id = p_discount_code_id;
+    end if;
     return jsonb_build_object(
       'ok', false,
       'reason', 'verify-failed',
@@ -704,7 +772,7 @@ as $$
 $$;
 
 revoke all on function public.create_guest_booking_if_capacity(
-  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text
+  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text, uuid, text
 ) from public;
 revoke all on function public.staff_update_channel_reservation(uuid, text, text, text, date, date, text, uuid) from public;
 revoke all on function public.staff_set_booking_room_unit(uuid, uuid) from public;
@@ -712,7 +780,7 @@ revoke all on function public.staff_room_block_unit_map() from public;
 revoke all on function public.staff_booking_room_unit_map() from public;
 
 grant execute on function public.create_guest_booking_if_capacity(
-  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text
+  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text, uuid, text
 ) to service_role;
 grant execute on function public.staff_update_channel_reservation(uuid, text, text, text, date, date, text, uuid) to service_role;
 grant execute on function public.staff_set_booking_room_unit(uuid, uuid) to service_role;
@@ -752,6 +820,7 @@ grant all on public.room_day_inventory to service_role;
 grant all on public.room_day_rates to service_role;
 grant all on public.staff_notification_emails to service_role;
 grant all on public.room_promotions to service_role;
+grant all on public.discount_codes to service_role;
 grant all on public.property_settings to service_role;
 grant select on public.property_gallery_photos to anon, authenticated;
 grant all on public.property_gallery_photos to service_role;
@@ -769,6 +838,7 @@ alter table public.room_day_inventory enable row level security;
 alter table public.room_day_rates enable row level security;
 alter table public.staff_notification_emails enable row level security;
 alter table public.room_promotions enable row level security;
+alter table public.discount_codes enable row level security;
 alter table public.property_settings enable row level security;
 alter table public.property_gallery_photos enable row level security;
 alter table public.tours enable row level security;
@@ -878,6 +948,14 @@ with check (true);
 drop policy if exists "Service role can manage room promotions" on public.room_promotions;
 create policy "Service role can manage room promotions"
 on public.room_promotions
+for all
+to service_role
+using (true)
+with check (true);
+
+drop policy if exists "Service role can manage discount codes" on public.discount_codes;
+create policy "Service role can manage discount codes"
+on public.discount_codes
 for all
 to service_role
 using (true)

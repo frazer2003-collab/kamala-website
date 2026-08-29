@@ -1,0 +1,77 @@
+/* Staff Discounts — tab switcher for automatic vs guest codes. */
+
+.staff-discounts-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.staff-discounts-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.staff-discounts-tabs__tab:hover {
+  background: var(--color-surface-muted);
+}
+
+.staff-discounts-tabs__tab:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+.staff-discounts-tabs__tab--active {
+  border-color: color-mix(in srgb, var(--color-maroon) 45%, var(--color-border));
+  background: var(--color-maroon-wash);
+}
+
+.booking-promo-code {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.booking-promo-code__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.booking-promo-code__row .field-pair {
+  margin: 0;
+}
+
+.booking-promo-code__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.booking-promo-code__status {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.booking-promo-code__status--success {
+  color: var(--color-ink);
+}
+
+@media (max-width: 640px) {
+  .booking-promo-code__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
