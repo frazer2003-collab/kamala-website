@@ -80,16 +80,16 @@ export function HomeStickyReserve({ initialRoomId, rooms }: HomeStickyReservePro
 
   return (
     <>
-      <div className="home-sticky-reserve" role="region" aria-label="Continue reservation">
+      <div className="home-sticky-reserve" role="region" aria-label="Continue booking">
         <p className="home-sticky-reserve__label">
           <span className="home-sticky-reserve__room">{room.name}</span>
           <span className="home-sticky-reserve__sep" aria-hidden="true">
             ·
           </span>
-          <span>Ready to reserve</span>
+          <span>Ready to book</span>
         </p>
         <a className="button button--primary home-sticky-reserve__cta" href="#booking">
-          Complete reservation
+          Book now
         </a>
       </div>
       <div aria-hidden="true" className="home-sticky-reserve__spacer" />

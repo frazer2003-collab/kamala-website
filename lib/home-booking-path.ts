@@ -18,5 +18,5 @@ export function resolveHomeBookingPathStep(
 export const HOME_BOOKING_PATH_STEPS = [
   { id: "dates" as const, label: "Dates", href: "#dates" },
   { id: "room" as const, label: "Room", href: "#rooms" },
-  { id: "reserve" as const, label: "Reserve", href: "#booking" },
+  { id: "reserve" as const, label: "Book now", href: "#booking" },
 ] as const;

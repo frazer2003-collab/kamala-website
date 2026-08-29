@@ -61,7 +61,7 @@ export function HomeBookingPath({ hasDates, initialRoomId }: HomeBookingPathProp
 
   return (
     <nav
-      aria-label="How to reserve"
+      aria-label="How to book"
       className="home-booking-path"
     >
       <ol className="home-booking-path__list">
@@ -96,9 +96,9 @@ export function HomeBookingPath({ hasDates, initialRoomId }: HomeBookingPathProp
       </ol>
       <p className="home-booking-path__note">
         {currentStep === "dates"
-          ? "Reserve directly on this website — no booking site in between."
+          ? "Book directly on this website — no booking site in between."
           : currentStep === "room"
-            ? "Choose a room type, then complete your reservation below."
+            ? "Choose a room type, then book below."
             : "Finish guest details and pay in full to hold your room."}
       </p>
     </nav>
