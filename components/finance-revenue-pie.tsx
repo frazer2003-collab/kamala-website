@@ -23,7 +23,7 @@ export function FinanceSoldPie({
 
   return (
     <figure className="staff-sold__chart" aria-labelledby="finance-pie-title">
-      <figcaption id="finance-pie-title" className="staff-sold__chart-title">
+      <figcaption id="finance-pie-title" className="staff-sold__section-title">
         Sold of available
       </figcaption>
       <div
