@@ -589,7 +589,7 @@ begin
           and br.departure_date > v_night
           and br.status <> 'declined'
           and (
-            br.status in ('pending_payment', 'confirmed')
+            br.status = 'confirmed'
             or br.deposit_paid_at is not null
             or br.bank_transfer_claimed_at is not null
           )
