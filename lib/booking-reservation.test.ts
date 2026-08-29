@@ -17,11 +17,22 @@ describe("bookingReservesRoom", () => {
     );
   });
 
-  it("reserves inventory while card payment is pending", () => {
+  it("does not reserve inventory while card payment is pending", () => {
     assert.equal(
       bookingReservesRoom({
         status: "pending_payment",
         deposit_paid_at: null,
+        bank_transfer_claimed_at: null,
+      }),
+      false,
+    );
+  });
+
+  it("reserves inventory after card payment", () => {
+    assert.equal(
+      bookingReservesRoom({
+        status: "pending_payment",
+        deposit_paid_at: "2026-07-18T07:00:00.000Z",
         bank_transfer_claimed_at: null,
       }),
       true,
@@ -41,10 +52,23 @@ describe("bookingReservesRoom", () => {
 });
 
 describe("bookingBlocksCalendarExport", () => {
-  it("blocks export for open unconfirmed requests", () => {
-    assert.equal(bookingBlocksCalendarExport({ status: "new" }), true);
-    assert.equal(bookingBlocksCalendarExport({ status: "pending_payment" }), true);
-    assert.equal(bookingBlocksCalendarExport({ status: "awaiting" }), true);
+  it("blocks export only for stays that hold inventory", () => {
+    assert.equal(bookingBlocksCalendarExport({ status: "new" }), false);
+    assert.equal(
+      bookingBlocksCalendarExport({
+        status: "pending_payment",
+        deposit_paid_at: null,
+        bank_transfer_claimed_at: null,
+      }),
+      false,
+    );
+    assert.equal(
+      bookingBlocksCalendarExport({
+        status: "awaiting",
+        bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z",
+      }),
+      true,
+    );
   });
 
   it("does not block export for declined requests", () => {

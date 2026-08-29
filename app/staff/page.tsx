@@ -184,9 +184,9 @@ function getMoneyState(booking: StaffBooking) {
 
   if (booking.status === "pending_payment") {
     return {
-      tone: "warning" as const,
+      tone: "muted" as const,
       title: "Checkout not finished",
-      body: "The guest started booking but has not paid yet. Release the hold if they abandoned checkout.",
+      body: "The guest has not paid and has not reported a bank transfer. Dates stay available.",
     };
   }
 
@@ -348,7 +348,7 @@ export default async function StaffBookingsPage({
                     <>
                       {" · "}
                       <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
-                        {checkoutHoldCount} checkout hold
+                        {checkoutHoldCount} unfinished checkout
                         {checkoutHoldCount === 1 ? "" : "s"}
                       </Link>
                     </>
@@ -391,7 +391,7 @@ export default async function StaffBookingsPage({
                     <>
                       {" · "}
                       <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
-                        {checkoutHoldCount} checkout hold
+                        {checkoutHoldCount} unfinished checkout
                         {checkoutHoldCount === 1 ? "" : "s"}
                       </Link>
                     </>
@@ -409,7 +409,7 @@ export default async function StaffBookingsPage({
 
         {error === "release-failed" ? (
           <p className="form-message form-message--error" role="alert">
-            That checkout hold could not be released. It may already be paid or
+            That unfinished checkout could not be removed. It may already be paid or
             moved — refresh and try again.
           </p>
         ) : null}

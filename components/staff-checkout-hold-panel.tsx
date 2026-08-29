@@ -20,9 +20,9 @@ export function StaffCheckoutHoldPanel({
   if (!canManage) {
     return (
       <div className="staff-decide staff-decide--quiet">
-        <h3 className="staff-decide__title">Checkout hold</h3>
+        <h3 className="staff-decide__title">Unfinished checkout</h3>
         <p className="detail-help" role="status">
-          Connect Supabase to release abandoned checkout holds.
+          Connect Supabase to remove abandoned checkout records.
         </p>
       </div>
     );
@@ -31,25 +31,25 @@ export function StaffCheckoutHoldPanel({
   if (confirming) {
     return (
       <div className="staff-decide staff-decide--declining">
-        <h3 className="staff-decide__title">Release checkout hold</h3>
+        <h3 className="staff-decide__title">Remove unfinished checkout</h3>
         <p className="staff-decide__summary">
-          Remove <strong>{guestName}</strong>&apos;s unfinished booking and
-          free those dates on the calendar. No payment was received and no
-          email is sent. This cannot be undone.
+          Remove <strong>{guestName}</strong>&apos;s unfinished booking record.
+          These dates were never held — no payment was received and no email is
+          sent. This cannot be undone.
         </p>
         <form action={releaseCheckoutHoldBooking} className="staff-decide__form">
           <StaffFormBusyBridge />
           <input name="booking-id" type="hidden" value={bookingId} />
           <div className="staff-decide__actions">
             <button className="button button--danger" type="submit">
-              Release hold
+              Remove record
             </button>
             <button
               className="button button--quiet"
               onClick={() => setConfirming(false)}
               type="button"
             >
-              Keep hold
+              Keep record
             </button>
           </div>
         </form>
@@ -59,13 +59,14 @@ export function StaffCheckoutHoldPanel({
 
   return (
     <div className="staff-decide staff-decide--quiet">
-      <h3 className="staff-decide__title">Checkout hold</h3>
+      <h3 className="staff-decide__title">Unfinished checkout</h3>
       <p className="staff-decide__summary" role="status">
-        The guest started booking but did not finish payment. These dates stay
-        reserved until they pay or you release the hold.
+        The guest started booking but has not paid and has not tapped
+        &ldquo;I&apos;ve paid&rdquo; on QR/bank transfer. These dates stay
+        available for other guests.
       </p>
       <p className="detail-help">
-        Release only if the guest abandoned checkout or asked you to cancel.
+        Remove the record if the guest abandoned checkout or asked you to cancel.
       </p>
       <div className="staff-decide__actions">
         <button
@@ -73,7 +74,7 @@ export function StaffCheckoutHoldPanel({
           onClick={() => setConfirming(true)}
           type="button"
         >
-          Release hold…
+          Remove record…
         </button>
       </div>
     </div>
