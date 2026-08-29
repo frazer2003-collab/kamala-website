@@ -4,7 +4,7 @@ import { FinanceSoldPie } from "@/components/finance-revenue-pie";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffShell } from "@/components/staff-shell";
 import { parseStaffTimelineRange } from "@/lib/calendar";
-import { formatMoneySuffix } from "@/lib/currency";
+import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
 import { loadStaffFinancePageData } from "@/lib/staff-finance-data";
 import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
@@ -100,7 +100,7 @@ function FinancePageHeader({
 }
 
 type FinanceRangeOverviewProps = {
-  currency: string;
+  currency: PropertyCurrency;
   report: ReturnType<typeof buildStaffInsightsReport>;
 };
 
