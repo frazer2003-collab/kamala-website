@@ -49,6 +49,8 @@ export type BookingRequestRow = {
   conversation_token: string | null;
   room_unit_id: string | null;
   bed_setup?: string | null;
+  discount_code_id?: string | null;
+  discount_code_text?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -137,6 +139,19 @@ export type RoomPromotionRow = {
   end_date: string;
   percent_off: number;
   label: string | null;
+  created_at: string;
+};
+
+export type DiscountCodeRow = {
+  id: string;
+  code: string;
+  percent_off: number;
+  room_id: string | null;
+  valid_until: string | null;
+  max_uses: number | null;
+  uses_count: number;
+  label: string | null;
+  active: boolean;
   created_at: string;
 };
 
@@ -350,6 +365,17 @@ export type Database = {
         Update: Partial<Omit<RoomPromotionRow, "id" | "created_at">>;
         Relationships: [];
       };
+      discount_codes: {
+        Row: DiscountCodeRow;
+        Insert: Omit<DiscountCodeRow, "id" | "created_at" | "uses_count" | "active"> & {
+          id?: string;
+          created_at?: string;
+          uses_count?: number;
+          active?: boolean;
+        };
+        Update: Partial<Omit<DiscountCodeRow, "id" | "created_at">>;
+        Relationships: [];
+      };
       property_settings: {
         Row: PropertySettingsRow;
         Insert: Omit<
@@ -424,6 +450,8 @@ export type Database = {
           p_conversation_token: string;
           p_available_count: number;
           p_bed_setup?: string | null;
+          p_discount_code_id?: string | null;
+          p_discount_code_text?: string | null;
         };
         Returns: {
           ok: boolean;

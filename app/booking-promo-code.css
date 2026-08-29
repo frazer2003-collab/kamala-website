@@ -1,0 +1,42 @@
+/* Guest checkout — optional promo code field. */
+
+.booking-promo-code {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.booking-promo-code__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.booking-promo-code__row .field-pair {
+  margin: 0;
+}
+
+.booking-promo-code__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.booking-promo-code__status {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.booking-promo-code__status--success {
+  color: var(--color-ink);
+}
+
+@media (max-width: 640px) {
+  .booking-promo-code__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

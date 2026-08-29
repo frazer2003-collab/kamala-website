@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import {
   cancelPendingBooking,
@@ -30,6 +30,8 @@ import {
   defaultBedSetupForRoom,
   roomOffersBedSetupChoice,
 } from "@/lib/bed-setup";
+import { normalizeDiscountCodeInput } from "@/lib/discount-codes";
+import "@/app/booking-promo-code.css";
 
 function persistGuestLocale(nextLocale: Locale) {
   try {
@@ -163,6 +165,10 @@ function emptyDisplayQuote(baseRate: number): BookingQuoteResult {
     baseNightlyRate: baseRate,
     effectiveNightlyRate: null,
     promoLabel: null,
+    discountCodeApplied: false,
+    discountCodeError: null,
+    discountCodeId: null,
+    discountCodeText: null,
   };
 }
 
@@ -311,6 +317,9 @@ export function BookingRequest({
   const [serverQuote, setServerQuote] = useState<BookingQuoteResult | null>(null);
   const [quotePending, setQuotePending] = useState(false);
   const [quoteFailed, setQuoteFailed] = useState(false);
+  const [discountCodeDraft, setDiscountCodeDraft] = useState("");
+  const [appliedDiscountCode, setAppliedDiscountCode] = useState("");
+  const [discountCodeNotice, setDiscountCodeNotice] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -336,7 +345,12 @@ export function BookingRequest({
     setQuotePending(true);
     setQuoteFailed(false);
 
-    void getBookingQuote(selectedRoom.id, fields.arrival, fields.departure)
+    void getBookingQuote(
+      selectedRoom.id,
+      fields.arrival,
+      fields.departure,
+      appliedDiscountCode || undefined,
+    )
       .then((quote) => {
         if (!cancelled) {
           setServerQuote(quote);
@@ -355,7 +369,22 @@ export function BookingRequest({
     return () => {
       cancelled = true;
     };
-  }, [fields.arrival, fields.departure, selectedRoom.id]);
+  }, [appliedDiscountCode, fields.arrival, fields.departure, selectedRoom.id]);
+
+  const stayFingerprintRef = useRef(
+    `${fields.roomId}|${fields.arrival}|${fields.departure}`,
+  );
+
+  useEffect(() => {
+    const next = `${fields.roomId}|${fields.arrival}|${fields.departure}`;
+    if (next === stayFingerprintRef.current) {
+      return;
+    }
+    stayFingerprintRef.current = next;
+    setAppliedDiscountCode("");
+    setDiscountCodeDraft("");
+    setDiscountCodeNotice(t(locale, "promoCodeCleared"));
+  }, [fields.arrival, fields.departure, fields.roomId, locale]);
 
   const clientQuote = useMemo(() => {
     if (!hasValidStayDates(fields.arrival, fields.departure)) {
@@ -382,6 +411,10 @@ export function BookingRequest({
           )?.label ??
           `${Math.round(((calculated.baseTotal - calculated.total) / calculated.baseTotal) * 100)}% off`
         : null,
+      discountCodeApplied: false,
+      discountCodeError: null,
+      discountCodeId: null,
+      discountCodeText: null,
     };
   }, [fields.arrival, fields.departure, promotions, selectedRoom.id, selectedRoom.rate]);
 
@@ -396,6 +429,9 @@ export function BookingRequest({
   const deposit = Math.max(1, Math.round(estimate));
   const showPromoPricing =
     displayQuote.hasPromotion && displayQuote.baseTotal > displayQuote.total;
+  const promoCodeBlockingSubmit =
+    Boolean(appliedDiscountCode) &&
+    (quotePending || Boolean(displayQuote.discountCodeError));
   const hasDates = hasValidStayDates(fields.arrival, fields.departure);
   const paymentReturnUrl = paymentStep
     ? getBookingPaymentReturnUrl(paymentStep.bookingId, locale)
@@ -709,6 +745,73 @@ export function BookingRequest({
           ) : null}
           {hasDates ? (
             <>
+              <div className="booking-promo-code">
+                <div className="booking-promo-code__row">
+                  <div className="field-pair">
+                    <label htmlFor="discount-code">{t(locale, "promoCodeLabel")}</label>
+                    <input
+                      autoComplete="off"
+                      id="discount-code"
+                      name="discount-code-display"
+                      onChange={(event) => {
+                        setDiscountCodeDraft(event.target.value);
+                        setDiscountCodeNotice(null);
+                      }}
+                      placeholder="WELCOME10"
+                      spellCheck={false}
+                      type="text"
+                      value={discountCodeDraft}
+                    />
+                  </div>
+                  <div className="booking-promo-code__actions">
+                    <button
+                      className="button button--secondary"
+                      disabled={!discountCodeDraft.trim() || quotePending}
+                      onClick={() => {
+                        const next = normalizeDiscountCodeInput(discountCodeDraft);
+                        setAppliedDiscountCode(next);
+                        setDiscountCodeDraft(next);
+                        setDiscountCodeNotice(null);
+                      }}
+                      type="button"
+                    >
+                      {t(locale, "promoCodeApply")}
+                    </button>
+                    {appliedDiscountCode ? (
+                      <button
+                        className="button button--quiet"
+                        onClick={() => {
+                          setAppliedDiscountCode("");
+                          setDiscountCodeDraft("");
+                          setDiscountCodeNotice(null);
+                        }}
+                        type="button"
+                      >
+                        {t(locale, "promoCodeRemove")}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                {displayQuote.discountCodeError ? (
+                  <p className="form-message form-message--error" role="alert">
+                    {displayQuote.discountCodeError}
+                  </p>
+                ) : null}
+                {appliedDiscountCode && displayQuote.discountCodeApplied ? (
+                  <p
+                    className="booking-promo-code__status booking-promo-code__status--success"
+                    role="status"
+                  >
+                    {t(locale, "promoCodeApplied")}
+                  </p>
+                ) : null}
+                {discountCodeNotice ? (
+                  <p className="booking-promo-code__status" role="status">
+                    {discountCodeNotice}
+                  </p>
+                ) : null}
+              </div>
+              <input name="discount-code" type="hidden" value={appliedDiscountCode} />
               <div className="booking-receipt__lines">
                 <div className="booking-receipt__line">
                   <span>
@@ -804,7 +907,9 @@ export function BookingRequest({
           <SubmitButton
             currency={currency}
             deposit={deposit}
-            disabled={roomIsFull || bookableRooms.length === 0}
+            disabled={
+              roomIsFull || bookableRooms.length === 0 || promoCodeBlockingSubmit
+            }
             locale={locale}
             paymentStep={false}
           />
