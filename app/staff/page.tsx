@@ -1,6 +1,7 @@
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form";
+import { StaffCheckoutHoldPanel } from "@/components/staff-checkout-hold-panel";
 import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
 import { StaffShell } from "@/components/staff-shell";
 import {
@@ -13,6 +14,7 @@ import {
   getDeclinedBookings,
   getStaffBookingById,
   getStaffBookingRequests,
+  isAbandonedCheckoutHold,
   type StaffBooking,
 } from "@/lib/booking-requests";
 import { formatMoneySuffix } from "@/lib/currency";
@@ -67,6 +69,7 @@ const STATUS_SORT: Partial<Record<BookingStatus, number>> = {
   "needs-reply": 0,
   new: 1,
   awaiting: 2,
+  pending_payment: 3,
 };
 
 function parseInboxFilter(value: string | undefined): InboxFilter {
@@ -179,6 +182,14 @@ function getMoneyState(booking: StaffBooking) {
     };
   }
 
+  if (booking.status === "pending_payment") {
+    return {
+      tone: "warning" as const,
+      title: "Checkout not finished",
+      body: "The guest started booking but has not paid yet. Release the hold if they abandoned checkout.",
+    };
+  }
+
   return null;
 }
 
@@ -257,6 +268,7 @@ export default async function StaffBookingsPage({
     Boolean(selected?.databaseId) && selected?.status !== "declined";
   const isClosedConversation = selected?.status === "declined";
   const selectedNeedsReply = selected?.status === "needs-reply";
+  const selectedCheckoutHold = selected ? isAbandonedCheckoutHold(selected) : false;
   const selectedMoney = selected ? getMoneyState(selected) : null;
   const newRequestCount = staffBookings.bookings.filter(
     (booking) => booking.status === "new",
@@ -267,6 +279,8 @@ export default async function StaffBookingsPage({
   const awaitingCount = staffBookings.bookings.filter(
     (booking) => booking.status === "awaiting",
   ).length;
+  const checkoutHoldCount = staffBookings.bookings.filter(isAbandonedCheckoutHold)
+    .length;
   const focusDetailOnMobile = Boolean(selected) && !preferInboxView;
   const selectedKey = selected ? getStaffBookingKey(selected) : null;
   const inboxRoomTypeError =
@@ -330,6 +344,15 @@ export default async function StaffBookingsPage({
                       </Link>
                     </>
                   ) : null}
+                  {checkoutHoldCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
+                        {checkoutHoldCount} checkout hold
+                        {checkoutHoldCount === 1 ? "" : "s"}
+                      </Link>
+                    </>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -364,6 +387,15 @@ export default async function StaffBookingsPage({
                       </Link>
                     </>
                   ) : null}
+                  {checkoutHoldCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
+                        {checkoutHoldCount} checkout hold
+                        {checkoutHoldCount === 1 ? "" : "s"}
+                      </Link>
+                    </>
+                  ) : null}
                 </>
               )}
               {" · "}
@@ -375,6 +407,12 @@ export default async function StaffBookingsPage({
           </Link>
         </div>
 
+        {error === "release-failed" ? (
+          <p className="form-message form-message--error" role="alert">
+            That checkout hold could not be released. It may already be paid or
+            moved — refresh and try again.
+          </p>
+        ) : null}
         {error === "refund-failed" ? (
           <p className="form-message form-message--error" role="alert">
             The Stripe refund did not go through, so this request is still open
@@ -707,22 +745,30 @@ export default async function StaffBookingsPage({
               </div>
 
               {!isClosedConversation ? (
-                <StaffRequestDecisionPanel
-                  alreadyConfirmed={
-                    selected.status === "confirmed" ||
-                    (selected.status === "needs-reply" && selected.depositPaid)
-                  }
-                  bookingId={selected.databaseId ?? ""}
-                  canManage={canManageSelected}
-                  currency={settings.currency}
-                  depositAmount={selected.depositAmount}
-                  depositPaid={selected.depositPaid}
-                  bankTransferClaimed={selected.bankTransferClaimed}
-                  guestEmail={selected.contact}
-                  guestName={selected.guest}
-                  needsReply={selectedNeedsReply}
-                  practiceMode={isPracticeMode}
-                />
+                selectedCheckoutHold ? (
+                  <StaffCheckoutHoldPanel
+                    bookingId={selected.databaseId ?? ""}
+                    canManage={canManageSelected}
+                    guestName={selected.guest}
+                  />
+                ) : (
+                  <StaffRequestDecisionPanel
+                    alreadyConfirmed={
+                      selected.status === "confirmed" ||
+                      (selected.status === "needs-reply" && selected.depositPaid)
+                    }
+                    bookingId={selected.databaseId ?? ""}
+                    canManage={canManageSelected}
+                    currency={settings.currency}
+                    depositAmount={selected.depositAmount}
+                    depositPaid={selected.depositPaid}
+                    bankTransferClaimed={selected.bankTransferClaimed}
+                    guestEmail={selected.contact}
+                    guestName={selected.guest}
+                    needsReply={selectedNeedsReply}
+                    practiceMode={isPracticeMode}
+                  />
+                )
               ) : (
                 <p className="detail-help">
                   This request is closed. Conversation history is read-only.

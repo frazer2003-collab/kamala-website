@@ -789,6 +789,51 @@ export async function cancelPendingBooking(
     .eq("conversation_token", conversationToken);
 }
 
+export async function releaseCheckoutHoldBooking(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const bookingId = getValue(formData, "booking-id");
+  if (!bookingId) {
+    redirect("/staff");
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: booking } = await supabase
+    .from("booking_requests")
+    .select(
+      "id, status, deposit_paid_at, bank_transfer_claimed_at, stripe_payment_intent_id, discount_code_id",
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (
+    !booking ||
+    booking.status !== "pending_payment" ||
+    booking.deposit_paid_at ||
+    booking.bank_transfer_claimed_at ||
+    booking.stripe_payment_intent_id
+  ) {
+    redirect(
+      `/staff?booking=${encodeURIComponent(bookingId)}&error=release-failed`,
+    );
+  }
+
+  if (booking.discount_code_id) {
+    await releaseDiscountCodeUse(booking.discount_code_id);
+  }
+
+  await supabase
+    .from("booking_requests")
+    .delete()
+    .eq("id", bookingId)
+    .eq("status", "pending_payment");
+
+  revalidatePath("/");
+  revalidatePath("/staff");
+  revalidatePath("/staff/calendar");
+  redirect("/staff");
+}
+
 async function cancelPaymentIntentBestEffort(paymentIntentId: string) {
   if (!hasStripeServerConfig()) {
     return;
