@@ -385,7 +385,7 @@ create table if not exists public.property_settings (
     'Breakfast is included for every confirmed booking request.',
     'Quiet hours begin at 10 pm so early guests and families can rest.'
   ],
-  cancellation_policy text not null default 'Cancel at least 7 days before arrival for a full deposit refund. Later cancellations are reviewed case by case.',
+  cancellation_policy text not null default 'Cancel more than 3 days before check-in for a full refund of your payment (not a partial deposit). Bank and card processing fees are deducted from the refunded amount. Within 3 days of check-in, the first night is non-refundable.',
   privacy_policy text not null default 'We use your contact details only to manage your booking and stay. We do not sell guest data.',
   terms_summary text not null default 'A 50% deposit reserves your room. The remaining balance is due before check-in unless staff confirm another arrangement.',
   line_url text,

@@ -59,7 +59,7 @@ const defaultSettings: PropertySettings = {
   allowPayOnArrival: false,
   houseRules: [...houseRules],
   cancellationPolicy:
-    "Cancel at least 7 days before arrival for a full refund. Later cancellations are reviewed case by case.",
+    "Cancel more than 3 days before check-in for a full refund of your payment (not a partial deposit). Bank and card processing fees are deducted from the refunded amount. Within 3 days of check-in, the first night is non-refundable.",
   privacyPolicy:
     "We use your contact details only to manage your booking and stay. We do not sell guest data.",
   termsSummary:
