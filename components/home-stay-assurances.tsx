@@ -1,6 +1,6 @@
 const GUEST_BENEFITS = [
   { accent: "Best rate", rest: "guarantee", detail: "when you book direct" },
-  { accent: "Flexible", rest: "cancellation", detail: "if your plans shift" },
+  { accent: "Flexible", rest: "cancellation", detail: "100% refund 3+ days before check-in" },
   { accent: "Free", rest: "luggage storage", detail: "before and after your stay" },
   { accent: "Scooter", rest: "rental", detail: "available on site" },
   { accent: "Discounted", rest: "tours", detail: "local picks at guest rates" },
