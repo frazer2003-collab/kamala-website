@@ -53,6 +53,7 @@ type HomeBookingSectionProps = {
   availabilityByRoomId: Record<string, number>;
   bankTransfer: BankTransferDetails;
   currency: PropertyCurrency;
+  hasStayDates?: boolean;
   initialArrival?: string;
   initialDeparture?: string;
   initialLocale?: Locale;
@@ -80,6 +81,7 @@ export function HomeBookingSection({
   allowPayOnArrival,
   addressLine = null,
   bankTransfer,
+  hasStayDates = false,
   initialRoomId,
   initialArrival,
   initialDeparture,
@@ -123,6 +125,10 @@ export function HomeBookingSection({
       Boolean(stripePublishableKey),
     );
 
+    const promptCopy = !hasStayDates
+      ? "Check your dates above, then pick a room — your reservation form opens here. We confirm by email, usually within a day."
+      : "Choose a room type above — guest details and payment come next on this page. We confirm by email, usually within a day.";
+
     return (
       <section
         className="section section--booking booking-panel--prompt"
@@ -130,11 +136,19 @@ export function HomeBookingSection({
         aria-labelledby="booking-prompt-title"
       >
         <h2 id="booking-prompt-title">{buildBookingSectionHeading(addressLine)}</h2>
-        <p>
-          Choose dates, pick a room, then reserve. We confirm by email —
-          usually within a day.
-        </p>
+        <p>{promptCopy}</p>
         <p className="booking-panel__payment-note">{paymentNote}</p>
+        <div className="booking-panel--prompt__actions">
+          {!hasStayDates ? (
+            <a className="button button--primary" href="#dates">
+              Check dates
+            </a>
+          ) : (
+            <a className="button button--primary" href="#rooms">
+              Choose a room
+            </a>
+          )}
+        </div>
       </section>
     );
   }
