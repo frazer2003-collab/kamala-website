@@ -37,9 +37,6 @@ export function GuestTopbar({ settings, current, tone = "default" }: GuestTopbar
         <Link aria-current={current === "contact" ? "page" : undefined} href="/contact">
           Contact
         </Link>
-        <Link aria-current={current === "tours" ? "page" : undefined} href="/tours">
-          Tours
-        </Link>
         {settings.lineUrl ? (
           <a href={settings.lineUrl} rel="noopener noreferrer" target="_blank">
             LINE
