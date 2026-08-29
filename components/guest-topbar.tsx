@@ -30,7 +30,6 @@ export function GuestTopbar({ settings, current, tone = "default" }: GuestTopbar
         <Link aria-current={current === "gallery" ? "page" : undefined} href="/gallery">
           Gallery
         </Link>
-        <Link href="/#rooms">Rooms</Link>
         <Link aria-current={current === "location" ? "page" : undefined} href="/location">
           Location
         </Link>
