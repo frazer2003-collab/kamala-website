@@ -35,6 +35,17 @@
 .home-page .topbar--home .topbar__brand {
   flex: 0 1 auto;
   min-width: 0;
+  max-width: min(100%, 18rem);
+}
+
+.home-page .topbar--home .brand__name {
+  max-width: min(11rem, 38vw);
+}
+
+@media (min-width: 720px) {
+  .home-page .topbar--home .brand__name {
+    max-width: 14rem;
+  }
 }
 
 .home-page .topbar--home .brand__logo {

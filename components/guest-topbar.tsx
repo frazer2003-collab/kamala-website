@@ -27,13 +27,17 @@ export function GuestTopbar({
     >
       <Link className="brand brand--logo" href="/">
         <Image
-          alt={settings.propertyName}
+          alt=""
+          aria-hidden
           className="brand__logo"
           height={47}
           priority
           src="/guesthouse-logo.png"
           width={70}
         />
+        <span className="brand__name">
+          <strong>{settings.propertyName}</strong>
+        </span>
       </Link>
       <nav className="topbar__nav" aria-label="Guest navigation">
         <Link aria-current={current === "gallery" ? "page" : undefined} href="/gallery">
