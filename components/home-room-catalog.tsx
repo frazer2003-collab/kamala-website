@@ -338,7 +338,7 @@ export function HomeRoomCatalog({
             ) : null}
           </div>
           <p className="section__subhead">
-            {buildRoomsSectionSubhead(rooms.length, addressLine)}
+            {buildRoomsSectionSubhead(rooms.length, addressLine, hasStayDates)}
           </p>
           {availabilityVerifyFailed ? (
             <p className="section__verify-note" role="status">

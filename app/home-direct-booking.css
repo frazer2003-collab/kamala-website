@@ -1,0 +1,192 @@
+/* Direct-booking homepage — one counter lane from dates to checkout. */
+
+.home-booking-path {
+  padding-block: clamp(var(--space-5), 3vw, var(--space-6));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.home-booking-path__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-booking-path__step {
+  min-width: 0;
+}
+
+.home-booking-path__link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.home-booking-path__step--current .home-booking-path__link {
+  border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
+  background: var(--color-maroon-wash);
+  color: var(--color-ink);
+}
+
+.home-booking-path__step--complete .home-booking-path__link {
+  color: var(--color-ink);
+}
+
+.home-booking-path__marker {
+  display: grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.home-booking-path__step--current .home-booking-path__marker {
+  background: var(--color-maroon);
+  color: white;
+}
+
+.home-booking-path__step--complete .home-booking-path__marker {
+  background: var(--color-success-wash);
+  color: var(--color-ink);
+}
+
+.home-booking-path__note {
+  margin: var(--space-3) 0 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.home-book-zone {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: clip;
+}
+
+.home-book-zone > .section--listings {
+  padding-inline: clamp(var(--space-5), 4vw, var(--space-8));
+  padding-top: clamp(var(--space-8), 4vw, var(--space-12));
+  padding-bottom: clamp(var(--space-6), 3vw, var(--space-8));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.home-book-zone > .section--booking,
+.home-book-zone > .booking-panel--loading-checkout {
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-surface-muted);
+  box-shadow: none;
+}
+
+.home-book-zone .section--listings .section__heading--compact {
+  margin-bottom: clamp(var(--space-5), 3vw, var(--space-6));
+}
+
+.home-sticky-reserve {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 19;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0.65rem clamp(var(--space-4), 4vw, var(--space-8));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.home-sticky-reserve__spacer {
+  height: 4.25rem;
+}
+
+.home-sticky-reserve__label {
+  margin: 0;
+  min-width: 0;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.home-sticky-reserve__room {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-sticky-reserve__sep {
+  display: none;
+}
+
+.home-sticky-reserve__cta {
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  padding-inline: 1rem;
+  font-size: 0.88rem;
+}
+
+.booking-panel--prompt__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .home-sticky-reserve__label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+
+  .home-sticky-reserve__room {
+    display: inline;
+  }
+
+  .home-sticky-reserve__sep {
+    display: inline;
+    color: var(--color-soft);
+  }
+}
+
+@media (max-width: 640px) {
+  .home-booking-path__list {
+    grid-template-columns: 1fr;
+  }
+
+  .home-sticky-reserve {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-sticky-reserve__cta {
+    width: 100%;
+  }
+}

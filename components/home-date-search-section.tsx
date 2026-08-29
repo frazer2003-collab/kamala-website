@@ -28,7 +28,7 @@ export function HomeDateSearchSection({
       <HomeHeroIntro addressLine={addressLine} propertyName={propertyName} />
       <div className="hero-atmosphere__search">
         <p className="hero-atmosphere__search-label" id="home-dates-label">
-          Check dates for your stay
+          Start your reservation — check dates
         </p>
         <Suspense
           fallback={

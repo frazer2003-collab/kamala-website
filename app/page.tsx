@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getBookingQuote } from "@/app/actions";
 import { GuestTopbar } from "@/components/guest-topbar";
+import { HomeBookingPath } from "@/components/home-booking-path";
 import { HomeBookingSection } from "@/components/home-booking-section";
 import { HomeHeroShell } from "@/components/home-hero-shell";
 import { HomeDateSearchSection } from "@/components/home-date-search-section";
 import { HomeRoomCatalog } from "@/components/home-room-catalog";
 import { HomeStayAssurances } from "@/components/home-stay-assurances";
 import { HomeStayStory } from "@/components/home-stay-story";
+import { HomeStickyReserve } from "@/components/home-sticky-reserve";
 import { SiteFooter } from "@/components/site-footer";
 import { isLocale } from "@/lib/i18n";
 import { HomeStickyDates } from "@/components/home-sticky-dates";
@@ -122,17 +124,47 @@ export default async function Home({
       <div className="site-shell home-body">
         <HomeStayAssurances />
 
-        <HomeRoomCatalog
-          addressLine={settings.addressLine}
-          availabilityByRoomId={availabilityByRoomId}
-          availabilityVerifyFailed={availabilityVerifyFailed}
-          currency={settings.currency}
-          hasStayDates={Boolean(stayDates)}
-          promotions={promotions}
-          quotesByRoomId={quotesByRoomId}
-          rooms={rooms}
-          stayDates={stayDates ?? undefined}
+        <HomeBookingPath
+          hasDates={Boolean(stayDates)}
+          initialRoomId={initialRoomId}
         />
+
+        <div className="home-book-zone">
+          <HomeRoomCatalog
+            addressLine={settings.addressLine}
+            availabilityByRoomId={availabilityByRoomId}
+            availabilityVerifyFailed={availabilityVerifyFailed}
+            currency={settings.currency}
+            hasStayDates={Boolean(stayDates)}
+            promotions={promotions}
+            quotesByRoomId={quotesByRoomId}
+            rooms={rooms}
+            stayDates={stayDates ?? undefined}
+          />
+
+          <HomeBookingSection
+            addressLine={settings.addressLine}
+            allowPayOnArrival={settings.allowPayOnArrival}
+            availabilityByRoomId={availabilityByRoomId}
+            bankTransfer={{
+              promptPayId: settings.promptPayId,
+              bankName: settings.bankName,
+              accountName: settings.accountName,
+              accountNumber: settings.accountNumber,
+            }}
+            currency={settings.currency}
+            hasStayDates={Boolean(stayDates)}
+            initialArrival={stayDates?.arrival}
+            initialDeparture={stayDates?.departure}
+            initialLocale={isLocale(lang) ? lang : "en"}
+            initialRoomId={initialRoomId}
+            promotions={promotions}
+            rooms={rooms}
+            stripePublishableKey={
+              hasStripeClientConfig() ? getStripePublishableKey() : null
+            }
+          />
+        </div>
 
         <HomeStayStory
           addressLine={settings.addressLine}
@@ -143,30 +175,10 @@ export default async function Home({
           propertyTagline={settings.propertyTagline}
         />
 
-        <HomeBookingSection
-          addressLine={settings.addressLine}
-          allowPayOnArrival={settings.allowPayOnArrival}
-          availabilityByRoomId={availabilityByRoomId}
-          bankTransfer={{
-            promptPayId: settings.promptPayId,
-            bankName: settings.bankName,
-            accountName: settings.accountName,
-            accountNumber: settings.accountNumber,
-          }}
-          currency={settings.currency}
-          initialArrival={stayDates?.arrival}
-          initialDeparture={stayDates?.departure}
-          initialLocale={isLocale(lang) ? lang : "en"}
-          initialRoomId={initialRoomId}
-          promotions={promotions}
-          rooms={rooms}
-          stripePublishableKey={
-            hasStripeClientConfig() ? getStripePublishableKey() : null
-          }
-        />
-
         <SiteFooter settings={settings} />
       </div>
+
+      <HomeStickyReserve initialRoomId={initialRoomId} rooms={rooms} />
     </main>
   );
 }

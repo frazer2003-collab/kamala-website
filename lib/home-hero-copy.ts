@@ -140,7 +140,7 @@ export function buildAtmosphereLede(
     tagline && isPropertyTypeTagline(tagline) ? tagline.toLowerCase() : "guesthouse";
 
   if (isCoastalLocation(locationLabel)) {
-    return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms and an easy walk to the beach — book here and we reply to confirm.`;
+    return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms and an easy walk to the beach — reserve on this website.`;
   }
 
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
@@ -148,10 +148,10 @@ export function buildAtmosphereLede(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `A family-run garden guesthouse among hotels in Chiang Mai Old City — book here and we reply to confirm your stay.`;
+    return `A family-run garden guesthouse among hotels in Chiang Mai Old City — reserve on this website.`;
   }
 
-  return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms — book here and we reply to confirm.`;
+  return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms — reserve on this website.`;
 }
 
 export function buildStayStoryHeading(
@@ -212,18 +212,22 @@ export function buildMetadataNearbyNote(
 export function buildRoomsSectionSubhead(
   roomCount: number,
   addressLine: string | null = null,
+  hasStayDates = false,
 ): string {
   const types = roomCount === 1 ? "1 room type" : `${roomCount} room types`;
+  let location = types;
 
   if (addressLine && isNearThaPhaeGate(addressLine)) {
-    return `${types} near ${THAE_PHAE_GATE_NAME}`;
+    location = `${types} near ${THAE_PHAE_GATE_NAME}`;
+  } else if (addressLine && /chiang\s*mai/i.test(addressLine)) {
+    location = `${types} in Chiang Mai Old City`;
   }
 
-  if (addressLine && /chiang\s*mai/i.test(addressLine)) {
-    return `${types} in Chiang Mai Old City`;
+  if (hasStayDates) {
+    return `${location} — pick a room; the reservation form opens below.`;
   }
 
-  return types;
+  return location;
 }
 
 export function buildStayStoryCheckInDetails(
@@ -237,7 +241,7 @@ export function buildStayStoryCheckInDetails(
     ? checkInRule.trim().replace(/\.+$/, "")
     : `Check-in is from ${checkInFrom} to ${checkInUntil}`;
 
-  return `${checkInLine}. After you reserve a room, we reply by email to confirm your stay and send arrival details.`;
+  return `${checkInLine}. After you reserve a room, we send arrival details.`;
 }
 
 export function buildStayStoryAtmosphereLine(locationLabel: string): string {
