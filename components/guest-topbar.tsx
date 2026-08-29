@@ -1,14 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
+import { GuestTopbarHome } from "@/components/guest-topbar-home";
 import type { PropertySettings } from "@/lib/property-settings";
 
 type GuestTopbarProps = {
   settings: PropertySettings;
   current?: "home" | "gallery" | "tours" | "location" | "contact";
   tone?: "default" | "on-dark";
+  variant?: "default" | "home";
 };
 
-export function GuestTopbar({ settings, current, tone = "default" }: GuestTopbarProps) {
+export function GuestTopbar({
+  settings,
+  current,
+  tone = "default",
+  variant = "default",
+}: GuestTopbarProps) {
+  if (variant === "home") {
+    return <GuestTopbarHome settings={settings} />;
+  }
+
   return (
     <header
       className={tone === "on-dark" ? "topbar topbar--on-dark" : "topbar"}

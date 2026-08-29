@@ -7,6 +7,7 @@ import "./globals.css";
 import "./home-landing.css";
 import "./home-direct-booking.css";
 import "./home-overdrive.css";
+import "./home-topbar.css";
 import "./room-summary.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
