@@ -20,7 +20,11 @@ import {
   getConfirmedBookingById,
   getConfirmedBookings,
   getStaffBookingKey,
+  getStaffBookingRequests,
   isInventoryHoldBooking,
+  openRequestsHref,
+  openRequestsWarningCopy,
+  summarizeOpenRequests,
 } from "@/lib/booking-requests";
 import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS } from "@/lib/stay-dates";
 import {
@@ -140,6 +144,7 @@ export default async function StaffCalendarPage({
     settings,
     promotions,
     roomUnitsResult,
+    openRequests,
   ] = await Promise.all([
     Promise.all(
       timelineRange.months.map((entry) =>
@@ -165,6 +170,7 @@ export default async function StaffCalendarPage({
     getPropertySettings(),
     getStaffRoomPromotions(),
     getStaffRoomUnits(),
+    getStaffBookingRequests(),
   ]);
 
   const allPartsSupabase = <T extends { source: string }>(parts: T[]) =>
@@ -465,6 +471,9 @@ export default async function StaffCalendarPage({
   // One live region only: page flash when no dialog; panel alert when a dialog is open.
   const pageFormError = dialogOpen ? null : formErrorMessage;
   const panelFormError = dialogOpen ? formErrorMessage : null;
+  const openRequestsSummary = summarizeOpenRequests(openRequests.bookings);
+  const openRequestsWarning = openRequestsWarningCopy(openRequestsSummary);
+  const openRequestsLink = openRequestsHref(openRequestsSummary);
 
   return (
     <StaffShell current="calendar">
@@ -477,6 +486,15 @@ export default async function StaffCalendarPage({
             Requests
           </Link>
         </div>
+
+        {openRequestsWarning ? (
+          <p className="form-message form-message--warning" role="status">
+            {openRequestsWarning}{" "}
+            <Link className="staff-header__quiet-link" href={openRequestsLink}>
+              Open Requests
+            </Link>
+          </p>
+        ) : null}
 
         {!canWriteCalendar ? (
           <p className="form-message form-message--setup" role="status">
