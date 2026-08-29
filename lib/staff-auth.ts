@@ -37,7 +37,7 @@ function getSessionSecret() {
 }
 
 function getAdminCredentials() {
-  const username = process.env.STAFF_ADMIN_USERNAME || "admin";
+  const username = process.env.STAFF_ADMIN_USERNAME || "greencurry";
   const password = process.env.STAFF_ADMIN_PASSWORD;
 
   if (!password) {
