@@ -60,22 +60,29 @@ function calendarRoomHref(fromIso: string, toIso: string, roomId: string) {
 function FinancePageHeader({
   fromIso,
   monthKey,
+  rangeLabel,
   toIso,
 }: {
   fromIso: string;
   monthKey: string;
+  rangeLabel?: string;
   toIso: string;
 }) {
   return (
-    <div className="staff-header staff-header--compact staff-sold__header">
+    <header className="staff-header staff-header--compact staff-sold__header">
       <div className="staff-sold__intro">
         <h1 id="staff-sold-title">Finance</h1>
         <p>
           Nights and money sold for the selected dates — website stays and
           quoted channel nights.
         </p>
+        {rangeLabel ? (
+          <p className="staff-sold__range-label">
+            Showing <strong>{rangeLabel}</strong>
+          </p>
+        ) : null}
       </div>
-      <div className="staff-sold__dates">
+      <div className="staff-sold__dates-band">
         <StaffCalendarMonthPicker
           fromIso={fromIso}
           monthKey={monthKey}
@@ -88,7 +95,49 @@ function FinancePageHeader({
           toIso={toIso}
         />
       </div>
-    </div>
+    </header>
+  );
+}
+
+type FinanceRangeOverviewProps = {
+  currency: string;
+  report: ReturnType<typeof buildStaffInsightsReport>;
+};
+
+function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
+  return (
+    <aside className="staff-sold__aside" aria-label="Range overview">
+      <div className="staff-sold__summary" role="region" aria-label="Range totals">
+        <h2 className="staff-sold__summary-title">Range totals</h2>
+        <p className="staff-sold__summary-line">
+          <span>
+            {nightLabel(report.totals.nightsSold)}
+            <span aria-hidden="true"> · </span>
+            {stayLabel(report.totals.stayCount)}
+          </span>
+          {report.totals.estimatedRevenue > 0 ? (
+            <span>
+              {formatMoneySuffix(report.totals.estimatedRevenue, currency)}
+            </span>
+          ) : null}
+        </p>
+        {report.totals.averageNightlyRate !== null ? (
+          <p className="staff-sold__summary-avg">
+            Avg nightly rate{" "}
+            <strong>
+              {formatMoneySuffix(report.totals.averageNightlyRate, currency)}
+            </strong>
+          </p>
+        ) : null}
+        <p className="staff-sold__note">{report.revenueNote}</p>
+      </div>
+
+      <FinanceSoldPie
+        nightsAvailable={report.totals.nightsAvailable}
+        nightsOverCapacity={report.totals.nightsOverCapacity}
+        nightsSold={report.totals.nightsSold}
+      />
+    </aside>
   );
 }
 
@@ -167,122 +216,57 @@ export default async function StaffSoldPage({
         className="staff-main staff-main--sold"
         aria-labelledby="staff-sold-title"
       >
-        <FinancePageHeader fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
+        <FinancePageHeader
+          fromIso={fromIso}
+          monthKey={monthKey}
+          rangeLabel={report.rangeLabel}
+          toIso={toIso}
+        />
 
-        <>
-          {warnings.map((message) => (
-            <p
-              className="form-message form-message--warning"
-              key={message}
-              role="status"
+        {warnings.map((message) => (
+          <p
+            className="form-message form-message--warning"
+            key={message}
+            role="status"
+          >
+            {message} Some numbers may be missing — try again in a moment.
+          </p>
+        ))}
+
+        {noRoomsConfigured ? (
+          <p className="staff-sold__empty" role="status">
+            No room types yet.{" "}
+            <Link href="/staff/settings/rooms">Add rooms in Settings</Link> before
+            you can see what sold.
+          </p>
+        ) : (
+          <div className="staff-sold__body">
+            <FinanceRangeOverview currency={currency} report={report} />
+
+            <div
+              className="staff-sold__ledger"
+              role="region"
+              aria-label="Sold by room"
             >
-              {message} Some numbers may be missing — try again in a moment.
-            </p>
-          ))}
-
-          {noRoomsConfigured ? (
-              <p className="staff-sold__empty" role="status">
-                No room types yet.{" "}
-                <Link href="/staff/settings/rooms">Add rooms in Settings</Link>{" "}
-                before you can see what sold.
-              </p>
-            ) : (
-              <div className="staff-sold__body">
-                <div
-                  className="staff-sold__sold"
-                  role="region"
-                  aria-label="Sold by room"
+              {soldRooms.length === 0 ? (
+                <p className="staff-sold__empty" role="status">
+                  Nothing sold in {report.rangeLabel} yet. Confirmed stays that
+                  land in this range will appear here.
+                </p>
+              ) : (
+                <ol
+                  className="staff-sold__list"
+                  aria-label="Rooms ranked by nights sold"
+                  role="list"
                 >
-                {soldRooms.length === 0 ? (
-                    <p className="staff-sold__empty" role="status">
-                      Nothing sold in {report.rangeLabel} yet. Confirmed stays
-                      that land in this range will appear here.
-                    </p>
-                  ) : (
-                    <ol
-                      className="staff-sold__list"
-                      aria-label="Rooms ranked by nights sold"
-                      role="list"
-                    >
-                      {soldRooms.map((row) => {
-                        const caption = moneyCaption(row);
-                        return (
-                          <li className="staff-sold__row" key={row.roomId}>
-                            <div className="staff-sold__row-main">
-                              <h3>
-                                <Link
-                                  className="staff-sold__room-link"
-                                  href={calendarRoomHref(
-                                    fromIso,
-                                    toIso,
-                                    row.roomId,
-                                  )}
-                                >
-                                  {row.roomName}
-                                  <span className="sr-only">
-                                    {` (open on calendar for ${report.rangeLabel})`}
-                                  </span>
-                                </Link>
-                              </h3>
-                              <p className="staff-sold__row-stats">
-                                <span>{nightLabel(row.nightsSold)}</span>
-                                <span aria-hidden="true">·</span>
-                                <span>{stayLabel(row.stayCount)}</span>
-                                {row.soldPercent !== null ? (
-                                  <>
-                                    <span aria-hidden="true">·</span>
-                                    <span>{row.soldPercent}% sold</span>
-                                  </>
-                                ) : null}
-                                {row.nightsOverCapacity > 0 ? (
-                                  <>
-                                    <span aria-hidden="true">·</span>
-                                    <span>
-                                      {row.nightsOverCapacity} over capacity
-                                    </span>
-                                  </>
-                                ) : null}
-                              </p>
-                              {row.sources.length > 0 ? (
-                                <p className="staff-sold__sources">
-                                  {sourceLine(row.sources)}
-                                </p>
-                              ) : null}
-                            </div>
-                            <div className="staff-sold__row-money">
-                              {row.estimatedRevenue > 0 && caption ? (
-                                <p>
-                                  <strong>
-                                    {formatMoneySuffix(
-                                      row.estimatedRevenue,
-                                      currency,
-                                    )}
-                                  </strong>
-                                  <span>{caption}</span>
-                                </p>
-                              ) : (
-                                <p className="staff-sold__row-money--quiet">
-                                  <span>No stay total yet</span>
-                                </p>
-                              )}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  )}
-
-                  {soldRooms.length > 0 && quietRooms.length > 0 ? (
-                    <div
-                      className="staff-sold__quiet"
-                      aria-labelledby="staff-sold-quiet-title"
-                    >
-                      <h2 id="staff-sold-quiet-title">Didn’t sell in this range</h2>
-                      <ul role="list">
-                        {quietRooms.map((row) => (
-                          <li key={row.roomId}>
+                  {soldRooms.map((row) => {
+                    const caption = moneyCaption(row);
+                    return (
+                      <li className="staff-sold__row" key={row.roomId}>
+                        <div className="staff-sold__row-main">
+                          <h3>
                             <Link
-                              className="staff-sold__quiet-link"
+                              className="staff-sold__room-link"
                               href={calendarRoomHref(fromIso, toIso, row.roomId)}
                             >
                               {row.roomName}
@@ -290,55 +274,76 @@ export default async function StaffSoldPage({
                                 {` (open on calendar for ${report.rangeLabel})`}
                               </span>
                             </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                </div>
+                          </h3>
+                          <p className="staff-sold__row-stats">
+                            <span>{nightLabel(row.nightsSold)}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{stayLabel(row.stayCount)}</span>
+                            {row.soldPercent !== null ? (
+                              <>
+                                <span aria-hidden="true">·</span>
+                                <span>{row.soldPercent}% sold</span>
+                              </>
+                            ) : null}
+                            {row.nightsOverCapacity > 0 ? (
+                              <>
+                                <span aria-hidden="true">·</span>
+                                <span>{row.nightsOverCapacity} over capacity</span>
+                              </>
+                            ) : null}
+                          </p>
+                          {row.sources.length > 0 ? (
+                            <p className="staff-sold__sources">
+                              {sourceLine(row.sources)}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="staff-sold__row-money">
+                          {row.estimatedRevenue > 0 && caption ? (
+                            <p>
+                              <strong>
+                                {formatMoneySuffix(row.estimatedRevenue, currency)}
+                              </strong>
+                              <span>{caption}</span>
+                            </p>
+                          ) : (
+                            <p className="staff-sold__row-money--quiet">
+                              <span>No stay total yet</span>
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
 
-                <FinanceSoldPie
-                  nightsAvailable={report.totals.nightsAvailable}
-                  nightsOverCapacity={report.totals.nightsOverCapacity}
-                  nightsSold={report.totals.nightsSold}
-                />
-
+              {soldRooms.length > 0 && quietRooms.length > 0 ? (
                 <div
-                  className="staff-sold__summary"
-                  role="region"
-                  aria-label="Range totals"
+                  className="staff-sold__quiet"
+                  aria-labelledby="staff-sold-quiet-title"
                 >
-                  <p className="staff-sold__summary-line">
-                    <span>
-                      {nightLabel(report.totals.nightsSold)}
-                      <span aria-hidden="true"> · </span>
-                      {stayLabel(report.totals.stayCount)}
-                    </span>
-                    {report.totals.estimatedRevenue > 0 ? (
-                      <span>
-                        {formatMoneySuffix(
-                          report.totals.estimatedRevenue,
-                          currency,
-                        )}
-                      </span>
-                    ) : null}
-                  </p>
-                  {report.totals.averageNightlyRate !== null ? (
-                    <p className="staff-sold__summary-avg">
-                      Avg nightly rate{" "}
-                      <strong>
-                        {formatMoneySuffix(
-                          report.totals.averageNightlyRate,
-                          currency,
-                        )}
-                      </strong>
-                    </p>
-                  ) : null}
-                  <p className="staff-sold__note">{report.revenueNote}</p>
+                  <h2 id="staff-sold-quiet-title">Didn’t sell in this range</h2>
+                  <ul role="list">
+                    {quietRooms.map((row) => (
+                      <li key={row.roomId}>
+                        <Link
+                          className="staff-sold__quiet-link"
+                          href={calendarRoomHref(fromIso, toIso, row.roomId)}
+                        >
+                          {row.roomName}
+                          <span className="sr-only">
+                            {` (open on calendar for ${report.rangeLabel})`}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-            )}
-        </>
+              ) : null}
+            </div>
+          </div>
+        )}
       </section>
     </StaffShell>
   );
