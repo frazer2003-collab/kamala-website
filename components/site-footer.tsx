@@ -27,14 +27,11 @@ export function SiteFooter({ settings }: { settings: PropertySettings }) {
             </p>
           ) : null}
         </div>
-        <nav aria-label="Guest pages and legal" className="site-footer__nav">
+        <nav aria-label="Guest pages" className="site-footer__nav">
           <Link href="/gallery">Gallery</Link>
           <Link href="/#rooms">Rooms</Link>
           <Link href="/location">Location</Link>
-          <Link href="/tours">Tours</Link>
           <Link href="/contact">Contact</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
           <Link href="/cancellation">Cancellation</Link>
           {settings.lineUrl ? (
             <a href={settings.lineUrl} rel="noopener noreferrer" target="_blank">
