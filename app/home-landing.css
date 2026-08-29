@@ -1,5 +1,18 @@
 /* Homepage trust polish — overrides guest landing surfaces only. */
 
+.brand--logo {
+  gap: 0;
+  padding: 0.15rem 0;
+}
+
+.brand__logo {
+  display: block;
+  width: auto;
+  height: 2.35rem;
+  max-width: min(11.5rem, 44vw);
+  object-fit: contain;
+}
+
 .home-stay-assurances {
   padding-block: clamp(var(--space-6), 4vw, var(--space-8));
   border-bottom: 1px solid color-mix(in oklch, var(--color-maroon) 14%, var(--color-border));
