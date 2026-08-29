@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getBookingQuote } from "@/app/actions";
 import { GuestTopbar } from "@/components/guest-topbar";
-import { HomeBookingPath } from "@/components/home-booking-path";
 import { HomeBookingSection } from "@/components/home-booking-section";
 import { HomeHeroShell } from "@/components/home-hero-shell";
 import { HomeDateSearchSection } from "@/components/home-date-search-section";
@@ -123,11 +122,6 @@ export default async function Home({
 
       <div className="site-shell home-body">
         <HomeStayAssurances />
-
-        <HomeBookingPath
-          hasDates={Boolean(stayDates)}
-          initialRoomId={initialRoomId}
-        />
 
         <div className="home-book-zone">
           <HomeRoomCatalog
