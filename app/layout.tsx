@@ -6,6 +6,7 @@ import { buildSiteMetadataCopy, getMetadataBase } from "@/lib/site-metadata";
 import "./globals.css";
 import "./home-landing.css";
 import "./home-direct-booking.css";
+import "./home-overdrive.css";
 import "./room-summary.css";
 
 const plusJakarta = Plus_Jakarta_Sans({

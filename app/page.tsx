@@ -97,7 +97,7 @@ export default async function Home({
   const jsonLd = websiteJsonLd ? [lodgingJsonLd, websiteJsonLd] : lodgingJsonLd;
 
   return (
-    <main className="guest-site">
+    <main className="guest-site home-page">
       <HomePageJsonLd data={jsonLd} />
       <HomeHeroShell heroImageUrl={resolveHeroImageUrl(settings.heroImageUrl)}>
         <GuestTopbar current="home" settings={settings} />
