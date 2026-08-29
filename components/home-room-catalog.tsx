@@ -188,12 +188,6 @@ function RoomListingCard({
         Fully booked
       </button>
     );
-  } else if (bookable) {
-    primaryControl = (
-      <a className="button button--secondary listing-card__reserve" href="#dates">
-        Check dates
-      </a>
-    );
   }
 
   const actionControls = (
