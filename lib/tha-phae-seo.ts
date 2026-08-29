@@ -85,7 +85,7 @@ export function buildThaPhaeMetaDescription(propertyName: string): string {
 }
 
 export function buildThaPhaeHeroLede(): string {
-  return `A family-run garden guesthouse among hotels in Chiang Mai Old City. Reserve directly on this website. We are on Tha Phae Road Soi 6 — just across from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} a two-minute walk away.`;
+  return `A family-run garden guesthouse among hotels in Chiang Mai Old City. Reserve directly on this website. We are in front of ${THAE_PHAE_GATE_NAME} — just across from the Sunday Walking Street.`;
 }
 
 export function buildThaPhaeStayStoryLede(propertyName: string): string {
