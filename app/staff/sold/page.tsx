@@ -186,9 +186,13 @@ export default async function StaffSoldPage({
                 <Link href="/staff/settings/rooms">Add rooms in Settings</Link>{" "}
                 before you can see what sold.
               </p>
-          ) : (
-            <div className="staff-sold__body">
-              <div className="staff-sold__sold">
+            ) : (
+              <div className="staff-sold__body">
+                <div
+                  className="staff-sold__sold"
+                  role="region"
+                  aria-label="Sold by room"
+                >
                 {soldRooms.length === 0 ? (
                     <p className="staff-sold__empty" role="status">
                       Nothing sold in {report.rangeLabel} yet. Confirmed stays
