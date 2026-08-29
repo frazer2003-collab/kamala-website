@@ -126,8 +126,8 @@ export function HomeBookingSection({
     );
 
     const promptCopy = !hasStayDates
-      ? "Check your dates above, then pick a room — your reservation form opens here. We confirm by email, usually within a day."
-      : "Choose a room type above — guest details and payment come next on this page. We confirm by email, usually within a day.";
+      ? "Check your dates above, then pick a room — your reservation form opens here."
+      : "Choose a room type above — guest details and payment come next on this page.";
 
     return (
       <section

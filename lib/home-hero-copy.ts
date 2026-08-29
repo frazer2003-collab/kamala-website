@@ -140,7 +140,7 @@ export function buildAtmosphereLede(
     tagline && isPropertyTypeTagline(tagline) ? tagline.toLowerCase() : "guesthouse";
 
   if (isCoastalLocation(locationLabel)) {
-    return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms and an easy walk to the beach — reserve on this website and we confirm by email.`;
+    return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms and an easy walk to the beach — reserve on this website.`;
   }
 
   if (isChiangMaiLocation(locationLabel) && isNearThaPhaeGate(addressLine)) {
@@ -148,10 +148,10 @@ export function buildAtmosphereLede(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `A family-run garden guesthouse among hotels in Chiang Mai Old City — reserve on this website and we confirm by email.`;
+    return `A family-run garden guesthouse among hotels in Chiang Mai Old City — reserve on this website.`;
   }
 
-  return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms — reserve on this website and we confirm by email.`;
+  return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms — reserve on this website.`;
 }
 
 export function buildStayStoryHeading(
@@ -241,7 +241,7 @@ export function buildStayStoryCheckInDetails(
     ? checkInRule.trim().replace(/\.+$/, "")
     : `Check-in is from ${checkInFrom} to ${checkInUntil}`;
 
-  return `${checkInLine}. After you reserve a room, we reply by email to confirm your stay and send arrival details.`;
+  return `${checkInLine}. After you reserve a room, we send arrival details.`;
 }
 
 export function buildStayStoryAtmosphereLine(locationLabel: string): string {
