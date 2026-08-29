@@ -146,7 +146,6 @@ export default async function StaffReservationsPage({
                   <input
                     defaultValue={fromIso}
                     id="reservations-from"
-                    max={toIso}
                     name="from"
                     required
                     type="date"
@@ -157,7 +156,6 @@ export default async function StaffReservationsPage({
                   <input
                     defaultValue={toIso}
                     id="reservations-to"
-                    min={fromIso}
                     name="to"
                     required
                     type="date"
