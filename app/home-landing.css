@@ -1,8 +1,24 @@
 /* Homepage trust polish — overrides guest landing surfaces only. */
 
 .brand--logo {
-  gap: 0;
+  gap: var(--space-3);
   padding: 0.15rem 0;
+  min-width: 0;
+}
+
+.brand__name {
+  min-width: 0;
+  max-width: min(14rem, 42vw);
+}
+
+.brand__name strong {
+  display: block;
+  color: var(--color-ink);
+  font-size: clamp(0.82rem, 2.4vw, 0.98rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-wrap: balance;
 }
 
 .brand__logo {

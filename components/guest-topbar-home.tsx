@@ -146,13 +146,17 @@ export function GuestTopbarHome({ settings }: GuestTopbarHomeProps) {
           onClick={closeMenu}
         >
           <Image
-            alt={settings.propertyName}
+            alt=""
+            aria-hidden
             className="brand__logo"
             height={47}
             priority
             src="/guesthouse-logo.png"
             width={70}
           />
+          <span className="brand__name">
+            <strong>{settings.propertyName}</strong>
+          </span>
         </Link>
 
         <div className="topbar__mobile-actions">
