@@ -6,36 +6,41 @@
 }
 
 .home-stay-assurances-list {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.2rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3) var(--space-5);
   margin: 0;
   padding: 0;
   list-style: none;
+  line-height: 1.4;
+}
+
+.home-stay-assurances-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.home-stay-assurances-phrase {
   color: var(--color-ink);
-  font-size: 0.88rem;
-  font-weight: 650;
-  line-height: 1.45;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
 }
 
-.home-stay-assurances-list li:not(:last-child)::after {
-  content: "·";
-  margin-inline: 0.65rem;
-  color: var(--color-soft);
+.home-stay-assurances-detail {
+  color: var(--color-muted);
+  font-size: 0.82rem;
   font-weight: 500;
+  line-height: 1.35;
 }
 
-@media (max-width: 640px) {
+@media (min-width: 900px) {
   .home-stay-assurances-list {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--space-2) var(--space-4);
-  }
-
-  .home-stay-assurances-list li:not(:last-child)::after {
-    content: none;
-    margin: 0;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-4);
   }
 }
 
