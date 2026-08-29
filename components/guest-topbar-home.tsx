@@ -156,9 +156,6 @@ export function GuestTopbarHome({ settings }: GuestTopbarHomeProps) {
         </Link>
 
         <div className="topbar__mobile-actions">
-          <a className="button button--primary topbar__cta topbar__cta--mobile" href="#dates">
-            Check dates
-          </a>
           <button
             aria-controls={navId}
             aria-expanded={menuOpen}
@@ -221,9 +218,6 @@ export function GuestTopbarHome({ settings }: GuestTopbarHomeProps) {
           <div aria-hidden="true" className="topbar__nav-divider" />
 
           <div className="topbar__nav-secondary">
-            <a className="button button--primary topbar__cta topbar__cta--desktop" href="#dates">
-              Check dates
-            </a>
             {settings.lineUrl ? (
               <a
                 className="topbar__nav-external"
