@@ -3,21 +3,10 @@ import { CalendarDateStrip } from "@/components/calendar-date-strip";
 import { FinanceSoldPie } from "@/components/finance-revenue-pie";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffShell } from "@/components/staff-shell";
-import {
-  monthsOverlappingDateRange,
-  parseStaffTimelineRange,
-} from "@/lib/calendar";
-import { getConfirmedBookingsOverlappingRange } from "@/lib/booking-requests";
+import { parseStaffTimelineRange } from "@/lib/calendar";
 import { formatMoneySuffix } from "@/lib/currency";
-import { getPropertySettings } from "@/lib/property-settings";
-import {
-  buildRateLookup,
-  getRoomDayRatesForMonth,
-} from "@/lib/room-day-rates";
-import { getChannelBlocksOverlappingRange, getStaffClosureBlocksOverlappingRange } from "@/lib/room-blocks";
-import { getStaffRoomPromotions } from "@/lib/room-promotions";
-import { getStaffRooms } from "@/lib/rooms";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
+import { loadStaffFinancePageData } from "@/lib/staff-finance-data";
 import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
 import "@/app/staff-sold.css";
@@ -68,6 +57,41 @@ function calendarRoomHref(fromIso: string, toIso: string, roomId: string) {
   return `/staff/calendar?${params.toString()}`;
 }
 
+function FinancePageHeader({
+  fromIso,
+  monthKey,
+  toIso,
+}: {
+  fromIso: string;
+  monthKey: string;
+  toIso: string;
+}) {
+  return (
+    <div className="staff-header staff-header--compact staff-sold__header">
+      <div className="staff-sold__intro">
+        <h1 id="staff-sold-title">Finance</h1>
+        <p>
+          Nights and money sold for the selected dates — website stays and
+          quoted channel nights.
+        </p>
+      </div>
+      <div className="staff-sold__dates">
+        <StaffCalendarMonthPicker
+          fromIso={fromIso}
+          monthKey={monthKey}
+          pathname="/staff/sold"
+          toIso={toIso}
+        />
+        <CalendarDateStrip
+          fromIso={fromIso}
+          pathname="/staff/sold"
+          toIso={toIso}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default async function StaffSoldPage({
   searchParams,
 }: {
@@ -84,9 +108,25 @@ export default async function StaffSoldPage({
   const monthKey = timelineRange.monthKey;
   const fromIso = timelineRange.fromIso;
   const toIso = timelineRange.toIso;
-  const overlappingMonths = monthsOverlappingDateRange(fromIso, toIso);
 
-  const [
+  if (!hasStaffSupabaseConfig()) {
+    return (
+      <StaffShell current="sold">
+        <section
+          className="staff-main staff-main--sold"
+          aria-labelledby="staff-sold-title"
+        >
+          <FinancePageHeader fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
+          <p className="form-message form-message--setup" role="status">
+            Booking data isn’t connected yet. Finish Supabase setup, then reload
+            this page.
+          </p>
+        </section>
+      </StaffShell>
+    );
+  }
+
+  const {
     rooms,
     bookingsResult,
     channelsResult,
@@ -94,21 +134,8 @@ export default async function StaffSoldPage({
     settings,
     promotions,
     dayRatesParts,
-    supabaseReady,
-  ] = await Promise.all([
-    getStaffRooms(),
-    getConfirmedBookingsOverlappingRange(fromIso, toIso),
-    getChannelBlocksOverlappingRange(fromIso, toIso),
-    getStaffClosureBlocksOverlappingRange(fromIso, toIso),
-    getPropertySettings(),
-    getStaffRoomPromotions(),
-    Promise.all(
-      overlappingMonths.map((entry) =>
-        getRoomDayRatesForMonth({ year: entry.year, month: entry.month }),
-      ),
-    ),
-    Promise.resolve(hasStaffSupabaseConfig()),
-  ]);
+    rateOverrides,
+  } = await loadStaffFinancePageData(fromIso, toIso);
 
   const warnings = [
     bookingsResult.error,
@@ -127,7 +154,7 @@ export default async function StaffSoldPage({
     channelBlocks: channelsResult.blocks,
     monthBlocks: closuresResult.blocks,
     promotions,
-    rateOverrides: buildRateLookup(dayRatesParts.flatMap((part) => part.entries)),
+    rateOverrides,
   });
   const currency = settings.currency;
   const soldRooms = report.rooms.filter((row) => row.nightsSold > 0);
@@ -140,56 +167,29 @@ export default async function StaffSoldPage({
         className="staff-main staff-main--sold"
         aria-labelledby="staff-sold-title"
       >
-        <div className="staff-header staff-header--compact staff-sold__header">
-          <div className="staff-sold__intro">
-            <h1 id="staff-sold-title">Finance</h1>
-            <p>
-              Nights and money sold for the selected dates — website stays and
-              quoted channel nights.
+        <FinancePageHeader fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
+
+        <>
+          {warnings.map((message) => (
+            <p
+              className="form-message form-message--warning"
+              key={message}
+              role="status"
+            >
+              {message} Some numbers may be missing — try again in a moment.
             </p>
-          </div>
-          <div className="staff-sold__dates">
-            <StaffCalendarMonthPicker
-              fromIso={fromIso}
-              monthKey={monthKey}
-              pathname="/staff/sold"
-              toIso={toIso}
-            />
-            <CalendarDateStrip
-              fromIso={fromIso}
-              pathname="/staff/sold"
-              toIso={toIso}
-            />
-          </div>
-        </div>
+          ))}
 
-        {!supabaseReady ? (
-          <p className="form-message form-message--setup" role="status">
-            Booking data isn’t connected yet. Finish Supabase setup, then reload
-            this page.
-          </p>
-        ) : (
-          <>
-            {warnings.map((message) => (
-              <p
-                className="form-message form-message--warning"
-                key={message}
-                role="status"
-              >
-                {message} Some numbers may be missing — try again in a moment.
-              </p>
-            ))}
-
-            {noRoomsConfigured ? (
+          {noRoomsConfigured ? (
               <p className="staff-sold__empty" role="status">
                 No room types yet.{" "}
                 <Link href="/staff/settings/rooms">Add rooms in Settings</Link>{" "}
                 before you can see what sold.
               </p>
-            ) : (
-              <div className="staff-sold__body">
-                <div className="staff-sold__sold">
-                  {soldRooms.length === 0 ? (
+          ) : (
+            <div className="staff-sold__body">
+              <div className="staff-sold__sold">
+                {soldRooms.length === 0 ? (
                     <p className="staff-sold__empty" role="status">
                       Nothing sold in {report.rangeLabel} yet. Confirmed stays
                       that land in this range will appear here.
@@ -205,7 +205,7 @@ export default async function StaffSoldPage({
                         return (
                           <li className="staff-sold__row" key={row.roomId}>
                             <div className="staff-sold__row-main">
-                              <h2>
+                              <h3>
                                 <Link
                                   className="staff-sold__room-link"
                                   href={calendarRoomHref(
@@ -219,7 +219,7 @@ export default async function StaffSoldPage({
                                     {` (open on calendar for ${report.rangeLabel})`}
                                   </span>
                                 </Link>
-                              </h2>
+                              </h3>
                               <p className="staff-sold__row-stats">
                                 <span>{nightLabel(row.nightsSold)}</span>
                                 <span aria-hidden="true">·</span>
@@ -269,8 +269,11 @@ export default async function StaffSoldPage({
                   )}
 
                   {soldRooms.length > 0 && quietRooms.length > 0 ? (
-                    <div className="staff-sold__quiet">
-                      <h2>Didn’t sell in this range</h2>
+                    <div
+                      className="staff-sold__quiet"
+                      aria-labelledby="staff-sold-quiet-title"
+                    >
+                      <h2 id="staff-sold-quiet-title">Didn’t sell in this range</h2>
                       <ul role="list">
                         {quietRooms.map((row) => (
                           <li key={row.roomId}>
@@ -331,8 +334,7 @@ export default async function StaffSoldPage({
                 </div>
               </div>
             )}
-          </>
-        )}
+        </>
       </section>
     </StaffShell>
   );
