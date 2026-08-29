@@ -157,6 +157,84 @@ export function isPendingBooking(booking: StaffBooking) {
   );
 }
 
+export type OpenRequestsSummary = {
+  total: number;
+  needsReply: number;
+  checkoutHolds: number;
+  awaitingPayment: number;
+  newRequests: number;
+};
+
+export function summarizeOpenRequests(bookings: StaffBooking[]): OpenRequestsSummary {
+  let needsReply = 0;
+  let checkoutHolds = 0;
+  let awaitingPayment = 0;
+  let newRequests = 0;
+
+  for (const booking of bookings) {
+    if (booking.status === "needs-reply") {
+      needsReply += 1;
+    } else if (isAbandonedCheckoutHold(booking)) {
+      checkoutHolds += 1;
+    } else if (booking.status === "awaiting") {
+      awaitingPayment += 1;
+    } else if (booking.status === "new") {
+      newRequests += 1;
+    }
+  }
+
+  return {
+    total: bookings.length,
+    needsReply,
+    checkoutHolds,
+    awaitingPayment,
+    newRequests,
+  };
+}
+
+export function openRequestsHref(summary: OpenRequestsSummary) {
+  if (summary.needsReply > 0) {
+    return "/staff?filter=needs-reply&view=inbox";
+  }
+
+  if (summary.awaitingPayment > 0) {
+    return "/staff?filter=awaiting&view=inbox";
+  }
+
+  return "/staff?view=inbox";
+}
+
+export function openRequestsWarningCopy(summary: OpenRequestsSummary) {
+  if (summary.total === 0) {
+    return null;
+  }
+
+  const parts: string[] = [];
+  if (summary.needsReply > 0) {
+    parts.push(
+      `${summary.needsReply} waiting for a reply`,
+    );
+  }
+  if (summary.checkoutHolds > 0) {
+    parts.push(
+      `${summary.checkoutHolds} checkout hold${summary.checkoutHolds === 1 ? "" : "s"}`,
+    );
+  }
+  if (summary.awaitingPayment > 0) {
+    parts.push(
+      `${summary.awaitingPayment} payment review`,
+    );
+  }
+  if (summary.newRequests > 0) {
+    parts.push(`${summary.newRequests} new`);
+  }
+
+  const detail = parts.length > 0 ? ` — ${parts.join(", ")}` : "";
+  const requestLabel = summary.total === 1 ? "request" : "requests";
+
+  return `${summary.total} open ${requestLabel} in Requests${detail}. Review there before assigning doors on the calendar.`;
+}
+
 /**
  * Visible on the staff calendar tape for room assignment.
  * Unverified bank-transfer claims stay off the tape until Requests approval.

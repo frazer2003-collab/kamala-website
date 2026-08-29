@@ -5,6 +5,9 @@ import {
   isInventoryHoldBooking,
   isPendingBooking,
   mapBookingRequest,
+  openRequestsHref,
+  openRequestsWarningCopy,
+  summarizeOpenRequests,
 } from "./booking-requests";
 import { bookingReservesRoom } from "./booking-reservation";
 import type { BookingRequestRow } from "./supabase";
@@ -129,5 +132,28 @@ describe("staff booking requests", () => {
 
     assert.equal(isCalendarBooking(approved), true);
     assert.equal(isInventoryHoldBooking(approved), false);
+  });
+
+  it("summarizes open requests for calendar warnings", () => {
+    const bookings = [
+      mapBookingRequest({ ...bankClaimRow, status: "needs-reply", deposit_paid_at: "2026-07-18T08:00:00.000Z", bank_transfer_claimed_at: null }),
+      mapBookingRequest({ ...bankClaimRow, status: "pending_payment", deposit_paid_at: null, bank_transfer_claimed_at: null, stripe_payment_intent_id: null }),
+      mapBookingRequest({ ...bankClaimRow, status: "awaiting", bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z" }),
+    ];
+
+    const summary = summarizeOpenRequests(bookings);
+    assert.deepEqual(summary, {
+      total: 3,
+      needsReply: 1,
+      checkoutHolds: 1,
+      awaitingPayment: 1,
+      newRequests: 0,
+    });
+    assert.equal(
+      openRequestsWarningCopy(summary),
+      "3 open requests in Requests — 1 waiting for a reply, 1 checkout hold, 1 payment review. Review there before assigning doors on the calendar.",
+    );
+    assert.equal(openRequestsHref(summary), "/staff?filter=needs-reply&view=inbox");
+    assert.equal(openRequestsWarningCopy({ total: 0, needsReply: 0, checkoutHolds: 0, awaitingPayment: 0, newRequests: 0 }), null);
   });
 });
