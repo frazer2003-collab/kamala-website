@@ -1,46 +1,145 @@
 /* Homepage trust polish — overrides guest landing surfaces only. */
 
 .home-stay-assurances {
-  padding-block: clamp(var(--space-5), 3vw, var(--space-6));
-  border-bottom: 1px solid var(--color-border);
+  padding-block: clamp(var(--space-6), 4vw, var(--space-8));
+  border-bottom: 1px solid color-mix(in oklch, var(--color-maroon) 14%, var(--color-border));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--color-maroon-wash) 88%, var(--color-surface)) 0%,
+      var(--color-maroon-wash) 100%
+    );
 }
 
 .home-stay-assurances-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: var(--space-3) var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+  gap: var(--space-4) var(--space-5);
   margin: 0;
   padding: 0;
   list-style: none;
-  line-height: 1.4;
 }
 
 .home-stay-assurances-list li {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .home-stay-assurances-phrase {
+  margin: 0;
   color: var(--color-ink);
-  font-size: 0.92rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
+  font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype", serif;
+  font-size: clamp(0.92rem, 2.4vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.home-stay-assurances-phrase::after {
+  content: "";
+  display: block;
+  width: min(2.75rem, 42%);
+  height: 2px;
+  margin-top: 0.45rem;
+  border-radius: 999px;
+  background: var(--color-maroon);
+  transform: scaleX(0.42);
+  transform-origin: left center;
+  transition: transform 320ms var(--ease-out-quint);
+}
+
+.home-stay-assurances-accent {
+  color: var(--color-maroon-deep);
+}
+
+.home-stay-assurances-accent::before {
+  content: "";
+  display: inline-block;
+  width: 0.38rem;
+  height: 0.38rem;
+  margin-right: 0.42rem;
+  border-radius: 999px;
+  background: var(--color-maroon);
+  vertical-align: 0.12em;
+}
+
+.home-stay-assurances-rest {
+  color: var(--color-ink);
 }
 
 .home-stay-assurances-detail {
+  margin: 0;
   color: var(--color-muted);
   font-size: 0.82rem;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-stay-assurances-list li:hover .home-stay-assurances-phrase::after,
+  .home-stay-assurances-list li:focus-within .home-stay-assurances-phrase::after {
+    transform: scaleX(1);
+  }
 }
 
 @media (min-width: 900px) {
   .home-stay-assurances-list {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: var(--space-4);
+    gap: var(--space-5);
+  }
+}
+
+@keyframes home-benefit-enter {
+  from {
+    filter: blur(6px);
+    opacity: 0;
+    transform: translateY(0.65rem);
+  }
+
+  to {
+    filter: blur(0);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .home-stay-assurances-list li {
+      animation: home-benefit-enter 680ms var(--ease-out-quint) both;
+      animation-timeline: view();
+    }
+
+    .home-stay-assurances-list li:nth-child(1) {
+      animation-range: entry 0% entry 28%;
+    }
+
+    .home-stay-assurances-list li:nth-child(2) {
+      animation-range: entry 4% entry 32%;
+    }
+
+    .home-stay-assurances-list li:nth-child(3) {
+      animation-range: entry 8% entry 36%;
+    }
+
+    .home-stay-assurances-list li:nth-child(4) {
+      animation-range: entry 12% entry 40%;
+    }
+
+    .home-stay-assurances-list li:nth-child(5) {
+      animation-range: entry 16% entry 44%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-stay-assurances-phrase::after {
+    transform: scaleX(0.72);
+    transition: none;
   }
 }
 
