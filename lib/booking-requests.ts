@@ -23,6 +23,7 @@ export const CALENDAR_BOOKING_FILTER =
 export type StaffBooking = Booking & {
   databaseId: string | null;
   bankTransferClaimed: boolean;
+  stripePaymentIntentId: string | null;
 };
 
 export function getStaffBookingKey(booking: StaffBooking) {
@@ -99,6 +100,7 @@ export function mapBookingRequest(
     depositPaid: Boolean(row.deposit_paid_at),
     bookingSource: parseBookingSource(row.booking_source),
     bankTransferClaimed: Boolean(row.bank_transfer_claimed_at),
+    stripePaymentIntentId: row.stripe_payment_intent_id ?? null,
     stayStatus: resolveStayStatusFromDates(row.arrival_date, row.departure_date),
     stayEndReason: parseStayEndReason(row.stay_end_reason),
     staffNote: row.staff_note ?? "",
@@ -126,7 +128,26 @@ async function getBookingRoomUnitMap(
   return map;
 }
 
+/** Guest started checkout but did not finish (bank/QR hold or abandoned card page). */
+export function isAbandonedCheckoutHold(
+  booking: Pick<
+    StaffBooking,
+    "status" | "depositPaid" | "bankTransferClaimed" | "stripePaymentIntentId"
+  >,
+) {
+  return (
+    booking.status === "pending_payment" &&
+    !booking.depositPaid &&
+    !booking.bankTransferClaimed &&
+    !booking.stripePaymentIntentId
+  );
+}
+
 export function isPendingBooking(booking: StaffBooking) {
+  if (isAbandonedCheckoutHold(booking)) {
+    return true;
+  }
+
   if (booking.status === "awaiting") {
     return booking.depositPaid || booking.bankTransferClaimed;
   }
@@ -144,6 +165,7 @@ export function isPendingBooking(booking: StaffBooking) {
 export function isCalendarBooking(
   booking: Pick<Booking, "status" | "depositPaid"> & {
     bankTransferClaimed?: boolean;
+    stripePaymentIntentId?: string | null;
   },
 ) {
   if (booking.status === "declined") {
@@ -155,7 +177,12 @@ export function isCalendarBooking(
     return false;
   }
 
-  if (booking.status === "pending_payment" || booking.status === "confirmed") {
+  // Abandoned bank/QR checkout — held in Requests until staff release or guest pays.
+  if (booking.status === "pending_payment") {
+    return Boolean(booking.stripePaymentIntentId);
+  }
+
+  if (booking.status === "confirmed") {
     return true;
   }
 
@@ -239,7 +266,10 @@ async function fetchBookingsFromSupabase(
 }
 
 export async function getStaffBookingRequests() {
-  const result = await fetchBookingsFromSupabase([...PENDING_BOOKING_STATUSES], "created_at");
+  const result = await fetchBookingsFromSupabase(
+    [...PENDING_BOOKING_STATUSES, "pending_payment"],
+    "created_at",
+  );
 
   return {
     ...result,
