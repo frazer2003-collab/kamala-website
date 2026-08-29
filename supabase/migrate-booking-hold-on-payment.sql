@@ -1,47 +1,4 @@
--- Guest-entered discount codes (promo codes) with usage limits.
-
-create table if not exists public.discount_codes (
-  id uuid primary key default gen_random_uuid(),
-  code text not null check (length(trim(code)) between 3 and 32),
-  percent_off integer not null check (percent_off between 1 and 90),
-  room_id text references public.rooms(id) on delete cascade,
-  valid_until date,
-  max_uses integer check (max_uses is null or max_uses > 0),
-  uses_count integer not null default 0 check (uses_count >= 0),
-  label text,
-  active boolean not null default true,
-  created_at timestamptz not null default now(),
-  constraint discount_codes_uses_within_max check (
-    max_uses is null or uses_count <= max_uses
-  )
-);
-
-create unique index if not exists discount_codes_code_lower_idx
-  on public.discount_codes (lower(code));
-
-create index if not exists discount_codes_active_idx
-  on public.discount_codes (active, valid_until);
-
-alter table public.booking_requests
-  add column if not exists discount_code_id uuid references public.discount_codes(id) on delete set null,
-  add column if not exists discount_code_text text;
-
-grant all on public.discount_codes to service_role;
-
-alter table public.discount_codes enable row level security;
-
-drop policy if exists "Service role can manage discount codes" on public.discount_codes;
-create policy "Service role can manage discount codes"
-on public.discount_codes
-for all
-to service_role
-using (true)
-with check (true);
-
--- Extend atomic guest booking to reserve a discount code use.
-drop function if exists public.create_guest_booking_if_capacity(
-  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text
-);
+-- Hold guest inventory only after card payment or bank "I've paid", not at checkout start.
 
 create or replace function public.create_guest_booking_if_capacity(
   p_guest_name text,
@@ -240,11 +197,3 @@ exception
     );
 end;
 $$;
-
-revoke all on function public.create_guest_booking_if_capacity(
-  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text, uuid, text
-) from public;
-
-grant execute on function public.create_guest_booking_if_capacity(
-  text, text, text, text, text, date, date, integer, integer, integer, text, text, integer, text, uuid, text
-) to service_role;

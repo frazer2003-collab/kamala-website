@@ -4,6 +4,8 @@ import {
   isCalendarBooking,
   isInventoryHoldBooking,
   isPendingBooking,
+  isStaffCancellableHold,
+  isUnverifiedBankHold,
   mapBookingRequest,
   openRequestsHref,
   openRequestsWarningCopy,
@@ -76,7 +78,7 @@ describe("staff booking requests", () => {
     assert.equal(isCalendarBooking(unpaid), false);
   });
 
-  it("keeps unverified bank claims off the calendar until Requests approval", () => {
+  it("does not hold inventory until bank I've paid or card payment", () => {
     const checkoutHold = mapBookingRequest({
       ...bankClaimRow,
       status: "pending_payment",
@@ -93,15 +95,14 @@ describe("staff booking requests", () => {
     });
     const bankHold = mapBookingRequest(bankClaimRow);
 
-    // Abandoned bank/QR checkout — Requests only until guest pays or staff release.
+    // Unpaid checkout — Requests only; dates stay open for other guests.
     assert.equal(isCalendarBooking(checkoutHold), false);
     assert.equal(isPendingBooking(checkoutHold), true);
-    assert.equal(isInventoryHoldBooking(checkoutHold), true);
-    // Card checkout in flight — calendar tape as awaiting payment.
-    assert.equal(isCalendarBooking(cardCheckoutHold), true);
+    assert.equal(isInventoryHoldBooking(checkoutHold), false);
+    assert.equal(isCalendarBooking(cardCheckoutHold), false);
     assert.equal(isPendingBooking(cardCheckoutHold), false);
-    assert.equal(isInventoryHoldBooking(cardCheckoutHold), true);
-    // Thai bank “I've paid” — Requests only until staff confirm.
+    assert.equal(isInventoryHoldBooking(cardCheckoutHold), false);
+    // Thai bank “I've paid” — holds inventory; Requests until staff confirm.
     assert.equal(isCalendarBooking(bankHold), false);
     assert.equal(isInventoryHoldBooking(bankHold), true);
     assert.equal(
@@ -110,7 +111,7 @@ describe("staff booking requests", () => {
         deposit_paid_at: null,
         bank_transfer_claimed_at: null,
       }),
-      true,
+      false,
     );
     assert.equal(
       bookingReservesRoom({
@@ -155,5 +156,25 @@ describe("staff booking requests", () => {
     );
     assert.equal(openRequestsHref(summary), "/staff?filter=needs-reply&view=inbox");
     assert.equal(openRequestsWarningCopy({ total: 0, needsReply: 0, checkoutHolds: 0, awaitingPayment: 0, newRequests: 0 }), null);
+  });
+
+  it("flags holds staff can cancel from Requests", () => {
+    const checkoutHold = mapBookingRequest({
+      ...bankClaimRow,
+      status: "pending_payment",
+      deposit_paid_at: null,
+      bank_transfer_claimed_at: null,
+    });
+    const bankHold = mapBookingRequest(bankClaimRow);
+    const paid = mapBookingRequest({
+      ...bankClaimRow,
+      status: "confirmed",
+      deposit_paid_at: "2026-07-18T09:00:00.000Z",
+    });
+
+    assert.equal(isUnverifiedBankHold(bankHold), true);
+    assert.equal(isStaffCancellableHold(checkoutHold), true);
+    assert.equal(isStaffCancellableHold(bankHold), true);
+    assert.equal(isStaffCancellableHold(paid), false);
   });
 });

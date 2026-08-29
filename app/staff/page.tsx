@@ -1,7 +1,7 @@
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form";
-import { StaffCheckoutHoldPanel } from "@/components/staff-checkout-hold-panel";
+import { StaffCancelHoldPanel } from "@/components/staff-cancel-hold-panel";
 import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
 import { StaffShell } from "@/components/staff-shell";
 import {
@@ -15,6 +15,7 @@ import {
   getStaffBookingById,
   getStaffBookingRequests,
   isAbandonedCheckoutHold,
+  isUnverifiedBankHold,
   type StaffBooking,
 } from "@/lib/booking-requests";
 import { formatMoneySuffix } from "@/lib/currency";
@@ -184,9 +185,9 @@ function getMoneyState(booking: StaffBooking) {
 
   if (booking.status === "pending_payment") {
     return {
-      tone: "warning" as const,
+      tone: "muted" as const,
       title: "Checkout not finished",
-      body: "The guest started booking but has not paid yet. Release the hold if they abandoned checkout.",
+      body: "The guest has not paid and has not reported a bank transfer. Dates stay available.",
     };
   }
 
@@ -203,6 +204,7 @@ export default async function StaffBookingsPage({
     error?: string;
     detail?: string;
     overlap?: string;
+    "hold-cancelled"?: string;
   }>;
 }) {
   await requireStaffSession();
@@ -214,6 +216,7 @@ export default async function StaffBookingsPage({
     error,
     detail: errorDetail,
     overlap,
+    "hold-cancelled": holdCancelled,
   } = await searchParams;
   const inboxFilter = parseInboxFilter(filterParam);
   const preferInboxView = viewParam === "inbox";
@@ -269,6 +272,7 @@ export default async function StaffBookingsPage({
   const isClosedConversation = selected?.status === "declined";
   const selectedNeedsReply = selected?.status === "needs-reply";
   const selectedCheckoutHold = selected ? isAbandonedCheckoutHold(selected) : false;
+  const selectedBankHold = selected ? isUnverifiedBankHold(selected) : false;
   const selectedMoney = selected ? getMoneyState(selected) : null;
   const newRequestCount = staffBookings.bookings.filter(
     (booking) => booking.status === "new",
@@ -348,7 +352,7 @@ export default async function StaffBookingsPage({
                     <>
                       {" · "}
                       <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
-                        {checkoutHoldCount} checkout hold
+                        {checkoutHoldCount} unfinished checkout
                         {checkoutHoldCount === 1 ? "" : "s"}
                       </Link>
                     </>
@@ -391,7 +395,7 @@ export default async function StaffBookingsPage({
                     <>
                       {" · "}
                       <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
-                        {checkoutHoldCount} checkout hold
+                        {checkoutHoldCount} unfinished checkout
                         {checkoutHoldCount === 1 ? "" : "s"}
                       </Link>
                     </>
@@ -407,10 +411,15 @@ export default async function StaffBookingsPage({
           </Link>
         </div>
 
-        {error === "release-failed" ? (
+        {error === "cancel-hold-failed" || error === "release-failed" ? (
           <p className="form-message form-message--error" role="alert">
-            That checkout hold could not be released. It may already be paid or
-            moved — refresh and try again.
+            That booking hold could not be cancelled. It may already be paid or
+            confirmed — refresh and try again.
+          </p>
+        ) : null}
+        {holdCancelled === "1" ? (
+          <p className="form-message form-message--success" role="status">
+            Booking hold cancelled — dates are available again.
           </p>
         ) : null}
         {error === "refund-failed" ? (
@@ -746,28 +755,39 @@ export default async function StaffBookingsPage({
 
               {!isClosedConversation ? (
                 selectedCheckoutHold ? (
-                  <StaffCheckoutHoldPanel
+                  <StaffCancelHoldPanel
                     bookingId={selected.databaseId ?? ""}
                     canManage={canManageSelected}
                     guestName={selected.guest}
+                    holdKind="unfinished-checkout"
                   />
                 ) : (
-                  <StaffRequestDecisionPanel
-                    alreadyConfirmed={
-                      selected.status === "confirmed" ||
-                      (selected.status === "needs-reply" && selected.depositPaid)
-                    }
-                    bookingId={selected.databaseId ?? ""}
-                    canManage={canManageSelected}
-                    currency={settings.currency}
-                    depositAmount={selected.depositAmount}
-                    depositPaid={selected.depositPaid}
-                    bankTransferClaimed={selected.bankTransferClaimed}
-                    guestEmail={selected.contact}
-                    guestName={selected.guest}
-                    needsReply={selectedNeedsReply}
-                    practiceMode={isPracticeMode}
-                  />
+                  <>
+                    {selectedBankHold ? (
+                      <StaffCancelHoldPanel
+                        bookingId={selected.databaseId ?? ""}
+                        canManage={canManageSelected}
+                        guestName={selected.guest}
+                        holdKind="bank-transfer-hold"
+                      />
+                    ) : null}
+                    <StaffRequestDecisionPanel
+                      alreadyConfirmed={
+                        selected.status === "confirmed" ||
+                        (selected.status === "needs-reply" && selected.depositPaid)
+                      }
+                      bookingId={selected.databaseId ?? ""}
+                      canManage={canManageSelected}
+                      currency={settings.currency}
+                      depositAmount={selected.depositAmount}
+                      depositPaid={selected.depositPaid}
+                      bankTransferClaimed={selected.bankTransferClaimed}
+                      guestEmail={selected.contact}
+                      guestName={selected.guest}
+                      needsReply={selectedNeedsReply}
+                      practiceMode={isPracticeMode}
+                    />
+                  </>
                 )
               ) : (
                 <p className="detail-help">

@@ -1,6 +1,7 @@
 import { type Booking, type BookingStatus } from "@/lib/content";
 import { parseBedSetup } from "@/lib/bed-setup";
 import { parseBookingSource } from "@/lib/booking-source";
+import { bookingReservesRoom } from "@/lib/booking-reservation";
 import { parseStayEndReason } from "@/lib/stay-end-reason";
 import { resolveStayStatusFromDates } from "@/lib/stay-status";
 import { getCalendarMonthBounds, monthOverlapsBooking } from "@/lib/calendar";
@@ -15,10 +16,10 @@ export const PENDING_BOOKING_STATUSES = ["awaiting", "needs-reply", "new"] as co
 /**
  * Stays fetched for the staff calendar tape.
  * Unverified Thai bank claims (`bank_transfer_claimed`, unpaid) stay in Requests
- * until staff confirm — they still hold guest inventory via `bookingReservesRoom`.
+ * until staff confirm — they hold guest inventory once the guest taps "I've paid".
  */
 export const CALENDAR_BOOKING_FILTER =
-  "status.eq.confirmed,status.eq.pending_payment,deposit_paid_at.not.is.null";
+  "status.eq.confirmed,deposit_paid_at.not.is.null,bank_transfer_claimed_at.not.is.null";
 
 export type StaffBooking = Booking & {
   databaseId: string | null;
@@ -143,6 +144,26 @@ export function isAbandonedCheckoutHold(
   );
 }
 
+/** Guest tapped I've paid; staff has not verified the transfer yet. */
+export function isUnverifiedBankHold(
+  booking: Pick<StaffBooking, "status" | "depositPaid" | "bankTransferClaimed">,
+) {
+  if (booking.depositPaid || !booking.bankTransferClaimed) {
+    return false;
+  }
+
+  return (
+    booking.status === "awaiting" ||
+    booking.status === "needs-reply" ||
+    booking.status === "new"
+  );
+}
+
+/** Holds staff can cancel from Requests without a decline email (no verified payment). */
+export function isStaffCancellableHold(booking: StaffBooking) {
+  return isAbandonedCheckoutHold(booking) || isUnverifiedBankHold(booking);
+}
+
 export function isPendingBooking(booking: StaffBooking) {
   if (isAbandonedCheckoutHold(booking)) {
     return true;
@@ -255,9 +276,9 @@ export function isCalendarBooking(
     return false;
   }
 
-  // Abandoned bank/QR checkout — held in Requests until staff release or guest pays.
+  // Unpaid checkout — no calendar tape until card paid or bank "I've paid".
   if (booking.status === "pending_payment") {
-    return Boolean(booking.stripePaymentIntentId);
+    return false;
   }
 
   if (booking.status === "confirmed") {
@@ -271,21 +292,21 @@ export function isCalendarBooking(
   return false;
 }
 
-/** Guest-facing hold that is not yet a paid/confirmed stay. */
+/** Guest-facing hold that blocks inventory before confirmation (bank claim, not paid card). */
 export function isInventoryHoldBooking(
   booking: Pick<Booking, "status" | "depositPaid"> & {
     bankTransferClaimed?: boolean;
   },
 ) {
-  if (booking.status === "declined") {
+  if (booking.status === "declined" || booking.depositPaid) {
     return false;
   }
 
-  if (booking.status === "pending_payment") {
-    return true;
-  }
-
-  return Boolean(booking.bankTransferClaimed && !booking.depositPaid);
+  return bookingReservesRoom({
+    status: booking.status,
+    deposit_paid_at: null,
+    bank_transfer_claimed_at: booking.bankTransferClaimed ? "claimed" : null,
+  });
 }
 
 function isConfirmedBooking(booking: Booking) {
