@@ -72,6 +72,10 @@
   background: var(--color-surface-strong);
 }
 
+.staff-sold__pie--over-capacity {
+  box-shadow: 0 0 0 3px var(--color-maroon-deep);
+}
+
 .staff-sold__chart-empty {
   margin: 0;
   color: var(--color-muted);
