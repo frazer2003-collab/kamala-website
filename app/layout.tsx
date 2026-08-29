@@ -35,6 +35,10 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s · ${propertyName}`,
     },
     description,
+    icons: {
+      icon: [{ url: "/icon.png", type: "image/png", sizes: "32x32" }],
+      apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+    },
     openGraph: {
       title: defaultTitle,
       description,
