@@ -789,7 +789,7 @@ export async function cancelPendingBooking(
     .eq("conversation_token", conversationToken);
 }
 
-export async function releaseCheckoutHoldBooking(formData: FormData) {
+export async function cancelBookingHoldBooking(formData: FormData) {
   await requireStaffCalendarWrite();
 
   const bookingId = getValue(formData, "booking-id");
@@ -806,32 +806,40 @@ export async function releaseCheckoutHoldBooking(formData: FormData) {
     .eq("id", bookingId)
     .maybeSingle();
 
-  if (
-    !booking ||
-    booking.status !== "pending_payment" ||
-    booking.deposit_paid_at ||
-    booking.bank_transfer_claimed_at ||
-    booking.stripe_payment_intent_id
-  ) {
+  const cancellable =
+    booking &&
+    !booking.deposit_paid_at &&
+    ((booking.status === "pending_payment" && !booking.bank_transfer_claimed_at) ||
+      (Boolean(booking.bank_transfer_claimed_at) &&
+        (booking.status === "awaiting" ||
+          booking.status === "needs-reply" ||
+          booking.status === "new")));
+
+  if (!cancellable) {
     redirect(
-      `/staff?booking=${encodeURIComponent(bookingId)}&error=release-failed`,
+      `/staff?booking=${encodeURIComponent(bookingId)}&error=cancel-hold-failed`,
     );
+  }
+
+  if (booking.stripe_payment_intent_id) {
+    await cancelPaymentIntentBestEffort(booking.stripe_payment_intent_id);
   }
 
   if (booking.discount_code_id) {
     await releaseDiscountCodeUse(booking.discount_code_id);
   }
 
-  await supabase
-    .from("booking_requests")
-    .delete()
-    .eq("id", bookingId)
-    .eq("status", "pending_payment");
+  await supabase.from("booking_requests").delete().eq("id", bookingId);
 
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
-  redirect("/staff");
+  redirect("/staff?hold-cancelled=1");
+}
+
+/** @deprecated Use cancelBookingHoldBooking */
+export async function releaseCheckoutHoldBooking(formData: FormData) {
+  return cancelBookingHoldBooking(formData);
 }
 
 async function cancelPaymentIntentBestEffort(paymentIntentId: string) {

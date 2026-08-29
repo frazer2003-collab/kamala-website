@@ -144,6 +144,26 @@ export function isAbandonedCheckoutHold(
   );
 }
 
+/** Guest tapped I've paid; staff has not verified the transfer yet. */
+export function isUnverifiedBankHold(
+  booking: Pick<StaffBooking, "status" | "depositPaid" | "bankTransferClaimed">,
+) {
+  if (booking.depositPaid || !booking.bankTransferClaimed) {
+    return false;
+  }
+
+  return (
+    booking.status === "awaiting" ||
+    booking.status === "needs-reply" ||
+    booking.status === "new"
+  );
+}
+
+/** Holds staff can cancel from Requests without a decline email (no verified payment). */
+export function isStaffCancellableHold(booking: StaffBooking) {
+  return isAbandonedCheckoutHold(booking) || isUnverifiedBankHold(booking);
+}
+
 export function isPendingBooking(booking: StaffBooking) {
   if (isAbandonedCheckoutHold(booking)) {
     return true;

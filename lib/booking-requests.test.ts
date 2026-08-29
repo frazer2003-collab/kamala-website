@@ -4,6 +4,8 @@ import {
   isCalendarBooking,
   isInventoryHoldBooking,
   isPendingBooking,
+  isStaffCancellableHold,
+  isUnverifiedBankHold,
   mapBookingRequest,
 } from "./booking-requests";
 import { bookingReservesRoom } from "./booking-reservation";
@@ -128,5 +130,25 @@ describe("staff booking requests", () => {
 
     assert.equal(isCalendarBooking(approved), true);
     assert.equal(isInventoryHoldBooking(approved), false);
+  });
+
+  it("flags holds staff can cancel from Requests", () => {
+    const checkoutHold = mapBookingRequest({
+      ...bankClaimRow,
+      status: "pending_payment",
+      deposit_paid_at: null,
+      bank_transfer_claimed_at: null,
+    });
+    const bankHold = mapBookingRequest(bankClaimRow);
+    const paid = mapBookingRequest({
+      ...bankClaimRow,
+      status: "confirmed",
+      deposit_paid_at: "2026-07-18T09:00:00.000Z",
+    });
+
+    assert.equal(isUnverifiedBankHold(bankHold), true);
+    assert.equal(isStaffCancellableHold(checkoutHold), true);
+    assert.equal(isStaffCancellableHold(bankHold), true);
+    assert.equal(isStaffCancellableHold(paid), false);
   });
 });
