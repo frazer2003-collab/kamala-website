@@ -22,7 +22,7 @@ export function StaffDiscountCodeAddForm({
 
   return (
     <form action={formAction} className="staff-promotion-form">
-      <StaffFormBusyBridge pending={pending} />
+      <StaffFormBusyBridge />
 
       {state.error ? (
         <p className="form-message form-message--error" role="alert">
