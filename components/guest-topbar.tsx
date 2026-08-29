@@ -30,15 +30,11 @@ export function GuestTopbar({ settings, current, tone = "default" }: GuestTopbar
         <Link aria-current={current === "gallery" ? "page" : undefined} href="/gallery">
           Gallery
         </Link>
-        <Link href="/#rooms">Rooms</Link>
         <Link aria-current={current === "location" ? "page" : undefined} href="/location">
           Location
         </Link>
         <Link aria-current={current === "contact" ? "page" : undefined} href="/contact">
           Contact
-        </Link>
-        <Link aria-current={current === "tours" ? "page" : undefined} href="/tours">
-          Tours
         </Link>
         {settings.lineUrl ? (
           <a href={settings.lineUrl} rel="noopener noreferrer" target="_blank">
