@@ -100,7 +100,7 @@ export default async function Home({
     <main className="guest-site home-page">
       <HomePageJsonLd data={jsonLd} />
       <HomeHeroShell heroImageUrl={resolveHeroImageUrl(settings.heroImageUrl)}>
-        <GuestTopbar current="home" settings={settings} />
+        <GuestTopbar current="home" settings={settings} variant="home" />
 
         <div className="hero hero--atmosphere">
           <HomeDateSearchSection
