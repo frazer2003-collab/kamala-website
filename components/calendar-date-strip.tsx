@@ -7,7 +7,6 @@ import {
   STAFF_TIMELINE_MAX_MONTHS,
   buildStaffCalendarHref,
   clampStaffTimelineDateRange,
-  maxStaffTimelineEndIso,
 } from "@/lib/calendar";
 
 type CalendarDateStripProps = {
@@ -56,8 +55,7 @@ export function CalendarDateStrip({
     setToValue(toIso);
   }, [fromIso, toIso]);
 
-  const maxTo = maxStaffTimelineEndIso(fromValue);
-  const hint = `Up to ${STAFF_TIMELINE_MAX_MONTHS} months.`;
+  const hint = `Up to ${STAFF_TIMELINE_MAX_MONTHS} months. Either date can be changed first.`;
 
   function applyRange(nextFrom: string, nextTo: string) {
     if (!nextFrom || !nextTo) {
@@ -98,17 +96,8 @@ export function CalendarDateStrip({
           <span className="calendar-date-strip__field-label">From</span>
           <input
             className="calendar-date-strip__input"
-            max={toValue || undefined}
             name="from"
-            onChange={(event) => {
-              const nextFrom = event.target.value;
-              setFromValue(nextFrom);
-              if (nextFrom && toValue && toValue < nextFrom) {
-                setToValue(nextFrom);
-              } else if (nextFrom && toValue > maxStaffTimelineEndIso(nextFrom)) {
-                setToValue(maxStaffTimelineEndIso(nextFrom));
-              }
-            }}
+            onChange={(event) => setFromValue(event.target.value)}
             type="date"
             value={fromValue}
           />
@@ -120,8 +109,6 @@ export function CalendarDateStrip({
           <span className="calendar-date-strip__field-label">To</span>
           <input
             className="calendar-date-strip__input"
-            max={maxTo}
-            min={fromValue || undefined}
             name="to"
             onChange={(event) => setToValue(event.target.value)}
             type="date"
