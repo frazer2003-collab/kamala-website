@@ -1,0 +1,220 @@
+/* Homepage overdrive — cinematic hero, scroll narrative, booking counter peak. */
+
+/* --- Hero: slow Ken Burns + copy entrance --- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-page .home-hero--atmosphere .home-hero__image {
+    animation: home-hero-ken-burns 32s ease-in-out infinite alternate;
+    transform-origin: center center;
+  }
+
+  .home-page .hero-atmosphere__copy {
+    animation: home-hero-rise 760ms var(--ease-out-quint) both;
+  }
+
+  .home-page .hero-atmosphere--dates-first .hero-atmosphere__copy h1 {
+    animation: home-hero-rise 840ms var(--ease-out-quint) 70ms both;
+  }
+
+  .home-page .hero-atmosphere__lede {
+    animation: home-hero-rise 760ms var(--ease-out-quint) 160ms both;
+  }
+}
+
+@keyframes home-hero-ken-burns {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes home-hero-rise {
+  from {
+    filter: blur(5px);
+    opacity: 0;
+    transform: translateY(0.7rem);
+  }
+
+  to {
+    filter: blur(0);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-page .home-hero--atmosphere .search-bar--atmosphere {
+  transition:
+    box-shadow 320ms var(--ease-out-quint),
+    transform 320ms var(--ease-out-quint);
+}
+
+.home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within {
+  box-shadow:
+    var(--shadow-search),
+    0 14px 36px oklch(20% 0.02 12 / 0.14);
+  transform: translateY(-2px);
+}
+
+/* --- Body rhythm --- */
+
+.home-page .home-body {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--space-8), 5vw, var(--space-12));
+  padding-top: clamp(var(--space-6), 3vw, var(--space-8));
+}
+
+.home-page .home-body > .section--stay-story {
+  margin-top: 0;
+}
+
+/* --- Book zone: elevated counter --- */
+
+.home-page .home-book-zone {
+  border-color: color-mix(in oklch, var(--color-maroon) 12%, var(--color-border));
+  box-shadow: var(--shadow-panel);
+}
+
+.home-page .home-book-zone .section__heading--compact h2 {
+  font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype", serif;
+  font-size: clamp(1.25rem, 2.8vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.home-page .listing-card--feature {
+  border-color: color-mix(in oklch, var(--color-maroon) 10%, var(--color-border));
+  transition:
+    border-color 280ms var(--ease-out-quint),
+    transform 280ms var(--ease-out-quint);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-page .listing-card--feature:hover {
+    border-color: color-mix(in oklch, var(--color-maroon) 22%, var(--color-border));
+    transform: translateY(-2px);
+  }
+}
+
+.home-page .listing-card--feature .listing-card__meta h3 {
+  font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype", serif;
+  font-size: clamp(0.92rem, 2.2vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.home-page .listing-card--feature .listing-card__media {
+  overflow: hidden;
+}
+
+.home-page .listing-card--feature .listing-card__media img {
+  transition: transform 560ms var(--ease-out-quint);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-page .listing-card--feature:hover .listing-card__media img {
+    transform: scale(1.05);
+  }
+}
+
+.home-page .listing-card--rail .listing-card__rail-copy h3 {
+  transition: color 180ms var(--ease-out-quint);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-page .listing-card--rail:hover .listing-card__rail-copy h3 {
+    color: var(--color-maroon-deep);
+  }
+}
+
+/* --- Stay story: guesthouse voice --- */
+
+.home-page .stay-story__main h2 {
+  font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype", serif;
+  font-size: clamp(1.25rem, 3vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.home-page .stay-story__lede {
+  color: var(--color-ink);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.home-page .stay-story__aside {
+  border-top: 2px solid var(--color-maroon);
+  background:
+    linear-gradient(
+      180deg,
+      var(--color-maroon-wash) 0%,
+      var(--color-surface) 45%
+    );
+}
+
+/* --- Scroll-driven section reveals (one page moment) --- */
+
+@keyframes home-section-rise {
+  from {
+    filter: blur(8px);
+    opacity: 0;
+    transform: translateY(1.1rem);
+  }
+
+  to {
+    filter: blur(0);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .home-page .home-book-zone {
+      animation: home-section-rise 920ms var(--ease-out-quint) both;
+      animation-range: entry 0% entry 32%;
+      animation-timeline: view();
+    }
+
+    .home-page .home-body > .section--stay-story {
+      animation: home-section-rise 920ms var(--ease-out-quint) both;
+      animation-range: entry 0% entry 28%;
+      animation-timeline: view();
+    }
+  }
+}
+
+/* --- Sticky reserve: counter slides up --- */
+
+@keyframes home-sticky-rise {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-page .home-sticky-reserve {
+    animation: home-sticky-rise 400ms var(--ease-out-quint) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within {
+    transform: none;
+  }
+
+  .home-page .listing-card--feature:hover {
+    transform: none;
+  }
+}
