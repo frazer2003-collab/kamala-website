@@ -175,7 +175,7 @@ function RoomListingCard({
         departure={stayDates?.departure}
         roomId={room.id}
       >
-        Reserve
+        Book now
       </BookRoomLink>
     );
   } else if (hasStayDates && !bookable) {

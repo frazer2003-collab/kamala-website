@@ -324,7 +324,7 @@ export function RoomDetailDialog({
                   onNavigate={requestClose}
                   roomId={room.id}
                 >
-                  Reserve
+                  Book now
                 </BookRoomLink>
               </div>
             </>
