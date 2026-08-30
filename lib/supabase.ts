@@ -129,6 +129,7 @@ export type StaffNotificationEmailRow = {
   email: string;
   label: string | null;
   calendar_access: StaffCalendarAccess;
+  password_hash: string | null;
   created_at: string;
 };
 

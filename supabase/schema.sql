@@ -323,6 +323,7 @@ create table if not exists public.staff_notification_emails (
   label text,
   calendar_access text not null default 'read_write'
     check (calendar_access in ('read', 'read_write')),
+  password_hash text,
   created_at timestamptz not null default now(),
   constraint staff_notification_emails_email_format
     check (email ~* '^[^@]+@[^@]+\.[^@]+$')

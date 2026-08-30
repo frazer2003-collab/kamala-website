@@ -11,14 +11,18 @@ import {
   setStaffSessionCookie,
   staffSensitiveScopeForPath,
   verifyAdminCredentials,
-  verifySharedStaffPassword,
+  verifyStaffEmailLogin,
   verifyStaffSensitivePasscode,
 } from "@/lib/staff-auth";
 import {
-  getStaffNotificationEmailByAddress,
   isStaffCalendarAccess,
   isValidStaffNotificationEmail,
 } from "@/lib/staff-notification-emails";
+import {
+  hashStaffPassword,
+  isStaffPasswordValid,
+  staffPasswordValidationMessage,
+} from "@/lib/staff-password";
 import {
   toPropertySettingsRow,
   type PropertySettingsInput,
@@ -136,11 +140,11 @@ export async function loginStaff(
     redirect(safeStaffPath(getValue(formData, "next")));
   }
 
-  const staffEmail = await getStaffNotificationEmailByAddress(username);
-  if (staffEmail && verifySharedStaffPassword(password)) {
+  const staffCredential = await verifyStaffEmailLogin(username, password);
+  if (staffCredential) {
     await setStaffSessionCookie({
-      calendarAccess: staffEmail.calendarAccess,
-      subject: staffEmail.email,
+      calendarAccess: staffCredential.calendarAccess,
+      subject: staffCredential.email,
     });
     redirect(safeStaffPath(getValue(formData, "next")));
   }
@@ -198,6 +202,7 @@ export async function addStaffNotificationEmail(
 
   const email = getValue(formData, "email").toLowerCase();
   const label = getValue(formData, "label") || null;
+  const password = getValue(formData, "password");
   const calendarAccessRaw = getValue(formData, "calendar-access");
   const calendarAccess = isStaffCalendarAccess(calendarAccessRaw)
     ? calendarAccessRaw
@@ -207,11 +212,18 @@ export async function addStaffNotificationEmail(
     return { error: "Enter a valid email address." };
   }
 
+  if (!isStaffPasswordValid(password)) {
+    return { error: staffPasswordValidationMessage() };
+  }
+
+  const passwordHash = await hashStaffPassword(password);
+
   const supabase = createStaffSupabaseClient();
   const { error } = await supabase.from("staff_notification_emails").insert({
     email,
     label,
     calendar_access: calendarAccess,
+    password_hash: passwordHash,
   });
 
   if (error) {
@@ -222,6 +234,13 @@ export async function addStaffNotificationEmail(
     if (error.code === "42P01") {
       return {
         error: "Run supabase/schema.sql in Supabase before adding emails.",
+      };
+    }
+
+    if (error.message?.includes("password_hash") || error.code === "42703") {
+      return {
+        error:
+          "Run supabase/migrate-staff-passwords.sql in Supabase before setting staff passwords.",
       };
     }
 
@@ -242,6 +261,60 @@ export async function addStaffNotificationEmail(
         ? `${email} can view the calendar (read only). They will not get booking alerts.`
         : `${email} will get booking alerts and can edit the calendar.`,
   };
+}
+
+export async function updateStaffNotificationPassword(
+  _prevState: StaffSettingsState,
+  formData: FormData,
+): Promise<StaffSettingsState> {
+  await requireStaffSensitiveAccess("/staff/settings");
+
+  if (!hasStaffSupabaseConfig()) {
+    return { error: "Supabase is not configured yet." };
+  }
+
+  const emailId = getValue(formData, "email-id");
+  const password = getValue(formData, "password");
+  const confirmPassword = getValue(formData, "confirm-password");
+
+  if (!emailId) {
+    return { error: "Could not find that staff account." };
+  }
+
+  if (!isStaffPasswordValid(password)) {
+    return { error: staffPasswordValidationMessage() };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "Passwords did not match. Try again." };
+  }
+
+  const passwordHash = await hashStaffPassword(password);
+  const supabase = createStaffSupabaseClient();
+  const { data, error } = await supabase
+    .from("staff_notification_emails")
+    .update({ password_hash: passwordHash })
+    .eq("id", emailId)
+    .select("email")
+    .maybeSingle();
+
+  if (error) {
+    if (error.message?.includes("password_hash") || error.code === "42703") {
+      return {
+        error:
+          "Run supabase/migrate-staff-passwords.sql in Supabase before setting staff passwords.",
+      };
+    }
+
+    return { error: "Could not update that password. Try again." };
+  }
+
+  if (!data?.email) {
+    return { error: "Could not find that staff account." };
+  }
+
+  revalidatePath("/staff/settings");
+  return { success: `Password updated for ${data.email}.` };
 }
 
 export async function updateStaffNotificationCalendarAccess(formData: FormData) {

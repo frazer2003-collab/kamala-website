@@ -2,6 +2,7 @@ import { StaffFormBusyBridge } from "@/components/staff-busy";
 import Link from "next/link";
 import { removeStaffNotificationEmail } from "@/app/staff/auth-actions";
 import { StaffEmailAccessForm } from "@/components/staff-email-access-form";
+import { StaffEmailPasswordForm } from "@/components/staff-email-password-form";
 import { StaffHeroImageField } from "@/components/staff-hero-image-field";
 import { StaffPropertySettingsForm } from "@/components/staff-property-settings-form";
 import { StaffSettingsAddForm } from "@/components/staff-settings-add-form";
@@ -11,6 +12,7 @@ import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
 import { getStaffNotificationEmails } from "@/lib/staff-notification-emails";
 import { hasStaffSupabaseConfig } from "@/lib/supabase";
+import "@/app/staff-passcode.css";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +96,7 @@ export default async function StaffSettingsPage({
             <p className="staff-settings-calendar-colors__hint">
               Read &amp; write staff get booking alerts and can edit the calendar.
               Read only staff can view the calendar when signed in, but do not receive
-              booking emails.
+              booking emails. Set a unique password for each staff email below.
             </p>
             <StaffSettingsAddForm disabled={!supabaseReady} />
           </section>
@@ -112,9 +114,18 @@ export default async function StaffSettingsPage({
                     <div>
                       <strong>{entry.email}</strong>
                       {entry.label ? <span>{entry.label}</span> : null}
-                      <small>Added {formatAddedAt(entry.created_at)}</small>
+                      <small>
+                        Added {formatAddedAt(entry.created_at)}
+                        {entry.hasPassword ? " · Password set" : " · Uses shared password until set"}
+                      </small>
                     </div>
                     <div className="staff-email-list__actions">
+                      <StaffEmailPasswordForm
+                        disabled={!supabaseReady}
+                        email={entry.email}
+                        emailId={entry.id}
+                        hasPassword={entry.hasPassword}
+                      />
                       <StaffEmailAccessForm
                         calendarAccess={entry.calendarAccess}
                         disabled={!supabaseReady}
