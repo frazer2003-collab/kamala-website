@@ -6,10 +6,21 @@ import {
   getStaffNotificationEmailByAddress,
 } from "@/lib/staff-notification-emails";
 import { verifyStaffPassword } from "@/lib/staff-password";
-import type { StaffCalendarAccess } from "@/lib/supabase";
+import {
+  decodeStaffSessionPayload,
+  getStaffSessionSecret,
+  hasStaffAuthConfig,
+  STAFF_SENSITIVE_COOKIE_NAME,
+  STAFF_SESSION_COOKIE_NAME,
+  type StaffSession,
+} from "@/lib/staff-session-edge";
 
-export const STAFF_SESSION_COOKIE_NAME = "kamala_staff_session";
-export const STAFF_SENSITIVE_COOKIE_NAME = "kamala_staff_sensitive";
+export {
+  hasStaffAuthConfig,
+  STAFF_SENSITIVE_COOKIE_NAME,
+  STAFF_SESSION_COOKIE_NAME,
+  type StaffSession,
+};
 const COOKIE_NAME = STAFF_SESSION_COOKIE_NAME;
 const SENSITIVE_COOKIE_NAME = STAFF_SENSITIVE_COOKIE_NAME;
 const SESSION_MAX_AGE_SECONDS = 30 * 60;
@@ -17,11 +28,6 @@ const SESSION_MAX_AGE_SECONDS = 30 * 60;
 const SENSITIVE_UNLOCK_MAX_AGE_SECONDS = 30 * 60;
 
 export type StaffSensitiveScope = "sold" | "settings";
-
-export type StaffSession = {
-  calendarAccess: StaffCalendarAccess;
-  subject: string;
-};
 
 function safeCompare(left: string, right: string) {
   if (left.length !== right.length) {
@@ -32,12 +38,7 @@ function safeCompare(left: string, right: string) {
 }
 
 function getSessionSecret() {
-  const secret = process.env.STAFF_SESSION_SECRET;
-  if (!secret) {
-    throw new Error("Missing STAFF_SESSION_SECRET");
-  }
-
-  return secret;
+  return getStaffSessionSecret();
 }
 
 function getAdminCredentials() {
@@ -49,10 +50,6 @@ function getAdminCredentials() {
   }
 
   return { username, password };
-}
-
-export function hasStaffAuthConfig() {
-  return Boolean(process.env.STAFF_ADMIN_PASSWORD && process.env.STAFF_SESSION_SECRET);
 }
 
 export function verifyAdminCredentials(inputUsername: string, inputPassword: string) {
@@ -99,50 +96,6 @@ function encodeSessionPayload(session: StaffSession & { exp: number }) {
   return Buffer.from(JSON.stringify(session), "utf8").toString("base64url");
 }
 
-function decodeSessionPayload(payload: string): (StaffSession & { exp: number }) | null {
-  // Legacy tokens: payload is only the expiry milliseconds.
-  if (/^\d+$/.test(payload)) {
-    const exp = Number.parseInt(payload, 10);
-    if (!Number.isFinite(exp)) {
-      return null;
-    }
-
-    return {
-      exp,
-      calendarAccess: "read_write",
-      subject: "admin",
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
-      exp?: unknown;
-      calendarAccess?: unknown;
-      subject?: unknown;
-    };
-
-    if (typeof parsed.exp !== "number" || !Number.isFinite(parsed.exp)) {
-      return null;
-    }
-
-    if (parsed.calendarAccess !== "read" && parsed.calendarAccess !== "read_write") {
-      return null;
-    }
-
-    if (typeof parsed.subject !== "string" || !parsed.subject) {
-      return null;
-    }
-
-    return {
-      exp: parsed.exp,
-      calendarAccess: parsed.calendarAccess,
-      subject: parsed.subject,
-    };
-  } catch {
-    return null;
-  }
-}
-
 export function createStaffSessionToken(session: StaffSession) {
   const payload = encodeSessionPayload({
     ...session,
@@ -161,7 +114,7 @@ export function readStaffSessionFromToken(token: string | undefined): StaffSessi
     return null;
   }
 
-  const session = decodeSessionPayload(payload);
+  const session = decodeStaffSessionPayload(payload);
   if (!session || session.exp < Date.now()) {
     return null;
   }
