@@ -34,6 +34,8 @@ export type PropertySettings = {
   termsSummary: string;
   lineUrl: string | null;
   whatsappUrl: string | null;
+  facebookUrl: string | null;
+  tiktokUrl: string | null;
   promptPayId: string | null;
   bankName: string | null;
   accountName: string | null;
@@ -66,6 +68,8 @@ const defaultSettings: PropertySettings = {
     "Payment in full reserves your room when you book. Staff confirm every reservation.",
   lineUrl: null,
   whatsappUrl: null,
+  facebookUrl: null,
+  tiktokUrl: null,
   promptPayId: null,
   bankName: null,
   accountName: null,
@@ -94,6 +98,8 @@ function mapPropertySettings(row: PropertySettingsRow): PropertySettings {
     termsSummary: row.terms_summary,
     lineUrl: row.line_url,
     whatsappUrl: row.whatsapp_url,
+    facebookUrl: row.facebook_url ?? null,
+    tiktokUrl: row.tiktok_url ?? null,
     promptPayId: row.promptpay_id,
     bankName: row.bank_name,
     accountName: row.account_name,
@@ -166,6 +172,8 @@ export type PropertySettingsInput = {
   termsSummary: string;
   lineUrl: string | null;
   whatsappUrl: string | null;
+  facebookUrl: string | null;
+  tiktokUrl: string | null;
   promptPayId: string | null;
   bankName: string | null;
   accountName: string | null;
@@ -191,6 +199,8 @@ export function toPropertySettingsRow(input: PropertySettingsInput) {
     terms_summary: input.termsSummary,
     line_url: input.lineUrl,
     whatsapp_url: input.whatsappUrl,
+    facebook_url: input.facebookUrl,
+    tiktok_url: input.tiktokUrl,
     promptpay_id: input.promptPayId,
     bank_name: input.bankName,
     account_name: input.accountName,

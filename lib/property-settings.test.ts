@@ -21,6 +21,8 @@ describe("toPropertySettingsRow", () => {
       termsSummary: "",
       lineUrl: null,
       whatsappUrl: null,
+      facebookUrl: null,
+      tiktokUrl: null,
       promptPayId: "0812345678",
       bankName: "Bangkok Bank",
       accountName: "Kamala Guesthouse",

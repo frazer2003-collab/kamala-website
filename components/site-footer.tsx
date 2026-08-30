@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { FooterSocials } from "@/components/footer-socials";
 import type { PropertySettings } from "@/lib/property-settings";
 import { formatPropertyTagline } from "@/lib/property-brand";
-import { normalizeTelHref } from "@/lib/tha-phae-seo";
+import "@/app/footer-socials.css";
 
 export function SiteFooter({ settings }: { settings: PropertySettings }) {
   const tagline = formatPropertyTagline(settings.propertyName, settings.propertyTagline);
@@ -15,17 +16,6 @@ export function SiteFooter({ settings }: { settings: PropertySettings }) {
             {tagline ? ` · ${tagline}` : null}
           </strong>
           {settings.addressLine ? <p>{settings.addressLine}</p> : null}
-          {settings.contactPhone || settings.contactEmail ? (
-            <p>
-              {settings.contactPhone ? (
-                <a href={normalizeTelHref(settings.contactPhone)}>{settings.contactPhone}</a>
-              ) : null}
-              {settings.contactPhone && settings.contactEmail ? " · " : null}
-              {settings.contactEmail ? (
-                <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
-              ) : null}
-            </p>
-          ) : null}
         </div>
         <nav aria-label="Guest pages" className="site-footer__nav">
           <Link href="/gallery">Gallery</Link>
@@ -33,21 +23,12 @@ export function SiteFooter({ settings }: { settings: PropertySettings }) {
           <Link href="/location">Location</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/cancellation">Cancellation</Link>
-          {settings.lineUrl ? (
-            <a href={settings.lineUrl} rel="noopener noreferrer" target="_blank">
-              LINE
-            </a>
-          ) : null}
-          {settings.whatsappUrl ? (
-            <a href={settings.whatsappUrl} rel="noopener noreferrer" target="_blank">
-              WhatsApp
-            </a>
-          ) : null}
           <Link className="site-footer__staff" href="/staff/login">
             Staff
           </Link>
         </nav>
       </div>
+      <FooterSocials settings={settings} />
     </footer>
   );
 }

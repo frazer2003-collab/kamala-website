@@ -391,6 +391,8 @@ create table if not exists public.property_settings (
   terms_summary text not null default 'A 50% deposit reserves your room. The remaining balance is due before check-in unless staff confirm another arrangement.',
   line_url text,
   whatsapp_url text,
+  facebook_url text,
+  tiktok_url text,
   promptpay_id text,
   bank_name text,
   account_name text,

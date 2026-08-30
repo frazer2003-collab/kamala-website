@@ -183,6 +183,34 @@ export function StaffPropertySettingsForm({
           type="url"
         />
       </div>
+      <div className="field-pair field-pair--wide staff-settings-subsection">
+        <h3 className="staff-settings-subheading">Social profiles (optional)</h3>
+        <p className="staff-settings-calendar-colors__hint">
+          Shown at the bottom of the guest site footer. Leave blank to hide each link.
+        </p>
+      </div>
+      <div className="field-pair field-pair--wide">
+        <label htmlFor="facebook-url">Facebook page</label>
+        <input
+          defaultValue={settings.facebookUrl ?? ""}
+          disabled={disabled}
+          id="facebook-url"
+          name="facebook-url"
+          placeholder="https://facebook.com/..."
+          type="url"
+        />
+      </div>
+      <div className="field-pair field-pair--wide">
+        <label htmlFor="tiktok-url">TikTok profile</label>
+        <input
+          defaultValue={settings.tiktokUrl ?? ""}
+          disabled={disabled}
+          id="tiktok-url"
+          name="tiktok-url"
+          placeholder="https://tiktok.com/@..."
+          type="url"
+        />
+      </div>
       <div className="field-pair field-pair--wide staff-settings-calendar-colors">
         <h3 className="staff-settings-subheading">Staff calendar colors</h3>
         <p className="staff-settings-calendar-colors__hint">

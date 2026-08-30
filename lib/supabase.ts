@@ -174,6 +174,8 @@ export type PropertySettingsRow = {
   terms_summary: string;
   line_url: string | null;
   whatsapp_url: string | null;
+  facebook_url?: string | null;
+  tiktok_url?: string | null;
   promptpay_id: string | null;
   bank_name: string | null;
   account_name: string | null;
