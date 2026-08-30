@@ -1,5 +1,12 @@
 /* Staff passcode unlock — reuses .staff-login-* chrome from globals. */
 
+.staff-login-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .staff-passcode-lead {
   margin: calc(var(--space-2) * -1) 0 0;
   color: var(--color-muted);

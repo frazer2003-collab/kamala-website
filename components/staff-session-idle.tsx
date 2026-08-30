@@ -5,6 +5,7 @@ import { logoutStaff } from "@/app/staff/auth-actions";
 import {
   STAFF_IDLE_STORAGE_KEY,
   STAFF_IDLE_TIMEOUT_MS,
+  clearStaffIdleActivity,
   formatStaffIdleCountdown,
   staffIdleMsRemaining,
   staffIdlePhase,
@@ -72,6 +73,7 @@ export function StaffSessionIdleGuard() {
         return;
       }
       signingOutRef.current = true;
+      clearStaffIdleActivity();
       startTransition(() => {
         void logoutStaff();
       });
@@ -187,6 +189,7 @@ export function StaffSessionIdleGuard() {
             disabled={pending}
             onClick={() => {
               signingOutRef.current = true;
+              clearStaffIdleActivity();
               startTransition(() => {
                 void logoutStaff();
               });

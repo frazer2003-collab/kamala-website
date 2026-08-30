@@ -8,7 +8,7 @@ export const STAFF_SESSION_COOKIE_NAME = "kamala_staff_session";
 export const STAFF_SENSITIVE_COOKIE_NAME = "kamala_staff_sensitive";
 const COOKIE_NAME = STAFF_SESSION_COOKIE_NAME;
 const SENSITIVE_COOKIE_NAME = STAFF_SENSITIVE_COOKIE_NAME;
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_MAX_AGE_SECONDS = 30 * 60;
 /** Unlock lasts only while working in that area — not a long-lived desk unlock. */
 const SENSITIVE_UNLOCK_MAX_AGE_SECONDS = 30 * 60;
 
@@ -217,7 +217,6 @@ export async function setStaffSessionCookie(session: StaffSession) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
   });
 }
 
