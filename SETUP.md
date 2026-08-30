@@ -54,7 +54,9 @@ Staff enter every stay on the calendar: tap a day, choose **Book**, and pick the
 2. Open **Settings** — set property name, address, currency (THB), policies, LINE/WhatsApp links, and the homepage background photo
 3. Open **Rooms** — update rates, descriptions, and upload room photos
 4. Open **Gallery** — upload guesthouse photos for the public `/gallery` page
-5. Add staff notification emails in Settings
+5. Add staff notification emails in Settings — each email gets its own password (at least 8 characters)
+
+After upgrading an existing database, run `supabase/migrate-staff-passwords.sql` once so staff passwords can be saved. Until a password is set for an email, that account can still sign in with the shared `STAFF_ADMIN_PASSWORD`.
 
 ## 4. Test the booking flow
 
