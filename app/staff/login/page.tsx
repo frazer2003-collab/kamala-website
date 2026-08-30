@@ -2,6 +2,7 @@ import Link from "next/link";
 import { StaffBusyRoot } from "@/components/staff-busy";
 import { StaffLoginForm } from "@/components/staff-login-form";
 import { hasStaffAuthConfig } from "@/lib/staff-auth";
+import "@/app/staff-passcode.css";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,10 @@ export default async function StaffLoginPage({
           </Link>
 
           <h1 id="staff-login-title">Sign in</h1>
+          <p className="staff-login-note">
+            Staff sign-in is required each time you open the staff area from the
+            guest site or a bookmark.
+          </p>
 
           <StaffLoginForm configured={hasStaffAuthConfig()} nextPath={nextPath} />
         </section>

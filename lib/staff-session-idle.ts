@@ -39,3 +39,15 @@ export function formatStaffIdleCountdown(msRemaining: number) {
   const seconds = totalSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
+
+export function clearStaffIdleActivity() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(STAFF_IDLE_STORAGE_KEY);
+  } catch {
+    // Private mode / blocked storage.
+  }
+}
