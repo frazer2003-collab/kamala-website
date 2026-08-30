@@ -5,12 +5,12 @@ import {
   isStaffProtectedPath,
 } from "@/lib/staff-entry";
 import {
-  readStaffSessionFromToken,
+  readStaffSessionFromTokenEdge,
   STAFF_SESSION_COOKIE_NAME,
   STAFF_SENSITIVE_COOKIE_NAME,
-} from "@/lib/staff-auth";
+} from "@/lib/staff-session-edge";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   if (!isStaffProtectedPath(pathname)) {
@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
 
   const origin = request.nextUrl.origin;
   const token = request.cookies.get(STAFF_SESSION_COOKIE_NAME)?.value;
-  const session = readStaffSessionFromToken(token);
+  const session = await readStaffSessionFromTokenEdge(token);
   const internalStaffNav = isInternalStaffReferer(
     request.headers.get("referer"),
     origin,
