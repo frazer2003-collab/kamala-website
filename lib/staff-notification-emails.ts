@@ -9,7 +9,14 @@ export type StaffNotificationEmail = {
   email: string;
   label: string | null;
   calendarAccess: StaffCalendarAccess;
+  hasPassword: boolean;
   created_at: string;
+};
+
+export type StaffLoginCredential = {
+  email: string;
+  calendarAccess: StaffCalendarAccess;
+  passwordHash: string | null;
 };
 
 export type { StaffCalendarAccess };
@@ -33,6 +40,7 @@ function mapRow(row: {
   email: string;
   label: string | null;
   calendar_access?: string | null;
+  password_hash?: string | null;
   created_at: string;
 }): StaffNotificationEmail {
   return {
@@ -40,9 +48,14 @@ function mapRow(row: {
     email: row.email,
     label: row.label,
     calendarAccess: row.calendar_access === "read" ? "read" : "read_write",
+    hasPassword: Boolean(row.password_hash),
     created_at: row.created_at,
   };
 }
+
+const staffEmailSelect =
+  "id, email, label, calendar_access, password_hash, created_at" as const;
+const staffEmailSelectLegacy = "id, email, label, calendar_access, created_at" as const;
 
 export async function getStaffNotificationEmails(): Promise<StaffNotificationEmail[]> {
   if (!hasStaffSupabaseConfig()) {
@@ -52,18 +65,28 @@ export async function getStaffNotificationEmails(): Promise<StaffNotificationEma
   const supabase = createStaffSupabaseClient();
   const { data, error } = await supabase
     .from("staff_notification_emails")
-    .select("id, email, label, calendar_access, created_at")
+    .select(staffEmailSelect)
     .order("created_at", { ascending: true });
 
   if (error || !data) {
-    // Older DBs before calendar_access existed on staff emails
+    // Older DBs before password_hash existed on staff emails
     const fallback = await supabase
       .from("staff_notification_emails")
-      .select("id, email, label, created_at")
+      .select(staffEmailSelectLegacy)
       .order("created_at", { ascending: true });
 
     if (fallback.error || !fallback.data) {
-      return [];
+      // Older DBs before calendar_access existed on staff emails
+      const legacy = await supabase
+        .from("staff_notification_emails")
+        .select("id, email, label, created_at")
+        .order("created_at", { ascending: true });
+
+      if (legacy.error || !legacy.data) {
+        return [];
+      }
+
+      return legacy.data.map((row) => mapRow(row));
     }
 
     return fallback.data.map((row) => mapRow(row));
@@ -83,15 +106,65 @@ export async function getStaffNotificationEmailByAddress(
   const supabase = createStaffSupabaseClient();
   const { data, error } = await supabase
     .from("staff_notification_emails")
-    .select("id, email, label, calendar_access, created_at")
+    .select(staffEmailSelect)
     .eq("email", normalized)
     .maybeSingle();
 
   if (error || !data) {
-    return null;
+    const fallback = await supabase
+      .from("staff_notification_emails")
+      .select(staffEmailSelectLegacy)
+      .eq("email", normalized)
+      .maybeSingle();
+
+    if (fallback.error || !fallback.data) {
+      return null;
+    }
+
+    return mapRow(fallback.data);
   }
 
   return mapRow(data);
+}
+
+export async function getStaffLoginCredential(
+  email: string,
+): Promise<StaffLoginCredential | null> {
+  const normalized = email.trim().toLowerCase();
+  if (!isValidStaffNotificationEmail(normalized) || !hasStaffSupabaseConfig()) {
+    return null;
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data, error } = await supabase
+    .from("staff_notification_emails")
+    .select("email, calendar_access, password_hash")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error || !data) {
+    const fallback = await supabase
+      .from("staff_notification_emails")
+      .select("email, calendar_access")
+      .eq("email", normalized)
+      .maybeSingle();
+
+    if (fallback.error || !fallback.data) {
+      return null;
+    }
+
+    return {
+      email: fallback.data.email,
+      calendarAccess: fallback.data.calendar_access === "read" ? "read" : "read_write",
+      passwordHash: null,
+    };
+  }
+
+  return {
+    email: data.email,
+    calendarAccess: data.calendar_access === "read" ? "read" : "read_write",
+    passwordHash: data.password_hash ?? null,
+  };
 }
 
 export async function getStaffNotificationRecipients(): Promise<string[]> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react-dom";
+import { useTransition } from "react";
 import { logoutStaff } from "@/app/staff/auth-actions";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { clearStaffIdleActivity } from "@/lib/staff-session-idle";

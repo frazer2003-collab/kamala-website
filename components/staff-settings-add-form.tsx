@@ -55,6 +55,19 @@ export function StaffSettingsAddForm({ disabled = false }: StaffSettingsAddFormP
         />
       </div>
 
+      <div className="field-pair">
+        <label htmlFor="staff-email-password">Password</label>
+        <input
+          autoComplete="new-password"
+          disabled={disabled}
+          id="staff-email-password"
+          minLength={8}
+          name="password"
+          required
+          type="password"
+        />
+      </div>
+
       <fieldset className="staff-settings-access" disabled={disabled}>
         <legend>Calendar access</legend>
         <label className="staff-settings-access__option">
@@ -76,8 +89,8 @@ export function StaffSettingsAddForm({ disabled = false }: StaffSettingsAddFormP
       </fieldset>
 
       <p className="field-help">
-        Sign in with this email plus the shared staff password. Only read &amp; write
-        staff get booking notification emails.
+        Each staff email has its own password (at least 8 characters). Only read
+        &amp; write staff get booking notification emails.
       </p>
 
       <button className="button button--primary" disabled={disabled} type="submit">

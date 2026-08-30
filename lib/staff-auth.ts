@@ -1,7 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getStaffNotificationEmailByAddress } from "@/lib/staff-notification-emails";
+import {
+  getStaffLoginCredential,
+  getStaffNotificationEmailByAddress,
+} from "@/lib/staff-notification-emails";
+import { verifyStaffPassword } from "@/lib/staff-password";
 import type { StaffCalendarAccess } from "@/lib/supabase";
 
 export const STAFF_SESSION_COOKIE_NAME = "kamala_staff_session";
@@ -67,6 +71,24 @@ export function verifySharedStaffPassword(inputPassword: string) {
 
   const { password } = getAdminCredentials();
   return safeCompare(inputPassword, password);
+}
+
+export async function verifyStaffEmailLogin(email: string, inputPassword: string) {
+  const credential = await getStaffLoginCredential(email);
+  if (!credential) {
+    return null;
+  }
+
+  if (credential.passwordHash) {
+    const matches = await verifyStaffPassword(inputPassword, credential.passwordHash);
+    return matches ? credential : null;
+  }
+
+  if (verifySharedStaffPassword(inputPassword)) {
+    return credential;
+  }
+
+  return null;
 }
 
 function signSessionPayload(payload: string) {

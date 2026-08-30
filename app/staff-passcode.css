@@ -15,3 +15,29 @@
   line-height: 1.45;
   max-width: 32ch;
 }
+
+.staff-email-list__item:has(.staff-email-password-form) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.staff-email-password-form {
+  display: grid;
+  gap: var(--space-3);
+  grid-column: 1 / -1;
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.staff-email-password-form__label {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+}
+
+.staff-email-password-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
