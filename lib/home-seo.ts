@@ -99,9 +99,12 @@ function buildOpenGraphImageAlt(settings: PropertySettings): string {
 }
 
 function buildSameAsProfiles(settings: PropertySettings) {
-  return [settings.lineUrl, settings.whatsappUrl].filter(
-    (url): url is string => Boolean(url?.trim()),
-  );
+  return [
+    settings.lineUrl,
+    settings.whatsappUrl,
+    settings.facebookUrl,
+    settings.tiktokUrl,
+  ].filter((url): url is string => Boolean(url?.trim()));
 }
 
 export function buildHomePageMetadata(settings: PropertySettings): Metadata {
