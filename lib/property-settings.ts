@@ -17,6 +17,21 @@ import { DEFAULT_HERO_IMAGE_URL } from "@/lib/home-hero-media";
 import { sanitizeMediaUrl } from "@/lib/media-url";
 import { normalizePropertyBrand } from "@/lib/property-brand";
 
+/** Shown when contact/social fields are unset (dev defaults and empty DB columns). */
+export const EXAMPLE_CONTACT_DEFAULTS = {
+  contactEmail: "bookings@kamalaguesthouse.com",
+  contactPhone: "+66986494996",
+  lineUrl: "https://line.me/R/ti/p/@kamalaguesthouse",
+  whatsappUrl: "https://wa.me/66986494996",
+  facebookUrl: "https://www.facebook.com/kamalaguesthouse",
+  tiktokUrl: "https://www.tiktok.com/@kamalaguesthouse",
+} as const;
+
+function contactOrExample(value: string | null | undefined, example: string | null) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : example;
+}
+
 export type PropertySettings = {
   propertyName: string;
   propertyTagline: string;
@@ -50,8 +65,8 @@ export type PropertySettings = {
 const defaultSettings: PropertySettings = {
   propertyName: "Kamala's Boutique Guesthouse",
   propertyTagline: "Chiang Mai Old City",
-  contactEmail: null,
-  contactPhone: null,
+  contactEmail: EXAMPLE_CONTACT_DEFAULTS.contactEmail,
+  contactPhone: EXAMPLE_CONTACT_DEFAULTS.contactPhone,
   addressLine:
     "2/7 Tha Phae Rd Soi 6, Changklan, Mueang Chiang Mai District, Chiang Mai 50100",
   checkInFrom: "3:00 pm",
@@ -66,10 +81,10 @@ const defaultSettings: PropertySettings = {
     "We use your contact details only to manage your booking and stay. We do not sell guest data.",
   termsSummary:
     "Payment in full reserves your room when you book. Staff confirm every reservation.",
-  lineUrl: null,
-  whatsappUrl: null,
-  facebookUrl: null,
-  tiktokUrl: null,
+  lineUrl: EXAMPLE_CONTACT_DEFAULTS.lineUrl,
+  whatsappUrl: EXAMPLE_CONTACT_DEFAULTS.whatsappUrl,
+  facebookUrl: EXAMPLE_CONTACT_DEFAULTS.facebookUrl,
+  tiktokUrl: EXAMPLE_CONTACT_DEFAULTS.tiktokUrl,
   promptPayId: null,
   bankName: null,
   accountName: null,
@@ -84,8 +99,8 @@ function mapPropertySettings(row: PropertySettingsRow): PropertySettings {
   return {
     propertyName: row.property_name,
     propertyTagline: row.property_tagline,
-    contactEmail: row.contact_email,
-    contactPhone: row.contact_phone,
+    contactEmail: contactOrExample(row.contact_email, EXAMPLE_CONTACT_DEFAULTS.contactEmail),
+    contactPhone: contactOrExample(row.contact_phone, EXAMPLE_CONTACT_DEFAULTS.contactPhone),
     addressLine: row.address_line,
     checkInFrom: row.check_in_from,
     checkInUntil: row.check_in_until,
@@ -96,10 +111,10 @@ function mapPropertySettings(row: PropertySettingsRow): PropertySettings {
     cancellationPolicy: row.cancellation_policy,
     privacyPolicy: row.privacy_policy,
     termsSummary: row.terms_summary,
-    lineUrl: row.line_url,
-    whatsappUrl: row.whatsapp_url,
-    facebookUrl: row.facebook_url ?? null,
-    tiktokUrl: row.tiktok_url ?? null,
+    lineUrl: contactOrExample(row.line_url, EXAMPLE_CONTACT_DEFAULTS.lineUrl),
+    whatsappUrl: contactOrExample(row.whatsapp_url, EXAMPLE_CONTACT_DEFAULTS.whatsappUrl),
+    facebookUrl: contactOrExample(row.facebook_url, EXAMPLE_CONTACT_DEFAULTS.facebookUrl),
+    tiktokUrl: contactOrExample(row.tiktok_url, EXAMPLE_CONTACT_DEFAULTS.tiktokUrl),
     promptPayId: row.promptpay_id,
     bankName: row.bank_name,
     accountName: row.account_name,
