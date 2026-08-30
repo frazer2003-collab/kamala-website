@@ -1,18 +1,16 @@
-/* Guest footer — contact channels and social follow links. */
+/* Guest footer — contact channels first, then quieter nav and location. */
 
 .site-footer__socials {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-6);
+  gap: var(--space-4) var(--space-6);
   flex-wrap: wrap;
-  margin-top: var(--space-6);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--color-border);
 }
 
 .site-footer__contacts {
   flex: 1 1 16rem;
+  min-width: 0;
 }
 
 .site-footer__contact-list,
@@ -30,6 +28,7 @@
   align-items: center;
   gap: 0.45rem;
   min-height: 2.75rem;
+  max-width: 100%;
   padding: 0.35rem 0.55rem;
   border-radius: var(--radius-md);
   color: var(--color-muted);
@@ -55,12 +54,14 @@
 
 .site-footer__contact-label {
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .site-footer__follow {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex: 0 0 auto;
 }
 
 .site-footer__follow-heading {
@@ -90,10 +91,15 @@
   background: var(--color-maroon-wash);
 }
 
-.guest-site .site-footer__socials {
+.site-footer__inner {
   margin-top: var(--space-6);
   padding-top: var(--space-5);
   border-top: 1px solid var(--color-border);
+}
+
+.site-footer__place {
+  min-width: 0;
+  max-width: 38rem;
 }
 
 .guest-site .site-footer__contact-link {
@@ -117,7 +123,38 @@
 @media (max-width: 720px) {
   .site-footer__socials {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: var(--space-5);
+  }
+
+  .site-footer__contact-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+  }
+
+  .site-footer__contact-link {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    padding: 0.55rem 0.7rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+
+  .site-footer__follow {
+    width: 100%;
+    justify-content: flex-start;
+    padding-top: var(--space-1);
+  }
+
+  .site-footer__inner {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
     gap: var(--space-4);
+  }
+
+  .site-footer__nav {
+    gap: var(--space-3) var(--space-4);
   }
 }

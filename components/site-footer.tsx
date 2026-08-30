@@ -9,8 +9,9 @@ export function SiteFooter({ settings }: { settings: PropertySettings }) {
 
   return (
     <footer className="site-footer">
+      <FooterSocials settings={settings} />
       <div className="site-footer__inner">
-        <div>
+        <div className="site-footer__place">
           <strong>
             {settings.propertyName}
             {tagline ? ` · ${tagline}` : null}
@@ -28,7 +29,6 @@ export function SiteFooter({ settings }: { settings: PropertySettings }) {
           </Link>
         </nav>
       </div>
-      <FooterSocials settings={settings} />
     </footer>
   );
 }
