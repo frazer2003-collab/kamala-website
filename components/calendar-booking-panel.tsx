@@ -374,8 +374,9 @@ export function CalendarBookingPanel({
               Paid
             </label>
             <span className="field-help">
-              Mark when payment is received. Clearing removes the paid stamp
-              without issuing Stripe refunds.
+              Unpaid still keeps the room booked — it only reminds staff to
+              collect at check-in. Mark Paid when money is received. Clearing
+              Paid removes the stamp without Stripe refunds.
             </span>
           </div>
         </div>

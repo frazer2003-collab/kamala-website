@@ -6,14 +6,25 @@ import {
 } from "./booking-reservation";
 
 describe("bookingReservesRoom", () => {
-  it("reserves inventory for a bank transfer claim", () => {
+  it("reserves inventory for confirmed staff-keyed stays even when unpaid", () => {
     assert.equal(
       bookingReservesRoom({
-        status: "pending",
+        status: "confirmed",
+        deposit_paid_at: null,
+        bank_transfer_claimed_at: null,
+      }),
+      true,
+    );
+  });
+
+  it("does not reserve inventory for a Thai QR claim waiting in Requests", () => {
+    assert.equal(
+      bookingReservesRoom({
+        status: "awaiting",
         deposit_paid_at: null,
         bank_transfer_claimed_at: "2026-07-18T07:00:00.000Z",
       }),
-      true,
+      false,
     );
   });
 
@@ -34,6 +45,17 @@ describe("bookingReservesRoom", () => {
         status: "pending_payment",
         deposit_paid_at: "2026-07-18T07:00:00.000Z",
         bank_transfer_claimed_at: null,
+      }),
+      true,
+    );
+  });
+
+  it("reserves inventory once staff confirms a bank transfer", () => {
+    assert.equal(
+      bookingReservesRoom({
+        status: "confirmed",
+        deposit_paid_at: "2026-07-18T09:00:00.000Z",
+        bank_transfer_claimed_at: "2026-07-18T07:00:00.000Z",
       }),
       true,
     );
@@ -65,6 +87,14 @@ describe("bookingBlocksCalendarExport", () => {
     assert.equal(
       bookingBlocksCalendarExport({
         status: "awaiting",
+        bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z",
+      }),
+      false,
+    );
+    assert.equal(
+      bookingBlocksCalendarExport({
+        status: "confirmed",
+        deposit_paid_at: "2026-07-18T09:00:00.000Z",
         bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z",
       }),
       true,
