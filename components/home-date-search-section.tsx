@@ -22,13 +22,18 @@ export function HomeDateSearchSection({
   return (
     <section
       aria-labelledby="home-hero-title"
-      className="hero-atmosphere hero-atmosphere--dates-first"
+      className="hero-atmosphere hero-atmosphere--elevate"
       id="dates"
     >
       <HomeHeroIntro addressLine={addressLine} propertyName={propertyName} />
+      <HomeHeroLede
+        addressLine={addressLine}
+        propertyName={propertyName}
+        propertyTagline={propertyTagline}
+      />
       <div className="hero-atmosphere__search">
         <p className="hero-atmosphere__search-label" id="home-dates-label">
-          Start your reservation — check dates
+          Check dates
         </p>
         <Suspense
           fallback={
@@ -45,11 +50,6 @@ export function HomeDateSearchSection({
           />
         </Suspense>
       </div>
-      <HomeHeroLede
-        addressLine={addressLine}
-        propertyName={propertyName}
-        propertyTagline={propertyTagline}
-      />
     </section>
   );
 }
