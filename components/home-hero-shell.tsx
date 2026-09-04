@@ -18,7 +18,7 @@ export function HomeHeroShell({ heroImageUrl, children }: HomeHeroShellProps) {
             className="home-hero__image"
             fill
             priority
-            sizes="100vw"
+            sizes="(max-width: 750px) 100vw, 1280px"
             src={resolvedHero}
           />
         ) : (

@@ -102,53 +102,53 @@ export function GuestTopbarHome({ settings }: GuestTopbarHomeProps) {
             <span className="sr-only">{menuOpen ? "Close menu" : "Open menu"}</span>
           </button>
         </div>
-
-        <nav aria-label="Guest navigation" className="topbar__nav" id={navId}>
-          <div className="topbar__nav-primary">
-            <Link href="/gallery" onClick={closeMenu}>
-              Gallery
-            </Link>
-            <Link href="/location" onClick={closeMenu}>
-              Location
-            </Link>
-            <Link href="/contact" onClick={closeMenu}>
-              Contact
-            </Link>
-          </div>
-
-          {settings.lineUrl || settings.whatsappUrl ? (
-            <>
-              <div aria-hidden="true" className="topbar__nav-divider" />
-              <div className="topbar__nav-secondary">
-                {settings.lineUrl ? (
-                  <a
-                    className="topbar__nav-external"
-                    href={settings.lineUrl}
-                    onClick={closeMenu}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    LINE
-                    <span className="sr-only"> (opens in new tab)</span>
-                  </a>
-                ) : null}
-                {settings.whatsappUrl ? (
-                  <a
-                    className="topbar__nav-external"
-                    href={settings.whatsappUrl}
-                    onClick={closeMenu}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    WhatsApp
-                    <span className="sr-only"> (opens in new tab)</span>
-                  </a>
-                ) : null}
-              </div>
-            </>
-          ) : null}
-        </nav>
       </div>
+
+      <nav aria-label="Guest navigation" className="topbar__nav" id={navId}>
+        <div className="topbar__nav-primary">
+          <Link href="/gallery" onClick={closeMenu}>
+            Gallery
+          </Link>
+          <Link href="/location" onClick={closeMenu}>
+            Location
+          </Link>
+          <Link href="/contact" onClick={closeMenu}>
+            Contact
+          </Link>
+        </div>
+
+        {settings.lineUrl || settings.whatsappUrl ? (
+          <>
+            <div aria-hidden="true" className="topbar__nav-divider" />
+            <div className="topbar__nav-secondary">
+              {settings.lineUrl ? (
+                <a
+                  className="topbar__nav-external"
+                  href={settings.lineUrl}
+                  onClick={closeMenu}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  LINE
+                  <span className="sr-only"> (opens in new tab)</span>
+                </a>
+              ) : null}
+              {settings.whatsappUrl ? (
+                <a
+                  className="topbar__nav-external"
+                  href={settings.whatsappUrl}
+                  onClick={closeMenu}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  WhatsApp
+                  <span className="sr-only"> (opens in new tab)</span>
+                </a>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+      </nav>
     </header>
   );
 }
