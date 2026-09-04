@@ -2,7 +2,7 @@
 
 /* --- Hero: slow Ken Burns (copy entrance lives in globals elevate) --- */
 
-@media (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) and (min-width: 720px) {
   .home-page .home-hero--atmosphere .home-hero__image {
     animation: home-hero-ken-burns 32s ease-in-out infinite alternate;
     transform-origin: center center;
@@ -129,6 +129,31 @@
   background: transparent;
 }
 
+@media (min-width: 921px) {
+  .home-page .stay-story--split {
+    grid-template-columns: minmax(0, 1.35fr) minmax(14rem, 0.65fr);
+    gap: clamp(var(--space-10), 6vw, var(--space-16));
+    align-items: start;
+  }
+
+  .home-page .stay-story__aside {
+    position: sticky;
+    top: calc(var(--home-topbar-sticky-offset, 4.25rem) + var(--space-5));
+    padding: var(--space-5) 0 0 var(--space-6);
+    border-left: 1px solid var(--color-border);
+  }
+
+  .home-page .stay-story__aside li {
+    font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: clamp(1.05rem, 1.2vw, 1.2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.35;
+    text-wrap: balance;
+    color: var(--color-ink);
+  }
+}
+
 @media (max-width: 640px) {
   .home-page .home-body {
     gap: var(--space-6);
@@ -182,6 +207,283 @@
   }
 
   .home-page .listing-card--feature:hover {
+    transform: none;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Motion language — Trusted Counter fluidity
+   Focal: hero still entrance
+   Continuity: menu, sticky dates, chrome
+   Feedback: press + quiet hover
+   ───────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Focal: quieter still arrives, then the counter. */
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__lede,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
+    animation: home-hero-arrive 520ms var(--ease-out-quint) both;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__lede {
+    animation-delay: 70ms;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
+    animation-delay: 140ms;
+  }
+
+  .home-page .home-hero--atmosphere .home-hero__overlay {
+    animation: home-veil-settle 700ms var(--ease-out-quint) both;
+  }
+
+  /* Continuity: mobile menu panel grows from the chrome. */
+  .home-page .topbar--home.topbar--menu-open .topbar__nav {
+    animation: home-nav-panel-in 260ms var(--ease-out-quint) both;
+    transform-origin: top center;
+  }
+
+  .home-page .topbar--home.topbar--menu-open .topbar__nav a {
+    animation: home-nav-link-in 280ms var(--ease-out-quint) both;
+  }
+
+  .home-page .topbar--home.topbar--menu-open .topbar__nav-primary a:nth-child(1) {
+    animation-delay: 40ms;
+  }
+
+  .home-page .topbar--home.topbar--menu-open .topbar__nav-primary a:nth-child(2) {
+    animation-delay: 70ms;
+  }
+
+  .home-page .topbar--home.topbar--menu-open .topbar__nav-primary a:nth-child(3) {
+    animation-delay: 100ms;
+  }
+
+  .home-page .topbar--home.topbar--menu-open .topbar__nav-secondary a:nth-child(1) {
+    animation-delay: 140ms;
+  }
+
+  .home-page .topbar--home.topbar--menu-open .topbar__nav-secondary a:nth-child(2) {
+    animation-delay: 170ms;
+  }
+
+  /* Continuity: date strip settles under the bar. */
+  .home-page .home-sticky-dates {
+    animation: home-sticky-dates-in 280ms var(--ease-out-quint) both;
+  }
+
+  /* Phrase rail: soft view-entry, capped stagger. */
+  @supports (animation-timeline: view()) {
+    .home-page .home-stay-assurances-list li {
+      animation: home-phrase-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+
+  /* Rooms: featured media eases in as it enters. */
+  @supports (animation-timeline: view()) {
+    .home-page .listing-card--feature .listing-card__media {
+      animation: home-media-settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+    }
+  }
+}
+
+@keyframes home-hero-arrive {
+  from {
+    opacity: 0.001;
+    transform: translateY(0.7rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-veil-settle {
+  from {
+    opacity: 0.72;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes home-nav-panel-in {
+  from {
+    opacity: 0.001;
+    transform: translateY(-0.35rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes home-nav-link-in {
+  from {
+    opacity: 0.001;
+    transform: translateY(0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-sticky-dates-in {
+  from {
+    opacity: 0.001;
+    transform: translateY(-0.4rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-phrase-in {
+  from {
+    opacity: 0.2;
+    transform: translateY(0.55rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-media-settle {
+  from {
+    opacity: 0.55;
+    transform: scale(1.02);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Feedback + fluid chrome (always on; near-imperceptible). */
+
+.home-page .home-hero--atmosphere .search-bar--atmosphere {
+  transition:
+    box-shadow 220ms var(--ease-out-quint),
+    border-color 220ms var(--ease-out-quint),
+    transform 220ms var(--ease-out-quint);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-page .home-hero--atmosphere .search-bar--atmosphere:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within {
+  transform: translateY(-1px);
+}
+
+.home-page .listing-card--rail {
+  transition:
+    background-color 180ms var(--ease-out-quint),
+    border-color 180ms var(--ease-out-quint),
+    transform 200ms var(--ease-out-quint);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-page .listing-card--rail:hover {
+    transform: translateY(-2px);
+  }
+
+  .home-page .listing-card--feature:hover .listing-card__media img {
+    transform: scale(1.035);
+  }
+}
+
+.home-page .listing-card--feature .button,
+.home-page .listing-card--rail .button {
+  transition:
+    background-color 180ms var(--ease-out-quint),
+    border-color 180ms var(--ease-out-quint),
+    color 180ms var(--ease-out-quint),
+    transform 140ms var(--ease-out-quint),
+    filter 180ms var(--ease-out-quint);
+}
+
+.home-page .listing-card--feature .button:active,
+.home-page .listing-card--rail .button:active,
+.home-page .home-hero--atmosphere .search-bar--atmosphere .search-bar__submit:active {
+  transform: scale(0.97);
+}
+
+.home-page .stay-story__gallery-link {
+  transition:
+    color 180ms var(--ease-out-quint),
+    transform 180ms var(--ease-out-quint);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-page .stay-story__gallery-link:hover {
+    transform: translateX(0.15rem);
+  }
+}
+
+.home-page .site-footer__contact-link,
+.home-page .site-footer__nav a {
+  transition:
+    color 180ms var(--ease-out-quint),
+    background-color 180ms var(--ease-out-quint),
+    transform 160ms var(--ease-out-quint);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-page .site-footer__contact-link:hover {
+    transform: translateX(0.12rem);
+  }
+}
+
+.home-page .home-sticky-dates__change {
+  transition:
+    color 180ms var(--ease-out-quint),
+    transform 140ms var(--ease-out-quint);
+}
+
+.home-page .home-sticky-dates__change:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__lede,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__search,
+  .home-page .home-hero--atmosphere .home-hero__overlay,
+  .home-page .topbar--home.topbar--menu-open .topbar__nav,
+  .home-page .topbar--home.topbar--menu-open .topbar__nav a,
+  .home-page .home-sticky-dates,
+  .home-page .home-stay-assurances-list li,
+  .home-page .listing-card--feature .listing-card__media {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .home-page .home-hero--atmosphere .search-bar--atmosphere,
+  .home-page .home-hero--atmosphere .search-bar--atmosphere:hover,
+  .home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within,
+  .home-page .listing-card--rail,
+  .home-page .listing-card--rail:hover,
+  .home-page .stay-story__gallery-link:hover,
+  .home-page .site-footer__contact-link:hover {
     transform: none;
   }
 }

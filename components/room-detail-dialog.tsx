@@ -242,41 +242,49 @@ export function RoomDetailDialog({
       <div className="room-detail-dialog__panel">
         <div className="room-detail-dialog__scroll">
           <div className="room-detail-dialog__header">
-            <div className="room-detail-dialog__heading">
-              <h2 id={titleId}>{room.name}</h2>
-              {rooms.length > 1 && onSelectRoom ? (
-                <div className="room-detail-dialog__room-nav" role="navigation" aria-label="Other rooms">
-                  <button
-                    className="button button--quiet room-detail-dialog__room-nav-btn"
-                    disabled={!previousRoom}
-                    onClick={() => previousRoom && onSelectRoom(previousRoom.id)}
-                    type="button"
-                  >
-                    Previous room
-                  </button>
-                  <span className="room-detail-dialog__room-nav-count" aria-live="polite">
-                    {roomIndex + 1} of {rooms.length}
-                  </span>
-                  <button
-                    className="button button--quiet room-detail-dialog__room-nav-btn"
-                    disabled={!nextRoom}
-                    onClick={() => nextRoom && onSelectRoom(nextRoom.id)}
-                    type="button"
-                  >
-                    Next room
-                  </button>
-                </div>
-              ) : null}
-            </div>
+            <h2 id={titleId}>{room.name}</h2>
             <button
               aria-label="Close room details"
-              className="button button--quiet"
+              className="button button--quiet room-detail-dialog__close"
               onClick={requestClose}
               type="button"
             >
-              Close
+              <span aria-hidden="true">×</span>
             </button>
           </div>
+
+          {rooms.length > 1 && onSelectRoom ? (
+            <div
+              aria-label="Other rooms"
+              className="room-detail-dialog__room-nav"
+              role="navigation"
+            >
+              <button
+                aria-label="Previous room"
+                className="button button--quiet room-detail-dialog__room-nav-btn"
+                disabled={!previousRoom}
+                onClick={() => previousRoom && onSelectRoom(previousRoom.id)}
+                type="button"
+              >
+                Prev
+              </button>
+              <span
+                aria-live="polite"
+                className="room-detail-dialog__room-nav-count"
+              >
+                {roomIndex + 1} of {rooms.length}
+              </span>
+              <button
+                aria-label="Next room"
+                className="button button--quiet room-detail-dialog__room-nav-btn"
+                disabled={!nextRoom}
+                onClick={() => nextRoom && onSelectRoom(nextRoom.id)}
+                type="button"
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
 
           <PhotoCarousel
             alt={photoAlt}

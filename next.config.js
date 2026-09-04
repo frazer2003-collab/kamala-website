@@ -34,7 +34,7 @@ const nextConfig = {
     // Uploads use new storage paths, so long TTL does not strand stale hero/gallery URLs.
     formats: ["image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 31,
-    deviceSizes: [640, 750, 1080, 1920],
+    deviceSizes: [640, 750, 828, 1080, 1280, 1920],
     imageSizes: [64, 96, 128, 256, 384],
     remotePatterns: [
       {

@@ -1,32 +1,55 @@
 /* Homepage trust polish — overrides guest landing surfaces only. */
 
 .brand--logo {
-  gap: var(--space-3);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
   padding: 0.15rem 0;
   min-width: 0;
+  text-align: center;
 }
 
 .brand__name {
   min-width: 0;
-  max-width: min(14rem, 42vw);
+  max-width: min(12.5rem, 72vw);
+  text-align: center;
 }
 
 .brand__name strong {
   display: block;
   color: var(--color-ink);
-  font-size: clamp(0.82rem, 2.4vw, 0.98rem);
+  font-size: clamp(0.68rem, 2.7vw, 0.8rem);
   font-weight: 800;
   letter-spacing: -0.025em;
-  line-height: 1.15;
+  line-height: 1.2;
   text-wrap: balance;
 }
 
 .brand__logo {
   display: block;
-  width: auto;
-  height: 2.35rem;
-  max-width: min(11.5rem, 44vw);
+  width: min(12.5rem, 72vw);
+  height: auto;
+  max-height: 3.1rem;
+  margin-inline: auto;
   object-fit: contain;
+  object-position: center;
+}
+
+@media (min-width: 720px) {
+  .brand__logo {
+    width: min(13.5rem, 100%);
+    max-height: 3.25rem;
+  }
+
+  .brand__name {
+    max-width: 13.5rem;
+  }
+
+  .brand__name strong {
+    font-size: clamp(0.72rem, 1.05vw, 0.84rem);
+  }
 }
 
 .home-stay-assurances {
@@ -176,4 +199,288 @@
       color-mix(in oklch, var(--color-ink) 14%, transparent) 42%,
       var(--color-canvas) 100%
     );
+}
+
+/* Mobile home — adapt / optimize / craft-floor pass */
+.home-page {
+  --home-topbar-sticky-offset: 4.75rem;
+  scroll-padding-top: calc(
+    var(--home-topbar-sticky-offset) + env(safe-area-inset-top, 0px)
+  );
+}
+
+.home-page .home-hero__content {
+  padding-top: calc(
+    var(--home-topbar-sticky-offset) + env(safe-area-inset-top, 0px)
+  );
+}
+
+@media (min-width: 720px) {
+  .home-page {
+    --home-topbar-sticky-offset: 4.25rem;
+  }
+
+  /* Desktop chrome: horizontal lockup so the film-still can breathe. */
+  .home-page .topbar--home .topbar__brand.brand--logo,
+  .home-page .brand--logo {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.7rem;
+    text-align: left;
+  }
+
+  .home-page .topbar--home .brand__logo,
+  .home-page .brand__logo {
+    width: auto;
+    height: 2.85rem;
+    max-width: 6.5rem;
+    max-height: 2.85rem;
+    margin-inline: 0;
+  }
+
+  .home-page .topbar--home .brand__name,
+  .home-page .brand__name {
+    max-width: 12rem;
+    text-align: left;
+  }
+
+  .home-page .topbar--home .brand__name strong,
+  .home-page .brand__name strong {
+    font-size: clamp(0.78rem, 0.85vw, 0.88rem);
+    line-height: 1.2;
+    text-align: left;
+  }
+
+  /* Film-still hero: one composition, brand → line → lede → counter. */
+  .home-page .home-hero--photo {
+    min-height: 100svh;
+  }
+
+  .home-page .hero-atmosphere--elevate {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(var(--space-5), 2.2vw, var(--space-7));
+    max-width: min(46rem, 100%);
+    min-height: calc(100svh - var(--home-topbar-sticky-offset) - 2rem);
+    padding-block: clamp(var(--space-8), 8vh, var(--space-14))
+      clamp(var(--space-12), 12vh, var(--space-20));
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy {
+    gap: var(--space-4);
+  }
+
+  .home-page .hero-atmosphere__brand {
+    font-size: clamp(2.65rem, 4vw, 3.55rem);
+    line-height: 1.06;
+    max-width: 14ch;
+  }
+
+  .home-page .hero-atmosphere__copy h1 {
+    font-size: clamp(1.28rem, 1.65vw, 1.5rem);
+    font-weight: 650;
+    max-width: 28ch;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__lede {
+    max-width: 42ch;
+    font-size: clamp(1.02rem, 1.15vw, 1.12rem);
+    line-height: 1.55;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
+    max-width: 40rem;
+    margin-top: var(--space-3);
+  }
+
+  .home-page .home-hero--atmosphere .search-bar--atmosphere {
+    min-height: 3.65rem;
+  }
+
+  .home-page .home-hero--atmosphere .search-bar--atmosphere .search-bar__submit {
+    min-height: 2.85rem;
+    padding-inline: 1.25rem;
+  }
+
+  .home-page .home-hero--atmosphere .search-bar--atmosphere .search-bar__submit:active {
+    transform: scale(0.98);
+  }
+
+  /* Assurances as a quiet phrase rail under the still. */
+  .home-page .home-stay-assurances {
+    padding-block: clamp(var(--space-8), 4vw, var(--space-12));
+  }
+
+  .home-page .home-stay-assurances-list {
+    gap: 0;
+    max-width: 100%;
+  }
+
+  .home-page .home-stay-assurances-list li {
+    padding: 0 clamp(var(--space-4), 1.4vw, var(--space-6));
+  }
+
+  .home-page .home-stay-assurances-phrase {
+    font-size: clamp(1.05rem, 1.15vw, 1.22rem);
+  }
+
+  .home-page .home-stay-assurances-detail {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  .home-page .home-body {
+    gap: clamp(var(--space-10), 5vw, var(--space-14));
+    padding-top: clamp(var(--space-6), 3vw, var(--space-8));
+  }
+
+  .home-page .home-body,
+  .home-page .home-stay-assurances,
+  .home-page .section--listings,
+  #rooms {
+    scroll-margin-top: calc(
+      var(--home-topbar-sticky-offset) + 3.25rem
+    );
+  }
+
+  .home-page .home-book-zone .section__heading--compact h2 {
+    font-size: clamp(1.55rem, 2.2vw, 1.95rem);
+  }
+
+  .home-page .listing-card--feature .listing-card__meta h3 {
+    font-size: clamp(1.15rem, 1.4vw, 1.35rem);
+  }
+
+  .home-page .stay-story__main h2 {
+    font-size: clamp(1.55rem, 2.2vw, 1.95rem);
+  }
+
+  /* Sticky dates: counter strip that respects the shell. */
+  .home-page .home-sticky-dates {
+    padding-inline: max(
+      var(--space-5),
+      calc((100vw - min(1280px, calc(100% - 2.5rem))) / 2 + var(--space-5))
+    );
+    background: color-mix(in oklch, var(--color-maroon-wash) 55%, var(--color-surface-muted));
+  }
+
+  .home-page .home-sticky-dates__label {
+    font-size: 0.95rem;
+  }
+
+  .home-page:has(.home-sticky-dates) .section--listings .section__change-dates {
+    display: none;
+  }
+}
+
+@media (min-width: 960px) {
+  .home-page .hero-atmosphere--elevate {
+    max-width: min(48rem, 52vw);
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
+    max-width: 42rem;
+  }
+}
+
+@media (max-width: 719px) {
+  .home-page .home-hero--photo {
+    min-height: min(100svh, 44rem);
+  }
+
+  .home-page .hero-atmosphere--elevate {
+    gap: var(--space-3);
+    padding-block: clamp(var(--space-5), 5svh, var(--space-8))
+      clamp(var(--space-6), 6svh, var(--space-10));
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy {
+    gap: var(--space-2);
+  }
+
+  .home-page .hero-atmosphere__brand {
+    font-size: clamp(1.85rem, 7.2vw, 2.55rem);
+    line-height: 1.08;
+  }
+
+  .home-page .hero-atmosphere__copy h1 {
+    font-size: clamp(1.05rem, 3.8vw, 1.2rem);
+    max-width: 24ch;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__lede {
+    max-width: 34ch;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
+    margin-top: var(--space-1);
+  }
+
+  /* Stronger veil over pale bedding so white type stays readable on phones. */
+  .guest-site .home-hero--atmosphere .home-hero__overlay {
+    background:
+      linear-gradient(
+        115deg,
+        color-mix(in oklch, var(--color-ink) 78%, transparent) 0%,
+        color-mix(in oklch, var(--color-ink) 48%, transparent) 36%,
+        color-mix(in oklch, var(--color-ink) 22%, transparent) 56%,
+        transparent 78%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--color-ink) 52%, transparent) 0%,
+        color-mix(in oklch, var(--color-ink) 22%, transparent) 38%,
+        color-mix(in oklch, var(--color-ink) 18%, transparent) 62%,
+        var(--color-canvas) 100%
+      );
+  }
+
+  .home-page .home-body {
+    gap: var(--space-6);
+    padding-top: var(--space-5);
+  }
+
+  .home-page .home-body,
+  .home-page .home-stay-assurances,
+  .home-page .section--listings,
+  #rooms {
+    scroll-margin-top: calc(
+      var(--home-topbar-sticky-offset) + 3.25rem + env(safe-area-inset-top, 0px)
+    );
+  }
+
+  .home-page .home-body > .section--listings {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-10);
+  }
+
+  .home-page .home-body > .section--listings .section__heading--compact {
+    margin-bottom: var(--space-5);
+  }
+
+  .home-page .home-body > .section--stay-story {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-8);
+  }
+
+  .home-page .home-stay-assurances {
+    padding-block: var(--space-5);
+  }
+
+  .home-page .home-stay-assurances-list li {
+    padding-block: var(--space-3);
+  }
+
+  .home-page .home-book-zone .section__heading--compact h2 {
+    font-size: clamp(1.25rem, 5.5vw, 1.55rem);
+  }
+
+  /* When sticky date chrome is visible, the in-section change link is redundant. */
+  .home-page:has(.home-sticky-dates) .section--listings .section__change-dates {
+    display: none;
+  }
 }

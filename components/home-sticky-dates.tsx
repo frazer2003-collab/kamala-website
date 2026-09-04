@@ -9,7 +9,7 @@ type HomeStickyDatesProps = {
 };
 
 function heroIsPastThreshold(hero: Element) {
-  return hero.getBoundingClientRect().bottom <= 64;
+  return hero.getBoundingClientRect().bottom <= 80;
 }
 
 export function HomeStickyDates({ arrival, departure }: HomeStickyDatesProps) {
@@ -43,7 +43,7 @@ export function HomeStickyDates({ arrival, departure }: HomeStickyDatesProps) {
           setHeroPast(!entry.isIntersecting);
         }
       },
-      { rootMargin: "-64px 0px 0px 0px", threshold: 0 },
+      { rootMargin: "-80px 0px 0px 0px", threshold: 0 },
     );
 
     observer.observe(hero);
