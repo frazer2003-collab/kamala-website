@@ -26,6 +26,14 @@ import {
   refreshStaleStayDates,
   resolveHomeStayDates,
 } from "@/lib/stay-dates";
+import { getPropertyTodayIso } from "@/lib/calendar";
+import {
+  getGuestNightAvailability,
+  guestNightAvailabilityLatestIso,
+  shiftStayDatesIfArrivalFull,
+} from "@/lib/guest-night-availability";
+import { addIsoDays } from "@/lib/room-day-inventory";
+
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
@@ -62,9 +70,48 @@ export default async function Home({
     getPropertySettings(),
   ]);
   const {
-    stayDates,
+    stayDates: resolvedStayDates,
     dateError,
   } = resolveHomeStayDates(arrival, departure);
+
+  let stayDates = resolvedStayDates;
+  if (stayDates) {
+    const today = getPropertyTodayIso();
+    const latest = guestNightAvailabilityLatestIso(today);
+    const searchToCandidate = addIsoDays(stayDates.arrival, 45);
+    const searchTo = searchToCandidate < latest ? searchToCandidate : latest;
+    if (searchTo >= stayDates.arrival) {
+      const nightAvailability = await getGuestNightAvailability(
+        rooms,
+        stayDates.arrival,
+        searchTo,
+      );
+      if (nightAvailability.status === "ok") {
+        const shifted = shiftStayDatesIfArrivalFull(
+          stayDates,
+          nightAvailability.nights,
+          latest,
+        );
+        if (
+          shifted &&
+          (arrival !== shifted.arrival || departure !== shifted.departure)
+        ) {
+          redirect(
+            `/?${buildHomeStaySearchParams({
+              arrival: shifted.arrival,
+              departure: shifted.departure,
+              room: initialRoomId,
+              lang,
+            })}`,
+          );
+        }
+        if (shifted) {
+          stayDates = shifted;
+        }
+      }
+    }
+  }
+
   const stayAvailability = stayDates
     ? await getRoomsStayAvailability(rooms, stayDates.arrival, stayDates.departure)
     : null;

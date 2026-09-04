@@ -63,3 +63,58 @@ export function clampGuestNightAvailabilityQuery({
 
   return { ok: true, fromIso, toIso: clampedTo };
 }
+
+/**
+ * First night on/after startIso that is not marked full.
+ * Unknown/missing statuses fail open (treated as selectable).
+ */
+export function findNextOpenArrivalIso(
+  nights: Record<string, GuestNightStatus>,
+  startIso: string,
+  latestIso: string,
+): string | null {
+  if (startIso > latestIso) {
+    return null;
+  }
+
+  let cursor = startIso;
+  while (cursor <= latestIso) {
+    if (nights[cursor] !== "full") {
+      return cursor;
+    }
+    cursor = addIsoDaysLocal(cursor, 1);
+  }
+
+  return null;
+}
+
+type StaySlice = {
+  arrival: string;
+  departure: string;
+  nights: number;
+};
+
+/**
+ * If check-in lands on a full night, slide the stay forward to the next open night
+ * (same length). Returns null when no change is needed or none is available.
+ */
+export function shiftStayDatesIfArrivalFull(
+  stay: StaySlice,
+  nights: Record<string, GuestNightStatus>,
+  latestIso: string,
+): StaySlice | null {
+  if (nights[stay.arrival] !== "full") {
+    return null;
+  }
+
+  const nextArrival = findNextOpenArrivalIso(nights, stay.arrival, latestIso);
+  if (!nextArrival || nextArrival === stay.arrival) {
+    return null;
+  }
+
+  return {
+    arrival: nextArrival,
+    departure: addIsoDaysLocal(nextArrival, stay.nights),
+    nights: stay.nights,
+  };
+}

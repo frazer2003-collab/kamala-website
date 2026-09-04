@@ -2139,13 +2139,17 @@ html.guest-dates-busy .home-sticky-dates {
 
 .room-detail-dialog__photo {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: min(56svh, 28rem);
   object-fit: cover;
+  object-position: center 35%;
   border-radius: var(--radius-lg);
+  background: var(--color-surface-muted);
 }
 
 .room-detail-dialog__photo--placeholder {
   min-height: 12rem;
+  display: grid;
+  place-items: center;
 }
 
 .room-detail-dialog__body {
@@ -8410,20 +8414,82 @@ html.staff-busy .staff-login-shell input {
   margin: 0;
 }
 
+/*
+  Room photos are often portrait. A full-width landscape stage letterboxes or over-crops.
+  Use a centered portrait stage so the image fills the frame.
+*/
+.room-detail-dialog__carousel.photo-carousel--thumbs .photo-carousel__stage {
+  display: flex;
+  justify-content: center;
+  background: transparent;
+  overflow: visible;
+}
+
+.room-detail-dialog__carousel.photo-carousel--thumbs .photo-carousel__viewport {
+  width: min(100%, calc(min(56svh, 28rem) * 0.8));
+  max-width: 100%;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-muted);
+  overflow: hidden;
+}
+
 .room-detail-dialog__carousel.photo-carousel--thumbs .photo-carousel__slide {
-  aspect-ratio: 16 / 11;
+  aspect-ratio: auto;
+  height: min(56svh, 28rem);
+  background: var(--color-surface-muted);
+}
+
+.room-detail-dialog__carousel .photo-carousel__image {
+  object-fit: cover;
+  object-position: center 35%;
+}
+
+.room-detail-dialog__carousel .photo-carousel__thumb {
+  flex-basis: 3.75rem;
+  width: 3.75rem;
+  aspect-ratio: 4 / 5;
+}
+
+@media (max-width: 719px) {
+  .room-detail-dialog__carousel {
+    width: calc(100% + (var(--space-3) * 2));
+    margin-inline: calc(var(--space-3) * -1);
+  }
+
+  .room-detail-dialog__carousel.photo-carousel--thumbs .photo-carousel__stage {
+    border-radius: 0;
+  }
+
+  /* Phones: fill the sheet width — portrait column feels undersized here. */
+  .room-detail-dialog__carousel.photo-carousel--thumbs .photo-carousel__viewport {
+    width: 100%;
+    border-radius: 0;
+  }
+
+  .room-detail-dialog__carousel.photo-carousel--thumbs .photo-carousel__slide {
+    height: min(48svh, 22rem);
+  }
+
+  .room-detail-dialog__carousel .photo-carousel__thumbs,
+  .room-detail-dialog__carousel .photo-carousel__thumbs-bar {
+    padding-inline: var(--space-3);
+  }
 }
 
 @media (min-width: 720px) {
+  .room-detail-dialog__carousel.photo-carousel--thumbs .photo-carousel__viewport {
+    width: min(100%, calc(min(58dvh, 30rem) * 0.8));
+  }
+
   .room-detail-dialog__carousel.photo-carousel--thumbs .photo-carousel__slide {
-    aspect-ratio: 4 / 3;
+    height: min(58dvh, 30rem);
   }
 
   .room-detail-dialog__carousel .photo-carousel__thumb {
-    flex-basis: 5.25rem;
-    width: 5.25rem;
-  }}
-
+    flex-basis: 4.5rem;
+    width: 4.5rem;
+  }
+}
 .staff-room-ical {
   display: grid;
   gap: var(--space-5);

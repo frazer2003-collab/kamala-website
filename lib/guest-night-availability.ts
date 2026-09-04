@@ -22,7 +22,9 @@ export {
   GUEST_NIGHT_AVAILABILITY_MAX_DAYS,
   clampGuestNightAvailabilityQuery,
   countInclusiveIsoDays,
+  findNextOpenArrivalIso,
   guestNightAvailabilityLatestIso,
+  shiftStayDatesIfArrivalFull,
 } from "@/lib/guest-night-availability-shared";
 
 

@@ -6,7 +6,9 @@ import {
   GUEST_NIGHT_AVAILABILITY_MAX_DAYS,
   clampGuestNightAvailabilityQuery,
   countInclusiveIsoDays,
+  findNextOpenArrivalIso,
   guestNightAvailabilityLatestIso,
+  shiftStayDatesIfArrivalFull,
 } from "./guest-night-availability-shared";
 import { addIsoDays, eachIsoDayInclusive } from "./room-day-inventory";
 
@@ -231,5 +233,103 @@ describe("guest night availability horizon (~3 months)", () => {
       todayIso: "2026-09-05",
     });
     assert.deepEqual(clamped, { ok: false, reason: "inverted" });
+  });
+});
+
+describe("findNextOpenArrivalIso / shiftStayDatesIfArrivalFull", () => {
+  it("returns the start night when it is open or unknown", () => {
+    assert.equal(
+      findNextOpenArrivalIso({ "2026-09-05": "open" }, "2026-09-05", "2026-09-10"),
+      "2026-09-05",
+    );
+    assert.equal(
+      findNextOpenArrivalIso({}, "2026-09-05", "2026-09-10"),
+      "2026-09-05",
+    );
+  });
+
+  it("skips consecutive full nights to the next open check-in", () => {
+    assert.equal(
+      findNextOpenArrivalIso(
+        {
+          "2026-09-05": "full",
+          "2026-09-06": "full",
+          "2026-09-07": "open",
+        },
+        "2026-09-05",
+        "2026-09-10",
+      ),
+      "2026-09-07",
+    );
+  });
+
+  it("returns null when every night through the horizon is full", () => {
+    assert.equal(
+      findNextOpenArrivalIso(
+        {
+          "2026-09-05": "full",
+          "2026-09-06": "full",
+        },
+        "2026-09-05",
+        "2026-09-06",
+      ),
+      null,
+    );
+  });
+
+  it("shifts a one-night stay forward when arrival is full", () => {
+    const shifted = shiftStayDatesIfArrivalFull(
+      {
+        arrival: "2026-09-05",
+        departure: "2026-09-06",
+        nights: 1,
+      },
+      {
+        "2026-09-05": "full",
+        "2026-09-06": "open",
+      },
+      "2026-09-20",
+    );
+    assert.deepEqual(shifted, {
+      arrival: "2026-09-06",
+      departure: "2026-09-07",
+      nights: 1,
+    });
+  });
+
+  it("preserves multi-night length when sliding past full arrival", () => {
+    const shifted = shiftStayDatesIfArrivalFull(
+      {
+        arrival: "2026-09-05",
+        departure: "2026-09-08",
+        nights: 3,
+      },
+      {
+        "2026-09-05": "full",
+        "2026-09-06": "full",
+        "2026-09-07": "open",
+      },
+      "2026-09-20",
+    );
+    assert.deepEqual(shifted, {
+      arrival: "2026-09-07",
+      departure: "2026-09-10",
+      nights: 3,
+    });
+  });
+
+  it("does not shift when arrival is already open", () => {
+    assert.equal(
+      shiftStayDatesIfArrivalFull(
+        {
+          arrival: "2026-09-05",
+          departure: "2026-09-06",
+          nights: 1,
+        },
+        { "2026-09-05": "open" },
+        "2026-09-20",
+      ),
+      null,
+    );
   });
 });

@@ -20,12 +20,11 @@ import {
 export type { GuestNightStatus };
 export {
   GUEST_NIGHT_AVAILABILITY_MAX_DAYS,
-} from "@/lib/guest-night-availability-shared";
-
-export {
   clampGuestNightAvailabilityQuery,
   countInclusiveIsoDays,
+  findNextOpenArrivalIso,
   guestNightAvailabilityLatestIso,
+  shiftStayDatesIfArrivalFull,
 } from "@/lib/guest-night-availability-shared";
 
 type StayBookingOccupancy = {

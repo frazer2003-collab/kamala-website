@@ -298,7 +298,7 @@ export function RoomDetailDialog({
               </div>
             }
             showThumbnails
-            sizes="(max-width: 720px) 92vw, 44rem"
+            sizes="(max-width: 719px) 100vw, min(48rem, 92vw)"
           />
 
           <div className="room-detail-dialog__body">
