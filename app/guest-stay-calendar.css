@@ -1,0 +1,268 @@
+.guest-stay-cal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.guest-stay-cal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: oklch(22% 0.025 12 / 0.42);
+  cursor: pointer;
+}
+
+.guest-stay-cal__sheet {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 28rem);
+  max-height: min(92dvh, 40rem);
+  padding: 0.35rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  border: 1px solid var(--color-border);
+  border-radius: 1.15rem 1.15rem 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel, 0 1px 2px oklch(20% 0.02 12 / 0.08), 0 8px 24px oklch(20% 0.02 12 / 0.12));
+  touch-action: manipulation;
+}
+
+.guest-stay-cal__grab {
+  width: 2.5rem;
+  height: 0.28rem;
+  margin: 0.35rem auto 0.55rem;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.guest-stay-cal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.guest-stay-cal__heading h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-display), "Libre Baskerville", Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.guest-stay-cal__hint {
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.guest-stay-cal__close {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.guest-stay-cal__month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.guest-stay-cal__month-label {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.guest-stay-cal__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.guest-stay-cal__nav-btn:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+}
+
+.guest-stay-cal__nav-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.guest-stay-cal__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.15rem;
+  margin-bottom: 0.25rem;
+  color: var(--color-soft);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.guest-stay-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.2rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 0.35rem;
+}
+
+.guest-stay-cal__day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.85rem;
+  min-width: 0;
+  padding: 0.2rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)),
+    color 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.guest-stay-cal__day-num {
+  font-size: 0.92rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.guest-stay-cal__day:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+}
+
+.guest-stay-cal__day:focus-visible {
+  outline: 2px solid var(--color-house-maroon);
+  outline-offset: 2px;
+}
+
+.guest-stay-cal__day--outside {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.guest-stay-cal__day--full,
+.guest-stay-cal__day--past {
+  color: var(--color-soft);
+  background: var(--color-surface-muted);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.guest-stay-cal__day--full:disabled,
+.guest-stay-cal__day--past:disabled {
+  opacity: 0.45;
+}
+
+/* Checkout may land on a full night cell — keep grey but allow press. */
+.guest-stay-cal__day--full:not(:disabled) {
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.guest-stay-cal__day--range {
+  background: var(--color-house-maroon-wash);
+  color: var(--color-ink);
+  opacity: 1;
+}
+
+.guest-stay-cal__day--arrival,
+.guest-stay-cal__day--departure {
+  background: var(--color-house-maroon);
+  color: #fff;
+  opacity: 1;
+}
+
+.guest-stay-cal__day--arrival:hover:not(:disabled),
+.guest-stay-cal__day--departure:hover:not(:disabled) {
+  background: var(--color-house-maroon-deep, var(--color-house-maroon));
+  color: #fff;
+}
+
+.guest-stay-cal__day--loading {
+  opacity: 0.72;
+}
+
+.guest-stay-cal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.guest-stay-cal__footer p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.guest-stay-cal__done {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  padding-inline: 1.15rem;
+  border-radius: 999px;
+}
+
+@media (min-width: 720px) {
+  .guest-stay-cal {
+    align-items: center;
+    padding: 1.5rem;
+  }
+
+  .guest-stay-cal__sheet {
+    border-radius: 1rem;
+    max-height: min(88dvh, 38rem);
+  }
+
+  .guest-stay-cal__grab {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guest-stay-cal__day {
+    transition: none;
+  }
+}

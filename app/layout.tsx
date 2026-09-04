@@ -8,6 +8,7 @@ import "./home-landing.css";
 import "./home-direct-booking.css";
 import "./home-overdrive.css";
 import "./home-topbar.css";
+import "./guest-stay-calendar.css";
 import "./room-summary.css";
 
 const plusJakarta = Plus_Jakarta_Sans({

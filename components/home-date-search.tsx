@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { GuestStayCalendar } from "@/components/guest-stay-calendar";
 import { getPropertyTodayIso } from "@/lib/calendar";
 import {
   MAX_STAY_NIGHTS,
@@ -35,38 +36,36 @@ function SearchDateSegment({
   disabled = false,
   id,
   label,
-  min,
   name,
-  onChange,
+  onOpen,
   value,
 }: {
   disabled?: boolean;
   id: string;
   label: string;
-  min: string;
   name: string;
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onOpen: () => void;
   value: string;
 }) {
   return (
-    <label className="search-bar__segment" htmlFor={id}>
-      <span className="search-bar__label">{label}</span>
-      <input
-        autoComplete="off"
-        className="search-bar__input"
-        disabled={disabled}
-        id={id}
-        min={min}
-        name={name}
-        onChange={onChange}
-        required
-        type="date"
-        value={value}
-      />
-      <span aria-hidden="true" className="search-bar__value">
+    <div className="search-bar__segment">
+      <span className="search-bar__label" id={`${id}-label`}>
+        {label}
+      </span>
+      <input name={name} type="hidden" value={value} />
+      <span aria-hidden="true" className="search-bar__value" id={`${id}-value`}>
         {value ? formatSegmentDate(value) : "—"}
       </span>
-    </label>
+      <button
+        aria-haspopup="dialog"
+        aria-labelledby={`${id}-label ${id}-value`}
+        className="search-bar__picker"
+        disabled={disabled}
+        id={id}
+        onClick={onOpen}
+        type="button"
+      />
+    </div>
   );
 }
 
@@ -81,6 +80,9 @@ export function HomeDateSearch({
   const formId = useId();
   const [isPending, startTransition] = useTransition();
   const [overlayReady, setOverlayReady] = useState(false);
+  const [calendarFocus, setCalendarFocus] = useState<"arrival" | "departure" | null>(
+    null,
+  );
   const propertyToday = useMemo(() => getPropertyTodayIso(), []);
   const defaultArrival = arrival ?? propertyToday;
   const defaultDeparture =
@@ -133,17 +135,6 @@ export function HomeDateSearch({
     );
   }, [arrival, departure, propertyToday]);
 
-  function handleArrivalChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const nextArrival = event.target.value;
-    setArrivalValue(nextArrival);
-
-    if (nextArrival) {
-      setDepartureValue(addIsoDays(nextArrival, 1));
-    }
-  }
-
-  const departureMin = arrivalValue ? addIsoDays(arrivalValue, 1) : addIsoDays(propertyToday, 1);
-
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isPending) {
@@ -165,6 +156,17 @@ export function HomeDateSearch({
   }
 
   const statusId = `${formId}-status`;
+  const arrivalTriggerId = `${formId}-arrival`;
+  const departureTriggerId = `${formId}-departure`;
+
+  function closeCalendar() {
+    const focusId =
+      calendarFocus === "departure" ? departureTriggerId : arrivalTriggerId;
+    setCalendarFocus(null);
+    queueMicrotask(() => {
+      document.getElementById(focusId)?.focus();
+    });
+  }
 
   return (
     <>
@@ -178,21 +180,19 @@ export function HomeDateSearch({
         <div className="search-bar__fields">
           <SearchDateSegment
             disabled={isPending}
-            id={`${formId}-arrival`}
+            id={arrivalTriggerId}
             label="Check in"
-            min={propertyToday}
             name="arrival"
-            onChange={handleArrivalChange}
+            onOpen={() => setCalendarFocus("arrival")}
             value={arrivalValue}
           />
           <div aria-hidden="true" className="search-bar__divider" />
           <SearchDateSegment
             disabled={isPending}
-            id={`${formId}-departure`}
+            id={departureTriggerId}
             label="Check out"
-            min={departureMin}
             name="departure"
-            onChange={(event) => setDepartureValue(event.target.value)}
+            onOpen={() => setCalendarFocus("departure")}
             value={departureValue}
           />
         </div>
@@ -213,6 +213,20 @@ export function HomeDateSearch({
           Check-out must be after check-in. Choose a stay between {MIN_STAY_NIGHTS} and{" "}
           {MAX_STAY_NIGHTS} nights, starting from today.
         </p>
+      ) : null}
+
+      {calendarFocus ? (
+        <GuestStayCalendar
+          arrival={arrivalValue}
+          departure={departureValue}
+          focus={calendarFocus}
+          onChange={({ arrival: nextArrival, departure: nextDeparture }) => {
+            setArrivalValue(nextArrival);
+            setDepartureValue(nextDeparture);
+          }}
+          onClose={closeCalendar}
+          todayIso={propertyToday}
+        />
       ) : null}
 
       {overlayReady && isPending

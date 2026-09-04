@@ -1,6 +1,6 @@
 ---
 name: Kamala
-description: Quiet, trustworthy guesthouse booking with a staff availability surface.
+description: Place-first guesthouse booking with calm editorial hospitality and a shared staff surface.
 colors:
   house-maroon: "oklch(48% 0.18 12)"
   house-maroon-deep: "oklch(40% 0.16 12)"
@@ -120,6 +120,11 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.pill}"
     padding: "0.45rem"
+  room-detail-dialog:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.xl}"
+    padding: "1rem"
   staff-dialog:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
@@ -131,65 +136,68 @@ components:
 
 ## Overview
 
-**Creative North Star: "The Trusted Counter"**
+**Creative North Star: "The Garden Key"**
 
-Kamala should feel like a well-run guesthouse front desk: quiet light, clear room keys, a host who knows what is available without making the guest wait. Guests arrive comparing rooms, dates, and trust signals; staff arrive needing booking clarity. The interface earns confidence through legibility, calm pacing, and honest hospitality before it asks for a reservation.
+Kamala should feel like being handed the key to a real garden house in Chiang Mai Old City: the place leads, the interface stays hospitable and almost invisible, and booking confidence comes from photos, dates, and plain next steps—not urgency theater. Guests arrive comparing rooms and trust; staff arrive needing clarity. One visual system serves both modes.
 
-Public booking and staff management share one visual system. Reference anchor: **Stripe-level polish and hierarchy**, translated into quieter hospitality. Explicitly reject playful travel UI, booking-site clichés, purple SaaS chrome, fake luxury gold, and cold enterprise admin aesthetics.
+Public marketing leans **editorial calm**: Libre Baskerville for brand and section voice, Plus Jakarta Sans for UI, film-still hero photography, and quiet continuum into rooms and stay story. Booking and ops surfaces may use slightly more lift (search bar, room-detail panel, sticky date strip) while guest marketing chrome stays flat. Reference bar: Stripe-level hierarchy translated into quieter hospitality.
 
 **Key Characteristics:**
-- Restrained color: maroon accent used sparingly (≤10% of a viewport); tinted neutrals carry the room
-- Warm humanist sans for UI; optional display serif for guest hero moments only
-- Responsive motion: state transitions only (~150–250ms); respect `prefers-reduced-motion`
-- Flat-by-default surfaces; depth from spacing and tonal steps, not glass or glow
-- One primary action per view; availability, booking status, and errors never rely on color alone
+- Place and photography lead; chrome recedes
+- House maroon used sparingly (≤10% of a viewport) for booking actions and critical emphasis
+- Display serif for guest brand moments; one sans for all UI and staff
+- Hybrid depth: flat tonal guest surfaces; soft panel/search shadows on booking overlays
+- Calm motion (`--ease-out-quint`, ~150–280ms states; authored hero/menu entrances); respect `prefers-reduced-motion`
+- One primary action per view; availability and status never rely on color alone
 
 ## Colors
 
-Restrained strategy: tinted neutrals carry most of every screen. House maroon appears on booking actions, active nav, focus emphasis, and critical status — never as ambient decoration. Canonical values live as CSS custom properties on `:root` in `app/globals.css` (OKLCH).
+Restrained strategy: maroon-tinted neutrals carry most of every screen. House maroon is the single accent voice—booking CTAs, focus, and rare emphasis—not ambient decoration. Canonical values live as CSS custom properties on `:root` in `app/globals.css` (OKLCH).
 
 ### Primary
-- **House Maroon** (`oklch(48% 0.18 12)` / `--color-maroon`): Primary booking actions, brand mark, important emphasis. Rare by design.
+- **House Maroon** (`oklch(48% 0.18 12)` / `--color-maroon`): Primary booking actions, brand emphasis, active focus. Rare by design.
 - **House Maroon Deep** (`oklch(40% 0.16 12)` / `--color-maroon-deep`): Hover/pressed primary, selected emphasis.
-- **House Maroon Light** (`oklch(62% 0.14 12)` / `--color-maroon-light`): Softer accent; alias `--color-gold` resolves here (not literal gold).
-- **House Maroon Wash** (`oklch(96.5% 0.025 12)` / `--color-maroon-wash`): Soft selection, today washes, selection highlight.
+- **House Maroon Light** (`oklch(62% 0.14 12)` / `--color-maroon-light`): Softer accent; `--color-gold` aliases here (not literal gold).
+- **House Maroon Wash** (`oklch(96.5% 0.025 12)` / `--color-maroon-wash`): Soft selection, sticky-date wash, highlight bands.
 
 ### Neutral
-- **Canvas** (`oklch(99.2% 0.004 12)` / `--color-canvas`): Page background — lightly tinted toward maroon hue, not cream/sand default.
-- **Surface** (`oklch(100% 0 0)` / `--color-surface`): Panels, dialogs, cells, guest topbar.
+- **Canvas** (`oklch(99.2% 0.004 12)` / `--color-canvas`): Page background—lightly tinted toward maroon hue, not cream/sand default.
+- **Surface** (`oklch(100% 0 0)` / `--color-surface`): Panels, dialogs, guest topbar when solid, room-detail panel.
 - **Surface Muted** (`oklch(97.2% 0.009 12)` / `--color-surface-muted`): Sticky headers, secondary bands, quiet hover fills.
 - **Surface Strong** (`oklch(94% 0.012 12)` / `--color-surface-strong`): Stronger tonal step for contrast bands.
-- **Ink** (`oklch(22% 0.025 12)` / `--color-ink`): Body text — contrast ≥4.5:1 against canvas.
-- **Muted** (`oklch(46% 0.022 12)` / `--color-muted`): Secondary labels and metadata — still readable.
+- **Ink** (`oklch(22% 0.025 12)` / `--color-ink`): Body text—contrast ≥4.5:1 against canvas.
+- **Muted** (`oklch(46% 0.022 12)` / `--color-muted`): Secondary labels and metadata.
 - **Soft** (`oklch(56% 0.018 12)` / `--color-soft`): Tertiary / quieter meta.
 - **Border** (`oklch(89% 0.01 12)` / `--color-border`): Dividers and input strokes.
 
 ### Semantic
-- **Success / Warning / Danger** with matching washes. Warning **ink** for text on wash is `oklch(38% 0.11 65)` (not the bright warning fill).
-- Staff calendar also uses configurable hex swatches for Bookable / Closed / Sold out / Reservation (`--calendar-color-*`).
+- **Success / Warning / Danger** with matching washes. Warning **ink** for text on wash is `oklch(38% 0.11 65)`.
+- Staff calendar hex swatches: Bookable / Closed / Sold out / Reservation (`--calendar-color-*`).
 
 ### Named Rules
-**The One Voice Rule.** If maroon appears more than once in a viewport without a booking, navigation, focus, or status purpose tied to it, the screen is over-branded.
+**The One Voice Rule.** If maroon appears more than once in a viewport without a booking, navigation, focus, or status purpose, the screen is over-branded.
 
-**The Trust Tint Rule.** Neutrals pick up light chroma toward the maroon hue. Warmth lives in accent and copy, not a beige body background.
+**The Trust Tint Rule.** Neutrals pick up light chroma toward the maroon hue. Warmth lives in accent, photography, and copy—not a beige body background.
+
+**The Place-First Rule.** On guest marketing surfaces, real room/garden imagery and brand display type outrank UI decoration.
 
 ## Typography
 
-**Display Font:** Libre Baskerville via `--font-display` (guest hero / display moments; fallbacks Iowan Old Style, Palatino, Georgia)
+**Display Font:** Libre Baskerville via `--font-display` (guest hero, room titles, section display; fallbacks Iowan Old Style, Palatino, Georgia)  
 **Body Font:** Plus Jakarta Sans (Aptos, Segoe UI, system-ui)
 
-**Character:** Hospitable but precise. Guest display can use the serif; UI chrome and staff stay Plus Jakarta. Do not invent a second sans.
+**Character:** Editorial calm—serif carries the house voice; sans keeps booking and staff precise and hospitable.
 
 ### Hierarchy
-- **Display** (Libre Baskerville, clamp ~2.1–3.4rem in atmosphere hero / up to ~3.75rem): Guest brand moments only.
-- **Headline** (800, ~1.25rem): Page titles such as Calendar / Sign in.
-- **Title** (800, ~0.92rem): Section headers, dialog titles.
-- **Body** (400, 1rem, 1.55 line-height): Instructions, form copy; max ~65–70ch for prose.
-- **Label** (750, ~0.78rem): Timeline row labels, pills, metadata.
+- **Display** (Libre Baskerville, clamp ~1.85–3.55rem on home elevate / up to ~3.75rem): Guest brand and film-still moments only.
+- **Headline** (800, ~1.25rem): Page titles such as Calendar / Sign in; room-detail `h2` may use display serif at ~1.2–1.75rem.
+- **Title** (800, ~0.92rem): Section headers, dialog chrome labels.
+- **Body** (400, 1rem, 1.55 line-height): Instructions and prose; max ~65–70ch.
+- **Label** (750, ~0.78rem): Pills, metadata, timeline labels.
 - **Compact / UI steps** (0.72–0.88rem): Dense staff controls and extranet chrome.
 
 ### Named Rules
-**The Single Family Rule.** UI uses one sans. Display serif is optional and guest-only.
+**The Single Family Rule.** UI uses one sans. Display serif is optional and guest-facing.
 
 **The Balance Rule.** Prefer `text-wrap: balance` on headings and `text-wrap: pretty` on long prose. Heading letter-spacing floor ≥ `-0.04em`.
 
@@ -197,74 +205,80 @@ Restrained strategy: tinted neutrals carry most of every screen. House maroon ap
 
 - **Guest shell:** `.site-shell` max width `min(1280px, calc(100% - 2.5rem))`, centered.
 - **Rhythm:** spacing scale `--space-1`…`--space-20` (0.25rem–5rem). Tight groups, generous section separation; more space above a heading than below it.
-- **Breakpoints (content-driven, observed):** ~640px phone, ~920px tablet/desktop split (listings showcase, many guest layouts), occasional 720/900/960 for specific surfaces.
-- **Density:** Guest pages are airy; staff calendar and ops are denser but keep ≥2.75rem touch targets on coarse pointers.
-- **Staff login:** Distilled centered column (`min(22rem, 100%)`), no card chrome — brand, heading, fields, primary action.
+- **Breakpoints (observed):** ~640px phone; ~720px home topbar/desktop chrome split; ~920px listings two-column; occasional 960 for hero max-width.
+- **Density:** Guest pages are airy; staff calendar/ops denser with ≥2.75rem touch targets on coarse pointers.
+- **Home film-still:** First viewport is one composition—brand, one headline, lede, date search—on full-bleed photography. Assurances sit below the fold on desktop.
+- **Home topbar:** Fixed over the hero (`position: fixed`); transparent over film-still, solid when scrolled. Mobile: centered brand lockup + menu. Desktop: horizontal logo+name, inline nav (chat channels stay mobile-menu only).
+- **Staff login:** Distilled centered column (`min(22rem, 100%)`), no card chrome.
 
 ## Elevation & Depth
 
-Flat by default. Surfaces separate through background steps (canvas → surface → muted → strong) and 1px borders, not drop shadows or decorative `backdrop-filter`. Shadows appear only on transient or floating layers (dropdowns, dialogs, search bar) and stay soft with offset + blur.
+**Hybrid depth.** Guest marketing is flat-by-default: canvas → surface → muted → strong and 1px borders. Booking and floating layers may lift: date search on hero, room-detail dialog, sticky date strip, and dropdowns use soft panel/search shadows. No frosted glass on sticky chrome; no decorative glow.
 
 ### Shadow Vocabulary
 - **Soft** (`--shadow-soft: 0 6px 20px oklch(20% 0.02 12 / 0.08)`): Light ambient lift.
-- **Panel** (`--shadow-panel: 0 1px 2px …, 0 8px 24px …`): Dialogs and elevated panels.
-- **Search** (`--shadow-search`): Compact floating controls (date search bar on hero).
+- **Panel** (`--shadow-panel`): Dialogs and elevated panels (room details, staff dialogs).
+- **Search** (`--shadow-search`): Compact floating controls (atmosphere date search).
 
 ### Named Rules
-**The Flat-By-Default Rule.** Surfaces are flat at rest. No frosted glass on sticky chrome (guest topbar is opaque surface).
+**The Flat-By-Default Rule.** Surfaces are flat at rest on marketing. Shadows respond to floating/booking state, not decoration.
 
-**Motion tie-in:** Entrance / cover motion only under `prefers-reduced-motion: no-preference`; never gate content at `opacity: 0`. State transitions use `--ease-out-quint` (~180ms). Guest date-check busy overlay is a full-viewport veil with white status copy while availability loads.
+**Motion tie-in:** Hero arrive, menu panel, sticky dates, and room-detail open use `--ease-out-quint` under `prefers-reduced-motion: no-preference`. Never gate content at `opacity: 0` as the only resting state. Ken Burns on hero imagery is desktop-only.
 
 ## Shapes
 
-- **Actions:** Pill radius (`999px`) on buttons, brand chip, nav pills, search bar shell.
-- **Panels / media:** `--radius-sm` (0.5rem) through `--radius-xl` (1rem) for inputs, listing media, dialogs, feature room cards.
+- **Actions:** Pill radius (`999px`) on buttons, nav pills, search-bar shell, quiet close controls.
+- **Panels / media:** `--radius-sm` (0.5rem) through `--radius-xl` (1rem) for inputs, listing media, dialogs, feature cards.
 - **Borders:** 1px `var(--color-border)`; avoid colored side-stripe accents thicker than 1px on cards/list items.
 - **Forms:** Labeled `.field-pair` stacks; no card wrapping required for login or simple forms.
 
 ## Components
 
+Editorial calm: controls are clear and pill-shaped; photography and display type do the persuading.
+
 ### Buttons
 - **Shape:** Pill (`border-radius: 999px`), min-height ≥2.75–2.8rem.
-- **Primary:** House maroon fill with a subtle vertical gradient (`oklch(64% 0.22 12)` → maroon); white text. Hover deepens toward maroon-deep. Hover lifts `1px` (disabled cancels lift).
+- **Primary:** House maroon fill with subtle vertical gradient (`oklch(64% 0.22 12)` → maroon); white text. Hover deepens toward maroon-deep. Press `scale(0.97–0.98)`.
 - **Secondary / Quiet:** Surface + border + ink; quiet is slightly smaller padding.
-- **Danger:** Maroon-tinted border/fill wash (not pure red chrome) for destructive staff actions.
-- **Focus:** Visible maroon / light-maroon ring (`:focus-visible`); do not remove outlines.
+- **Focus:** Visible maroon-family ring (`:focus-visible`); do not remove outlines.
 
 ### Status pills / availability
-- Compact labels with mark + text (○ / × or words). Open uses success-tinted border; full uses muted dashed border. Color is secondary to text.
+- Compact labels with mark + text. Open uses success-tinted border; full uses muted dashed border. Color is secondary to text.
 
 ### Cards / Containers
-- Prefer tonal bands and borders over cards. Guest room **feature** listing may use a bordered surface panel; more-room rows are list rows, not cards. Staff calendar uses flat grid cells; dialogs use surface + panel shadow.
+- Prefer tonal bands and borders over cards. Guest feature listing may use a bordered surface panel; more-room rows are list rows. Room-detail dialog is a surface panel with panel shadow, max-height ~92–94dvh, sticky book footer.
 - On phone (≤640px), more-room rows stack CTAs under content at full width.
 
 ### Inputs / Fields
-- `.field-pair` with persistent labels. Errors use `.form-message--error` with `role="alert"`. Setup notes use `.form-message--setup`. Focus rings use maroon family.
+- `.field-pair` with persistent labels. Errors use `.form-message--error` with `role="alert"`. Focus rings use maroon family.
 
 ### Navigation
-- **Guest:** Sticky opaque topbar (surface + bottom border); current page via `aria-current`. Atmosphere hero date search sits in the first viewport.
+- **Guest home:** Fixed topbar; over-hero white brand/nav; scrolled solid surface. Mobile hamburger opens full-width panel with staggered link entrance. Desktop inline Gallery / Location / Contact.
+- **Guest other pages:** Opaque topbar; current page via `aria-current`.
 - **Staff:** Sidebar + header; touch targets ≥2.75rem.
 
 ### Signature patterns
-- **Date search (guest):** Pill search bar on atmosphere hero; submit becomes pending while checking dates; full-page busy overlay (`guest-dates-busy-overlay`) blocks interaction until rooms refresh.
-- **Rooms showcase:** Featured room + “more room types” rail; desktop two-column from 920px; stacked below.
-- **Staff timeline:** Horizontal month grid with sticky door-number labels; unassigned stays in Needs room # lane; reservation bars ≥24px (≥44px on coarse pointers).
+- **Date search (guest):** Pill search bar on atmosphere hero; pending submit; full-page busy overlay while availability loads.
+- **Sticky dates:** Fixed under topbar after hero; shell-aligned wash on desktop; spacer clears fixed chrome.
+- **Rooms showcase:** Featured room + more-room rail; desktop two-column from 920px.
+- **Room details dialog:** Compact header (title + ×), Prev/Next room pager, photo carousel, essentials, sticky footer with price + Book now (side-by-side from 720px).
+- **Staff timeline:** Horizontal month grid with sticky door-number labels; reservation bars ≥24px (≥44px on coarse pointers).
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** lead with booking confidence: legible room details, obvious date/availability state, plain confirmation copy.
+- **Do** lead with place and booking confidence: real imagery, legible room details, obvious dates/price/next step.
 - **Do** use maroon only for actions and emphasis the guest or staff member should notice (≤10% of the viewport).
-- **Do** respect `prefers-reduced-motion` — no opacity-gated entrances when motion is reduced.
+- **Do** keep the first homepage viewport to brand, one headline, lede, and date search.
+- **Do** respect `prefers-reduced-motion`—no opacity-gated resting content when motion is reduced.
 - **Do** pair status color with text (Closed, Sold out, Bookable, stay status labels).
-- **Do** keep staff density operational without turning into cold enterprise chrome.
-- **Do** prefer spacing and tonal steps over new card wrappers.
+- **Do** prefer spacing and tonal steps over new card wrappers on marketing surfaces.
 
 ### Don't:
-- **Don't** use playful or casual travel UI — no bouncy motion, whimsical illustration, meme-adjacent copy, or toy-like colors.
-- **Don't** ship generic booking-site clichés — floating search cards on stock heroes, discount urgency banners, fake luxury gold, identical amenity icon grids.
-- **Don't** ship generic SaaS clichés on staff — purple/indigo gradients, metric-stat heroes, decorative glassmorphism, or dashboard chrome disconnected from the guest experience.
-- **Don't** dump cold enterprise chrome on staff — dense gray tables, unexplained jargon, or internal-software aesthetics.
+- **Don't** use playful or casual travel UI—no bouncy motion, whimsical illustration, or toy-like colors.
+- **Don't** ship generic booking-site clichés—urgency banners, fake luxury gold, stock-hero search cards, amenity icon grids.
+- **Don't** ship generic SaaS clichés on staff—purple/indigo gradients, metric-stat heroes, decorative glassmorphism.
+- **Don't** dump cold enterprise chrome on staff—dense gray tables or unexplained jargon.
 - **Don't** use side-stripe accent borders, gradient text, nested card-in-card layouts, or uppercase tracked eyebrows on every section.
 - **Don't** rely on color alone for availability, booking status, errors, or required fields.
 - **Don't** invent a second UI sans or treat `--color-gold` as literal gold (it aliases maroon-light).

@@ -105,17 +105,30 @@ export async function loadRoomDayInventoryForRange(
   arrival: string,
   departure: string,
 ): Promise<{ ok: true; entries: RoomDayInventory[] } | { ok: false; error: string }> {
-  if (!hasStaffSupabaseConfig()) {
+  return loadRoomDayInventoryForRoomsRange([roomId], arrival, departure);
+}
+
+/** One inventory query for many room types across a stay/night window. */
+export async function loadRoomDayInventoryForRoomsRange(
+  roomIds: string[],
+  arrival: string,
+  departure: string,
+): Promise<{ ok: true; entries: RoomDayInventory[] } | { ok: false; error: string }> {
+  if (!hasStaffSupabaseConfig() || roomIds.length === 0) {
     return { ok: true, entries: [] };
   }
 
   try {
     const supabase = createStaffSupabaseClient();
     const lastNight = addIsoDays(departure, -1);
+    if (lastNight < arrival) {
+      return { ok: true, entries: [] };
+    }
+
     const { data, error } = await supabase
       .from("room_day_inventory")
       .select("*")
-      .eq("room_id", roomId)
+      .in("room_id", roomIds)
       .gte("date", arrival)
       .lte("date", lastNight)
       .order("date", { ascending: true });
