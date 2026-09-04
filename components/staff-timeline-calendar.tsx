@@ -24,7 +24,7 @@ import { getCalendarColorStyleProps } from "@/lib/calendar-colors";
 import {
   formatCalendarMonthLabelFromIso,
   getTodayIso,
-  pickLeadingVisibleCalendarDayIso,
+  pickLeadingVisibleCalendarDayHeadIso,
   type CalendarDay,
 } from "@/lib/calendar";
 import type { StaffBooking } from "@/lib/booking-requests";
@@ -130,8 +130,8 @@ function overrideCueTitle(hasAllotment: boolean, hasRate: boolean) {
 
 function DoorReservationRow({
   unit,
-  bookings,
-  channelReservations,
+  unitBookings,
+  unitChannels,
   calendarDays,
   monthKey,
   fromIso,
@@ -148,8 +148,8 @@ function DoorReservationRow({
   roomTypeLabel,
 }: {
   unit: RoomUnit;
-  bookings: StaffBooking[];
-  channelReservations: StaffRoomBlock[];
+  unitBookings: StaffBooking[];
+  unitChannels: StaffRoomBlock[];
   calendarDays: CalendarDay[];
   monthKey: string;
   fromIso?: string;
@@ -168,15 +168,6 @@ function DoorReservationRow({
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
   const primaryRoomId = getPrimaryRoomIdForUnit(unit);
-  const unitBookings = useMemo(
-    () => bookings.filter((booking) => booking.roomUnitId === unit.id),
-    [bookings, unit.id],
-  );
-  const unitChannels = useMemo(
-    () =>
-      channelReservations.filter((reservation) => reservation.roomUnitId === unit.id),
-    [channelReservations, unit.id],
-  );
   const bars = useMemo(
     () =>
       buildUnitTimelineBars({
@@ -350,6 +341,8 @@ function DoorReservationRow({
 function UnassignedReservationRow({
   bookings,
   channelReservations,
+  bookingByKey,
+  channelByKey,
   calendarDays,
   monthKey,
   fromIso,
@@ -365,6 +358,8 @@ function UnassignedReservationRow({
 }: {
   bookings: StaffBooking[];
   channelReservations: StaffRoomBlock[];
+  bookingByKey: Map<string, StaffBooking>;
+  channelByKey: Map<string, StaffRoomBlock>;
   calendarDays: CalendarDay[];
   monthKey: string;
   fromIso?: string;
@@ -450,15 +445,9 @@ function UnassignedReservationRow({
               ? selectedBookingKey === bar.itemKey
               : selectedBlockKey === bar.itemKey;
           const sourceBooking =
-            bar.kind === "booking"
-              ? bookings.find((booking) => getStaffBookingKey(booking) === bar.itemKey)
-              : null;
+            bar.kind === "booking" ? (bookingByKey.get(bar.itemKey) ?? null) : null;
           const sourceChannel =
-            bar.kind === "channel"
-              ? channelReservations.find(
-                  (reservation) => getStaffRoomBlockKey(reservation) === bar.itemKey,
-                )
-              : null;
+            bar.kind === "channel" ? (channelByKey.get(bar.itemKey) ?? null) : null;
           const stayId =
             sourceBooking?.databaseId ?? sourceChannel?.databaseId ?? null;
           const stayRoomId = sourceBooking?.roomId ?? sourceChannel?.roomId ?? "";
@@ -619,6 +608,59 @@ export function StaffTimelineCalendar({
     return assignGuestBarColors(names);
   }, [bookings, blocks]);
 
+  const bookingsByUnitId = useMemo(() => {
+    const map = new Map<string, StaffBooking[]>();
+    for (const booking of bookings) {
+      const unitId = booking.roomUnitId;
+      if (!unitId) {
+        continue;
+      }
+      const list = map.get(unitId);
+      if (list) {
+        list.push(booking);
+      } else {
+        map.set(unitId, [booking]);
+      }
+    }
+    return map;
+  }, [bookings]);
+
+  const channelsByUnitId = useMemo(() => {
+    const map = new Map<string, StaffRoomBlock[]>();
+    for (const reservation of channelReservations) {
+      const unitId = reservation.roomUnitId;
+      if (!unitId) {
+        continue;
+      }
+      const list = map.get(unitId);
+      if (list) {
+        list.push(reservation);
+      } else {
+        map.set(unitId, [reservation]);
+      }
+    }
+    return map;
+  }, [channelReservations]);
+
+  const bookingByKey = useMemo(() => {
+    const map = new Map<string, StaffBooking>();
+    for (const booking of bookings) {
+      map.set(getStaffBookingKey(booking), booking);
+    }
+    return map;
+  }, [bookings]);
+
+  const channelByKey = useMemo(() => {
+    const map = new Map<string, StaffRoomBlock>();
+    for (const reservation of channelReservations) {
+      map.set(getStaffRoomBlockKey(reservation), reservation);
+    }
+    return map;
+  }, [channelReservations]);
+
+  const emptyUnitBookings = useMemo(() => [] as StaffBooking[], []);
+  const emptyUnitChannels = useMemo(() => [] as StaffRoomBlock[], []);
+
   useEffect(() => {
     setVisibleMonthLabel(monthLabel);
   }, [monthLabel]);
@@ -639,16 +681,7 @@ export function StaffTimelineCalendar({
       }
 
       const labelRight = monthCell.getBoundingClientRect().right;
-      const days = Array.from(dayHeads, (dayHead) => {
-        const rect = dayHead.getBoundingClientRect();
-        return {
-          iso: dayHead.dataset.calendarDay ?? "",
-          left: rect.left,
-          right: rect.right,
-        };
-      }).filter((day) => day.iso.length > 0);
-
-      const leadingIso = pickLeadingVisibleCalendarDayIso(days, labelRight);
+      const leadingIso = pickLeadingVisibleCalendarDayHeadIso(dayHeads, labelRight);
       if (!leadingIso) {
         return;
       }
@@ -724,9 +757,11 @@ export function StaffTimelineCalendar({
         </div>
 
         <UnassignedReservationRow
+          bookingByKey={bookingByKey}
           bookings={bookings}
           calendarDays={calendarDays}
           canManage={canManage}
+          channelByKey={channelByKey}
           channelReservations={channelReservations}
           fromIso={fromIso}
           guestColors={guestColors}
@@ -754,9 +789,7 @@ export function StaffTimelineCalendar({
               return (
                 <DoorReservationRow
                   allotmentOverrideKeys={allotmentOverrideKeySet}
-                  bookings={bookings}
                   calendarDays={calendarDays}
-                  channelReservations={channelReservations}
                   closedDayKeys={closedDayKeys}
                   fromIso={fromIso}
                   guestColors={guestColors}
@@ -771,6 +804,8 @@ export function StaffTimelineCalendar({
                   toIso={toIso}
                   todayIso={todayIso}
                   unit={unit}
+                  unitBookings={bookingsByUnitId.get(unit.id) ?? emptyUnitBookings}
+                  unitChannels={channelsByUnitId.get(unit.id) ?? emptyUnitChannels}
                 />
               );
             })

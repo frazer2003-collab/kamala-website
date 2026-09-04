@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   formatCalendarMonthLabelFromIso,
+  pickLeadingVisibleCalendarDayHeadIso,
   pickLeadingVisibleCalendarDayIso,
 } from "./calendar";
 
@@ -34,5 +35,27 @@ describe("pickLeadingVisibleCalendarDayIso", () => {
 
   it("returns null for an empty day list", () => {
     assert.equal(pickLeadingVisibleCalendarDayIso([], 100), null);
+  });
+
+  it("returns the first day when the label edge is before the board", () => {
+    const days = [
+      { iso: "2026-08-01", left: 100, right: 130 },
+      { iso: "2026-08-02", left: 132, right: 162 },
+    ];
+
+    assert.equal(pickLeadingVisibleCalendarDayIso(days, 50), "2026-08-01");
+  });
+});
+
+describe("pickLeadingVisibleCalendarDayHeadIso", () => {
+  it("binary-searches day heads by layout right edge", () => {
+    const heads = [
+      { dataset: { calendarDay: "2026-07-30" }, getBoundingClientRect: () => ({ right: 130 }) },
+      { dataset: { calendarDay: "2026-07-31" }, getBoundingClientRect: () => ({ right: 162 }) },
+      { dataset: { calendarDay: "2026-08-01" }, getBoundingClientRect: () => ({ right: 194 }) },
+      { dataset: { calendarDay: "2026-08-02" }, getBoundingClientRect: () => ({ right: 226 }) },
+    ];
+
+    assert.equal(pickLeadingVisibleCalendarDayHeadIso(heads, 163), "2026-08-01");
   });
 });

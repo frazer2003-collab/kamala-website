@@ -54,13 +54,50 @@ export function pickLeadingVisibleCalendarDayIso(
     return null;
   }
 
-  for (const day of days) {
-    if (day.right > labelRight + 1) {
-      return day.iso;
+  // Days are left-to-right; binary search avoids O(n) scans on long boards.
+  let lo = 0;
+  let hi = days.length - 1;
+  let ans = days.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (days[mid].right > labelRight + 1) {
+      ans = mid;
+      hi = mid - 1;
+    } else {
+      lo = mid + 1;
     }
   }
 
-  return days[days.length - 1]?.iso ?? null;
+  return days[ans]?.iso ?? null;
+}
+
+/** First day head whose right edge clears the sticky label (binary search over layout). */
+export function pickLeadingVisibleCalendarDayHeadIso(
+  dayHeads: ArrayLike<{
+    getBoundingClientRect(): { right: number };
+    dataset: { calendarDay?: string };
+  }>,
+  labelRight: number,
+) {
+  const n = dayHeads.length;
+  if (n === 0) {
+    return null;
+  }
+
+  let lo = 0;
+  let hi = n - 1;
+  let ans = n - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (dayHeads[mid].getBoundingClientRect().right > labelRight + 1) {
+      ans = mid;
+      hi = mid - 1;
+    } else {
+      lo = mid + 1;
+    }
+  }
+
+  return dayHeads[ans].dataset.calendarDay || null;
 }
 
 export const PROPERTY_TIME_ZONE = "Asia/Bangkok";

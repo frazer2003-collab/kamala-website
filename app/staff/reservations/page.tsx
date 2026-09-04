@@ -73,10 +73,12 @@ export default async function StaffReservationsPage({
   const todayIso = getTodayIso();
   const rangeLabel = formatRangeLabel(fromIso, toIso);
 
-  // Promote leftover iCal/OTA room_blocks into booking_requests (Conversation + cancel).
-  await purgeIcalSyncedChannelBlocks();
-  // Clear leftover No # stays that overlap July 2026.
-  await purgeUnassignedJuly2026Stays();
+  // Promote leftover iCal/OTA room_blocks into booking_requests (Conversation + cancel),
+  // and clear leftover No # stays that overlap July 2026 — run in parallel, before reads.
+  await Promise.all([
+    purgeIcalSyncedChannelBlocks(),
+    purgeUnassignedJuly2026Stays(),
+  ]);
 
   const [bookingsResult, channelsResult, roomUnitsResult, settings, supabaseReady] =
     await Promise.all([
