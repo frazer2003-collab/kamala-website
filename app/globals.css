@@ -619,10 +619,30 @@ p {
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-muted);
   box-shadow: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-0.35rem);
+  transition:
+    opacity 220ms var(--ease-out-quint),
+    transform 220ms var(--ease-out-quint),
+    visibility 220ms;
+}
+
+.home-sticky-dates--visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .home-sticky-dates__spacer {
   /* Clears fixed topbar + sticky date strip once the hero has scrolled away. */
+  height: 0;
+  overflow: hidden;
+}
+
+.home-sticky-dates__spacer--visible {
   height: calc(var(--home-topbar-sticky-offset, 4.75rem) + 3.25rem);
 }
 
@@ -659,18 +679,26 @@ p {
     padding-block: 0.45rem;
   }
 
-  .home-sticky-dates__spacer {
+  .home-sticky-dates__spacer--visible {
     height: calc(var(--home-topbar-sticky-offset, 4.75rem) + 3rem);
   }
 
   .home-sticky-dates__label {
     font-size: 0.84rem;
-  }}
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .home-sticky-dates {
     transition: none;
-  }}
+  }
+
+  .home-sticky-dates:not(.home-sticky-dates--visible) {
+    opacity: 0;
+    visibility: hidden;
+    transform: none;
+  }
+}
 
 .hero-atmosphere__search {
   display: grid;

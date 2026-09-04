@@ -22,6 +22,12 @@ export {
   GUEST_NIGHT_AVAILABILITY_MAX_DAYS,
 } from "@/lib/guest-night-availability-shared";
 
+export {
+  clampGuestNightAvailabilityQuery,
+  countInclusiveIsoDays,
+  guestNightAvailabilityLatestIso,
+} from "@/lib/guest-night-availability-shared";
+
 type StayBookingOccupancy = {
   roomId: string;
   roomUnitId: string | null;
