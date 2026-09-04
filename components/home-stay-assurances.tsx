@@ -7,12 +7,12 @@ const GUEST_BENEFITS = [
 ] as const;
 
 /**
- * Guest perks at the counter — display-serif phrases with maroon lead words.
+ * Guest perks at the counter — display-serif phrases, quiet rail.
  * Not amenity icon cards (DESIGN.md anti-pattern).
  */
 export function HomeStayAssurances() {
   return (
-    <section className="home-stay-assurances" aria-label="Guest benefits">
+    <section className="home-stay-assurances home-stay-assurances--elevate" aria-label="Guest benefits">
       <ul className="home-stay-assurances-list">
         {GUEST_BENEFITS.map(({ accent, rest, detail }) => (
           <li key={`${accent}-${rest}`}>
