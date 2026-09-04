@@ -33,6 +33,7 @@ function booking(partial: Partial<StaffBooking> & Pick<StaffBooking, "roomId" | 
     roomNumber: null,
     bedSetup: null,
     bankTransferClaimed: false,
+    stripePaymentIntentId: null,
     ...partial,
   };
 }

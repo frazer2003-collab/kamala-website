@@ -36,6 +36,7 @@ function websiteBooking(
     depositPaid: partial.depositPaid ?? true,
     bookingSource: partial.bookingSource ?? null,
     bankTransferClaimed: partial.bankTransferClaimed ?? false,
+    stripePaymentIntentId: partial.stripePaymentIntentId ?? null,
     stayStatus: partial.stayStatus ?? "expected",
     stayEndReason: partial.stayEndReason ?? null,
     staffNote: "",

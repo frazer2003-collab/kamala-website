@@ -2,7 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Libre_Baskerville, Plus_Jakarta_Sans } from "next/font/google";
 import { getPropertySettings } from "@/lib/property-settings";
-import { buildSiteMetadataCopy, getMetadataBase } from "@/lib/site-metadata";
+import {
+  buildSiteMetadataCopy,
+  buildSiteVerification,
+  getMetadataBase,
+} from "@/lib/site-metadata";
 import "./globals.css";
 import "./home-landing.css";
 import "./home-direct-booking.css";
@@ -48,6 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: propertyName,
       locale: "en_TH",
     },
+    verification: buildSiteVerification(process.env),
   };
 }
 

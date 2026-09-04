@@ -42,6 +42,7 @@ function booking(partial: {
     bedSetup: null,
     databaseId: partial.id,
     bankTransferClaimed: false,
+    stripePaymentIntentId: null,
   };
 }
 

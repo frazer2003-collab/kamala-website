@@ -37,6 +37,12 @@ After swapping keys: redeploy (or restart `npm run dev`), and confirm property c
    - `NEXT_PUBLIC_APP_URL=https://www.kamalaguesthouse.com` (use **www** — apex has no DNS and breaks guest conversation email links)
    - `STAFF_ADMIN_USERNAME` / `STAFF_ADMIN_PASSWORD` / `STAFF_SESSION_SECRET`
 
+5. **Search Console** — optional but needed to see which search terms find the site:
+   - `GOOGLE_SITE_VERIFICATION` — [Search Console](https://search.google.com/search-console) → add `https://www.kamalaguesthouse.com` → **HTML tag** → paste the token (the whole `<meta>` tag also works)
+   - `BING_SITE_VERIFICATION` — [Bing Webmaster Tools](https://www.bing.com/webmasters) → import from Google, or paste the `msvalidate.01` token
+   - Redeploy, then click **Verify** in each dashboard. Bing is worth doing: ChatGPT search grounds on Bing's index.
+   - Query data is not retroactive — it starts collecting the day you verify.
+
 ## 2. Run the database schema
 
 In the Supabase SQL editor:
