@@ -360,6 +360,10 @@ export function CalendarWalkInForm({
               />
               Paid
             </label>
+            <span className="field-help">
+              Leave unchecked if collecting later — the stay still holds the
+              room.
+            </span>
           </div>
         </div>
 

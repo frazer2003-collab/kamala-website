@@ -137,7 +137,7 @@ export function CalendarStayDialogs({
               <dd>
                 {selectedBooking.depositPaid
                   ? formatMoneySuffix(selectedBooking.depositAmount, currency)
-                  : "Not received"}
+                  : "Unpaid — collect at check-in"}
               </dd>
             </div>
             <div>

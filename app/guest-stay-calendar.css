@@ -1,3 +1,5 @@
+/* Guest stay date picker — Garden Key / Operate: calm, hybrid lift, clipped-safe focus */
+
 .guest-stay-cal {
   position: fixed;
   inset: 0;
@@ -28,7 +30,11 @@
   border: 1px solid var(--color-border);
   border-radius: 1.15rem 1.15rem 0 0;
   background: var(--color-surface);
-  box-shadow: var(--shadow-panel, 0 1px 2px oklch(20% 0.02 12 / 0.08), 0 8px 24px oklch(20% 0.02 12 / 0.12));
+  box-shadow: var(
+    --shadow-panel,
+    0 1px 2px oklch(20% 0.02 12 / 0.08),
+    0 8px 24px oklch(20% 0.02 12 / 0.12)
+  );
   touch-action: manipulation;
 }
 
@@ -78,6 +84,15 @@
   line-height: 1;
 }
 
+.guest-stay-cal__close:focus {
+  outline: none;
+}
+
+.guest-stay-cal .guest-stay-cal__close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-house-maroon, var(--color-maroon));
+}
+
 .guest-stay-cal__month-nav {
   display: flex;
   align-items: center;
@@ -107,15 +122,26 @@
   font-size: 1.35rem;
   line-height: 1;
   cursor: pointer;
+  transition:
+    background-color 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)),
+    color 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
-.guest-stay-cal__nav-btn:hover:not(:disabled) {
-  background: var(--color-surface-muted);
+.guest-stay-cal__nav-btn:focus {
+  outline: none;
+}
+
+.guest-stay-cal .guest-stay-cal__nav-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-house-maroon, var(--color-maroon));
 }
 
 .guest-stay-cal__nav-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.35;
+  color: var(--color-soft);
+  background: var(--color-surface-muted);
 }
 
 .guest-stay-cal__weekdays {
@@ -137,11 +163,14 @@
   gap: 0.2rem;
   flex: 1 1 auto;
   min-height: 0;
+  /* Keep focus/press rings inside cells — outer outline was clipped here. */
   overflow: auto;
-  padding-bottom: 0.35rem;
+  padding: 0.15rem 0.1rem 0.45rem;
 }
 
 .guest-stay-cal__day {
+  position: relative;
+  z-index: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -153,25 +182,36 @@
   background: transparent;
   color: var(--color-ink);
   font: inherit;
+  opacity: 1;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)),
-    color 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1));
+  -webkit-tap-highlight-color: transparent;
+  /* Override global button transition noise that flashed box-shadow/outline. */
+  transition:
+    background-color 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)),
+    color 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow 160ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .guest-stay-cal__day-num {
+  position: relative;
+  z-index: 1;
+  color: inherit;
   font-size: 0.92rem;
   font-weight: 750;
   line-height: 1;
 }
 
-.guest-stay-cal__day:hover:not(:disabled) {
-  background: var(--color-surface-muted);
+.guest-stay-cal__day:focus {
+  outline: none;
 }
 
-.guest-stay-cal__day:focus-visible {
-  outline: 2px solid var(--color-house-maroon);
-  outline-offset: 2px;
+/* Inset ring — survives overflow:auto; beats .guest-site :focus-visible. */
+.guest-stay-cal .guest-stay-cal__day:focus-visible {
+  outline: none;
+  z-index: 2;
+  box-shadow: inset 0 0 0 2px var(--color-house-maroon, var(--color-maroon));
 }
 
 .guest-stay-cal__day--outside {
@@ -179,46 +219,83 @@
   pointer-events: none;
 }
 
+.guest-stay-cal__day--today:not(.guest-stay-cal__day--arrival):not(
+    .guest-stay-cal__day--departure
+  ):not(.guest-stay-cal__day--full):not(.guest-stay-cal__day--past) {
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.guest-stay-cal__day--today:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-house-maroon, var(--color-maroon));
+}
+
+/* Mute with color only — never opacity. */
 .guest-stay-cal__day--full,
 .guest-stay-cal__day--past {
   color: var(--color-soft);
-  background: var(--color-surface-muted);
-  opacity: 0.55;
+  background: var(--color-surface-strong, var(--color-surface-muted));
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.guest-stay-cal__day[data-selectable="false"] {
   cursor: not-allowed;
 }
 
-.guest-stay-cal__day--full:disabled,
-.guest-stay-cal__day--past:disabled {
-  opacity: 0.45;
-}
-
-/* Checkout may land on a full night cell — keep grey but allow press. */
-.guest-stay-cal__day--full:not(:disabled) {
+.guest-stay-cal__day--full[data-selectable="true"] {
   cursor: pointer;
-  opacity: 0.7;
+  color: var(--color-muted);
 }
 
 .guest-stay-cal__day--range {
-  background: var(--color-house-maroon-wash);
+  z-index: 1;
+  background: var(--color-house-maroon-wash, var(--color-maroon-wash));
   color: var(--color-ink);
-  opacity: 1;
+  border-radius: 0.35rem;
 }
 
 .guest-stay-cal__day--arrival,
 .guest-stay-cal__day--departure {
-  background: var(--color-house-maroon);
+  z-index: 2;
+  background: var(--color-house-maroon, var(--color-maroon));
   color: #fff;
-  opacity: 1;
+  box-shadow: none;
 }
 
-.guest-stay-cal__day--arrival:hover:not(:disabled),
-.guest-stay-cal__day--departure:hover:not(:disabled) {
-  background: var(--color-house-maroon-deep, var(--color-house-maroon));
+.guest-stay-cal__day--arrival {
+  border-radius: 0.7rem 0.35rem 0.35rem 0.7rem;
+}
+
+.guest-stay-cal__day--departure {
+  border-radius: 0.35rem 0.7rem 0.7rem 0.35rem;
+}
+
+.guest-stay-cal__day--arrival.guest-stay-cal__day--departure {
+  border-radius: 0.7rem;
+}
+
+.guest-stay-cal__day--arrival .guest-stay-cal__day-num,
+.guest-stay-cal__day--departure .guest-stay-cal__day-num {
   color: #fff;
 }
 
-.guest-stay-cal__day--loading {
-  opacity: 0.72;
+.guest-stay-cal .guest-stay-cal__day--arrival:focus-visible,
+.guest-stay-cal .guest-stay-cal__day--departure:focus-visible {
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px var(--color-house-maroon, var(--color-maroon));
+}
+
+.guest-stay-cal__day--loading:not(.guest-stay-cal__day--arrival):not(
+    .guest-stay-cal__day--departure
+  ):not(.guest-stay-cal__day--range) {
+  color: var(--color-muted);
+}
+
+.guest-stay-cal__day[data-selectable="true"]:active {
+  transform: scale(0.96);
+}
+
+.guest-stay-cal__nav-btn:not(:disabled):active {
+  transform: scale(0.96);
 }
 
 .guest-stay-cal__footer {
@@ -245,6 +322,45 @@
   border-radius: 999px;
 }
 
+.guest-stay-cal .guest-stay-cal__done:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-house-maroon, var(--color-maroon));
+}
+
+/* Hover only when a real pointer can hover — avoids sticky tap washes on mobile. */
+@media (hover: hover) and (pointer: fine) {
+  .guest-stay-cal__nav-btn:hover:not(:disabled) {
+    background: var(--color-surface-muted);
+  }
+
+  .guest-stay-cal__day[data-selectable="true"]:hover:not(
+      .guest-stay-cal__day--arrival
+    ):not(.guest-stay-cal__day--departure):not(.guest-stay-cal__day--range) {
+    background: var(--color-surface-muted);
+  }
+
+  .guest-stay-cal__day--range:hover {
+    background: var(--color-house-maroon-wash, var(--color-maroon-wash));
+  }
+
+  .guest-stay-cal__day--arrival:hover,
+  .guest-stay-cal__day--departure:hover {
+    background: var(--color-house-maroon-deep, var(--color-maroon-deep));
+    color: #fff;
+  }
+
+  .guest-stay-cal__day--full[data-selectable="false"]:hover,
+  .guest-stay-cal__day--past:hover {
+    background: var(--color-surface-strong, var(--color-surface-muted));
+  }
+
+  .guest-stay-cal__day[data-selectable="false"]:not(.guest-stay-cal__day--arrival):not(
+      .guest-stay-cal__day--departure
+    ):not(.guest-stay-cal__day--full):not(.guest-stay-cal__day--past):hover {
+    background: transparent;
+  }
+}
+
 @media (min-width: 720px) {
   .guest-stay-cal {
     align-items: center;
@@ -261,8 +377,71 @@
   }
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .guest-stay-cal__backdrop {
+    animation: guest-stay-cal-backdrop-in 220ms var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1))
+      both;
+  }
+
+  .guest-stay-cal__sheet {
+    animation: guest-stay-cal-sheet-in-mobile 280ms
+      var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  }
+
+  @media (min-width: 720px) {
+    .guest-stay-cal__sheet {
+      animation-name: guest-stay-cal-sheet-in-desktop;
+    }
+  }
+}
+
+@keyframes guest-stay-cal-backdrop-in {
+  from {
+    opacity: 0.001;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes guest-stay-cal-sheet-in-mobile {
+  from {
+    opacity: 0.001;
+    transform: translateY(1.25rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guest-stay-cal-sheet-in-desktop {
+  from {
+    opacity: 0.001;
+    transform: translateY(0.5rem) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .guest-stay-cal__day {
+  .guest-stay-cal__backdrop,
+  .guest-stay-cal__sheet {
+    animation: none;
+  }
+
+  .guest-stay-cal__day,
+  .guest-stay-cal__nav-btn {
     transition: none;
+  }
+
+  .guest-stay-cal__day[data-selectable="true"]:active,
+  .guest-stay-cal__nav-btn:not(:disabled):active {
+    transform: none;
   }
 }

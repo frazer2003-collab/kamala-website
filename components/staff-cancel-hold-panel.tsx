@@ -35,14 +35,14 @@ const COPY: Record<
     submit: "Cancel hold",
   },
   "bank-transfer-hold": {
-    title: "Bank transfer hold",
+    title: "Bank transfer claim",
     summary:
-      "The guest reported a transfer, so these dates are held until you confirm or cancel. Use cancel when no payment arrived or the claim should be cleared.",
-    help: "Cancel frees the dates immediately. No email is sent — use Decline below if you need to message the guest.",
-    confirmTitle: "Cancel booking hold",
+      "The guest reported a Thai QR / bank transfer. These dates stay available for other guests until you confirm payment.",
+    help: "Cancel removes the request if no payment arrived. No email is sent — use Decline below if you need to message the guest.",
+    confirmTitle: "Cancel bank transfer claim",
     confirmSummary: (guest) =>
-      `Release ${guest}'s held dates. Payment was not verified on record — no refund is needed and no email is sent.`,
-    submit: "Cancel hold",
+      `Remove ${guest}'s bank-transfer request. Dates were not held on the guest calendar — no refund is needed and no email is sent.`,
+    submit: "Cancel claim",
   },
 };
 

@@ -15,8 +15,8 @@ export const PENDING_BOOKING_STATUSES = ["awaiting", "needs-reply", "new"] as co
 
 /**
  * Stays fetched for the staff calendar tape.
- * Unverified Thai bank claims (`bank_transfer_claimed`, unpaid) stay in Requests
- * until staff confirm — they hold guest inventory once the guest taps "I've paid".
+ * Unverified Thai bank claims stay in Requests until staff confirm —
+ * they do not hold guest inventory and are filtered off the tape.
  */
 export const CALENDAR_BOOKING_FILTER =
   "status.eq.confirmed,deposit_paid_at.not.is.null,bank_transfer_claimed_at.not.is.null";
@@ -259,7 +259,7 @@ export function openRequestsWarningCopy(summary: OpenRequestsSummary) {
 /**
  * Visible on the staff calendar tape for room assignment.
  * Unverified bank-transfer claims stay off the tape until Requests approval.
- * Guest inventory is held separately by `bookingReservesRoom`.
+ * Guest inventory is held separately by `bookingReservesRoom` (paid / confirmed only).
  */
 export function isCalendarBooking(
   booking: Pick<Booking, "status" | "depositPaid"> & {
@@ -276,7 +276,7 @@ export function isCalendarBooking(
     return false;
   }
 
-  // Unpaid checkout — no calendar tape until card paid or bank "I've paid".
+  // Unpaid checkout — no calendar tape until card paid or staff confirms bank transfer.
   if (booking.status === "pending_payment") {
     return false;
   }
@@ -292,7 +292,7 @@ export function isCalendarBooking(
   return false;
 }
 
-/** Guest-facing hold that blocks inventory before confirmation (bank claim, not paid card). */
+/** True only for rare pre-confirm holds — Thai QR waiting in Requests does not hold. */
 export function isInventoryHoldBooking(
   booking: Pick<Booking, "status" | "depositPaid"> & {
     bankTransferClaimed?: boolean;
@@ -302,10 +302,15 @@ export function isInventoryHoldBooking(
     return false;
   }
 
+  // Unverified Thai QR / bank claims wait in Requests without taking allocation.
+  if (booking.bankTransferClaimed) {
+    return false;
+  }
+
   return bookingReservesRoom({
     status: booking.status,
     deposit_paid_at: null,
-    bank_transfer_claimed_at: booking.bankTransferClaimed ? "claimed" : null,
+    bank_transfer_claimed_at: null,
   });
 }
 

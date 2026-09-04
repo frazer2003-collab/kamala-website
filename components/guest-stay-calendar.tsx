@@ -231,15 +231,12 @@ export function GuestStayCalendar({
     onChange({ arrival: nextArrival, departure: nextDeparture });
   }
 
-  function handleDayClick(iso: string) {
-    if (iso < todayIso) {
+  function handleDayClick(iso: string, selectable: boolean) {
+    if (!selectable) {
       return;
     }
 
     if (picking === "arrival") {
-      if (isNightFull(iso)) {
-        return;
-      }
       const nextDeparture =
         draftDeparture > addIsoDays(iso, 1) &&
         draftDeparture <= addIsoDays(iso, MAX_STAY_NIGHTS)
@@ -250,21 +247,19 @@ export function GuestStayCalendar({
       return;
     }
 
-    if (iso <= draftArrival) {
-      if (isNightFull(iso)) {
-        return;
-      }
+    // Tapping check-in again while choosing check-out restarts the range.
+    if (iso === draftArrival) {
+      setPicking("departure");
+      return;
+    }
+
+    if (iso < draftArrival) {
       commit(iso, addIsoDays(iso, 1));
       setPicking("departure");
       return;
     }
 
-    if (iso > maxDeparture) {
-      return;
-    }
-
     commit(draftArrival, iso);
-    onClose();
   }
 
   function dayState(iso: string, inCurrentMonth: boolean) {
@@ -273,19 +268,22 @@ export function GuestStayCalendar({
     const isArrival = iso === draftArrival;
     const isDeparture = iso === draftDeparture;
     const inRange =
-      draftArrival &&
-      draftDeparture &&
+      Boolean(draftArrival) &&
+      Boolean(draftDeparture) &&
       iso > draftArrival &&
       iso < draftDeparture;
 
     let selectable = inCurrentMonth && !past;
     if (picking === "arrival") {
       selectable = selectable && !full;
+    } else if (isArrival) {
+      // Keep check-in tappable (and fully visible) while choosing check-out.
+      selectable = true;
+    } else if (iso < draftArrival) {
+      // Allow restarting the range from an earlier open night.
+      selectable = selectable && !full;
     } else {
-      selectable =
-        selectable &&
-        iso > draftArrival &&
-        iso <= maxDeparture;
+      selectable = selectable && iso <= maxDeparture;
       // Checkout morning may land on a "full" night cell — still allow it.
     }
 
@@ -296,7 +294,9 @@ export function GuestStayCalendar({
       isDeparture,
       inRange,
       selectable,
-      greyed: past || full,
+      isToday: iso === todayIso,
+      // Never mute the current selection endpoints — opacity/disabled made them vanish.
+      greyed: (past || full) && !isArrival && !isDeparture,
     };
   }
 
@@ -410,6 +410,7 @@ export function GuestStayCalendar({
               day.inCurrentMonth ? "" : "guest-stay-cal__day--outside",
               state.greyed ? "guest-stay-cal__day--full" : "",
               state.past ? "guest-stay-cal__day--past" : "",
+              state.isToday ? "guest-stay-cal__day--today" : "",
               state.isArrival ? "guest-stay-cal__day--arrival" : "",
               state.isDeparture ? "guest-stay-cal__day--departure" : "",
               state.inRange ? "guest-stay-cal__day--range" : "",
@@ -424,9 +425,9 @@ export function GuestStayCalendar({
                 aria-label={ariaLabel}
                 aria-pressed={state.isArrival || state.isDeparture}
                 className={className}
-                disabled={!state.selectable}
+                data-selectable={state.selectable ? "true" : "false"}
                 key={`${day.iso}-${day.inCurrentMonth ? "in" : "out"}`}
-                onClick={() => handleDayClick(day.iso)}
+                onClick={() => handleDayClick(day.iso, state.selectable)}
                 type="button"
               >
                 <span className="guest-stay-cal__day-num">{day.date.getDate()}</span>

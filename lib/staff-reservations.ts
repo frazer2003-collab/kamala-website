@@ -100,10 +100,11 @@ function websiteStatusLabel(booking: StaffBooking, todayIso: string = getTodayIs
     return formatStayEndReason(booking.stayEndReason) ?? "Cancelled";
   }
 
+  if (booking.bankTransferClaimed && !booking.depositPaid) {
+    return "Transfer to verify";
+  }
+
   if (isInventoryHoldBooking(booking)) {
-    if (booking.bankTransferClaimed && !booking.depositPaid) {
-      return "Transfer to verify";
-    }
     return "Awaiting payment";
   }
 

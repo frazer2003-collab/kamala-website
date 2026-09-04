@@ -78,7 +78,7 @@ describe("staff booking requests", () => {
     assert.equal(isCalendarBooking(unpaid), false);
   });
 
-  it("does not hold inventory until bank I've paid or card payment", () => {
+  it("does not hold inventory until bank I've paid is staff-confirmed or card payment", () => {
     const checkoutHold = mapBookingRequest({
       ...bankClaimRow,
       status: "pending_payment",
@@ -102,9 +102,9 @@ describe("staff booking requests", () => {
     assert.equal(isCalendarBooking(cardCheckoutHold), false);
     assert.equal(isPendingBooking(cardCheckoutHold), false);
     assert.equal(isInventoryHoldBooking(cardCheckoutHold), false);
-    // Thai bank “I've paid” — holds inventory; Requests until staff confirm.
+    // Thai bank “I've paid” — Requests until staff confirm; dates stay open.
     assert.equal(isCalendarBooking(bankHold), false);
-    assert.equal(isInventoryHoldBooking(bankHold), true);
+    assert.equal(isInventoryHoldBooking(bankHold), false);
     assert.equal(
       bookingReservesRoom({
         status: checkoutHold.status,
@@ -119,7 +119,7 @@ describe("staff booking requests", () => {
         deposit_paid_at: null,
         bank_transfer_claimed_at: "2026-07-18T08:00:00.000Z",
       }),
-      true,
+      false,
     );
   });
 
