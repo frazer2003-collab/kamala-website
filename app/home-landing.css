@@ -370,7 +370,7 @@
     font-size: 0.95rem;
   }
 
-  .home-page:has(.home-sticky-dates) .section--listings .section__change-dates {
+  .home-page:has(.home-sticky-dates--visible) .section--listings .section__change-dates {
     display: none;
   }
 }
@@ -480,7 +480,7 @@
   }
 
   /* When sticky date chrome is visible, the in-section change link is redundant. */
-  .home-page:has(.home-sticky-dates) .section--listings .section__change-dates {
+  .home-page:has(.home-sticky-dates--visible) .section--listings .section__change-dates {
     display: none;
   }
 }

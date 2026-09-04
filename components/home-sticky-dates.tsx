@@ -113,15 +113,22 @@ export function HomeStickyDates({ arrival, departure }: HomeStickyDatesProps) {
 
   return (
     <>
-      {visible ? (
-        <div className="home-sticky-dates" role="region" aria-label="Your selected dates">
-          <p className="home-sticky-dates__label">{formatStayDateRange(arrival, departure)}</p>
-          <a className="home-sticky-dates__change" href="#dates">
-            Change dates
-          </a>
-        </div>
-      ) : null}
-      {visible ? <div aria-hidden="true" className="home-sticky-dates__spacer" /> : null}
+      <div
+        aria-hidden={!visible}
+        aria-label="Your selected dates"
+        className={`home-sticky-dates${visible ? " home-sticky-dates--visible" : ""}`}
+        inert={!visible ? true : undefined}
+        role="region"
+      >
+        <p className="home-sticky-dates__label">{formatStayDateRange(arrival, departure)}</p>
+        <a className="home-sticky-dates__change" href="#dates" tabIndex={visible ? 0 : -1}>
+          Change dates
+        </a>
+      </div>
+      <div
+        aria-hidden="true"
+        className={`home-sticky-dates__spacer${visible ? " home-sticky-dates__spacer--visible" : ""}`}
+      />
     </>
   );
 }

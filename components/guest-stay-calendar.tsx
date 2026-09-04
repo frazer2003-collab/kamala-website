@@ -142,6 +142,7 @@ export function GuestStayCalendar({
     "loading",
   );
   const [mounted, setMounted] = useState(false);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -231,10 +232,15 @@ export function GuestStayCalendar({
     onChange({ arrival: nextArrival, departure: nextDeparture });
   }
 
-  function handleDayClick(iso: string, selectable: boolean) {
+  function handleDayClick(iso: string, selectable: boolean, full: boolean) {
     if (!selectable) {
+      if (full) {
+        setStatusNote("That night is fully booked — try another date.");
+      }
       return;
     }
+
+    setStatusNote(null);
 
     if (picking === "arrival") {
       const nextDeparture =
@@ -287,16 +293,19 @@ export function GuestStayCalendar({
       // Checkout morning may land on a "full" night cell — still allow it.
     }
 
+    const showFullMark = full && !isArrival && !isDeparture;
+    const fullBlocked = showFullMark && !selectable;
+
     return {
       past,
       full,
+      fullBlocked,
+      showFullMark,
       isArrival,
       isDeparture,
       inRange,
       selectable,
       isToday: iso === todayIso,
-      // Never mute the current selection endpoints — opacity/disabled made them vanish.
-      greyed: (past || full) && !isArrival && !isDeparture,
     };
   }
 
@@ -325,8 +334,14 @@ export function GuestStayCalendar({
             <h2 id={titleId}>
               {picking === "arrival" ? "Select check-in" : "Select check-out"}
             </h2>
-            <p className="guest-stay-cal__hint">
-              Grey dates are fully booked
+            <p
+              className={`guest-stay-cal__hint${statusNote ? " guest-stay-cal__hint--alert" : ""}`}
+              aria-live="polite"
+            >
+              {statusNote ??
+                (picking === "arrival"
+                  ? "Dates marked Full have no rooms left that night."
+                  : "Check-out can land on a Full morning.")}
             </p>
           </div>
           <button
@@ -408,8 +423,13 @@ export function GuestStayCalendar({
             const className = [
               "guest-stay-cal__day",
               day.inCurrentMonth ? "" : "guest-stay-cal__day--outside",
-              state.greyed ? "guest-stay-cal__day--full" : "",
-              state.past ? "guest-stay-cal__day--past" : "",
+              state.fullBlocked ? "guest-stay-cal__day--full" : "",
+              state.showFullMark && !state.fullBlocked
+                ? "guest-stay-cal__day--full-soft"
+                : "",
+              state.past && !state.isArrival && !state.isDeparture
+                ? "guest-stay-cal__day--past"
+                : "",
               state.isToday ? "guest-stay-cal__day--today" : "",
               state.isArrival ? "guest-stay-cal__day--arrival" : "",
               state.isDeparture ? "guest-stay-cal__day--departure" : "",
@@ -427,10 +447,17 @@ export function GuestStayCalendar({
                 className={className}
                 data-selectable={state.selectable ? "true" : "false"}
                 key={`${day.iso}-${day.inCurrentMonth ? "in" : "out"}`}
-                onClick={() => handleDayClick(day.iso, state.selectable)}
+                onClick={() =>
+                  handleDayClick(day.iso, state.selectable, state.full)
+                }
                 type="button"
               >
                 <span className="guest-stay-cal__day-num">{day.date.getDate()}</span>
+                {state.showFullMark ? (
+                  <span aria-hidden="true" className="guest-stay-cal__day-mark">
+                    Full
+                  </span>
+                ) : null}
               </button>
             );
           })}

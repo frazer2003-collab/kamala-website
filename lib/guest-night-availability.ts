@@ -18,7 +18,13 @@ export type { GuestNightStatus };
 export {
   computeGuestNightAvailability,
 } from "@/lib/guest-night-availability-core";
-export { GUEST_NIGHT_AVAILABILITY_MAX_DAYS };
+export {
+  GUEST_NIGHT_AVAILABILITY_MAX_DAYS,
+  clampGuestNightAvailabilityQuery,
+  countInclusiveIsoDays,
+  guestNightAvailabilityLatestIso,
+} from "@/lib/guest-night-availability-shared";
+
 
 export type GuestNightAvailabilityResult = {
   status: "ok" | "verify-failed";

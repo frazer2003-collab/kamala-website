@@ -87,7 +87,7 @@
 }
 
 .home-page .listing-card--feature .listing-card__media img {
-  transition: transform 480ms var(--ease-out-quint);
+  transition: transform 360ms var(--ease-out-quint);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -197,7 +197,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .home-page .home-sticky-reserve {
-    animation: home-sticky-rise 400ms var(--ease-out-quint) both;
+    animation: home-sticky-rise 320ms var(--ease-out-quint) both;
   }
 }
 
@@ -212,82 +212,89 @@
 }
 
 /* ─────────────────────────────────────────────
-   Motion language — Trusted Counter fluidity
+   Motion language — Garden Key / calm counter
    Focal: hero still entrance
-   Continuity: menu, sticky dates, chrome
-   Feedback: press + quiet hover
+   Continuity: menu + sticky chrome (transitions)
+   Feedback: press + quiet hover (fine pointer)
    ───────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: no-preference) {
-  /* Focal: quieter still arrives, then the counter. */
+  /* Focal: still arrives, then the counter. */
   .home-page .hero-atmosphere--elevate .hero-atmosphere__copy,
   .home-page .hero-atmosphere--elevate .hero-atmosphere__lede,
   .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
-    animation: home-hero-arrive 520ms var(--ease-out-quint) both;
+    animation: home-hero-arrive 440ms var(--ease-out-quint) both;
   }
 
   .home-page .hero-atmosphere--elevate .hero-atmosphere__lede {
-    animation-delay: 70ms;
+    animation-delay: 60ms;
   }
 
   .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
-    animation-delay: 140ms;
+    animation-delay: 110ms;
   }
 
   .home-page .home-hero--atmosphere .home-hero__overlay {
-    animation: home-veil-settle 700ms var(--ease-out-quint) both;
+    animation: home-veil-settle 520ms var(--ease-out-quint) both;
   }
 
   /* Continuity: mobile menu panel grows from the chrome. */
   .home-page .topbar--home.topbar--menu-open .topbar__nav {
-    animation: home-nav-panel-in 260ms var(--ease-out-quint) both;
+    animation: home-nav-panel-in 240ms var(--ease-out-quint) both;
     transform-origin: top center;
   }
 
   .home-page .topbar--home.topbar--menu-open .topbar__nav a {
-    animation: home-nav-link-in 280ms var(--ease-out-quint) both;
+    animation: home-nav-link-in 260ms var(--ease-out-quint) both;
   }
 
   .home-page .topbar--home.topbar--menu-open .topbar__nav-primary a:nth-child(1) {
-    animation-delay: 40ms;
+    animation-delay: 36ms;
   }
 
   .home-page .topbar--home.topbar--menu-open .topbar__nav-primary a:nth-child(2) {
-    animation-delay: 70ms;
+    animation-delay: 60ms;
   }
 
   .home-page .topbar--home.topbar--menu-open .topbar__nav-primary a:nth-child(3) {
-    animation-delay: 100ms;
+    animation-delay: 84ms;
   }
 
   .home-page .topbar--home.topbar--menu-open .topbar__nav-secondary a:nth-child(1) {
-    animation-delay: 140ms;
+    animation-delay: 120ms;
   }
 
   .home-page .topbar--home.topbar--menu-open .topbar__nav-secondary a:nth-child(2) {
-    animation-delay: 170ms;
+    animation-delay: 144ms;
+  }
+}
+
+/* Shorter hero entrance on small / coarse screens (less jank on scroll). */
+@media (prefers-reduced-motion: no-preference) and (max-width: 719px) {
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__lede,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
+    animation-duration: 360ms;
   }
 
-  /* Continuity: date strip settles under the bar. */
-  .home-page .home-sticky-dates {
-    animation: home-sticky-dates-in 280ms var(--ease-out-quint) both;
+  .home-page .home-hero--atmosphere .home-hero__overlay {
+    animation-duration: 420ms;
   }
+}
 
-  /* Phrase rail: soft view-entry, capped stagger. */
+/* Scroll-driven narrative: desktop / fine pointer only — mobile view() is janky. */
+@media (prefers-reduced-motion: no-preference) and (min-width: 720px) and (hover: hover) {
   @supports (animation-timeline: view()) {
     .home-page .home-stay-assurances-list li {
       animation: home-phrase-in linear both;
       animation-timeline: view();
-      animation-range: entry 0% entry 35%;
+      animation-range: entry 0% entry 32%;
     }
-  }
 
-  /* Rooms: featured media eases in as it enters. */
-  @supports (animation-timeline: view()) {
     .home-page .listing-card--feature .listing-card__media {
       animation: home-media-settle linear both;
       animation-timeline: view();
-      animation-range: entry 0% entry 45%;
+      animation-range: entry 0% entry 40%;
     }
   }
 }
@@ -295,7 +302,7 @@
 @keyframes home-hero-arrive {
   from {
     opacity: 0.001;
-    transform: translateY(0.7rem);
+    transform: translateY(0.55rem);
   }
 
   to {
@@ -306,7 +313,7 @@
 
 @keyframes home-veil-settle {
   from {
-    opacity: 0.72;
+    opacity: 0.78;
   }
 
   to {
@@ -317,7 +324,7 @@
 @keyframes home-nav-panel-in {
   from {
     opacity: 0.001;
-    transform: translateY(-0.35rem) scale(0.985);
+    transform: translateY(-0.3rem) scale(0.988);
   }
 
   to {
@@ -329,19 +336,7 @@
 @keyframes home-nav-link-in {
   from {
     opacity: 0.001;
-    transform: translateY(0.35rem);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes home-sticky-dates-in {
-  from {
-    opacity: 0.001;
-    transform: translateY(-0.4rem);
+    transform: translateY(0.28rem);
   }
 
   to {
@@ -352,8 +347,8 @@
 
 @keyframes home-phrase-in {
   from {
-    opacity: 0.2;
-    transform: translateY(0.55rem);
+    opacity: 0.35;
+    transform: translateY(0.4rem);
   }
 
   to {
@@ -364,8 +359,8 @@
 
 @keyframes home-media-settle {
   from {
-    opacity: 0.55;
-    transform: scale(1.02);
+    opacity: 0.72;
+    transform: scale(1.015);
   }
 
   to {
@@ -374,39 +369,36 @@
   }
 }
 
-/* Feedback + fluid chrome (always on; near-imperceptible). */
+/* Feedback + fluid chrome — hover lifts only on fine pointers. */
 
 .home-page .home-hero--atmosphere .search-bar--atmosphere {
   transition:
-    box-shadow 220ms var(--ease-out-quint),
-    border-color 220ms var(--ease-out-quint),
-    transform 220ms var(--ease-out-quint);
+    box-shadow 200ms var(--ease-out-quint),
+    border-color 200ms var(--ease-out-quint),
+    transform 200ms var(--ease-out-quint);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .home-page .home-hero--atmosphere .search-bar--atmosphere:hover {
+  .home-page .home-hero--atmosphere .search-bar--atmosphere:hover,
+  .home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within {
     transform: translateY(-1px);
   }
-}
-
-.home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within {
-  transform: translateY(-1px);
 }
 
 .home-page .listing-card--rail {
   transition:
     background-color 180ms var(--ease-out-quint),
     border-color 180ms var(--ease-out-quint),
-    transform 200ms var(--ease-out-quint);
+    transform 180ms var(--ease-out-quint);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .home-page .listing-card--rail:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
   }
 
   .home-page .listing-card--feature:hover .listing-card__media img {
-    transform: scale(1.035);
+    transform: scale(1.03);
   }
 }
 
@@ -434,7 +426,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .home-page .stay-story__gallery-link:hover {
-    transform: translateX(0.15rem);
+    transform: translateX(0.12rem);
   }
 }
 
@@ -448,7 +440,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .home-page .site-footer__contact-link:hover {
-    transform: translateX(0.12rem);
+    transform: translateX(0.1rem);
   }
 }
 
@@ -469,9 +461,9 @@
   .home-page .home-hero--atmosphere .home-hero__overlay,
   .home-page .topbar--home.topbar--menu-open .topbar__nav,
   .home-page .topbar--home.topbar--menu-open .topbar__nav a,
-  .home-page .home-sticky-dates,
   .home-page .home-stay-assurances-list li,
-  .home-page .listing-card--feature .listing-card__media {
+  .home-page .listing-card--feature .listing-card__media,
+  .home-page .home-sticky-reserve {
     animation: none !important;
     opacity: 1;
     transform: none;
@@ -482,8 +474,13 @@
   .home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within,
   .home-page .listing-card--rail,
   .home-page .listing-card--rail:hover,
+  .home-page .listing-card--feature:hover .listing-card__media img,
   .home-page .stay-story__gallery-link:hover,
-  .home-page .site-footer__contact-link:hover {
+  .home-page .site-footer__contact-link:hover,
+  .home-page .listing-card--feature .button:active,
+  .home-page .listing-card--rail .button:active,
+  .home-page .home-hero--atmosphere .search-bar--atmosphere .search-bar__submit:active,
+  .home-page .home-sticky-dates__change:active {
     transform: none;
   }
 }
