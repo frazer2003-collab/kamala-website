@@ -52,7 +52,9 @@ In the Supabase SQL editor:
 
 Historical one-off upgrade scripts live in `supabase/archive/` — only needed for very old databases. See `supabase/README.md`.
 
-Staff enter every stay on the calendar: tap a day, choose **Book**, and pick the source (walk-in, Airbnb, Booking.com, or Expedia). iCal export URLs on room settings still feed outbound calendars to OTAs if you use them.
+If the live database still has iCal tables/columns, run `supabase/migrate-remove-ical.sql` once.
+
+Staff enter every stay on the calendar: tap a day, choose **Book**, and pick the source (walk-in, Airbnb, Booking.com, or Expedia).
 
 ## 3. Configure the property
 

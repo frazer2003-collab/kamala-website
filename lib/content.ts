@@ -28,7 +28,6 @@ export type Room = {
   tone: "courtyard" | "garden" | "veranda" | "attic";
   imageUrl: string | null;
   galleryUrls: string[];
-  icalExportToken?: string | null;
 };
 
 export type StayStatus = "expected" | "checked-in" | "checked-out";

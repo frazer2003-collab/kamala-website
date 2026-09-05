@@ -58,11 +58,11 @@ describe("getTimelineDoorUnits", () => {
 
   it("orders unknown doors Twin → Double → Deluxe → Family after the chart", () => {
     const units = [
-      { id: "u1", number: "201", sortOrder: 1, roomIds: ["family"], icalExportToken: null },
-      { id: "u2", number: "101", sortOrder: 2, roomIds: ["deluxe"], icalExportToken: null },
-      { id: "u3", number: "50", sortOrder: 3, roomIds: ["twin"], icalExportToken: null },
-      { id: "u4", number: "75", sortOrder: 4, roomIds: ["double"], icalExportToken: null },
-      { id: "u5", number: "116", sortOrder: 5, roomIds: ["ground"], icalExportToken: null },
+      { id: "u1", number: "201", sortOrder: 1, roomIds: ["family"] },
+      { id: "u2", number: "101", sortOrder: 2, roomIds: ["deluxe"] },
+      { id: "u3", number: "50", sortOrder: 3, roomIds: ["twin"] },
+      { id: "u4", number: "75", sortOrder: 4, roomIds: ["double"] },
+      { id: "u5", number: "116", sortOrder: 5, roomIds: ["ground"] },
     ];
     const shortNames = new Map([
       ["twin", "Twin"],
@@ -92,7 +92,6 @@ describe("applyDefaultRoomIds", () => {
         number: "114",
         sortOrder: 50,
         roomIds: ["garden"],
-        icalExportToken: null,
       },
     ]);
 

@@ -1,5 +1,5 @@
 /**
- * Canonical public site origin for absolute links (iCal export, emails, SEO).
+ * Canonical public site origin for absolute links (emails, SEO).
  * Prefer NEXT_PUBLIC_APP_URL — the same var used across booking/Stripe setup.
  */
 
@@ -52,13 +52,4 @@ export function getSiteUrl() {
   }
 
   return "http://localhost:3000";
-}
-
-export function getRoomIcalExportUrl(exportToken: string) {
-  return `${getSiteUrl()}/api/ical/${encodeURIComponent(exportToken)}`;
-}
-
-/** Per room-number export for Airbnb listings. */
-export function getRoomUnitIcalExportUrl(exportToken: string) {
-  return `${getSiteUrl()}/api/ical/unit/${encodeURIComponent(exportToken)}`;
 }

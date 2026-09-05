@@ -1,5 +1,6 @@
 import type { Room } from "@/lib/content";
 import { bookingReservesRoom } from "@/lib/booking-reservation";
+import { isChannelBlockRow } from "@/lib/booking-source";
 import { computeGuestNightAvailability } from "@/lib/guest-night-availability-core";
 import {
   GUEST_NIGHT_AVAILABILITY_MAX_DAYS,
@@ -71,7 +72,7 @@ export async function getGuestNightAvailability(
         supabase
           .from("room_blocks")
           .select(
-            "id, room_id, room_unit_id, start_date, end_date, ical_feed_id, guest_name, reason",
+            "id, room_id, room_unit_id, start_date, end_date, staff_booking_source, guest_name, reason",
           )
           .lt("start_date", queryDeparture)
           .gt("end_date", fromIso),
@@ -96,7 +97,7 @@ export async function getGuestNightAvailability(
 
     const allBlocks = blocksResult.data ?? [];
     const channelBlocks = allBlocks
-      .filter((block) => Boolean(block.ical_feed_id))
+      .filter((block) => isChannelBlockRow(block))
       .map((block) => ({
         roomId: block.room_id,
         roomUnitId: block.room_unit_id,
@@ -108,7 +109,7 @@ export async function getGuestNightAvailability(
       }));
 
     const staffClosures = allBlocks
-      .filter((block) => !block.ical_feed_id)
+      .filter((block) => !isChannelBlockRow(block))
       .map((block) => ({
         roomId: block.room_id,
         startDate: block.start_date,

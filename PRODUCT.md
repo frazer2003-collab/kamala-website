@@ -28,7 +28,7 @@ Guests use the public site (often on mobile) to set dates, compare rooms, and re
 
 ## Capabilities and Constraints
 
-Confirmed in product use: guest stay-date search and room booking; staff sign-in; requests, calendar, and settings surfaces on the same site. Technical setup (Supabase, Stripe, staff auth env, OTA calendar sync) is documented in `SETUP.md`. Undecided: deeper reservation logic called out as near-term foundation work in prior product notes—treat as evolving, not a finished claim.
+Confirmed in product use: guest stay-date search and room booking; staff sign-in; requests, calendar, and settings surfaces on the same site. Technical setup (Supabase, Stripe, staff auth env) is documented in `SETUP.md`. Undecided: deeper reservation logic called out as near-term foundation work in prior product notes—treat as evolving, not a finished claim.
 
 ## Brand Commitments
 

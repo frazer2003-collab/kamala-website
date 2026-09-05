@@ -23,9 +23,8 @@ export type StaffRoomBlock = {
   guestName: string;
   guestEmail: string;
   guestPhone: string;
-  /** Staff override, or inferred from channel label when unset. */
+  /** Staff override, or inferred from a channel label when unset. */
   bookingSource: BookingSource | null;
-  icalFeedId: string | null;
   channelLabel: string | null;
   roomUnitId: string | null;
   roomNumber: string | null;
@@ -33,16 +32,12 @@ export type StaffRoomBlock = {
 
 function mapRoomBlock(
   row: RoomBlockRow,
-  channelLabelById?: Map<string, string>,
   roomUnitIdOverride?: string | null,
 ): StaffRoomBlock {
-  const icalFeedId = row.ical_feed_id ?? null;
   const staffSource = parseBookingSource(row.staff_booking_source);
-  const channelLabel = icalFeedId
-    ? (channelLabelById?.get(icalFeedId) ?? "Channel")
-    : isOtaBookingSource(staffSource)
-      ? formatBookingSource(staffSource)
-      : null;
+  const channelLabel = isOtaBookingSource(staffSource)
+    ? formatBookingSource(staffSource)
+    : null;
 
   return {
     id: row.id.slice(0, 8).toUpperCase(),
@@ -56,7 +51,6 @@ function mapRoomBlock(
     guestEmail: row.guest_email ?? "",
     guestPhone: row.guest_phone ?? "",
     bookingSource: staffSource ?? inferBookingSourceFromChannelLabel(channelLabel),
-    icalFeedId,
     channelLabel,
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
     roomNumber: null,
@@ -81,35 +75,16 @@ async function getBlockRoomUnitMap(
   return map;
 }
 
-/** OTA reservations — legacy iCal imports or staff-tagged channel blocks. */
+/** OTA channel stays — not staff inventory closures. */
 export function isChannelReservation(block: StaffRoomBlock) {
-  return block.icalFeedId !== null || isOtaBookingSource(block.bookingSource);
+  return isOtaBookingSource(block.bookingSource);
 }
 
 export function getStaffRoomBlockKey(block: StaffRoomBlock) {
   return block.databaseId ?? block.id;
 }
 
-async function getChannelLabelMap(
-  supabase: ReturnType<typeof createStaffSupabaseClient>,
-) {
-  const map = new Map<string, string>();
-  const { data, error } = await supabase
-    .from("room_ical_feeds")
-    .select("id, label");
-
-  if (error || !data) {
-    return map;
-  }
-
-  for (const feed of data) {
-    map.set(feed.id, feed.label?.trim() || "Channel");
-  }
-
-  return map;
-}
-
-/** Month blocks + all channel reservations in one round-trip (shared label/unit maps). */
+/** Month blocks + channel reservations in one round-trip. */
 export async function getStaffCalendarBlocks(month: { year: number; month: number }) {
   if (!hasStaffSupabaseConfig()) {
     return {
@@ -123,8 +98,7 @@ export async function getStaffCalendarBlocks(month: { year: number; month: numbe
   try {
     const supabase = createStaffSupabaseClient();
     const { monthStart, monthEnd } = getCalendarMonthBounds(month.year, month.month);
-    const [channelLabelById, unitMap, monthResult, channelResult] = await Promise.all([
-      getChannelLabelMap(supabase),
+    const [unitMap, monthResult] = await Promise.all([
       getBlockRoomUnitMap(supabase),
       supabase
         .from("room_blocks")
@@ -132,12 +106,6 @@ export async function getStaffCalendarBlocks(month: { year: number; month: numbe
         .lte("start_date", monthEnd)
         .gt("end_date", monthStart)
         .order("start_date", { ascending: true }),
-      supabase
-        .from("room_blocks")
-        .select("*")
-        .not("ical_feed_id", "is", null)
-        .order("start_date", { ascending: true })
-        .limit(300),
     ]);
 
     if (monthResult.error || !monthResult.data) {
@@ -150,19 +118,16 @@ export async function getStaffCalendarBlocks(month: { year: number; month: numbe
     }
 
     const mapRow = (row: RoomBlockRow) =>
-      mapRoomBlock(row, channelLabelById, unitMap.get(row.id) ?? row.room_unit_id ?? null);
+      mapRoomBlock(row, unitMap.get(row.id) ?? row.room_unit_id ?? null);
 
     const monthBlocks = monthResult.data.map(mapRow);
-    const channelBlocks =
-      channelResult.error || !channelResult.data
-        ? monthBlocks.filter(isChannelReservation)
-        : channelResult.data.map(mapRow);
+    const channelBlocks = monthBlocks.filter(isChannelReservation);
 
     return {
       monthBlocks,
       channelBlocks,
       source: "supabase" as const,
-      error: channelResult.error ? "Could not load all channel reservations." : null,
+      error: null,
     };
   } catch {
     return {
@@ -199,17 +164,7 @@ export async function getRoomBlockById(blockId: string) {
       return null;
     }
 
-    let channelLabelById: Map<string, string> | undefined;
-
-    if (data.ical_feed_id) {
-      channelLabelById = await getChannelLabelMap(supabase);
-    }
-
-    return mapRoomBlock(
-      data,
-      channelLabelById,
-      unitMap.get(data.id) ?? data.room_unit_id ?? null,
-    );
+    return mapRoomBlock(data, unitMap.get(data.id) ?? data.room_unit_id ?? null);
   } catch {
     return null;
   }
@@ -227,7 +182,7 @@ export async function getChannelReservationsForRange(fromIso: string, toIso: str
 
   try {
     const supabase = createStaffSupabaseClient();
-    const [{ data, error }, channelLabelById, unitMap] = await Promise.all([
+    const [{ data, error }, unitMap] = await Promise.all([
       supabase
         .from("room_blocks")
         .select("*")
@@ -235,7 +190,6 @@ export async function getChannelReservationsForRange(fromIso: string, toIso: str
         .lte("start_date", toIso)
         .order("start_date", { ascending: true })
         .limit(500),
-      getChannelLabelMap(supabase),
       getBlockRoomUnitMap(supabase),
     ]);
 
@@ -248,9 +202,7 @@ export async function getChannelReservationsForRange(fromIso: string, toIso: str
     }
 
     const blocks = data
-      .map((row) =>
-        mapRoomBlock(row, channelLabelById, unitMap.get(row.id) ?? row.room_unit_id ?? null),
-      )
+      .map((row) => mapRoomBlock(row, unitMap.get(row.id) ?? row.room_unit_id ?? null))
       .filter(isChannelReservation);
 
     return {
@@ -282,7 +234,7 @@ export async function getChannelBlocksOverlappingRange(
 
   try {
     const supabase = createStaffSupabaseClient();
-    const [{ data, error }, channelLabelById, unitMap] = await Promise.all([
+    const [{ data, error }, unitMap] = await Promise.all([
       supabase
         .from("room_blocks")
         .select("*")
@@ -290,7 +242,6 @@ export async function getChannelBlocksOverlappingRange(
         .gt("end_date", fromIso)
         .order("start_date", { ascending: true })
         .limit(500),
-      getChannelLabelMap(supabase),
       getBlockRoomUnitMap(supabase),
     ]);
 
@@ -302,16 +253,12 @@ export async function getChannelBlocksOverlappingRange(
       };
     }
 
+    const blocks = data
+      .map((row) => mapRoomBlock(row, unitMap.get(row.id) ?? row.room_unit_id ?? null))
+      .filter(isChannelReservation);
+
     return {
-      blocks: data
-        .map((row) =>
-          mapRoomBlock(
-            row,
-            channelLabelById,
-            unitMap.get(row.id) ?? row.room_unit_id ?? null,
-          ),
-        )
-        .filter(isChannelReservation),
+      blocks,
       source: "supabase" as const,
       error: null,
     };
@@ -324,7 +271,7 @@ export async function getChannelBlocksOverlappingRange(
   }
 }
 
-/** Non-channel staff closes whose nights overlap the range (for Finance capacity). */
+/** Staff closures whose nights overlap [fromIso, toIso] inclusive (for Finance). */
 export async function getStaffClosureBlocksOverlappingRange(
   fromIso: string,
   toIso: string,
@@ -339,7 +286,7 @@ export async function getStaffClosureBlocksOverlappingRange(
 
   try {
     const supabase = createStaffSupabaseClient();
-    const [{ data, error }, channelLabelById, unitMap] = await Promise.all([
+    const [{ data, error }, unitMap] = await Promise.all([
       supabase
         .from("room_blocks")
         .select("*")
@@ -347,7 +294,6 @@ export async function getStaffClosureBlocksOverlappingRange(
         .gt("end_date", fromIso)
         .order("start_date", { ascending: true })
         .limit(500),
-      getChannelLabelMap(supabase),
       getBlockRoomUnitMap(supabase),
     ]);
 
@@ -361,13 +307,53 @@ export async function getStaffClosureBlocksOverlappingRange(
 
     return {
       blocks: data
-        .map((row) =>
-          mapRoomBlock(
-            row,
-            channelLabelById,
-            unitMap.get(row.id) ?? row.room_unit_id ?? null,
-          ),
-        )
+        .map((row) => mapRoomBlock(row, unitMap.get(row.id) ?? row.room_unit_id ?? null))
+        .filter((block) => !isChannelReservation(block)),
+      source: "supabase" as const,
+      error: null,
+    };
+  } catch {
+    return {
+      blocks: [] as StaffRoomBlock[],
+      source: "sample" as const,
+      error: "Supabase is not configured correctly.",
+    };
+  }
+}
+
+export async function getStaffClosuresForMonth(month: { year: number; month: number }) {
+  if (!hasStaffSupabaseConfig()) {
+    return {
+      blocks: [] as StaffRoomBlock[],
+      source: "sample" as const,
+      error: null,
+    };
+  }
+
+  try {
+    const supabase = createStaffSupabaseClient();
+    const { monthStart, monthEnd } = getCalendarMonthBounds(month.year, month.month);
+    const [unitMap, result] = await Promise.all([
+      getBlockRoomUnitMap(supabase),
+      supabase
+        .from("room_blocks")
+        .select("*")
+        .lte("start_date", monthEnd)
+        .gt("end_date", monthStart)
+        .order("start_date", { ascending: true }),
+    ]);
+
+    if (result.error || !result.data) {
+      return {
+        blocks: [] as StaffRoomBlock[],
+        source: "sample" as const,
+        error: "Could not load room blocks.",
+      };
+    }
+
+    return {
+      blocks: result.data
+        .map((row) => mapRoomBlock(row, unitMap.get(row.id) ?? row.room_unit_id ?? null))
         .filter((block) => !isChannelReservation(block)),
       source: "supabase" as const,
       error: null,
@@ -393,14 +379,12 @@ export async function getChannelReservations() {
 
   try {
     const supabase = createStaffSupabaseClient();
-    const [{ data, error }, channelLabelById, unitMap] = await Promise.all([
+    const [{ data, error }, unitMap] = await Promise.all([
       supabase
         .from("room_blocks")
         .select("*")
-        .not("ical_feed_id", "is", null)
         .order("start_date", { ascending: true })
-        .limit(300),
-      getChannelLabelMap(supabase),
+        .limit(500),
       getBlockRoomUnitMap(supabase),
     ]);
 
@@ -413,9 +397,9 @@ export async function getChannelReservations() {
     }
 
     return {
-      blocks: data.map((row) =>
-        mapRoomBlock(row, channelLabelById, unitMap.get(row.id) ?? row.room_unit_id ?? null),
-      ),
+      blocks: data
+        .map((row) => mapRoomBlock(row, unitMap.get(row.id) ?? row.room_unit_id ?? null))
+        .filter(isChannelReservation),
       source: "supabase" as const,
       error: null,
     };
@@ -427,8 +411,3 @@ export async function getChannelReservations() {
     };
   }
 }
-
-export {
-  promoteChannelReservationsToBookings,
-  purgeIcalSyncedChannelBlocks,
-} from "@/lib/promote-channel-bookings";

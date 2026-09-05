@@ -121,7 +121,7 @@ begin
       select 1
       from public.room_blocks b
       where b.room_id = p_room_id
-        and b.ical_feed_id is null
+        and coalesce(b.staff_booking_source, '') not in ('airbnb', 'expedia', 'booking')
         and b.start_date <= v_night
         and b.end_date > v_night
     );
@@ -166,7 +166,7 @@ begin
         select count(*)::integer
         from public.room_blocks b
         where b.room_id = p_room_id
-          and b.ical_feed_id is not null
+          and b.staff_booking_source in ('airbnb', 'expedia', 'booking')
           and b.start_date <= v_night
           and b.end_date > v_night
       )

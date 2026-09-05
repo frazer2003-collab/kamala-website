@@ -1,4 +1,4 @@
-/* Staff passcode unlock — reuses .staff-login-* chrome from globals. */
+/* Staff passcode unlock — reuses .staff-login-* chrome from staff-ops.css. */
 
 .staff-login-note {
   margin: 0;

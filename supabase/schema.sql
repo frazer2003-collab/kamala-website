@@ -22,7 +22,6 @@ create table if not exists public.rooms (
   image_url text,
   gallery_urls text[] not null default '{}',
   sort_order integer not null default 0,
-  ical_export_token uuid not null default gen_random_uuid(),
   updated_at timestamptz not null default now()
 );
 
@@ -116,13 +115,8 @@ create table if not exists public.room_units (
   id uuid primary key default gen_random_uuid(),
   number text not null unique,
   sort_order integer not null default 0,
-  ical_export_token uuid not null default gen_random_uuid(),
   created_at timestamptz not null default now()
 );
-
-create unique index if not exists room_units_ical_export_token_idx
-  on public.room_units (ical_export_token)
-  where ical_export_token is not null;
 
 create table if not exists public.room_unit_types (
   room_unit_id uuid not null references public.room_units(id) on delete cascade,
@@ -240,26 +234,8 @@ create index if not exists booking_messages_booking_created_idx
   on public.booking_messages (booking_request_id, created_at);
 
 -- ---------------------------------------------------------------------------
--- Calendar: iCal feeds, blocks, day inventory / rates
+-- Calendar: blocks, day inventory / rates
 -- ---------------------------------------------------------------------------
-
-create table if not exists public.room_ical_feeds (
-  id uuid primary key default gen_random_uuid(),
-  room_id text not null references public.rooms(id) on delete cascade,
-  room_unit_id uuid references public.room_units(id) on delete cascade,
-  label text not null check (length(trim(label)) > 0),
-  import_url text not null check (length(trim(import_url)) > 0),
-  last_synced_at timestamptz,
-  last_sync_error text,
-  created_at timestamptz not null default now()
-);
-
-create index if not exists room_ical_feeds_room_id_idx
-  on public.room_ical_feeds (room_id);
-
-create index if not exists room_ical_feeds_room_unit_id_idx
-  on public.room_ical_feeds (room_unit_id)
-  where room_unit_id is not null;
 
 create table if not exists public.room_blocks (
   id uuid primary key default gen_random_uuid(),
@@ -275,15 +251,10 @@ create table if not exists public.room_blocks (
     staff_booking_source is null
     or staff_booking_source in ('walk-in', 'airbnb', 'expedia', 'booking')
   ),
-  ical_feed_id uuid references public.room_ical_feeds(id) on delete cascade,
-  ical_uid text,
   room_unit_id uuid references public.room_units(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
-create unique index if not exists room_blocks_ical_feed_uid_idx
-  on public.room_blocks (ical_feed_id, ical_uid)
-  where ical_feed_id is not null and ical_uid is not null;
 
 create index if not exists room_blocks_room_unit_id_idx
   on public.room_blocks (room_unit_id)
@@ -557,7 +528,7 @@ begin
       select 1
       from public.room_blocks b
       where b.room_id = p_room_id
-        and b.ical_feed_id is null
+        and coalesce(b.staff_booking_source, '') not in ('airbnb', 'expedia', 'booking')
         and b.start_date <= v_night
         and b.end_date > v_night
     );
@@ -602,7 +573,7 @@ begin
         select count(*)::integer
         from public.room_blocks b
         where b.room_id = p_room_id
-          and b.ical_feed_id is not null
+          and b.staff_booking_source in ('airbnb', 'expedia', 'booking')
           and b.start_date <= v_night
           and b.end_date > v_night
       )
@@ -709,7 +680,7 @@ begin
     staff_note = nullif(trim(p_staff_note), ''),
     room_unit_id = p_room_unit_id
   where id = p_block_id
-    and ical_feed_id is not null;
+    and staff_booking_source in ('airbnb', 'expedia', 'booking');
 
   if not found then
     raise exception 'channel_block_not_found';
@@ -794,7 +765,7 @@ grant execute on function public.staff_booking_room_unit_map() to service_role;
 -- Grants + RLS
 -- ---------------------------------------------------------------------------
 
--- Public clients may read room catalog fields, but not ical_export_token.
+-- Public clients may read room catalog fields.
 grant select (
   id,
   name,
@@ -818,7 +789,6 @@ grant all on public.booking_messages to service_role;
 grant all on public.room_blocks to service_role;
 grant all on public.room_units to service_role;
 grant all on public.room_unit_types to service_role;
-grant all on public.room_ical_feeds to service_role;
 grant all on public.room_day_inventory to service_role;
 grant all on public.room_day_rates to service_role;
 grant all on public.staff_notification_emails to service_role;
@@ -836,7 +806,6 @@ alter table public.booking_messages enable row level security;
 alter table public.room_blocks enable row level security;
 alter table public.room_units enable row level security;
 alter table public.room_unit_types enable row level security;
-alter table public.room_ical_feeds enable row level security;
 alter table public.room_day_inventory enable row level security;
 alter table public.room_day_rates enable row level security;
 alter table public.staff_notification_emails enable row level security;
@@ -916,13 +885,6 @@ to service_role
 using (true)
 with check (true);
 
-drop policy if exists "Service role can manage room ical feeds" on public.room_ical_feeds;
-create policy "Service role can manage room ical feeds"
-on public.room_ical_feeds
-for all
-to service_role
-using (true)
-with check (true);
 
 drop policy if exists "Service role can manage room day inventory" on public.room_day_inventory;
 create policy "Service role can manage room day inventory"

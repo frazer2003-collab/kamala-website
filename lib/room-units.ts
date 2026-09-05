@@ -9,20 +9,18 @@ export type RoomUnit = {
   sortOrder: number;
   /** Room type ids that can use this physical unit. */
   roomIds: string[];
-  /** Per-listing Airbnb export token (null until schema room_units.ical_export_token). */
-  icalExportToken: string | null;
 };
 
-/** Superior (courtyard) door numbers — Airbnb import slots and assignment. */
+/** Superior (courtyard) door numbers — assignment / sellable inventory. */
 export const COURTYARD_UNIT_NUMBERS = ["113", "115", "118", "120"] as const;
 
 /** Deluxe (garden) door numbers — assignment / sellable inventory. */
 export const GARDEN_UNIT_NUMBERS = ["112", "117", "119"] as const;
 
-/** Family (loft) — Airbnb iCal door 114. */
+/** Family (loft) door number. */
 export const LOFT_UNIT_NUMBERS = ["114"] as const;
 
-/** Family Ground Floor — Airbnb iCal door 116. */
+/** Family Ground Floor door number. */
 export const GROUND_UNIT_NUMBERS = ["116"] as const;
 
 /**
@@ -62,7 +60,6 @@ export const SAMPLE_ROOM_UNITS: RoomUnit[] = Object.entries(DEFAULT_UNIT_ROOM_ID
       number,
       sortOrder: chartIndex >= 0 ? (chartIndex + 1) * 10 : 1000,
       roomIds,
-      icalExportToken: null,
     };
   },
 );
@@ -465,44 +462,17 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
   }
 
   const supabase = createStaffSupabaseClient();
-  let unitRows: Array<{
-    id: string;
-    number: string;
-    sort_order: number;
-    ical_export_token?: string | null;
-  }> | null = null;
-
-  const withToken = await supabase
+  const unitsResult = await supabase
     .from("room_units")
-    .select("id, number, sort_order, ical_export_token")
+    .select("id, number, sort_order")
     .order("sort_order", { ascending: true });
 
-  if (
-    withToken.error &&
-    /ical_export_token|column .* does not exist/i.test(withToken.error.message)
-  ) {
-    const withoutToken = await supabase
-      .from("room_units")
-      .select("id, number, sort_order")
-      .order("sort_order", { ascending: true });
-    unitRows = withoutToken.data;
-    if (withoutToken.error) {
-      if (
-        /relation .*room_units.* does not exist|Could not find the table/i.test(
-          withoutToken.error.message,
-        )
-      ) {
-        return {
-          units: [],
-          source: "sample",
-          error: "Run supabase/schema.sql to enable room numbers.",
-        };
-      }
-
-      return { units: [], source: "sample", error: withoutToken.error.message };
-    }
-  } else if (withToken.error) {
-    if (/relation .*room_units.* does not exist|Could not find the table/i.test(withToken.error.message)) {
+  if (unitsResult.error) {
+    if (
+      /relation .*room_units.* does not exist|Could not find the table/i.test(
+        unitsResult.error.message,
+      )
+    ) {
       return {
         units: [],
         source: "sample",
@@ -510,10 +480,10 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
       };
     }
 
-    return { units: [], source: "sample", error: withToken.error.message };
-  } else {
-    unitRows = withToken.data;
+    return { units: [], source: "sample", error: unitsResult.error.message };
   }
+
+  const unitRows = unitsResult.data;
 
   if (!unitRows?.length) {
     return {
@@ -535,7 +505,6 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
         number: row.number,
         sortOrder: row.sort_order,
         roomIds: [] as string[],
-        icalExportToken: row.ical_export_token ?? null,
       })),
     );
     return {
@@ -558,7 +527,6 @@ export async function getStaffRoomUnits(): Promise<UnitQueryResult> {
       number: row.number,
       sortOrder: row.sort_order,
       roomIds: roomIdsByUnit.get(row.id) ?? [],
-      icalExportToken: row.ical_export_token ?? null,
     })),
   );
 

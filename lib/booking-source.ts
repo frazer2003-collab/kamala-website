@@ -42,7 +42,7 @@ export function isOtaBookingSource(source: BookingSource | null | undefined): so
   return source !== null && source !== undefined && (OTA_BOOKING_SOURCES as readonly string[]).includes(source);
 }
 
-/** Infer a source from an iCal feed / channel label when staff have not set one. */
+/** Infer a source from a channel label when staff have not set one. */
 export function inferBookingSourceFromChannelLabel(
   label: string | null | undefined,
 ): BookingSource | null {
@@ -60,4 +60,11 @@ export function inferBookingSourceFromChannelLabel(
     return "booking";
   }
   return null;
+}
+
+/** Channel occupancy on room_blocks: OTA booking sources only. */
+export function isChannelBlockRow(row: {
+  staff_booking_source?: string | null;
+}) {
+  return isOtaBookingSource(parseBookingSource(row.staff_booking_source));
 }

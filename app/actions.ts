@@ -10,7 +10,7 @@ import {
   recordStaffChatMessage,
   seedGuestNoteMessage,
 } from "@/lib/booking-chat";
-import { parseBookingSource } from "@/lib/booking-source";
+import { parseBookingSource, isChannelBlockRow } from "@/lib/booking-source";
 import {
   formatMoneySuffix,
   getStripeCurrencyCode,
@@ -1453,7 +1453,7 @@ export async function assignStayRoomUnit(formData: FormData) {
   }
 
   const channel = channels.blocks.find((entry) => entry.databaseId === stayId);
-  if (!channel || !channel.icalFeedId) {
+  if (!channel) {
     redirect(fallbackHref);
   }
 
@@ -2001,11 +2001,11 @@ export async function updateChannelReservation(
   const supabase = createStaffSupabaseClient();
   const { data: block } = await supabase
     .from("room_blocks")
-    .select("id, ical_feed_id, room_id, start_date, end_date")
+    .select("id, staff_booking_source, room_id, start_date, end_date")
     .eq("id", blockId)
     .maybeSingle();
 
-  if (!block || !block.ical_feed_id) {
+  if (!block || !isChannelBlockRow(block)) {
     redirect(fallbackHref);
   }
 
@@ -2277,9 +2277,8 @@ export async function bulkUpdateRoomAvailability(formData: FormData) {
 
   const { data: overlappingBlocks, error: loadError } = await supabase
     .from("room_blocks")
-    .select("id, start_date, end_date, reason, staff_note")
+    .select("id, start_date, end_date, reason, staff_note, staff_booking_source")
     .eq("room_id", room.id)
-    .is("ical_feed_id", null)
     .lt("start_date", endExclusive)
     .gt("end_date", startDate);
 
@@ -2287,7 +2286,9 @@ export async function bulkUpdateRoomAvailability(formData: FormData) {
     redirect(`${bulkStatusHref}&error=save-failed`);
   }
 
-  for (const block of overlappingBlocks ?? []) {
+  for (const block of (overlappingBlocks ?? []).filter(
+    (entry) => !isChannelBlockRow(entry),
+  )) {
     const { error: deleteError } = await supabase
       .from("room_blocks")
       .delete()

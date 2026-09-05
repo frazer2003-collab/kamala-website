@@ -32,7 +32,6 @@ import {
   getStaffCalendarBlocks,
   getStaffRoomBlockKey,
   isChannelReservation,
-  purgeIcalSyncedChannelBlocks,
 } from "@/lib/room-blocks";
 import { purgeUnassignedJuly2026Stays } from "@/lib/purge-unassigned-july";
 import {
@@ -131,9 +130,6 @@ export default async function StaffCalendarPage({
   const boardToIso = timelineRange.boardToIso;
   const statsCalendarDays = buildCalendarDays(year, month);
   const calendarDays = buildStaffTimelineDays(boardFromIso, boardToIso);
-  // Promote leftover iCal/OTA room_blocks into booking_requests before reads
-  // (reads must see promoted stays). July cleanup overlaps the reads.
-  await purgeIcalSyncedChannelBlocks();
   const purgeJulyPromise = purgeUnassignedJuly2026Stays();
   const [
     confirmedBookingsParts,

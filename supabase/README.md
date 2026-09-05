@@ -7,7 +7,13 @@ Run once in the Supabase SQL editor:
 1. `schema.sql` — complete current database (tables, RPCs, RLS, storage buckets, room/door seed)
 2. `seed-chiangmai-tours.sql` — optional tour cards
 
-Then open Staff → Settings and fill property details, photos, and calendar feeds.
+Then open Staff → Settings and fill property details and photos.
+
+## Existing projects
+
+Run once in the SQL editor when upgrading an older database that still has iCal tables/columns:
+
+- `migrate-remove-ical.sql` — drops `room_ical_feeds`, export tokens, and `ical_feed_id` / `ical_uid`
 
 ## Diagnostics
 

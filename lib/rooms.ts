@@ -57,7 +57,6 @@ function mapRoom(row: RoomRow): Room {
     tone: row.tone,
     imageUrl: resolveRoomImageUrl(row.image_url, row.id),
     galleryUrls: resolveRoomGalleryUrls(row.gallery_urls, row.id),
-    icalExportToken: row.ical_export_token ?? null,
   };
 }
 

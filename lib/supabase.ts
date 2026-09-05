@@ -14,7 +14,6 @@ export type RoomRow = {
   image_url: string | null;
   gallery_urls: string[];
   sort_order: number;
-  ical_export_token: string | null;
   updated_at: string;
 };
 
@@ -59,7 +58,6 @@ export type RoomUnitRow = {
   id: string;
   number: string;
   sort_order: number;
-  ical_export_token: string | null;
   created_at: string;
 };
 
@@ -89,20 +87,7 @@ export type RoomBlockRow = {
   guest_email: string | null;
   guest_phone: string | null;
   staff_booking_source?: string | null;
-  ical_feed_id: string | null;
-  ical_uid: string | null;
   room_unit_id: string | null;
-  created_at: string;
-};
-
-export type RoomIcalFeedRow = {
-  id: string;
-  room_id: string;
-  room_unit_id: string | null;
-  label: string;
-  import_url: string;
-  last_synced_at: string | null;
-  last_sync_error: string | null;
   created_at: string;
 };
 
@@ -222,13 +207,12 @@ export type Database = {
         Row: RoomRow;
         Insert: Omit<
           RoomRow,
-          "updated_at" | "image_url" | "gallery_urls" | "sort_order" | "ical_export_token"
+          "updated_at" | "image_url" | "gallery_urls" | "sort_order"
         > & {
           updated_at?: string;
           image_url?: string | null;
           gallery_urls?: string[];
           sort_order?: number;
-          ical_export_token?: string | null;
         };
         Update: Partial<Omit<RoomRow, "id" | "updated_at">>;
         Relationships: [];
@@ -268,10 +252,9 @@ export type Database = {
       };
       room_units: {
         Row: RoomUnitRow;
-        Insert: Omit<RoomUnitRow, "id" | "created_at" | "ical_export_token"> & {
+        Insert: Omit<RoomUnitRow, "id" | "created_at"> & {
           id?: string;
           created_at?: string;
-          ical_export_token?: string | null;
         };
         Update: Partial<Omit<RoomUnitRow, "id" | "created_at">>;
         Relationships: [];
@@ -301,8 +284,6 @@ export type Database = {
           | "guest_name"
           | "guest_email"
           | "guest_phone"
-          | "ical_feed_id"
-          | "ical_uid"
           | "room_unit_id"
         > & {
           id?: string;
@@ -310,26 +291,9 @@ export type Database = {
           guest_name?: string | null;
           guest_email?: string | null;
           guest_phone?: string | null;
-          ical_feed_id?: string | null;
-          ical_uid?: string | null;
           room_unit_id?: string | null;
         };
         Update: Partial<Omit<RoomBlockRow, "id" | "created_at">>;
-        Relationships: [];
-      };
-      room_ical_feeds: {
-        Row: RoomIcalFeedRow;
-        Insert: Omit<
-          RoomIcalFeedRow,
-          "id" | "created_at" | "last_synced_at" | "last_sync_error" | "room_unit_id"
-        > & {
-          id?: string;
-          created_at?: string;
-          last_synced_at?: string | null;
-          last_sync_error?: string | null;
-          room_unit_id?: string | null;
-        };
-        Update: Partial<Omit<RoomIcalFeedRow, "id" | "created_at">>;
         Relationships: [];
       };
       room_day_inventory: {

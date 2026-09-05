@@ -1,4 +1,10 @@
--- Hold guest inventory only after card payment or bank "I've paid", not at checkout start.
+-- Remove iCal import/export completely.
+-- Run once on the live Supabase project after deploying the app that no longer
+-- uses room_ical_feeds, export tokens, or ical_feed_id on room_blocks.
+
+-- Drop leftover imported channel blocks (staff enter OTA stays on the calendar).
+delete from public.room_blocks
+where ical_feed_id is not null;
 
 create or replace function public.create_guest_booking_if_capacity(
   p_guest_name text,
@@ -37,6 +43,7 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'unavailable');
   end if;
 
+  -- Only Superior (courtyard) keeps a bed preference.
   if p_room_id is distinct from 'courtyard' then
     v_bed_setup := null;
   end if;
@@ -197,3 +204,55 @@ exception
     );
 end;
 $$;
+
+create or replace function public.staff_update_channel_reservation(
+  p_block_id uuid,
+  p_guest_name text,
+  p_guest_email text,
+  p_guest_phone text,
+  p_start_date date,
+  p_end_date date,
+  p_staff_note text,
+  p_room_unit_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_room_unit_id is not null and not exists (
+    select 1 from public.room_units where id = p_room_unit_id
+  ) then
+    raise exception 'room_unit_not_found';
+  end if;
+
+  update public.room_blocks
+  set
+    guest_name = nullif(trim(p_guest_name), ''),
+    guest_email = nullif(trim(p_guest_email), ''),
+    guest_phone = nullif(trim(p_guest_phone), ''),
+    start_date = p_start_date,
+    end_date = p_end_date,
+    staff_note = nullif(trim(p_staff_note), ''),
+    room_unit_id = p_room_unit_id
+  where id = p_block_id
+    and staff_booking_source in ('airbnb', 'expedia', 'booking');
+
+  if not found then
+    raise exception 'channel_block_not_found';
+  end if;
+end;
+$$;
+
+-- Drop iCal schema objects.
+drop policy if exists "Service role can manage room ical feeds" on public.room_ical_feeds;
+drop table if exists public.room_ical_feeds cascade;
+
+drop index if exists public.room_blocks_ical_feed_uid_idx;
+alter table public.room_blocks drop column if exists ical_feed_id;
+alter table public.room_blocks drop column if exists ical_uid;
+
+drop index if exists public.room_units_ical_export_token_idx;
+alter table public.room_units drop column if exists ical_export_token;
+alter table public.rooms drop column if exists ical_export_token;

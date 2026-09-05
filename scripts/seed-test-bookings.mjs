@@ -108,7 +108,7 @@ if (wipeBookings) throw new Error(`bookings: ${wipeBookings.message}`);
 const { error: wipeBlocks } = await supabase
   .from("room_blocks")
   .delete()
-  .is("ical_feed_id", null);
+  .neq("id", "00000000-0000-0000-0000-000000000000");
 if (wipeBlocks) throw new Error(`blocks: ${wipeBlocks.message}`);
 
 /** @type {Array<Record<string, unknown>>} */

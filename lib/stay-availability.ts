@@ -2,6 +2,7 @@ import type { Room } from "@/lib/content";
 import { bookingOccupiesDay } from "@/lib/calendar";
 import { countNetBookedForRoomDay } from "@/lib/calendar-timeline";
 import { bookingReservesRoom } from "@/lib/booking-reservation";
+import { isChannelBlockRow } from "@/lib/booking-source";
 import {
   buildInventoryLookup,
   getRoomsToSellForDay,
@@ -176,7 +177,9 @@ export async function getRoomsStayAvailability(
         ),
         supabase
           .from("room_blocks")
-          .select("id, room_id, room_unit_id, start_date, end_date, ical_feed_id, guest_name, reason")
+          .select(
+            "id, room_id, room_unit_id, start_date, end_date, staff_booking_source, guest_name, reason",
+          )
           .lt("start_date", departure)
           .gt("end_date", arrival),
         getStaffRoomUnits(),
@@ -204,7 +207,7 @@ export async function getRoomsStayAvailability(
 
     const allBlocks = blocksResult.data ?? [];
     const channelBlocks: StayChannelOccupancy[] = allBlocks
-      .filter((block) => Boolean(block.ical_feed_id))
+      .filter((block) => isChannelBlockRow(block))
       .map((block) => ({
         roomId: block.room_id,
         roomUnitId: block.room_unit_id,
@@ -216,7 +219,7 @@ export async function getRoomsStayAvailability(
       }));
 
     const staffClosures: StaffClosure[] = allBlocks
-      .filter((block) => !block.ical_feed_id)
+      .filter((block) => !isChannelBlockRow(block))
       .map((block) => ({
         roomId: block.room_id,
         startDate: block.start_date,

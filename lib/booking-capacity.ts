@@ -1,6 +1,7 @@
 import { createStaffSupabaseClient } from "@/lib/supabase";
 import { bookingOccupiesDay } from "@/lib/calendar";
 import { bookingReservesRoom } from "@/lib/booking-reservation";
+import { isChannelBlockRow } from "@/lib/booking-source";
 import {
   buildInventoryLookup,
   loadRoomDayInventoryForRange,
@@ -73,7 +74,7 @@ export async function countOverlappingReservationsForRooms(
       .gt("departure_date", arrival),
     supabase
       .from("room_blocks")
-      .select("id, room_id, start_date, end_date, ical_feed_id")
+      .select("id, room_id, start_date, end_date, staff_booking_source")
       .in("room_id", roomIds)
       .lt("start_date", departure)
       .gt("end_date", arrival),
@@ -110,7 +111,7 @@ export async function countOverlappingReservationsForRooms(
     }
 
     // Manual closures shut the room; channel blocks count as one booked unit.
-    if (!block.ical_feed_id) {
+    if (!isChannelBlockRow(block)) {
       continue;
     }
 
@@ -161,7 +162,7 @@ export async function getUnavailableStayDays(
         .gt("departure_date", arrival),
       supabase
         .from("room_blocks")
-        .select("id, room_id, start_date, end_date, ical_feed_id")
+        .select("id, room_id, start_date, end_date, staff_booking_source")
         .eq("room_id", roomId)
         .lt("start_date", departure)
         .gt("end_date", arrival),
@@ -200,7 +201,7 @@ export async function getUnavailableStayDays(
           continue;
         }
 
-        if (!block.ical_feed_id) {
+        if (!isChannelBlockRow(block)) {
           closed = true;
           break;
         }
@@ -286,7 +287,7 @@ async function evaluateStayCapacity(
         .gt("departure_date", arrival),
       supabase
         .from("room_blocks")
-        .select("id, room_id, start_date, end_date, ical_feed_id")
+        .select("id, room_id, start_date, end_date, staff_booking_source")
         .eq("room_id", roomId)
         .lt("start_date", departure)
         .gt("end_date", arrival),
@@ -323,8 +324,8 @@ async function evaluateStayCapacity(
           continue;
         }
 
-        // OTA/channel imports occupy a single unit; staff closures shut the room.
-        if (block.ical_feed_id) {
+        // OTA/channel stays occupy a single unit; staff closures shut the room.
+        if (isChannelBlockRow(block)) {
           netBooked += 1;
         } else {
           return { ok: false, reason: "unavailable" };
