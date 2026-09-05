@@ -27,7 +27,7 @@ function sourceLine(sources: { label: string; stays: number }[]) {
       (source) =>
         `${source.label} · ${source.stays === 1 ? "1 stay" : `${source.stays} stays`}`,
     )
-    .join(", ");
+    .join(" · ");
 }
 
 function moneyCaption(row: {
@@ -71,8 +71,8 @@ function FinancePageHeader({
       <div className="staff-sold__intro">
         <h1 id="staff-sold-title">Finance</h1>
         <p>
-          Nights and money sold for the selected dates — website stays and
-          quoted channel nights.
+          What sold in the selected dates — nights, stay totals, and how full
+          the house was.
         </p>
       </div>
       <div className="staff-sold__dates-band">
@@ -98,30 +98,37 @@ type FinanceRangeOverviewProps = {
 };
 
 function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
+  const hasMoney = report.totals.estimatedRevenue > 0;
+
   return (
     <aside className="staff-sold__aside" aria-label="Range overview">
-      <div
-        className="staff-sold__panel staff-sold__overview"
-        role="region"
-        aria-label="Range overview"
-      >
+      <div className="staff-sold__overview">
         <div className="staff-sold__summary">
-          <h2 className="staff-sold__section-title">Range totals</h2>
-          <p className="staff-sold__summary-line">
-            <span>
-              {nightLabel(report.totals.nightsSold)}
-              <span aria-hidden="true"> · </span>
-              {stayLabel(report.totals.stayCount)}
-            </span>
-            {report.totals.estimatedRevenue > 0 ? (
-              <span>
+          <p className="staff-sold__range-chip">{report.rangeLabel}</p>
+          <h2 className="staff-sold__section-title">Range total</h2>
+          <p className="staff-sold__total">
+            {hasMoney ? (
+              <span className="staff-sold__total-value">
                 {formatMoneySuffix(report.totals.estimatedRevenue, currency)}
               </span>
+            ) : (
+              <span className="staff-sold__total-empty">No stay totals yet</span>
+            )}
+          </p>
+          <p className="staff-sold__summary-line">
+            <span>{nightLabel(report.totals.nightsSold)}</span>
+            <span aria-hidden="true">·</span>
+            <span>{stayLabel(report.totals.stayCount)}</span>
+            {report.totals.soldPercent !== null ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{report.totals.soldPercent}% of capacity</span>
+              </>
             ) : null}
           </p>
           {report.totals.averageNightlyRate !== null ? (
             <p className="staff-sold__summary-avg">
-              Avg nightly rate{" "}
+              Avg nightly{" "}
               <strong>
                 {formatMoneySuffix(report.totals.averageNightlyRate, currency)}
               </strong>
@@ -137,6 +144,19 @@ function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
         />
       </div>
     </aside>
+  );
+}
+
+function SoldOccupancyMeter({ percent }: { percent: number }) {
+  const width = Math.max(0, Math.min(100, percent));
+  return (
+    <div
+      className="staff-sold__meter"
+      aria-hidden="true"
+      style={{ ["--sold-meter" as string]: `${width}%` }}
+    >
+      <span className="staff-sold__meter-fill" />
+    </div>
   );
 }
 
@@ -221,10 +241,6 @@ export default async function StaffSoldPage({
           toIso={toIso}
         />
 
-        <p className="staff-sold__range-label" aria-live="polite">
-          Showing <strong>{report.rangeLabel}</strong>
-        </p>
-
         {warnings.map((message) => (
           <p
             className="form-message form-message--warning"
@@ -246,12 +262,20 @@ export default async function StaffSoldPage({
             <FinanceRangeOverview currency={currency} report={report} />
 
             <div className="staff-sold__ledger">
-              <div
-                className="staff-sold__panel staff-sold__ledger-panel"
-                role="region"
+              <section
+                className="staff-sold__ledger-panel"
                 aria-label="Sold by room"
               >
-                <h2 className="staff-sold__section-title">Sold by room</h2>
+                <header className="staff-sold__ledger-head">
+                  <h2 className="staff-sold__section-title">Sold by room</h2>
+                  {soldRooms.length > 0 ? (
+                    <p className="staff-sold__ledger-count">
+                      {soldRooms.length === 1
+                        ? "1 room type"
+                        : `${soldRooms.length} room types`}
+                    </p>
+                  ) : null}
+                </header>
 
                 {soldRooms.length === 0 ? (
                   <p className="staff-sold__empty" role="status">
@@ -262,7 +286,6 @@ export default async function StaffSoldPage({
                   <ol
                     className="staff-sold__list"
                     aria-label="Rooms ranked by nights sold"
-                    role="list"
                   >
                     {soldRooms.map((row) => {
                       const caption = moneyCaption(row);
@@ -272,7 +295,11 @@ export default async function StaffSoldPage({
                             <h3>
                               <Link
                                 className="staff-sold__room-link"
-                                href={calendarRoomHref(fromIso, toIso, row.roomId)}
+                                href={calendarRoomHref(
+                                  fromIso,
+                                  toIso,
+                                  row.roomId,
+                                )}
                               >
                                 {row.roomName}
                                 <span className="sr-only">
@@ -293,10 +320,15 @@ export default async function StaffSoldPage({
                               {row.nightsOverCapacity > 0 ? (
                                 <>
                                   <span aria-hidden="true">·</span>
-                                  <span>{row.nightsOverCapacity} over capacity</span>
+                                  <span className="staff-sold__over">
+                                    {row.nightsOverCapacity} over capacity
+                                  </span>
                                 </>
                               ) : null}
                             </p>
+                            {row.soldPercent !== null ? (
+                              <SoldOccupancyMeter percent={row.soldPercent} />
+                            ) : null}
                             {row.sources.length > 0 ? (
                               <p className="staff-sold__sources">
                                 {sourceLine(row.sources)}
@@ -307,7 +339,10 @@ export default async function StaffSoldPage({
                             {row.estimatedRevenue > 0 && caption ? (
                               <p>
                                 <strong>
-                                  {formatMoneySuffix(row.estimatedRevenue, currency)}
+                                  {formatMoneySuffix(
+                                    row.estimatedRevenue,
+                                    currency,
+                                  )}
                                 </strong>
                                 <span>{caption}</span>
                               </p>
@@ -334,7 +369,7 @@ export default async function StaffSoldPage({
                     >
                       Didn’t sell in this range
                     </h2>
-                    <ul role="list">
+                    <ul>
                       {quietRooms.map((row) => (
                         <li key={row.roomId}>
                           <Link
@@ -351,7 +386,7 @@ export default async function StaffSoldPage({
                     </ul>
                   </div>
                 ) : null}
-              </div>
+              </section>
             </div>
           </div>
         )}
