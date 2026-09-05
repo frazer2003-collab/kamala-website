@@ -351,6 +351,31 @@ export async function getBookingByRef(ref: string) {
   return booking;
 }
 
+const BOOKING_NOTE_SEED_PREFIX = "seed:booking-note:";
+
+function bookingNoteSeedId(bookingId: string) {
+  return `${BOOKING_NOTE_SEED_PREFIX}${bookingId}`;
+}
+
+function isBookingNoteSeedMessage(
+  row: { sender: string; body: string; source_email_id?: string | null },
+  bookingNote: string | null | undefined,
+) {
+  if (row.source_email_id?.startsWith(BOOKING_NOTE_SEED_PREFIX)) {
+    return true;
+  }
+  const note = bookingNote?.trim();
+  return Boolean(note && row.sender === "guest" && row.body.trim() === note);
+}
+
+/** Exported for unit tests — booking-note seeds must not suppress guest chat emails. */
+export function isBookingNoteSeedForNotify(
+  row: { sender: string; body: string; source_email_id?: string | null },
+  bookingNote: string | null | undefined,
+) {
+  return isBookingNoteSeedMessage(row, bookingNote);
+}
+
 export async function seedGuestNoteMessage(booking: BookingRequestRow) {
   const note = booking.note?.trim();
   if (!note) {
@@ -358,6 +383,17 @@ export async function seedGuestNoteMessage(booking: BookingRequestRow) {
   }
 
   const supabase = createStaffSupabaseClient();
+  const seedId = bookingNoteSeedId(booking.id);
+  const { data: existingBySeed } = await supabase
+    .from("booking_messages")
+    .select("id")
+    .eq("source_email_id", seedId)
+    .maybeSingle();
+
+  if (existingBySeed) {
+    return;
+  }
+
   const { data: existing } = await supabase
     .from("booking_messages")
     .select("id")
@@ -375,7 +411,7 @@ export async function seedGuestNoteMessage(booking: BookingRequestRow) {
     sender: "guest",
     sender_email: booking.guest_email,
     body: note,
-    source_email_id: null,
+    source_email_id: seedId,
     created_at: booking.created_at,
   });
 }
@@ -529,6 +565,37 @@ async function getLatestMessageSender(bookingId: string) {
   return data.sender as BookingMessageRow["sender"];
 }
 
+/**
+ * Latest sender that should gate email notify-once.
+ * Ignores seeded booking-note rows so the guest's first real chat still emails staff.
+ */
+async function getLatestNotifiableMessageSender(booking: BookingRequestRow) {
+  if (!hasStaffSupabaseConfig() || !booking.id) {
+    return null;
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data, error } = await supabase
+    .from("booking_messages")
+    .select("sender, body, source_email_id")
+    .eq("booking_request_id", booking.id)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error || !data?.length) {
+    return null;
+  }
+
+  for (const row of data) {
+    if (isBookingNoteSeedMessage(row, booking.note)) {
+      continue;
+    }
+    return row.sender as BookingMessageRow["sender"];
+  }
+
+  return null;
+}
+
 export async function recordGuestChatMessage({
   booking,
   body,
@@ -561,7 +628,7 @@ export async function recordGuestChatMessage({
     }
   }
 
-  const latestPriorSender = await getLatestMessageSender(booking.id);
+  const latestPriorSender = await getLatestNotifiableMessageSender(booking);
   const shouldNotify =
     !skipNotify &&
     shouldNotifyChatCounterpart({
