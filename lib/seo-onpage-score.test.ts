@@ -3,15 +3,15 @@ import { describe, it } from "node:test";
 import { scoreThaPaeSeoPage } from "./seo-onpage-score";
 
 describe("scoreThaPaeSeoPage", () => {
-  it("rewards pages aligned to hotels in Chiang Mai", () => {
+  it("rewards pages aligned to Chiang Mai guesthouse queries", () => {
     const result = scoreThaPaeSeoPage({
-      title: "Hotels in Chiang Mai Old City — Guesthouse",
+      title: "Chiang Mai Guesthouse near Thae Phae Gate",
       description:
-        "Kamala's Boutique Guesthouse: hotels in Chiang Mai Old City — a garden guesthouse with breakfast. Two-minute walk to the Old City gate near Tha Pae (Thae Phae).",
+        "Kamala's Boutique Guesthouse: a Chiang Mai guesthouse in the Old City — garden rooms with breakfast, two minutes from Thae Phae Gate. Book direct.",
       h1: "A garden guesthouse in Chiang Mai Old City",
       bodyText:
-        "Among hotels in Chiang Mai Old City, we are a Chiang Mai guesthouse near Thae Phae Gate.",
-      keywords: ["hotels in Chiang Mai", "Chiang Mai guesthouse"],
+        "A family-run Chiang Mai guest house near Thae Phae Gate — one of the quieter guesthouses in Chiang Mai Old City.",
+      keywords: ["Chiang Mai guesthouse", "guesthouse Chiang Mai", "Chiang Mai guest house"],
       canonical: "https://kamalaguesthouse.com/",
       hasOpenGraph: true,
       hasTwitterCard: true,

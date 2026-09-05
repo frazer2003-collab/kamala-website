@@ -148,7 +148,7 @@ export function buildAtmosphereLede(
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `A family-run garden guesthouse among hotels in Chiang Mai Old City — reserve on this website.`;
+    return `A family-run Chiang Mai guesthouse in the Old City — reserve on this website.`;
   }
 
   return `A family-run ${typeLabel} in ${locationLabel}. Garden rooms — reserve on this website.`;

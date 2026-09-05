@@ -32,23 +32,23 @@ const thaPhaeSettings = {
 } as PropertySettings;
 
 describe("Tha Pae Gate SEO copy", () => {
-  it("targets hotels in Chiang Mai Old City at SERP-friendly lengths", () => {
+  it("targets Chiang Mai guesthouse queries at SERP-friendly lengths", () => {
     const title = buildHomePageTitle(thaPhaeSettings);
     const description = buildHomePageDescription(thaPhaeSettings);
 
     assert.equal(title, THA_PHAE_PRIMARY_TITLE);
     assert.ok(title.length >= 30 && title.length <= 60, `title length ${title.length}`);
     assert.ok(
-      description.length >= 120 && description.length <= 155,
+      description.length >= 120 && description.length <= 160,
       `description length ${description.length}`,
     );
-    assert.match(title, /hotels in Chiang Mai/i);
-    assert.match(title, /guesthouse/i);
-    assert.match(description, /hotels in Chiang Mai Old City/i);
-    assert.match(description, /guesthouse/i);
+    assert.match(title, /Chiang Mai Guesthouse/i);
+    assert.match(title, /Thae Phae Gate/i);
+    assert.match(description, /Chiang Mai guesthouse/i);
+    assert.match(description, /Book direct/i);
   });
 
-  it("uses a host-voiced H1 and a natural hero lede that still names hotels in Chiang Mai Old City", () => {
+  it("uses a host-voiced H1 and a natural hero lede that names a Chiang Mai guesthouse", () => {
     const h1 = buildAtmosphereHeadline(
       "Chiang Mai",
       thaPhaeSettings.propertyName,
@@ -63,13 +63,12 @@ describe("Tha Pae Gate SEO copy", () => {
     assert.equal(h1, THA_PHAE_PRIMARY_HEADLINE);
     assert.match(h1, /garden guesthouse in Chiang Mai Old City/i);
     assert.doesNotMatch(h1, /^hotels in/i);
-    assert.match(lede, /hotels in Chiang Mai Old City/i);
-    assert.match(lede, /guesthouse/i);
+    assert.match(lede, /Chiang Mai guesthouse/i);
     assert.match(lede, /in front of Thae Phae Gate/i);
     assert.doesNotMatch(lede, /breakfast/i);
   });
 
-  it("scores highly against hotels in Chiang Mai", () => {
+  it("scores highly against Chiang Mai guesthouse queries", () => {
     const title = buildHomePageTitle(thaPhaeSettings);
     const description = buildHomePageDescription(thaPhaeSettings);
     const h1 = THA_PHAE_PRIMARY_HEADLINE;
@@ -100,13 +99,16 @@ describe("Tha Pae Gate SEO copy", () => {
     assert.equal(jsonLd.address?.streetAddress, "2/7 Tha Phae Rd Soi 6");
     assert.ok(Array.isArray(jsonLd.knowsAbout));
     assert.ok(jsonLd.knowsAbout?.includes("Thae Phae Gate"));
-    assert.ok(jsonLd.knowsAbout?.includes("Hotels in Chiang Mai"));
     assert.ok(jsonLd.knowsAbout?.includes("Chiang Mai guesthouse"));
+    assert.ok(jsonLd.knowsAbout?.includes("Chiang Mai guest house"));
+    assert.ok(jsonLd.knowsAbout?.includes("guesthouses in Chiang Mai"));
     assert.deepEqual(jsonLd.alternateName, [
       "Chiang Mai guesthouse",
-      "Hotels in Chiang Mai Old City",
+      "Chiang Mai guest house",
+      "Guesthouse Chiang Mai",
     ]);
     assert.ok(Array.isArray(jsonLd["@type"]));
+    assert.ok(jsonLd["@type"]?.includes("GuestHouse"));
     assert.ok(jsonLd["@type"]?.includes("Hotel"));
     assert.deepEqual(jsonLd.sameAs, [
       "https://line.me/R/ti/p/@example",

@@ -1,6 +1,9 @@
 /**
  * On-page SEO score for lodging queries with real search interest
  * (Google autocomplete / average Trends), not stuffed variants.
+ *
+ * Primary cluster: Chiang Mai guesthouse / guest house (winnable).
+ * Hotels queries are secondary — OTAs own the head term.
  */
 
 export type SeoPageSnapshot = {
@@ -16,12 +19,16 @@ export type SeoPageSnapshot = {
   hasRobotsIndex: boolean;
 };
 
-/** Highest-interest lodging query for this city (Google “hotels in [city]”). */
-export const HOTEL_SEO_QUERY = "hotels in chiang mai";
-/** Related query with steady interest. */
+/** Highest-interest winnable lodging query for this property. */
 export const GUESTHOUSE_SEO_QUERY = "chiang mai guesthouse";
-/** @deprecated Use HOTEL_SEO_QUERY. */
-export const TARGET_SEO_QUERY = HOTEL_SEO_QUERY;
+/** Spaced form from Google autocomplete. */
+export const GUEST_HOUSE_SEO_QUERY = "chiang mai guest house";
+/** Related guesthouse query. */
+export const GUESTHOUSE_CHIANG_MAI_QUERY = "guesthouse chiang mai";
+/** Secondary head term — OTAs dominate; keep light coverage only. */
+export const HOTEL_SEO_QUERY = "hotels in chiang mai";
+/** @deprecated Use GUESTHOUSE_SEO_QUERY. */
+export const TARGET_SEO_QUERY = GUESTHOUSE_SEO_QUERY;
 
 function normalize(text: string) {
   return text
@@ -29,6 +36,7 @@ function normalize(text: string) {
     .replace(/thae\s*phae/g, "tha pae")
     .replace(/tha\s*phae/g, "tha pae")
     .replace(/thapae/g, "tha pae")
+    .replace(/guest\s+house/g, "guesthouse")
     .replace(/chiang\s*mai/g, "chiangmai")
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
@@ -39,8 +47,14 @@ function includesNormalized(text: string, query: string) {
   return normalize(text).includes(normalize(query));
 }
 
-function includesHotelsInChiangMai(text: string) {
-  return includesNormalized(text, HOTEL_SEO_QUERY);
+function includesChiangMaiGuesthouse(text: string) {
+  return (
+    includesNormalized(text, GUESTHOUSE_SEO_QUERY) ||
+    includesNormalized(text, GUEST_HOUSE_SEO_QUERY) ||
+    includesNormalized(text, GUESTHOUSE_CHIANG_MAI_QUERY) ||
+    (includesNormalized(text, "guesthouse") &&
+      includesNormalized(text, "chiang mai"))
+  );
 }
 
 export type SeoScoreResult = {
@@ -66,9 +80,9 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "title-keyword",
-    includesHotelsInChiangMai(page.title),
+    includesChiangMaiGuesthouse(page.title),
     20,
-    "Title includes “hotels in Chiang Mai”",
+    "Title includes Chiang Mai guesthouse / guest house",
   );
   push(
     "description-length",
@@ -78,9 +92,9 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "description-keyword",
-    includesHotelsInChiangMai(page.description),
+    includesChiangMaiGuesthouse(page.description),
     12,
-    "Description includes “hotels in Chiang Mai”",
+    "Description includes Chiang Mai guesthouse / guest house",
   );
   push("h1-present", page.h1.trim().length > 0, 6, "H1 present");
   push(
@@ -93,9 +107,7 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "body-guesthouse",
-    includesNormalized(combined, GUESTHOUSE_SEO_QUERY) ||
-      (includesNormalized(combined, "guesthouse") &&
-        includesNormalized(combined, "chiang mai")),
+    includesChiangMaiGuesthouse(combined),
     10,
     "Page names a Chiang Mai guesthouse",
   );
@@ -103,7 +115,7 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
     "old-city",
     /old city/i.test(combined),
     6,
-    "Page names Old City (hotels in Chiang Mai old city)",
+    "Page names Old City",
   );
   push(
     "spelling-variants",
@@ -114,9 +126,9 @@ export function scoreThaPaeSeoPage(page: SeoPageSnapshot): SeoScoreResult {
   );
   push(
     "keywords-meta",
-    page.keywords.some((keyword) => includesHotelsInChiangMai(keyword)),
+    page.keywords.some((keyword) => includesChiangMaiGuesthouse(keyword)),
     4,
-    "Keywords meta includes “hotels in Chiang Mai”",
+    "Keywords meta includes Chiang Mai guesthouse",
   );
   push("canonical", Boolean(page.canonical), 2, "Canonical URL present");
   push("open-graph", page.hasOpenGraph, 2, "Open Graph tags present");

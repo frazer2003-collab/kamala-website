@@ -75,7 +75,7 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `Book ${propertyName} among hotels in Chiang Mai Old City — a garden guesthouse with breakfast included. Request dates here and we reply to confirm.`;
+    return `Book ${propertyName} — a Chiang Mai guesthouse in the Old City with breakfast included. Request dates here and we reply to confirm.`;
   }
 
   return `Book a room at ${propertyName} in ${locationLabel}. Garden rooms, breakfast included — request dates on this site and staff confirm every stay.`;
@@ -88,14 +88,14 @@ function buildOpenGraphImageAlt(settings: PropertySettings): string {
   );
 
   if (isThaPhaeSeoContext(locationLabel, settings.addressLine)) {
-    return `${settings.propertyName} — hotels in Chiang Mai Old City, near ${THAE_PHAE_GATE_NAME}`;
+    return `${settings.propertyName} — Chiang Mai guesthouse near ${THAE_PHAE_GATE_NAME}`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `${settings.propertyName} hotel and garden guesthouse in Chiang Mai Old City`;
+    return `${settings.propertyName} — garden guesthouse in Chiang Mai Old City`;
   }
 
-  return `${settings.propertyName} hotel and garden guesthouse in ${locationLabel}`;
+  return `${settings.propertyName} — garden guesthouse in ${locationLabel}`;
 }
 
 function buildSameAsProfiles(settings: PropertySettings) {
@@ -221,10 +221,14 @@ export function buildHomePageJsonLd(
 
   return {
     "@context": "https://schema.org",
-    "@type": ["LodgingBusiness", "Hotel", "Organization"],
+    "@type": ["LodgingBusiness", "GuestHouse", "Hotel", "Organization"],
     "@id": siteUrl ? `${siteUrl}/#lodging` : undefined,
     name: propertyName,
-    alternateName: ["Chiang Mai guesthouse", "Hotels in Chiang Mai Old City"],
+    alternateName: [
+      "Chiang Mai guesthouse",
+      "Chiang Mai guest house",
+      "Guesthouse Chiang Mai",
+    ],
     description,
     url: siteUrl,
     image: imageUrl,
@@ -282,16 +286,23 @@ export function buildHomePageJsonLd(
     knowsAbout: nearThaPhae
       ? [
           THAE_PHAE_GATE_NAME,
-          "Tha Phae Gate",
+          "Tha Pae Gate",
           "Thapae Gate",
           "Chiang Mai Old City",
           "Sunday Walking Street",
-          "Hotels in Chiang Mai",
-          "Hotels in Chiang Mai Old City",
           "Chiang Mai guesthouse",
+          "Chiang Mai guest house",
+          "guesthouse Chiang Mai",
+          "guesthouses in Chiang Mai",
+          "Hotels in Chiang Mai Old City",
         ]
       : isChiangMaiLocation(locationLabel)
-        ? ["Chiang Mai Old City", "Hotels in Chiang Mai", "Chiang Mai guesthouse"]
+        ? [
+            "Chiang Mai Old City",
+            "Chiang Mai guesthouse",
+            "Chiang Mai guest house",
+            "guesthouse Chiang Mai",
+          ]
         : undefined,
     makesOffer: rooms.map((room) => ({
       "@type": "Offer",
@@ -335,18 +346,18 @@ export function buildLocationPageFaqJsonLd(propertyName: string) {
     mainEntity: [
       {
         "@type": "Question",
-        name: "Are there hotels in Chiang Mai Old City near Tha Pae Gate?",
+        name: "Looking for a Chiang Mai guest house near Tha Pae Gate?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Yes. ${propertyName} is among hotels in Chiang Mai Old City — a garden guesthouse about a two-minute walk from Tha Pae Gate (also spelled Tha Phae / Thapae) on Tha Phae Road Soi 6.`,
+          text: `Yes. ${propertyName} is a Chiang Mai guesthouse on Tha Phae Road Soi 6 — about a two-minute walk from Tha Pae Gate (also spelled Tha Phae / Thapae), just across from the Sunday Walking Street.`,
         },
       },
       {
         "@type": "Question",
-        name: "Is this a Chiang Mai guesthouse?",
+        name: "Is this one of the guesthouses in Chiang Mai Old City?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Yes. ${propertyName} is a Chiang Mai guesthouse near Tha Pae Gate, with garden rooms and included breakfast.`,
+          text: `Yes. ${propertyName} is a family-run guesthouse in Chiang Mai Old City, with garden rooms and included breakfast.`,
         },
       },
       {
