@@ -1,8 +1,13 @@
 import { formatBedSetup, parseBedSetup } from "@/lib/bed-setup";
 import {
-  GUEST_CONVERSATION_BUTTON,
+  buildGuestChatNotificationCopy,
+  buildGuestChatNotificationHtml,
+} from "@/lib/guest-chat-email";
+import {
+  guestConversationBlockHtml,
   guestConversationBlockText,
 } from "@/lib/guest-email-conversation";
+import { EMAIL_FONT_BODY, escapeHtml } from "@/lib/email-theme";
 import { getStaffNotificationRecipients } from "@/lib/staff-notification-emails";
 
 type StaffBookingEmail = {
@@ -23,31 +28,7 @@ type EmailResult =
   | { ok: true }
   | { ok: false; reason: "missing-config" | "send-failed" };
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-const EMAIL_FONT = "Georgia, 'Times New Roman', Times, serif";
-
-function guestConversationButtonHtml(chatUrl: string) {
-  return `<a href="${escapeHtml(chatUrl)}" style="display: inline-block; padding: 12px 18px; background: oklch(48% 0.18 12); color: #fff; text-decoration: none; border-radius: 8px; font-family: ${EMAIL_FONT};">${GUEST_CONVERSATION_BUTTON}</a>`;
-}
-
-function guestConversationBlockHtml(chatUrl: string) {
-  return `
-      <p style="margin-top: 24px; padding: 12px 14px; background: oklch(96.5% 0.025 12); color: oklch(22% 0.025 12); font-size: 1rem; line-height: 1.45; font-family: ${EMAIL_FONT};">
-        <strong>Please do not reply to this email</strong> — we will not see it.
-        Click <strong>Open conversation</strong> to message us about your stay.
-      </p>
-      <p style="margin-top: 16px;">
-        ${guestConversationButtonHtml(chatUrl)}
-      </p>
-    `;
-}
+const EMAIL_FONT = EMAIL_FONT_BODY;
 
 export async function sendStaffBookingEmail(
   booking: StaffBookingEmail,
@@ -251,7 +232,7 @@ export async function sendGuestBookingEmail({
       subject,
       text,
       html: `
-        <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
+        <div style="font-family: ${EMAIL_FONT}; color: #251617; line-height: 1.5; max-width: 620px;">
           <p>${escapeHtml(body).replaceAll("\n", "<br />")}</p>
           ${chatHtml}
         </div>
@@ -358,68 +339,30 @@ export async function sendGuestChatNotificationEmail({
     return { ok: false, reason: "missing-config" };
   }
 
-  const subject =
-    kind === "welcome"
-      ? `Your Kamala conversation link · ${roomName}`
-      : kind === "confirmation"
-        ? `Your stay is confirmed · ${roomName}`
-        : `You have a new message about your stay · ${roomName}`;
+  const copy = buildGuestChatNotificationCopy({
+    kind,
+    guestName,
+    roomName,
+    message,
+  });
 
-  const text =
-    kind === "welcome"
-      ? [
-          `Hello ${guestName},`,
-          "",
-          message,
-          "",
-          guestConversationBlockText(chatUrl),
-        ].join("\n")
-      : kind === "confirmation"
-        ? [
-            `Hello ${guestName},`,
-            "",
-            `Your ${roomName} booking is confirmed.`,
-            "",
-            message,
-            "",
-            guestConversationBlockText(chatUrl),
-          ].join("\n")
-        : [
-            `Hello ${guestName},`,
-            "",
-            `Kamala sent you a message about your ${roomName} stay:`,
-            "",
-            message,
-            "",
-            guestConversationBlockText(chatUrl),
-          ].join("\n");
+  const text = [
+    copy.introText,
+    message.trim() ? "" : null,
+    message.trim() || null,
+    "",
+    guestConversationBlockText(chatUrl),
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
 
-  const html =
-    kind === "welcome"
-      ? `
-    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
-      <p>Hello ${escapeHtml(guestName)},</p>
-      <p style="white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</p>
-      ${guestConversationBlockHtml(chatUrl)}
-    </div>
-  `
-      : kind === "confirmation"
-        ? `
-    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
-      <h1 style="font-size: 1.25rem;">Your stay is confirmed</h1>
-      <p>Hello ${escapeHtml(guestName)}, your <strong>${escapeHtml(roomName)}</strong> booking is confirmed.</p>
-      <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid oklch(89% 0.01 12); background: oklch(96.5% 0.025 12); white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
-      ${guestConversationBlockHtml(chatUrl)}
-    </div>
-  `
-        : `
-    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
-      <h1 style="font-size: 1.25rem;">You have a new message</h1>
-      <p>Hello ${escapeHtml(guestName)}, Kamala sent you a message about your ${escapeHtml(roomName)} stay.</p>
-      <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 3px solid oklch(89% 0.01 12); background: oklch(96.5% 0.025 12); white-space: pre-wrap;">${escapeHtml(message).replaceAll("\n", "<br />")}</blockquote>
-      ${guestConversationBlockHtml(chatUrl)}
-    </div>
-  `;
+  const html = buildGuestChatNotificationHtml({
+    kind,
+    guestName,
+    roomName,
+    message,
+    chatUrl,
+  });
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -430,7 +373,7 @@ export async function sendGuestChatNotificationEmail({
     body: JSON.stringify({
       from,
       to,
-      subject,
+      subject: copy.subject,
       text,
       html,
     }),
