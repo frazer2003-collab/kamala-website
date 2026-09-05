@@ -56,10 +56,8 @@ import {
   releaseDiscountCodeUse,
 } from "@/lib/discount-codes";
 import {
-  buildBookingQuote,
   getBookingQuote,
   quoteRoomStay,
-  type BookingQuoteResult,
 } from "@/lib/booking-quote";
 import { isRoomBookable } from "@/lib/room-availability";
 import { resolveStayStatusFromDates } from "@/lib/stay-status";
@@ -93,7 +91,6 @@ import {
 } from "@/lib/bed-setup";
 import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS, countStayNights, isStayLengthAllowed } from "@/lib/stay-dates";
 
-export type { BookingQuoteResult };
 export { getBookingQuote };
 
 export type BookingFormValues = {
