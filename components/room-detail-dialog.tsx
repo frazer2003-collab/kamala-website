@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef } from "react";
-import type { BookingQuoteResult } from "@/app/actions";
+import type { BookingQuoteResult } from "@/lib/booking-quote";
 import { BookRoomLink } from "@/components/book-room-link";
 import { PhotoCarousel } from "@/components/photo-carousel";
 import { RoomAmenitiesList } from "@/components/room-amenities-list";

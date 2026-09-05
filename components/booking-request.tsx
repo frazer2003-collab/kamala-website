@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -8,9 +9,8 @@ import {
   getBookingQuote,
   type BookingActionState,
   type BookingFormValues,
-  type BookingQuoteResult,
 } from "@/app/actions";
-import { BookingPaymentElement } from "@/components/booking-payment-element";
+import type { BookingQuoteResult } from "@/lib/booking-quote";
 import { BookingProgress } from "@/components/booking-progress";
 import {
   SELECT_ROOM_EVENT,
@@ -32,6 +32,21 @@ import {
 } from "@/lib/bed-setup";
 import { normalizeDiscountCodeInput } from "@/lib/discount-codes";
 import "@/app/booking-promo-code.css";
+
+const BookingPaymentElement = dynamic(
+  () =>
+    import("@/components/booking-payment-element").then(
+      (module) => module.BookingPaymentElement,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <p className="booking-summary__hint" aria-live="polite">
+        Loading payment…
+      </p>
+    ),
+  },
+);
 
 function persistGuestLocale(nextLocale: Locale) {
   try {

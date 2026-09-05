@@ -131,12 +131,10 @@ export default async function StaffCalendarPage({
   const boardToIso = timelineRange.boardToIso;
   const statsCalendarDays = buildCalendarDays(year, month);
   const calendarDays = buildStaffTimelineDays(boardFromIso, boardToIso);
-  // Promote leftover iCal/OTA room_blocks into booking_requests (Conversation + cancel),
-  // and clear leftover No # stays that overlap July 2026 — run in parallel, before reads.
-  await Promise.all([
-    purgeIcalSyncedChannelBlocks(),
-    purgeUnassignedJuly2026Stays(),
-  ]);
+  // Promote leftover iCal/OTA room_blocks into booking_requests before reads
+  // (reads must see promoted stays). July cleanup overlaps the reads.
+  await purgeIcalSyncedChannelBlocks();
+  const purgeJulyPromise = purgeUnassignedJuly2026Stays();
   const [
     confirmedBookingsParts,
     calendarBlockParts,
@@ -174,6 +172,7 @@ export default async function StaffCalendarPage({
     getStaffRoomUnits(),
     getStaffBookingRequests(),
   ]);
+  await purgeJulyPromise;
 
   const allPartsSupabase = <T extends { source: string }>(parts: T[]) =>
     parts.length > 0 && parts.every((part) => part.source === "supabase");

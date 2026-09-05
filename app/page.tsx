@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getBookingQuote } from "@/app/actions";
+import { getBookingQuotesForRooms } from "@/lib/booking-quote";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { HomeBookingSection } from "@/components/home-booking-section";
 import { HomeHeroShell } from "@/components/home-hero-shell";
@@ -17,7 +17,7 @@ import { HomePageJsonLd } from "@/components/home-page-json-ld";
 import { resolveHeroImageUrl } from "@/lib/home-hero-media";
 import { buildHomePageJsonLd, buildHomePageMetadata, buildHomePageWebSiteJsonLd } from "@/lib/home-seo";
 import { getPropertySettings } from "@/lib/property-settings";
-import { hasStripeClientConfig, getStripePublishableKey } from "@/lib/stripe";
+import { hasStripeClientConfig, getStripePublishableKey } from "@/lib/stripe-public";
 import { getPublicRooms } from "@/lib/rooms";
 import { getPublicRoomPromotions } from "@/lib/room-promotions";
 import { getRoomsStayAvailability } from "@/lib/stay-availability";
@@ -33,6 +33,10 @@ import {
   shiftStayDatesIfArrivalFull,
 } from "@/lib/guest-night-availability";
 import { addIsoDays } from "@/lib/room-day-inventory";
+
+import "./home-landing.css";
+import "./home-direct-booking.css";
+import "./home-overdrive.css";
 
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -75,17 +79,24 @@ export default async function Home({
   } = resolveHomeStayDates(arrival, departure);
 
   let stayDates = resolvedStayDates;
+  let stayAvailability: Awaited<ReturnType<typeof getRoomsStayAvailability>> | null =
+    null;
+
   if (stayDates) {
     const today = getPropertyTodayIso();
     const latest = guestNightAvailabilityLatestIso(today);
     const searchToCandidate = addIsoDays(stayDates.arrival, 45);
     const searchTo = searchToCandidate < latest ? searchToCandidate : latest;
+
     if (searchTo >= stayDates.arrival) {
-      const nightAvailability = await getGuestNightAvailability(
-        rooms,
-        stayDates.arrival,
-        searchTo,
-      );
+      // Common path: run night + stay checks together; re-fetch stay only if arrival shifts.
+      const [nightAvailability, initialStayAvailability] = await Promise.all([
+        getGuestNightAvailability(rooms, stayDates.arrival, searchTo),
+        getRoomsStayAvailability(rooms, stayDates.arrival, stayDates.departure),
+      ]);
+
+      stayAvailability = initialStayAvailability;
+
       if (nightAvailability.status === "ok") {
         const shifted = shiftStayDatesIfArrivalFull(
           stayDates,
@@ -107,14 +118,27 @@ export default async function Home({
         }
         if (shifted) {
           stayDates = shifted;
+          if (
+            shifted.arrival !== resolvedStayDates!.arrival ||
+            shifted.departure !== resolvedStayDates!.departure
+          ) {
+            stayAvailability = await getRoomsStayAvailability(
+              rooms,
+              shifted.arrival,
+              shifted.departure,
+            );
+          }
         }
       }
+    } else {
+      stayAvailability = await getRoomsStayAvailability(
+        rooms,
+        stayDates.arrival,
+        stayDates.departure,
+      );
     }
   }
 
-  const stayAvailability = stayDates
-    ? await getRoomsStayAvailability(rooms, stayDates.arrival, stayDates.departure)
-    : null;
   const availabilityVerifyFailed = stayAvailability?.status === "verify-failed";
   const availabilityByRoomId = Object.fromEntries(
     (stayAvailability?.rooms ??
@@ -124,14 +148,7 @@ export default async function Home({
       }))).map((entry) => [entry.roomId, entry.availableCount]),
   );
   const quotesByRoomId = stayDates
-    ? Object.fromEntries(
-        await Promise.all(
-          rooms.map(async (room) => [
-            room.id,
-            await getBookingQuote(room.id, stayDates.arrival, stayDates.departure),
-          ]),
-        ),
-      )
+    ? await getBookingQuotesForRooms(rooms, stayDates.arrival, stayDates.departure, promotions)
     : {};
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? null;
   const lodgingJsonLd = buildHomePageJsonLd(

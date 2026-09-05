@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import "@/app/guest-stay-calendar.css";
 import {
   buildCalendarDays,
   formatCalendarMonthLabel,

@@ -81,7 +81,6 @@ export function GuestTopbarHome({ settings }: GuestTopbarHomeProps) {
             aria-hidden
             className="brand__logo"
             height={47}
-            priority
             src="/guesthouse-logo.png"
             width={70}
           />

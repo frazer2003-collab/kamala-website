@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { GuestTopbarHome } from "@/components/guest-topbar-home";
 import type { PropertySettings } from "@/lib/property-settings";
+import "@/app/home-topbar.css";
 
 type GuestTopbarProps = {
   settings: PropertySettings;
@@ -31,7 +32,6 @@ export function GuestTopbar({
           aria-hidden
           className="brand__logo"
           height={47}
-          priority
           src="/guesthouse-logo.png"
           width={70}
         />

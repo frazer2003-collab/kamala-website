@@ -1,10 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState, type ReactNode } from "react";
-import type { BookingQuoteResult } from "@/app/actions";
+import type { BookingQuoteResult } from "@/lib/booking-quote";
 import { BookRoomLink } from "@/components/book-room-link";
 import { OptimizedImage } from "@/components/optimized-image";
-import { RoomDetailDialog } from "@/components/room-detail-dialog";
 import { RoomSummaryList } from "@/components/room-summary-list";
 import type { Room } from "@/lib/content";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
@@ -22,6 +22,14 @@ import {
 import { formatStayDateRange } from "@/lib/stay-dates";
 import { buildRoomsSectionSubhead, buildRoomsSectionHeading } from "@/lib/home-hero-copy";
 import { formatRoomEssentials, formatRoomOutlookDetails } from "@/lib/room-essentials";
+
+const RoomDetailDialog = dynamic(
+  () =>
+    import("@/components/room-detail-dialog").then(
+      (module) => module.RoomDetailDialog,
+    ),
+  { ssr: false },
+);
 
 type HomeRoomCatalogProps = {
   rooms: Room[];

@@ -1,15 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { GuestStayCalendar } from "@/components/guest-stay-calendar";
 import { getPropertyTodayIso } from "@/lib/calendar";
 import {
   MAX_STAY_NIGHTS,
   MIN_STAY_NIGHTS,
   refreshStaleStayDates,
 } from "@/lib/stay-dates";
+
+const GuestStayCalendar = dynamic(
+  () =>
+    import("@/components/guest-stay-calendar").then(
+      (module) => module.GuestStayCalendar,
+    ),
+  { ssr: false },
+);
 
 const GUEST_DATES_BUSY_CLASS = "guest-dates-busy";
 

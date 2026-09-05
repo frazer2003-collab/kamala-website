@@ -1,5 +1,6 @@
 import { RoomSummaryIcon } from "@/components/room-summary-icons";
 import { buildRoomSummaryLines } from "@/lib/room-summary-lines";
+import "@/app/room-summary.css";
 
 type RoomSummaryListProps = {
   summary: string;

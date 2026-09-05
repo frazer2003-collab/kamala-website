@@ -8,22 +8,18 @@ import {
   getMetadataBase,
 } from "@/lib/site-metadata";
 import "./globals.css";
-import "./home-landing.css";
-import "./home-direct-booking.css";
-import "./home-overdrive.css";
-import "./home-topbar.css";
-import "./guest-stay-calendar.css";
-import "./room-summary.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  // Variable font → one file covering the weight range instead of five files.
+  display: "swap",
 });
 
 const libreBaskerville = Libre_Baskerville({
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["700"],
   variable: "--font-display",
+  display: "swap",
 });
 
 export const viewport: Viewport = {

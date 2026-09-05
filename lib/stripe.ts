@@ -3,6 +3,12 @@ import type { PropertyCurrency } from "@/lib/currency";
 import { getStripeCurrencyCode } from "@/lib/currency";
 import { STRIPE_BANK_CHARGE_RATE } from "@/lib/payment-pricing";
 import { getSiteUrl } from "@/lib/site-url";
+import {
+  getStripePublishableKey,
+  hasStripeClientConfig,
+} from "@/lib/stripe-public";
+
+export { getStripePublishableKey, hasStripeClientConfig };
 
 let stripeClient: Stripe | null = null;
 
@@ -10,21 +16,8 @@ export function hasStripeServerConfig() {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
 
-export function hasStripeClientConfig() {
-  return Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-}
-
 export function hasStripeConfig() {
   return hasStripeServerConfig() && hasStripeClientConfig();
-}
-
-export function getStripePublishableKey() {
-  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-  if (!key) {
-    throw new Error("Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY");
-  }
-
-  return key;
 }
 
 export function getStripe() {
