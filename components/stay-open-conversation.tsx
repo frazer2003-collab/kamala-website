@@ -12,6 +12,8 @@ type StayOpenConversationProps = {
   readOnly: boolean;
   /** Open immediately when staff already owe a reply. */
   priority: boolean;
+  /** Open once after a successful save that unlocked conversation (email added). */
+  autoOpen?: boolean;
 };
 
 export function StayOpenConversation({
@@ -21,18 +23,24 @@ export function StayOpenConversation({
   canManage,
   readOnly,
   priority,
+  autoOpen = false,
 }: StayOpenConversationProps) {
   const hintId = useId();
+  const panelId = useId();
   const chatRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(priority && hasGuestEmail);
+  const [open, setOpen] = useState(
+    hasGuestEmail && (priority || autoOpen),
+  );
 
   useEffect(() => {
     if (!hasGuestEmail) {
       setOpen(false);
-    } else if (priority) {
+      return;
+    }
+    if (priority || autoOpen) {
       setOpen(true);
     }
-  }, [bookingId, hasGuestEmail, priority]);
+  }, [bookingId, hasGuestEmail, priority, autoOpen]);
 
   useEffect(() => {
     if (!open || !chatRef.current) {
@@ -58,7 +66,7 @@ export function StayOpenConversation({
     <div className="reservation-detail__conversation">
       <div className="reservation-detail__conversation-launch">
         <button
-          aria-controls="booking-chat"
+          aria-controls={panelId}
           aria-describedby={hasGuestEmail ? undefined : hintId}
           aria-expanded={open}
           className={`button button--secondary reservation-detail__conversation-button${
@@ -74,6 +82,10 @@ export function StayOpenConversation({
           <p className="detail-help" id={hintId}>
             Add and save a guest email below to open Conversation.
           </p>
+        ) : autoOpen && open ? (
+          <p className="detail-help reservation-detail__conversation-unlocked" role="status">
+            Conversation unlocked — you can message the guest below.
+          </p>
         ) : null}
       </div>
 
@@ -82,7 +94,7 @@ export function StayOpenConversation({
           className={`staff-request-chat${
             priority ? " staff-request-chat--priority" : ""
           }`}
-          id="booking-chat"
+          id={panelId}
           ref={chatRef}
           tabIndex={-1}
         >

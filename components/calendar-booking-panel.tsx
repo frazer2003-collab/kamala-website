@@ -425,8 +425,8 @@ export function CalendarBookingPanel({
             value={fields.guestEmail}
           />
           <span className="field-help" id={emailHelpId}>
-            Leave blank if the guest has no email. A saved email unlocks Open
-            conversation above and notifies them when you reply.
+            Leave blank if the guest has no email. Saving a real email unlocks
+            Conversation above and opens the chat so you can message them.
           </span>
         </div>
         <div className="field-pair field-pair--wide guest-note">

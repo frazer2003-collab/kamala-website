@@ -35,8 +35,22 @@
   background: color-mix(in oklab, var(--color-maroon-wash) 70%, var(--color-surface));
 }
 
+.reservation-detail__conversation-unlocked {
+  color: var(--color-maroon-deep);
+  font-weight: 650;
+}
+
 .reservation-detail__conversation .staff-request-chat {
   margin-top: 0;
+}
+
+/* Nested BookingChat already sits in staff-request-chat chrome — no second frame. */
+.reservation-detail__conversation .staff-request-chat .booking-chat {
+  border: 0;
+  border-top: 0;
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .reservation-detail .detail-list--stay-meta {

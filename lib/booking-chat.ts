@@ -201,8 +201,13 @@ export function buildChatEmailSubject(booking: {
   return `[Kamala #${ref}] Message about ${booking.room_name ?? "your stay"}`;
 }
 
+export function getGuestChatPath(token: string) {
+  return `/booking/messages?token=${encodeURIComponent(token)}`;
+}
+
+/** Absolute URL for emails and off-site links. */
 export function getGuestChatUrl(token: string) {
-  return `${getAppBaseUrl()}/booking/messages?token=${encodeURIComponent(token)}`;
+  return `${getAppBaseUrl()}${getGuestChatPath(token)}`;
 }
 
 export function parseBookingRefFromSubject(subject: string) {
@@ -294,7 +299,7 @@ export async function resolveGuestConversationUrl({
   }
 
   const token = conversationToken ?? (await ensureConversationToken(bookingId));
-  return token ? getGuestChatUrl(token) : null;
+  return token ? getGuestChatPath(token) : null;
 }
 
 export async function getBookingByConversationToken(token: string) {

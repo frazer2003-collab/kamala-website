@@ -650,8 +650,14 @@ export default async function StaffBookingsPage({
                   </h3>
                   {!guestHasConversationLink(selected.contact) ? (
                     <p className="detail-help staff-request-chat__hint">
-                      No guest email on this stay yet. Add one if you want the
-                      guest notified when you reply.
+                      No guest email on this stay yet. You can still reply here —
+                      add an email on the{" "}
+                      <Link
+                        href={`/staff/calendar?booking=${encodeURIComponent(selected.databaseId)}`}
+                      >
+                        calendar stay
+                      </Link>{" "}
+                      if you want the guest notified.
                     </p>
                   ) : null}
                   <BookingChat

@@ -39,6 +39,8 @@ type CalendarStayDialogsProps = {
   promotions: RoomPromotionRate[];
   rateOverrides: Record<string, number>;
   formError?: string | null;
+  /** Open conversation after email save unlocked the guest link. */
+  autoOpenConversation?: boolean;
 };
 
 export function CalendarStayDialogs({
@@ -57,6 +59,7 @@ export function CalendarStayDialogs({
   promotions,
   rateOverrides,
   formError = null,
+  autoOpenConversation = false,
 }: CalendarStayDialogsProps) {
   const staySelection = useCalendarStaySelection();
 
@@ -157,6 +160,7 @@ export function CalendarStayDialogs({
 
           {selectedBooking.databaseId ? (
             <StayOpenConversation
+              autoOpen={autoOpenConversation && hasGuestEmail}
               bookingId={selectedBooking.databaseId}
               canManage={canManageSelected}
               guestLabel={selectedBooking.guest}

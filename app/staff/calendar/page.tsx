@@ -91,6 +91,7 @@ export default async function StaffCalendarPage({
     detail?: string;
     assignGuest?: string;
     assignUnit?: string;
+    conversation?: string;
     "confirm-email"?: string;
   }>;
 }) {
@@ -114,6 +115,7 @@ export default async function StaffCalendarPage({
     detail: errorDetail,
     assignGuest,
     assignUnit,
+    conversation,
     "confirm-email": confirmEmail,
   } = await searchParams;
   const timelineRange = parseStaffTimelineRange({
@@ -332,6 +334,8 @@ export default async function StaffCalendarPage({
               ? "Enter a valid phone number with at least 7 digits, or leave phone blank."
               : error === "invalid-email"
                 ? "Enter a valid email, or leave blank if the guest has no email."
+                : error === "conversation-token"
+                  ? "Guest email was saved, but the conversation link could not be created. Try saving again."
                 : error === "invalid-dates"
                   ? `Choose a stay between ${MIN_STAY_NIGHTS} and ${MAX_STAY_NIGHTS} nights.`
                   : error === "invalid-room-type"
@@ -705,6 +709,7 @@ export default async function StaffCalendarPage({
           </div>
 
           <CalendarStayDialogs
+            autoOpenConversation={conversation === "1"}
             blocks={calendarBlocks}
             bookings={calendarBookings}
             canManage={canManage}

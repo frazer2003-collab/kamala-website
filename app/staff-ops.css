@@ -1487,6 +1487,10 @@
 
 .staff-request-chat .booking-chat {
   padding: var(--space-4);
+  border: 0;
+  border-top: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .staff-request-chat .booking-chat__header {

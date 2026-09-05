@@ -1252,8 +1252,13 @@ export async function updateConfirmedBooking(
   }
 
   // Former walk-ins get a conversation link once a real guest email is saved.
-  if (guestHasConversationLink(guestEmail)) {
-    await ensureConversationToken(bookingId);
+  const hadConversationLink = guestHasConversationLink(booking.guest_email);
+  const hasConversationLink = guestHasConversationLink(guestEmail);
+  if (hasConversationLink) {
+    const token = await ensureConversationToken(bookingId);
+    if (!token) {
+      redirect(`${bookingHref}&error=conversation-token`);
+    }
   }
 
   const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
@@ -1298,7 +1303,12 @@ export async function updateConfirmedBooking(
     calendarHrefFromFormData(formData, {
       month: arrival.slice(0, 7),
       booking: bookingId,
-      extras: { saved: "1" },
+      extras: {
+        saved: "1",
+        ...(hasConversationLink && !hadConversationLink
+          ? { conversation: "1" }
+          : {}),
+      },
     }),
   );
 }
@@ -1915,7 +1925,10 @@ export async function createWalkInBooking(
     calendarHrefFromFormData(formData, {
       month: arrival.slice(0, 7),
       booking: data.id,
-      extras: { created: "walk-in" },
+      extras: {
+        created: "walk-in",
+        ...(guestEmail !== walkInEmailFallback ? { conversation: "1" } : {}),
+      },
     }),
   );
 }

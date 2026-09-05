@@ -474,7 +474,7 @@ export function BookingChat(props: BookingChatProps) {
       className={`booking-chat${
         props.variant === "guest" ? " booking-chat--guest" : ""
       }`}
-      id="booking-chat"
+      id={showHeading ? "booking-chat" : undefined}
     >
       <div className="booking-chat__header">
         <div>
