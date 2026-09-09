@@ -1,27 +1,42 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { sendContactMessage } from "@/app/contact-actions";
+import { ContactTurnstile } from "@/components/contact-turnstile";
 import {
   CONTACT_MESSAGE_MAX_LENGTH,
   initialContactFormState,
 } from "@/lib/contact-message";
+import {
+  CONTACT_HONEYPOT_FIELD,
+  CONTACT_STARTED_AT_FIELD,
+} from "@/lib/contact-spam";
 
 type ContactFormProps = {
   canEmail: boolean;
   propertyName: string;
+  turnstileSiteKey?: string | null;
 };
 
-export function ContactForm({ canEmail, propertyName }: ContactFormProps) {
+export function ContactForm({
+  canEmail,
+  propertyName,
+  turnstileSiteKey = null,
+}: ContactFormProps) {
   const [state, formAction, pending] = useActionState(
     sendContactMessage,
     initialContactFormState(),
   );
+  const [startedAt, setStartedAt] = useState("");
   const formErrorId = useId();
   const nameErrorId = useId();
   const emailErrorId = useId();
   const phoneErrorId = useId();
   const messageErrorId = useId();
+
+  useEffect(() => {
+    setStartedAt(String(Date.now()));
+  }, []);
 
   if (!canEmail) {
     return (
@@ -57,6 +72,23 @@ export function ContactForm({ canEmail, propertyName }: ContactFormProps) {
           {state.message}
         </p>
       ) : null}
+
+      <div className="contact-form__honeypot" aria-hidden="true">
+        <label htmlFor="contact-company-website">Company website</label>
+        <input
+          autoComplete="off"
+          id="contact-company-website"
+          name={CONTACT_HONEYPOT_FIELD}
+          tabIndex={-1}
+          type="text"
+        />
+      </div>
+      <input
+        name={CONTACT_STARTED_AT_FIELD}
+        type="hidden"
+        value={startedAt}
+        readOnly
+      />
 
       <div className="field-pair">
         <label htmlFor="contact-guest-name">
@@ -141,10 +173,12 @@ export function ContactForm({ canEmail, propertyName }: ContactFormProps) {
         ) : null}
       </div>
 
+      {turnstileSiteKey ? <ContactTurnstile siteKey={turnstileSiteKey} /> : null}
+
       <button
         aria-describedby={state.status === "error" ? formErrorId : undefined}
         className="button button--primary"
-        disabled={pending}
+        disabled={pending || !startedAt}
         type="submit"
       >
         {pending ? "Sending…" : "Send message"}

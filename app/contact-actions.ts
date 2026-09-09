@@ -1,6 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { sendStaffContactMessageEmail } from "@/lib/email";
+import {
+  checkContactRateLimit,
+  clientIpFromHeaders,
+} from "@/lib/contact-rate-limit";
 import {
   emptyContactMessageValues,
   normalizeContactMessageValues,
@@ -8,6 +13,17 @@ import {
   type ContactFormState,
   type ContactMessageValues,
 } from "@/lib/contact-message";
+import {
+  CONTACT_HONEYPOT_FIELD,
+  CONTACT_STARTED_AT_FIELD,
+  CONTACT_TURNSTILE_FIELD,
+  hasTurnstileConfigured,
+  isContactHoneypotTripped,
+  isContactSubmittedTooFast,
+  isLikelyContactSpamContent,
+  readContactStartedAt,
+  verifyTurnstileToken,
+} from "@/lib/contact-spam";
 import { getPropertySettings } from "@/lib/property-settings";
 
 function readContactValues(formData: FormData): ContactMessageValues {
@@ -19,11 +35,62 @@ function readContactValues(formData: FormData): ContactMessageValues {
   };
 }
 
+function silentSuccess(): ContactFormState {
+  return {
+    status: "success",
+    message: "Message sent. We’ll reply by email as soon as we can.",
+    values: emptyContactMessageValues(),
+  };
+}
+
 export async function sendContactMessage(
   _prev: ContactFormState,
   formData: FormData,
 ): Promise<ContactFormState> {
   const raw = readContactValues(formData);
+
+  if (isContactHoneypotTripped(formData.get(CONTACT_HONEYPOT_FIELD))) {
+    return silentSuccess();
+  }
+
+  const startedAt = readContactStartedAt(formData.get(CONTACT_STARTED_AT_FIELD));
+  if (isContactSubmittedTooFast(startedAt)) {
+    return silentSuccess();
+  }
+
+  if (
+    isLikelyContactSpamContent({
+      guestName: raw.guestName,
+      message: raw.message,
+    })
+  ) {
+    return silentSuccess();
+  }
+
+  const headerList = await headers();
+  const ip = clientIpFromHeaders(headerList);
+  const rate = checkContactRateLimit(`contact:${ip}`);
+  if (!rate.ok) {
+    return {
+      status: "error",
+      message:
+        "Too many messages from this connection. Please wait a few minutes and try again, or use LINE / WhatsApp / telephone.",
+      values: raw,
+    };
+  }
+
+  if (hasTurnstileConfigured()) {
+    const token = String(formData.get(CONTACT_TURNSTILE_FIELD) ?? "");
+    const ok = await verifyTurnstileToken(token, ip === "unknown" ? null : ip);
+    if (!ok) {
+      return {
+        status: "error",
+        message: "Please confirm you are human, then try again.",
+        values: raw,
+      };
+    }
+  }
+
   const values = normalizeContactMessageValues(raw);
   const fieldErrors = validateContactMessage(raw);
 

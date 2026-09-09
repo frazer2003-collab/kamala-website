@@ -13,6 +13,7 @@ import { ContactForm } from "@/components/contact-form";
 import { GuestPageClosingActions } from "@/components/guest-page-closing-actions";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
+import { getTurnstileSiteKey } from "@/lib/contact-spam";
 import { getPropertySettings } from "@/lib/property-settings";
 
 export const revalidate = 300;
@@ -30,6 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ContactPage() {
   const settings = await getPropertySettings();
   const canEmail = Boolean(settings.contactEmail?.trim());
+  const turnstileSiteKey = getTurnstileSiteKey();
 
   return (
     <main className="guest-site site-shell guest-page contact-page">
@@ -52,7 +54,11 @@ export default async function ContactPage() {
           <h2 className="sr-only" id="contact-form-title">
             Email message
           </h2>
-          <ContactForm canEmail={canEmail} propertyName={settings.propertyName} />
+          <ContactForm
+            canEmail={canEmail}
+            propertyName={settings.propertyName}
+            turnstileSiteKey={turnstileSiteKey}
+          />
         </section>
         <ContactChannels settings={settings} />
       </div>

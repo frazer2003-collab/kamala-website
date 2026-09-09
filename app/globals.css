@@ -1288,6 +1288,19 @@ html.guest-dates-busy .home-sticky-dates {
   max-width: 36rem;
 }
 
+.contact-form__honeypot {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.contact-form__turnstile {
+  margin: var(--space-2) 0 var(--space-3);
+}
+
 .contact-form__success-note {
   margin: var(--space-3) 0 var(--space-4);
   color: var(--color-muted);
