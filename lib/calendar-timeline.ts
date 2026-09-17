@@ -1,6 +1,6 @@
 import {
   bookingOccupiesDay,
-  getTodayIso,
+  getPropertyTodayIso,
   type CalendarDay,
 } from "@/lib/calendar";
 import type { StaffBooking } from "@/lib/booking-requests";
@@ -481,7 +481,7 @@ export function getCalendarMonthStats({
   blocks = [],
   calendarDays,
   rooms,
-  todayIso = getTodayIso(),
+  todayIso = getPropertyTodayIso(),
 }: {
   bookings: StaffBooking[];
   blocks?: StaffRoomBlock[];

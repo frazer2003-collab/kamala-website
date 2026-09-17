@@ -12,7 +12,7 @@ import {
 } from "@/app/actions";
 import { CalendarRangeFields } from "@/components/calendar-range-fields";
 import { CalendarWalkInForm } from "@/components/calendar-walk-in-form";
-import { buildStaffCalendarHref, getTodayIso } from "@/lib/calendar";
+import { buildStaffCalendarHref, getPropertyTodayIso } from "@/lib/calendar";
 import type { Room } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import type { RoomPromotionRate } from "@/lib/pricing";
@@ -159,7 +159,7 @@ export function CalendarDayPanel({
   roomUnitNumber = null,
 }: CalendarDayPanelProps) {
   const defaultDeparture = useMemo(() => addIsoDays(date, 1), [date]);
-  const todayIso = useMemo(() => getTodayIso(), []);
+  const todayIso = useMemo(() => getPropertyTodayIso(), []);
   const dayHref = buildStaffCalendarHref({
     month: monthKey,
     from: fromIso,

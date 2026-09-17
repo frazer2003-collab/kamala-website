@@ -55,7 +55,7 @@ export function CalendarDateStrip({
     setToValue(toIso);
   }, [fromIso, toIso]);
 
-  const hint = `Up to ${STAFF_TIMELINE_MAX_MONTHS} months. Either date can be changed first.`;
+  const hint = `Default month keeps a ${STAFF_TIMELINE_MAX_MONTHS}-month scroll. Custom From/To shows that exact window (max ${STAFF_TIMELINE_MAX_MONTHS} months).`;
 
   function applyRange(nextFrom: string, nextTo: string) {
     if (!nextFrom || !nextTo) {

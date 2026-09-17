@@ -116,11 +116,8 @@ export function CalendarBookingDialog({
     const returnKey = focusReturnKey;
     document.body.style.overflow = "hidden";
 
-    // Mobile modal: inert the shell. Desktop drawer: keep the timeline visible
-    // (not interactive under the light backdrop) without fully blanking context.
-    if (!isDesktopDrawer) {
-      shell?.setAttribute("inert", "");
-    }
+    // Keep the calendar visible under the drawer, but block clicks/focus into it.
+    shell?.setAttribute("inert", "");
 
     // Panel (drawer) is the scroll container on desktop; the shell scrolls on mobile.
     const panel = panelRef.current;
@@ -189,7 +186,6 @@ export function CalendarBookingDialog({
     closeHref,
     focusReturnKey,
     initialFocusSelector,
-    isDesktopDrawer,
     onClose,
     open,
     router,

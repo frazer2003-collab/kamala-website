@@ -119,7 +119,8 @@ export function getTodayIso() {
 }
 
 export function isPastCalendarDate(iso: string) {
-  return iso < getTodayIso();
+  // Property desk clock (Asia/Bangkok), not the browser/server local day.
+  return iso < getPropertyTodayIso();
 }
 
 /** Max months the staff timeline can show in one view. */

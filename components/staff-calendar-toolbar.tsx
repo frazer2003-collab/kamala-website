@@ -1,9 +1,5 @@
-import Link from "next/link";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
-import {
-  defaultStaffTimelineSelectionRange,
-  formatCalendarMonth,
-} from "@/lib/calendar";
+import { StaffCalendarTodayLink } from "@/components/staff-calendar-today-link";
 import type { CalendarMonthStats } from "@/lib/calendar-timeline";
 import type { CalendarColors } from "@/lib/calendar-colors";
 
@@ -18,27 +14,6 @@ type StaffCalendarToolbarProps = {
   selectedBlockKey?: string;
 };
 
-function buildMonthHref(
-  monthKey: string,
-  selectedBookingKey?: string,
-  selectedBlockKey?: string,
-) {
-  const selection = defaultStaffTimelineSelectionRange(monthKey);
-  const params = new URLSearchParams({
-    month: monthKey,
-    from: selection.fromIso,
-    to: selection.toIso,
-  });
-
-  if (selectedBookingKey) {
-    params.set("booking", selectedBookingKey);
-  } else if (selectedBlockKey) {
-    params.set("block", selectedBlockKey);
-  }
-
-  return `/staff/calendar?${params.toString()}`;
-}
-
 export function StaffCalendarToolbar({
   monthKey,
   fromIso,
@@ -50,8 +25,6 @@ export function StaffCalendarToolbar({
   selectedBlockKey,
 }: StaffCalendarToolbarProps) {
   void _calendarColors;
-  const today = new Date();
-  const currentMonthKey = formatCalendarMonth(today.getFullYear(), today.getMonth() + 1);
 
   return (
     <div className="staff-calendar-toolbar">
@@ -65,12 +38,11 @@ export function StaffCalendarToolbar({
             toIso={toIso}
           />
         </h2>
-        <Link
-          className="staff-calendar-toolbar__today"
-          href={`${buildMonthHref(currentMonthKey, selectedBookingKey, selectedBlockKey)}#calendar-today`}
-        >
-          Today
-        </Link>
+        <StaffCalendarTodayLink
+          monthKey={monthKey}
+          selectedBlockKey={selectedBlockKey}
+          selectedBookingKey={selectedBookingKey}
+        />
       </div>
 
       <div className="staff-calendar-toolbar__meta" aria-label="Month summary">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { bulkUpdateRoomAvailability } from "@/app/actions";
 import { CalendarRangeFields } from "@/components/calendar-range-fields";
-import { buildStaffCalendarHref, getTodayIso } from "@/lib/calendar";
+import { buildStaffCalendarHref, getPropertyTodayIso } from "@/lib/calendar";
 import type { Room } from "@/lib/content";
 
 type CalendarBulkAvailabilityPanelProps = {
@@ -47,7 +47,7 @@ export function CalendarBulkAvailabilityPanel({
   canManage,
   error,
 }: CalendarBulkAvailabilityPanelProps) {
-  const todayIso = useMemo(() => getTodayIso(), []);
+  const todayIso = useMemo(() => getPropertyTodayIso(), []);
   const defaultEnd = useMemo(() => addIsoDays(todayIso, 6), [todayIso]);
   const closeHref = buildStaffCalendarHref({ month: monthKey, from: fromIso, to: toIso });
   const errorMessage = getErrorMessage(error);

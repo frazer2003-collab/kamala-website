@@ -23,7 +23,7 @@ import type { CalendarColors } from "@/lib/calendar-colors";
 import { getCalendarColorStyleProps } from "@/lib/calendar-colors";
 import {
   formatCalendarMonthLabelFromIso,
-  getTodayIso,
+  getPropertyTodayIso,
   pickLeadingVisibleCalendarDayHeadIso,
   type CalendarDay,
 } from "@/lib/calendar";
@@ -541,7 +541,7 @@ export function StaffTimelineCalendar({
   allotmentOverrideKeys = [],
   rateOverrideKeys = [],
 }: StaffTimelineCalendarProps) {
-  const todayIso = getTodayIso();
+  const todayIso = getPropertyTodayIso();
   const dayCount = calendarDays.length;
   const staySelection = useCalendarStaySelection();
   const activeBookingKey = staySelection?.bookingKey || selectedBookingKey;
@@ -726,7 +726,7 @@ export function StaffTimelineCalendar({
           className="staff-extranet__dates"
           style={{ ["--timeline-days" as string]: dayCount }}
         >
-          <div aria-live="polite" className="staff-extranet__month">
+          <div className="staff-extranet__month" aria-hidden="true">
             {visibleMonthLabel}
           </div>
           {calendarDays.map((day, columnIndex) => {
