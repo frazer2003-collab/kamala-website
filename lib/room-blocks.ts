@@ -12,6 +12,13 @@ import {
   type RoomBlockRow,
 } from "@/lib/supabase";
 
+/**
+ * Row cap for range queries. Sized for the six-month staff timeline window
+ * (STAFF_TIMELINE_MAX_MONTHS) across every door, so a long range cannot
+ * silently drop closures or channel stays.
+ */
+const ROOM_BLOCK_RANGE_LIMIT = 2000;
+
 export type StaffRoomBlock = {
   id: string;
   databaseId: string | null;
@@ -189,7 +196,7 @@ export async function getChannelReservationsForRange(fromIso: string, toIso: str
         .gte("start_date", fromIso)
         .lte("start_date", toIso)
         .order("start_date", { ascending: true })
-        .limit(500),
+        .limit(ROOM_BLOCK_RANGE_LIMIT),
       getBlockRoomUnitMap(supabase),
     ]);
 
@@ -241,7 +248,7 @@ export async function getChannelBlocksOverlappingRange(
         .lte("start_date", toIso)
         .gt("end_date", fromIso)
         .order("start_date", { ascending: true })
-        .limit(500),
+        .limit(ROOM_BLOCK_RANGE_LIMIT),
       getBlockRoomUnitMap(supabase),
     ]);
 
@@ -293,7 +300,7 @@ export async function getStaffClosureBlocksOverlappingRange(
         .lte("start_date", toIso)
         .gt("end_date", fromIso)
         .order("start_date", { ascending: true })
-        .limit(500),
+        .limit(ROOM_BLOCK_RANGE_LIMIT),
       getBlockRoomUnitMap(supabase),
     ]);
 

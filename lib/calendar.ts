@@ -123,13 +123,13 @@ export function isPastCalendarDate(iso: string) {
 }
 
 /** Max months the staff timeline can show in one view. */
-export const STAFF_TIMELINE_MAX_MONTHS = 3;
+export const STAFF_TIMELINE_MAX_MONTHS = 6;
 
 /**
- * Default board length past the anchor month start: current month plus the
- * next two, so staff can scroll right into months 2 and 3.
+ * Default board length from the anchor month start: current month plus the
+ * next five, so staff can scroll right through a six-month horizon.
  */
-export const STAFF_TIMELINE_DEFAULT_MONTHS = 3;
+export const STAFF_TIMELINE_DEFAULT_MONTHS = 6;
 
 export type CalendarMonthRef = {
   year: number;
@@ -200,7 +200,7 @@ export function clampCalendarMonthRange(
 
 /**
  * Latest end date allowed for a from date within maxMonths calendar months
- * (inclusive). Example: from 2026-07-10 with max 3 → 2026-09-30.
+ * (inclusive). Example: from 2026-07-10 with max 6 → 2026-12-31.
  */
 export function maxStaffTimelineEndIso(
   fromIso: string,
@@ -331,7 +331,7 @@ export function defaultStaffTimelineSelectionRange(monthParam?: string) {
   return { fromIso: monthStart, toIso: monthEnd };
 }
 
-/** Scrollable board horizon: anchor month plus the next two. */
+/** Scrollable board horizon: anchor month through STAFF_TIMELINE_DEFAULT_MONTHS. */
 export function defaultStaffTimelineDateRange(monthParam?: string) {
   const start = parseCalendarMonth(monthParam);
   const end = shiftCalendarMonth(
@@ -347,7 +347,7 @@ export function defaultStaffTimelineDateRange(monthParam?: string) {
 /**
  * Resolve the staff timeline date window.
  * Prefers `from`/`to` day params for the selector; the board expands to a
- * three-month scroll horizon from the start month so months 2 and 3 can be
+ * six-month scroll horizon from the start month so later months can be
  * revealed by scrolling right.
  */
 export function parseStaffTimelineRange({
@@ -383,7 +383,7 @@ export function parseStaffTimelineRange({
       clampedMonths.end.month,
     ).monthEnd;
   } else {
-    // Default selector: one month. Board still expands to +2 months below.
+    // Default selector: one month. Board still expands to the default horizon below.
     ({ fromIso, toIso } = defaultStaffTimelineSelectionRange(monthParam));
   }
 
@@ -394,8 +394,8 @@ export function parseStaffTimelineRange({
   ).toIso;
   const isDefaultOneMonthSelection =
     selected.fromIso === horizon.fromIso && selected.toIso === startMonthEnd;
-  // One-month default (and month-picker jumps) keep a 3-month scroll horizon.
-  // Custom from/to ranges use the exact selected window (still max 3 months).
+  // One-month default (and month-picker jumps) keep a 6-month scroll horizon.
+  // Custom from/to ranges use the exact selected window (still max 6 months).
   const boardToIso = isDefaultOneMonthSelection ? horizon.toIso : selected.toIso;
   const board = clampStaffTimelineDateRange(
     selected.fromIso,

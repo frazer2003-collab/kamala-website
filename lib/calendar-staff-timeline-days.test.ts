@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  STAFF_TIMELINE_DEFAULT_MONTHS,
+  STAFF_TIMELINE_MAX_MONTHS,
   buildStaffCalendarHref,
   buildStaffTimelineDays,
   clampStaffTimelineDateRange,
@@ -21,11 +23,11 @@ describe("buildStaffTimelineDays", () => {
     assert.ok(days.every((day) => day.inCurrentMonth));
   });
 
-  it("clamps ranges longer than three calendar months", () => {
-    const days = buildStaffTimelineDays("2026-07-01", "2026-12-31");
+  it("clamps ranges longer than six calendar months", () => {
+    const days = buildStaffTimelineDays("2026-07-01", "2027-06-30");
 
     assert.equal(days[0]?.iso, "2026-07-01");
-    assert.equal(days[days.length - 1]?.iso, "2026-09-30");
+    assert.equal(days[days.length - 1]?.iso, "2026-12-31");
   });
 });
 
@@ -37,38 +39,40 @@ describe("defaultStaffTimeline ranges", () => {
     assert.equal(range.toIso, "2026-07-31");
   });
 
-  it("keeps a three-month scroll horizon from the anchor month", () => {
+  it("keeps a six-month scroll horizon from the anchor month", () => {
     const range = defaultStaffTimelineDateRange("2026-07");
 
     assert.equal(range.fromIso, "2026-07-01");
-    assert.equal(range.toIso, "2026-09-30");
+    assert.equal(range.toIso, "2026-12-31");
+    assert.equal(STAFF_TIMELINE_DEFAULT_MONTHS, 6);
+    assert.equal(STAFF_TIMELINE_MAX_MONTHS, 6);
   });
 });
 
 describe("parseStaffTimelineRange", () => {
-  it("defaults the selector to one month and the board to three", () => {
+  it("defaults the selector to one month and the board to six", () => {
     const range = parseStaffTimelineRange({ month: "2026-07" });
 
     assert.equal(range.fromIso, "2026-07-01");
     assert.equal(range.toIso, "2026-07-31");
     assert.equal(range.boardFromIso, "2026-07-01");
-    assert.equal(range.boardToIso, "2026-09-30");
+    assert.equal(range.boardToIso, "2026-12-31");
     assert.equal(range.monthKey, "2026-07");
-    assert.equal(range.monthCount, 3);
+    assert.equal(range.monthCount, 6);
   });
 
-  it("clamps from/to to at most three calendar months", () => {
+  it("clamps from/to to at most six calendar months", () => {
     const range = parseStaffTimelineRange({
       from: "2026-07-10",
-      to: "2026-12-01",
+      to: "2027-06-01",
     });
 
     assert.equal(range.fromIso, "2026-07-10");
-    assert.equal(range.toIso, "2026-09-30");
+    assert.equal(range.toIso, "2026-12-31");
     assert.equal(range.toIso, maxStaffTimelineEndIso("2026-07-10"));
-    assert.equal(monthsOverlappingDateRange(range.fromIso, range.toIso).length, 3);
+    assert.equal(monthsOverlappingDateRange(range.fromIso, range.toIso).length, 6);
     assert.equal(range.boardFromIso, "2026-07-10");
-    assert.equal(range.boardToIso, "2026-09-30");
+    assert.equal(range.boardToIso, "2026-12-31");
   });
 
   it("orders a reversed from/to before clamping", () => {
@@ -93,6 +97,19 @@ describe("parseStaffTimelineRange", () => {
     assert.equal(range.toIso, "2026-08-15");
     assert.equal(range.boardFromIso, "2026-07-01");
     assert.equal(range.boardToIso, "2026-08-15");
+  });
+
+  it("allows a full six-month custom from/to", () => {
+    const range = parseStaffTimelineRange({
+      from: "2026-07-01",
+      to: "2026-12-15",
+    });
+
+    assert.equal(range.fromIso, "2026-07-01");
+    assert.equal(range.toIso, "2026-12-15");
+    assert.equal(range.boardFromIso, "2026-07-01");
+    assert.equal(range.boardToIso, "2026-12-15");
+    assert.equal(monthsOverlappingDateRange(range.fromIso, range.toIso).length, 6);
   });
 });
 
