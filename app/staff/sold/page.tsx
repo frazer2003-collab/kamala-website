@@ -30,21 +30,20 @@ function sourceLine(sources: { label: string; stays: number }[]) {
     .join(" · ");
 }
 
+/**
+ * Says where a row's money came from. A row built from saved totals shows its
+ * amount even when that amount is 0, because a comped stay is a real answer and
+ * not missing data.
+ */
 function moneyCaption(row: {
-  websiteRevenue: number;
-  channelRevenue: number;
-  estimatedRevenue: number;
+  stayCount: number;
+  recordedStayCount: number;
 }) {
-  if (row.estimatedRevenue <= 0) {
-    return null;
+  const hasQuoted = row.stayCount > row.recordedStayCount;
+  if (row.recordedStayCount > 0) {
+    return hasQuoted ? "Saved totals + quoted channels" : "Saved stay totals";
   }
-  if (row.websiteRevenue > 0 && row.channelRevenue > 0) {
-    return "Website + quoted channels";
-  }
-  if (row.channelRevenue > 0) {
-    return "Quoted estimate";
-  }
-  return "Website (in range)";
+  return hasQuoted ? "Quoted estimate" : null;
 }
 
 function calendarRoomHref(fromIso: string, toIso: string, roomId: string) {
@@ -98,7 +97,10 @@ type FinanceRangeOverviewProps = {
 };
 
 function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
-  const hasMoney = report.totals.estimatedRevenue > 0;
+  // A range of comped stays totals 0 without being empty, so show the figure
+  // whenever any stay carried a saved total.
+  const hasMoney =
+    report.totals.estimatedRevenue > 0 || report.totals.recordedStayCount > 0;
 
   return (
     <aside className="staff-sold__aside" aria-label="Range overview">
@@ -140,7 +142,7 @@ function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
         <FinanceSoldPie
           nightsAvailable={report.totals.nightsAvailable}
           nightsOverCapacity={report.totals.nightsOverCapacity}
-          nightsSold={report.totals.nightsSold}
+          nightsSold={report.totals.nightsSoldInCapacity}
         />
       </div>
     </aside>
@@ -293,20 +295,30 @@ export default async function StaffSoldPage({
                         <li className="staff-sold__row" key={row.roomId}>
                           <div className="staff-sold__row-main">
                             <h3>
-                              <Link
-                                className="staff-sold__room-link"
-                                href={calendarRoomHref(
-                                  fromIso,
-                                  toIso,
-                                  row.roomId,
-                                )}
-                              >
-                                {row.roomName}
-                                <span className="sr-only">
-                                  {` (open on calendar for ${report.rangeLabel})`}
-                                </span>
-                              </Link>
+                              {row.isUnconfigured ? (
+                                row.roomName
+                              ) : (
+                                <Link
+                                  className="staff-sold__room-link"
+                                  href={calendarRoomHref(
+                                    fromIso,
+                                    toIso,
+                                    row.roomId,
+                                  )}
+                                >
+                                  {row.roomName}
+                                  <span className="sr-only">
+                                    {` (open on calendar for ${report.rangeLabel})`}
+                                  </span>
+                                </Link>
+                              )}
                             </h3>
+                            {row.isUnconfigured ? (
+                              <p className="staff-sold__row-retired">
+                                Room type removed from Settings — kept here so its
+                                money still counts.
+                              </p>
+                            ) : null}
                             <p className="staff-sold__row-stats">
                               <span>{nightLabel(row.nightsSold)}</span>
                               <span aria-hidden="true">·</span>
@@ -336,7 +348,7 @@ export default async function StaffSoldPage({
                             ) : null}
                           </div>
                           <div className="staff-sold__row-money">
-                            {row.estimatedRevenue > 0 && caption ? (
+                            {caption ? (
                               <p>
                                 <strong>
                                   {formatMoneySuffix(

@@ -39,6 +39,14 @@ export type StaffInsightsRoomRow = {
   websiteRevenue: number;
   channelRevenue: number;
   estimatedRevenue: number;
+  /**
+   * Stays in range whose recorded stay total was used as-is. Above zero means
+   * the money shown is what staff entered, so a 0 figure is a real 0 and not a
+   * gap in the data.
+   */
+  recordedStayCount: number;
+  /** Stays on record for a room type that is no longer configured. */
+  isUnconfigured: boolean;
   sources: StaffInsightsSourceCount[];
 };
 
@@ -57,7 +65,10 @@ export type StaffInsightsReport = {
     channelRevenue: number;
     estimatedRevenue: number;
     averageNightlyRate: number | null;
-    websiteStayCount: number;
+    /** Stays in range whose recorded stay total was used as-is. */
+    recordedStayCount: number;
+    /** Nights sold against room types that are still sellable, for occupancy. */
+    nightsSoldInCapacity: number;
     nightsAvailable: number;
     nightsOverCapacity: number;
     soldPercent: number | null;
@@ -139,6 +150,15 @@ export function estimateQuotedMoneyInMonth({
     ).rate;
   }
   return total;
+}
+
+/**
+ * Whether a stay carries a price staff actually agreed to. Stay totals are
+ * stored not-null and never negative, so anything in range counts — including 0
+ * for a comped stay or a full discount.
+ */
+export function hasRecordedTotal(estimatedTotal: number | null | undefined) {
+  return typeof estimatedTotal === "number" && Number.isFinite(estimatedTotal) && estimatedTotal >= 0;
 }
 
 /**
@@ -312,19 +332,32 @@ export function buildStaffInsightsReport({
   const staffClosures = monthBlocks.filter((block) => !isChannelReservation(block));
   const calendarDays = buildRangeDays(rangeStart, rangeEnd);
 
-  const rows = rooms.map((room) => {
-    const roomBookings = bookings.filter((booking) => booking.roomId === room.id);
-    const roomChannels = uniqueChannelStays.filter((stay) => stay.roomId === room.id);
+  function buildRow({
+    roomId,
+    roomName,
+    baseRate,
+    availableCount,
+    isUnconfigured,
+  }: {
+    roomId: string;
+    roomName: string;
+    baseRate: number;
+    availableCount: number;
+    isUnconfigured: boolean;
+  }): StaffInsightsRoomRow {
+    const roomBookings = bookings.filter((booking) => booking.roomId === roomId);
+    const roomChannels = uniqueChannelStays.filter((stay) => stay.roomId === roomId);
     const sources = new Map<string, number>();
     let nightsSold = 0;
     let stayCount = 0;
     let websiteRevenue = 0;
     let channelRevenue = 0;
+    let recordedStayCount = 0;
     const nightsAvailable = countSellableDoorNights({
-      availableCount: room.availableCount,
+      availableCount,
       calendarDays,
       staffClosures,
-      roomId: room.id,
+      roomId,
     });
 
     for (const booking of roomBookings) {
@@ -340,7 +373,12 @@ export function buildStaffInsightsReport({
       nightsSold += nights;
       stayCount += 1;
       bumpSource(sources, websiteSourceLabel(booking.bookingSource));
-      if (booking.estimatedTotal > 0) {
+      // Every write path stores a stay total, so that figure is the price the
+      // property agreed to. Trust it even when it is 0 (comped or a full
+      // discount); substituting the rack rate would invent revenue nobody
+      // charged. Only a truly absent number falls back to a quote.
+      if (hasRecordedTotal(booking.estimatedTotal)) {
+        recordedStayCount += 1;
         websiteRevenue += prorateStayMoneyInRange({
           estimatedTotal: booking.estimatedTotal,
           arrival: booking.arrivalDate,
@@ -350,8 +388,8 @@ export function buildStaffInsightsReport({
         });
       } else {
         websiteRevenue += estimateQuotedMoneyInMonth({
-          roomId: room.id,
-          baseRate: room.rate,
+          roomId,
+          baseRate,
           arrival: booking.arrivalDate,
           departure: booking.departureDate,
           monthStart: rangeStart,
@@ -375,9 +413,11 @@ export function buildStaffInsightsReport({
       nightsSold += nights;
       stayCount += 1;
       bumpSource(sources, channelSourceLabel(stay));
+      // Channel closures carry no price of their own, so these nights stay an
+      // estimate from the property's own rates.
       channelRevenue += estimateQuotedMoneyInMonth({
-        roomId: room.id,
-        baseRate: room.rate,
+        roomId,
+        baseRate,
         arrival: stay.startDate,
         departure: stay.endDate,
         monthStart: rangeStart,
@@ -388,11 +428,15 @@ export function buildStaffInsightsReport({
     }
 
     const estimatedRevenue = websiteRevenue + channelRevenue;
-    const nightsOverCapacity = Math.max(0, nightsSold - nightsAvailable);
+    // A removed room type has no capacity left to compare against, so its nights
+    // are not overbooking.
+    const nightsOverCapacity = isUnconfigured
+      ? 0
+      : Math.max(0, nightsSold - nightsAvailable);
 
     return {
-      roomId: room.id,
-      roomName: room.name,
+      roomId,
+      roomName,
       nightsSold,
       nightsAvailable,
       soldPercent: soldPercentOf(nightsSold, nightsAvailable),
@@ -401,11 +445,56 @@ export function buildStaffInsightsReport({
       websiteRevenue,
       channelRevenue,
       estimatedRevenue,
+      recordedStayCount,
+      isUnconfigured,
       sources: [...sources.entries()]
         .map(([label, stays]) => ({ label, stays }))
         .sort((a, b) => b.stays - a.stays || a.label.localeCompare(b.label)),
     } satisfies StaffInsightsRoomRow;
-  });
+  }
+
+  const rows = rooms.map((room) =>
+    buildRow({
+      roomId: room.id,
+      roomName: room.name,
+      baseRate: room.rate,
+      availableCount: room.availableCount,
+      isUnconfigured: false,
+    }),
+  );
+
+  // booking_requests.room_id has no foreign key, so removing a room type leaves
+  // its past stays behind. Those stays still earned money; report them under the
+  // name they were sold as instead of dropping them out of the totals.
+  const configuredRoomIds = new Set(rooms.map((room) => room.id));
+  const retiredRooms = new Map<string, string>();
+  for (const booking of bookings) {
+    if (configuredRoomIds.has(booking.roomId) || retiredRooms.has(booking.roomId)) {
+      continue;
+    }
+    if (
+      countNightsInMonth(
+        booking.arrivalDate,
+        booking.departureDate,
+        rangeStart,
+        rangeEnd,
+      ) > 0
+    ) {
+      retiredRooms.set(booking.roomId, booking.room?.trim() || booking.roomId);
+    }
+  }
+
+  for (const [roomId, roomName] of retiredRooms) {
+    rows.push(
+      buildRow({
+        roomId,
+        roomName,
+        baseRate: 0,
+        availableCount: 0,
+        isUnconfigured: true,
+      }),
+    );
+  }
 
   rows.sort(
     (a, b) =>
@@ -421,6 +510,13 @@ export function buildStaffInsightsReport({
     (sum, row) => sum + row.nightsOverCapacity,
     0,
   );
+  // Removed room types contribute nights with no capacity behind them, which
+  // would read as overbooking. Occupancy compares only what is still sellable;
+  // money above still counts every night.
+  const nightsSoldInCapacity = rows.reduce(
+    (sum, row) => (row.isUnconfigured ? sum : sum + row.nightsSold),
+    0,
+  );
 
   const totals = {
     nightsSold,
@@ -429,18 +525,11 @@ export function buildStaffInsightsReport({
     channelRevenue: rows.reduce((sum, row) => sum + row.channelRevenue, 0),
     estimatedRevenue,
     averageNightlyRate: nightsSold > 0 ? estimatedRevenue / nightsSold : null,
-    websiteStayCount: bookings.filter(
-      (booking) =>
-        countNightsInMonth(
-          booking.arrivalDate,
-          booking.departureDate,
-          rangeStart,
-          rangeEnd,
-        ) > 0 && booking.estimatedTotal > 0,
-    ).length,
+    recordedStayCount: rows.reduce((sum, row) => sum + row.recordedStayCount, 0),
+    nightsSoldInCapacity,
     nightsAvailable,
     nightsOverCapacity,
-    soldPercent: soldPercentOf(nightsSold, nightsAvailable),
+    soldPercent: soldPercentOf(nightsSoldInCapacity, nightsAvailable),
   };
 
   return {
@@ -453,6 +542,6 @@ export function buildStaffInsightsReport({
     rooms: rows,
     totals,
     revenueNote:
-      "Website money counts only nights in this range (prorated from the stay total, or quoted when no total is saved). Channel nights use the website quote for nights in this range — not the OTA payout.",
+      "Booking money is the total saved on each stay, counted only for nights in this range. A stay saved at 0 counts as 0. Channel closures carry no total, so those nights are quoted from your own rates — not the OTA payout.",
   };
 }

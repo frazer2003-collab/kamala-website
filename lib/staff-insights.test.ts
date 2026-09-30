@@ -325,7 +325,7 @@ describe("buildStaffInsightsReport", () => {
     assert.match(report.revenueNote, /website|quote|channel|payout/i);
   });
 
-  it("falls back to quoted nights when a website stay has no saved total", () => {
+  it("honours a stay saved at zero instead of charging the rack rate", () => {
     const report = buildStaffInsightsReport({
       year: 2026,
       month: 7,
@@ -341,8 +341,120 @@ describe("buildStaffInsightsReport", () => {
       channelBlocks: [],
     });
 
-    assert.equal(report.rooms[0]?.websiteRevenue, 2100); // 3 × 700
-    assert.equal(report.rooms[0]?.estimatedRevenue, 2100);
+    assert.equal(report.rooms[0]?.nightsSold, 3);
+    assert.equal(report.rooms[0]?.websiteRevenue, 0);
+    assert.equal(report.rooms[0]?.estimatedRevenue, 0);
+    assert.equal(report.rooms[0]?.recordedStayCount, 1);
+    assert.equal(report.totals.estimatedRevenue, 0);
+    assert.equal(report.totals.recordedStayCount, 1);
+    assert.equal(report.totals.averageNightlyRate, 0);
+  });
+
+  it("uses the entered price even when it undercuts the room's rate", () => {
+    const report = buildStaffInsightsReport({
+      year: 2026,
+      month: 7,
+      rooms,
+      bookings: [
+        booking({
+          roomId: "superior",
+          arrivalDate: "2026-07-01",
+          departureDate: "2026-07-03",
+          estimatedTotal: 1000, // rack rate would be 2 × 700 = 1400
+          bookingSource: "walk-in",
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.rooms[0]?.websiteRevenue, 1000);
+    assert.equal(report.totals.averageNightlyRate, 500);
+  });
+
+  it("ignores day overrides and promotions for stays that carry a total", () => {
+    const report = buildStaffInsightsReport({
+      year: 2026,
+      month: 7,
+      rooms,
+      bookings: [
+        booking({
+          roomId: "superior",
+          arrivalDate: "2026-07-10",
+          departureDate: "2026-07-12",
+          estimatedTotal: 1500,
+        }),
+      ],
+      channelBlocks: [],
+      promotions: [
+        {
+          roomId: "superior",
+          startDate: "2026-07-01",
+          endDate: "2026-07-31",
+          percentOff: 50,
+        },
+      ],
+      rateOverrides: new Map([
+        ["superior:2026-07-10", 9999],
+        ["superior:2026-07-11", 9999],
+      ]),
+    });
+
+    assert.equal(report.rooms[0]?.websiteRevenue, 1500);
+  });
+
+  it("keeps money from stays whose room type was removed from settings", () => {
+    const report = buildStaffInsightsReport({
+      year: 2026,
+      month: 7,
+      rooms,
+      bookings: [
+        booking({
+          roomId: "retired-suite",
+          room: "Garden Suite",
+          arrivalDate: "2026-07-05",
+          departureDate: "2026-07-08",
+          estimatedTotal: 3000,
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    const retired = report.rooms.find((row) => row.roomId === "retired-suite");
+    assert.equal(retired?.roomName, "Garden Suite");
+    assert.equal(retired?.isUnconfigured, true);
+    assert.equal(retired?.nightsSold, 3);
+    assert.equal(retired?.estimatedRevenue, 3000);
+    // Capacity is unknowable once the room type is gone.
+    assert.equal(retired?.nightsAvailable, 0);
+    assert.equal(retired?.soldPercent, null);
+    assert.equal(report.totals.estimatedRevenue, 3000);
+    assert.equal(report.totals.nightsSold, 3);
+    assert.equal(report.rooms.filter((row) => row.isUnconfigured).length, 1);
+    // Its nights earn money but do not count against sellable capacity.
+    assert.equal(report.totals.nightsSoldInCapacity, 0);
+    assert.equal(report.totals.nightsOverCapacity, 0);
+    assert.equal(report.totals.soldPercent, 0);
+  });
+
+  it("leaves removed room types out when their stays miss the range", () => {
+    const report = buildStaffInsightsReport({
+      year: 2026,
+      month: 7,
+      rooms,
+      bookings: [
+        booking({
+          roomId: "retired-suite",
+          room: "Garden Suite",
+          arrivalDate: "2026-05-05",
+          departureDate: "2026-05-08",
+          estimatedTotal: 3000,
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.rooms.some((row) => row.isUnconfigured), false);
+    assert.equal(report.totals.estimatedRevenue, 0);
   });
 
   it("quotes only channel nights that fall inside the month", () => {

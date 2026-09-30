@@ -354,6 +354,16 @@
   text-wrap: pretty;
 }
 
+.staff-sold__row-retired {
+  margin: 0.1rem 0 0;
+  max-width: 48ch;
+  color: var(--color-soft);
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
 .staff-sold__row-money {
   min-width: 0;
   justify-self: end;
