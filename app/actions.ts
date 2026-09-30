@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { after } from "next/server";
 import { createStaffSupabaseClient, type BookingRequestRow } from "@/lib/supabase";
 import { sendGuestBookingEmail, sendStaffBookingEmail } from "@/lib/email";
 import {
@@ -71,6 +72,7 @@ import {
 import { isBankTransferAvailable } from "@/lib/bank-transfer";
 import {
   findUnitAssignmentConflict,
+  getAssignableUnitsForStay,
   getRoomUnitById,
   getStaffRoomUnits,
   hasAssignableUnitForStay,
@@ -1716,7 +1718,6 @@ export async function createWalkInBooking(
 ): Promise<WalkInBookingState> {
   await requireStaffCalendarWrite();
 
-  const month = getValue(formData, "month");
   const roomId = getValue(formData, "room-id");
   const guestName = getValue(formData, "guest-name");
   const guestPhone = getValue(formData, "guest-phone");
@@ -1724,13 +1725,18 @@ export async function createWalkInBooking(
   const arrival = getValue(formData, "arrival");
   const departure = getValue(formData, "departure");
   const staffNote = getValue(formData, "staff-note");
-  const room = await getRoomForBooking(roomId);
   const arrivalDate = parseDate(arrival);
   const departureDate = parseDate(departure);
   const fallbackArrival = arrival || getValue(formData, "date") || "";
 
-  if (!room || !arrivalDate || !departureDate || departureDate <= arrivalDate) {
+  // Field shape first: a typo should never cost a database round trip.
+  if (!arrivalDate || !departureDate || departureDate <= arrivalDate) {
     return walkInError("invalid-dates", formData, fallbackArrival);
+  }
+
+  const nights = countStayNights(arrival, departure);
+  if (nights === null || !isStayLengthAllowed(nights)) {
+    return walkInError("invalid-dates", formData, arrival);
   }
 
   if (guestName.length < 2) {
@@ -1745,40 +1751,40 @@ export async function createWalkInBooking(
     return walkInError("invalid-phone", formData, arrival);
   }
 
-  const nights = countStayNights(arrival, departure);
-  if (nights === null || !isStayLengthAllowed(nights)) {
-    return walkInError("invalid-dates", formData, arrival);
-  }
-
-  const customTotalRaw = getValue(formData, "custom-total").trim();
-  let estimatedTotal: number;
-  if (customTotalRaw) {
-    const customTotal = parseMoneyAmount(customTotalRaw);
-    if (customTotal === null) {
-      return walkInError("invalid-custom-total", formData, arrival);
-    }
-    estimatedTotal = customTotal;
-  } else {
-    const quote = await quoteRoomStay(room.id, room.rate, arrival, departure);
-    estimatedTotal = quote.total;
-  }
-
   const bookingSourceRaw = getValue(formData, "booking-source") || "walk-in";
   const bookingSource = parseBookingSource(bookingSourceRaw);
   if (!bookingSource) {
     return walkInError("invalid-source", formData, arrival);
   }
 
+  const customTotalRaw = getValue(formData, "custom-total").trim();
+  let customTotal: number | null = null;
+  if (customTotalRaw) {
+    customTotal = parseMoneyAmount(customTotalRaw);
+    if (customTotal === null) {
+      return walkInError("invalid-custom-total", formData, arrival);
+    }
+  }
+
+  const room = await getRoomForBooking(roomId);
+  if (!room) {
+    return walkInError("invalid-room", formData, arrival);
+  }
+
   const depositPaid = getValue(formData, "deposit-paid") === "1";
   const paidAt = depositPaid ? new Date().toISOString() : null;
   const requestedRoomUnitId = getValue(formData, "room-unit-id");
 
-  const capacity = await checkStayCapacity(
-    room.id,
-    arrival,
-    departure,
-    room.availableCount,
-  );
+  // Capacity, doors, and pricing are independent reads: one wait, not four.
+  const [capacity, { units }, confirmed, channels, quote] = await Promise.all([
+    checkStayCapacity(room.id, arrival, departure, room.availableCount),
+    getStaffRoomUnits(),
+    getConfirmedBookings(),
+    getChannelReservations(),
+    customTotal === null
+      ? quoteRoomStay(room.id, room.rate, arrival, departure)
+      : Promise.resolve(null),
+  ]);
 
   if (!capacity.ok) {
     if (capacity.reason === "verify-failed") {
@@ -1787,17 +1793,16 @@ export async function createWalkInBooking(
     return walkInError("unavailable", formData, arrival);
   }
 
-  const [{ units }, confirmed, channels] = await Promise.all([
-    getStaffRoomUnits(),
-    getConfirmedBookings(),
-    getChannelReservations(),
-  ]);
+  const estimatedTotal = customTotal ?? quote?.total ?? 0;
   const occupancies = [
     ...confirmed.bookings.map(occupancyFromBooking),
     ...channels.blocks.map(occupancyFromChannelBlock),
   ];
 
   let assignRoomUnitId: string | null = null;
+  // A door staff picked is part of the booking; a door we picked for them is a
+  // convenience, and the two deserve different treatment if assignment fails.
+  let doorWasAutoPicked = false;
   if (requestedRoomUnitId) {
     const unit = getRoomUnitById(units, requestedRoomUnitId);
     if (!unit || !isUnitEligibleForRoom(unit, room.id)) {
@@ -1815,16 +1820,21 @@ export async function createWalkInBooking(
     }
     assignRoomUnitId = requestedRoomUnitId;
   } else {
-    const hasDoor = hasAssignableUnitForStay({
+    // Staff booked the room type, not a door. We already know which doors are
+    // free for these nights, so take the first one instead of saving the stay
+    // as "Needs room #" and making someone assign it again later.
+    const [freeUnit] = getAssignableUnitsForStay({
       units,
       roomId: room.id,
       arrivalDate: arrival,
       departureDate: departure,
       occupancies,
     });
-    if (!hasDoor) {
+    if (!freeUnit) {
       return walkInError("no-assignable-door", formData, arrival);
     }
+    assignRoomUnitId = freeUnit.id;
+    doorWasAutoPicked = true;
   }
 
   const supabase = createStaffSupabaseClient();
@@ -1876,48 +1886,57 @@ export async function createWalkInBooking(
         assignFailed = Boolean(fallbackError);
       }
 
-      if (assignFailed) {
+      if (assignFailed && !doorWasAutoPicked) {
         await supabase.from("booking_requests").delete().eq("id", data.id);
         return walkInError("save-failed", formData, arrival);
       }
+      // A door we chose losing a race does not invalidate the stay. Keep it and
+      // let it surface as "Needs room #" rather than discarding staff's input.
     }
   }
 
   if (guestEmail !== walkInEmailFallback && !isPastCalendarDate(arrival)) {
-    const settings = await getPropertySettings();
-    const propertyName = settings.propertyName || "Kamala";
-    const arrivalLabel = formatBookingEmailDate(arrival);
-    const departureLabel = formatBookingEmailDate(departure);
-    const chatUrl = data.conversation_token
-      ? getGuestChatUrl(data.conversation_token)
-      : null;
-    const body = [
-      `Hello ${guestName},`,
-      "",
-      `Your booking at ${propertyName} is confirmed. We look forward to welcoming you.`,
-      "",
-      `Room: ${room.name}`,
-      `Check-in: ${arrivalLabel}`,
-      `Check-out: ${departureLabel}`,
-      `Nights: ${nights}`,
-      settings.checkInFrom ? `Check-in time: from ${settings.checkInFrom}` : "",
-      "",
-      "If any of these details look wrong, do not reply to this email — click Open conversation below to message us.",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    const conversationToken = data.conversation_token;
+    // The guest confirmation is a side effect of a saved stay, not a step in it.
+    // Sending it after the response keeps the desk from waiting on the mail API
+    // while a guest stands at the counter.
+    after(async () => {
+      const settings = await getPropertySettings();
+      const propertyName = settings.propertyName || "Kamala";
+      const arrivalLabel = formatBookingEmailDate(arrival);
+      const departureLabel = formatBookingEmailDate(departure);
+      const chatUrl = conversationToken
+        ? getGuestChatUrl(conversationToken)
+        : null;
+      const body = [
+        `Hello ${guestName},`,
+        "",
+        `Your booking at ${propertyName} is confirmed. We look forward to welcoming you.`,
+        "",
+        `Room: ${room.name}`,
+        `Check-in: ${arrivalLabel}`,
+        `Check-out: ${departureLabel}`,
+        `Nights: ${nights}`,
+        settings.checkInFrom ? `Check-in time: from ${settings.checkInFrom}` : "",
+        "",
+        "If any of these details look wrong, do not reply to this email — click Open conversation below to message us.",
+      ]
+        .filter(Boolean)
+        .join("\n");
 
-    await sendGuestBookingEmail({
-      to: guestEmail,
-      subject: `Your booking at ${propertyName} is confirmed`,
-      body,
-      chatUrl,
+      await sendGuestBookingEmail({
+        to: guestEmail,
+        subject: `Your booking at ${propertyName} is confirmed`,
+        body,
+        chatUrl,
+      });
     });
   }
 
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
+  revalidatePath("/staff/reservations");
   redirect(
     calendarHrefFromFormData(formData, {
       month: arrival.slice(0, 7),

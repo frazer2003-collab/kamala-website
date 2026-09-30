@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
   createWalkInBooking,
   type WalkInBookingState,
@@ -18,6 +17,14 @@ import {
 } from "@/lib/pricing";
 import { CalendarRangeFields } from "@/components/calendar-range-fields";
 import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS } from "@/lib/stay-dates";
+import {
+  alignDepartureToArrival,
+  departureBoundsForArrival,
+  shiftIsoDate,
+} from "@/lib/walk-in-stay-dates";
+
+/** Longest name the booking_requests row accepts without truncation surprises. */
+const GUEST_NAME_MAX = 120;
 
 type CalendarWalkInFormProps = {
   roomId: string;
@@ -27,7 +34,7 @@ type CalendarWalkInFormProps = {
   monthKey: string;
   fromIso?: string;
   toIso?: string;
-  dayHref: string;
+  onBack: () => void;
   canManage: boolean;
   currency: PropertyCurrency;
   promotions: RoomPromotionRate[];
@@ -37,13 +44,35 @@ type CalendarWalkInFormProps = {
   roomUnitNumber?: string | null;
 };
 
-function addIsoDays(iso: string, days: number) {
-  const date = new Date(`${iso}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+type WalkInFields = {
+  guestName: string;
+  guestPhone: string;
+  guestEmail: string;
+  arrival: string;
+  departure: string;
+  staffNote: string;
+  customTotal: string;
+  bookingSource: BookingSource;
+  depositPaid: boolean;
+  showEmail: boolean;
+  showTotal: boolean;
+};
+
+function fieldsFromValues(values: WalkInBookingState["values"]): WalkInFields {
+  return {
+    guestName: values.guestName,
+    guestPhone: values.guestPhone,
+    guestEmail: values.guestEmail,
+    arrival: values.arrival,
+    departure: values.departure,
+    staffNote: values.staffNote,
+    customTotal: values.customTotal,
+    bookingSource: (values.bookingSource as BookingSource | "") || "walk-in",
+    depositPaid: values.depositPaid,
+    // A returned email or total means the field was open when staff submitted.
+    showEmail: values.showEmail || Boolean(values.guestEmail),
+    showTotal: values.showTotal || Boolean(values.customTotal),
+  };
 }
 
 function walkInErrorCopy(code?: string) {
@@ -56,6 +85,8 @@ function walkInErrorCopy(code?: string) {
       return "Phone needs 7+ digits, or leave blank.";
     case "invalid-email":
       return "Enter a valid email, or leave blank.";
+    case "invalid-room":
+      return "That room type is no longer set up. Reload the calendar and try again.";
     case "invalid-dates":
       return `Pick ${MIN_STAY_NIGHTS}–${MAX_STAY_NIGHTS} nights.`;
     case "invalid-custom-total":
@@ -86,7 +117,7 @@ export function CalendarWalkInForm({
   monthKey,
   fromIso,
   toIso,
-  dayHref,
+  onBack,
   canManage,
   currency,
   promotions,
@@ -103,7 +134,7 @@ export function CalendarWalkInForm({
         guestPhone: "",
         guestEmail: "",
         arrival: date,
-        departure: addIsoDays(date, 1),
+        departure: shiftIsoDate(date, MIN_STAY_NIGHTS),
         staffNote: "",
         customTotal: "",
         bookingSource: "walk-in",
@@ -115,36 +146,71 @@ export function CalendarWalkInForm({
     [date],
   );
   const [state, formAction, pending] = useActionState(createWalkInBooking, initialState);
-  const [arrival, setArrival] = useState(initialState.values.arrival);
-  const [departure, setDeparture] = useState(initialState.values.departure);
-  const [guestName, setGuestName] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
-  const [staffNote, setStaffNote] = useState("");
-  const [customTotal, setCustomTotal] = useState("");
-  const [bookingSource, setBookingSource] = useState<BookingSource>("walk-in");
-  const [depositPaid, setDepositPaid] = useState(false);
-  const [showEmail, setShowEmail] = useState(false);
-  const [showTotal, setShowTotal] = useState(false);
+  const [fields, setFields] = useState(() => fieldsFromValues(initialState.values));
+  const [syncedState, setSyncedState] = useState(state);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const totalRef = useRef<HTMLInputElement>(null);
+  const revealTarget = useRef<"email" | "total" | null>(null);
+
+  // A rejected save returns what staff typed. Adopt it in one update during
+  // render rather than a chain of setState calls in an effect.
+  if (syncedState !== state) {
+    setSyncedState(state);
+    if (state.status !== "idle") {
+      setFields(fieldsFromValues(state.values));
+    }
+  }
+
+  const {
+    arrival,
+    departure,
+    guestName,
+    guestPhone,
+    guestEmail,
+    staffNote,
+    customTotal,
+    bookingSource,
+    depositPaid,
+    showEmail,
+    showTotal,
+  } = fields;
+
+  function setField<Key extends keyof WalkInFields>(
+    key: Key,
+    value: WalkInFields[Key],
+  ) {
+    setFields((current) => ({ ...current, [key]: value }));
+  }
+
+  // The Save button sits below the fields, so a rejected save has to pull
+  // attention back up to the reason rather than leaving the desk guessing.
+  useEffect(() => {
+    if (state.status === "error") {
+      errorRef.current?.focus();
+    }
+  }, [state]);
 
   useEffect(() => {
-    if (state.status === "idle") {
-      return;
+    if (revealTarget.current === "email" && showEmail) {
+      emailRef.current?.focus();
     }
-    setGuestName(state.values.guestName);
-    setGuestPhone(state.values.guestPhone);
-    setGuestEmail(state.values.guestEmail);
-    setArrival(state.values.arrival);
-    setDeparture(state.values.departure);
-    setStaffNote(state.values.staffNote);
-    setCustomTotal(state.values.customTotal);
-    setBookingSource(
-      (state.values.bookingSource as BookingSource | "") || "walk-in",
-    );
-    setDepositPaid(state.values.depositPaid);
-    setShowEmail(state.values.showEmail || Boolean(state.values.guestEmail));
-    setShowTotal(state.values.showTotal || Boolean(state.values.customTotal));
-  }, [state]);
+    if (revealTarget.current === "total" && showTotal) {
+      totalRef.current?.focus();
+    }
+    revealTarget.current = null;
+  }, [showEmail, showTotal]);
+
+  const departureBounds = departureBoundsForArrival(arrival);
+
+  /** Moving arrival carries the chosen night count with it. */
+  function changeArrival(next: string) {
+    setFields((current) => ({
+      ...current,
+      arrival: next,
+      departure: alignDepartureToArrival(next, current.departure, current.arrival),
+    }));
+  }
 
   const quote = useMemo(() => {
     const overrides = new Map(Object.entries(rateOverrides));
@@ -167,6 +233,8 @@ export function CalendarWalkInForm({
   const displayError = actionError || errorMessage;
   const totalHelpId = "walk-in-custom-total-help";
   const emailHelpId = "walk-in-guest-email-help";
+  const errorId = displayError ? "walk-in-error" : undefined;
+  const quoteId = quoteLabel ? "walk-in-quote" : undefined;
   const nameInvalid = state.error === "invalid-name";
   const emailInvalid = state.error === "invalid-email";
   const phoneInvalid = state.error === "invalid-phone";
@@ -192,10 +260,16 @@ export function CalendarWalkInForm({
         below.
         {roomUnitNumber
           ? ` This stay will be assigned to door #${roomUnitNumber}.`
-          : ""}
+          : " A free door for this room type is assigned when you save; you can change it on the stay afterwards."}
       </p>
       {displayError ? (
-        <p className="form-message form-message--error" role="alert">
+        <p
+          className="form-message form-message--error"
+          id={errorId}
+          ref={errorRef}
+          role="alert"
+          tabIndex={-1}
+        >
           {displayError}
         </p>
       ) : null}
@@ -211,12 +285,17 @@ export function CalendarWalkInForm({
         <div className="field-pair">
           <label htmlFor="walk-in-guest-name">Guest</label>
           <input
+            aria-describedby={nameInvalid ? errorId : undefined}
             aria-invalid={nameInvalid || undefined}
+            autoCapitalize="words"
             autoComplete="name"
+            autoFocus
             disabled={!canManage || pending}
             id="walk-in-guest-name"
+            maxLength={GUEST_NAME_MAX}
+            minLength={2}
             name="guest-name"
-            onChange={(event) => setGuestName(event.target.value)}
+            onChange={(event) => setField("guestName", event.target.value)}
             required
             type="text"
             value={guestName}
@@ -225,13 +304,15 @@ export function CalendarWalkInForm({
         <div className="field-pair">
           <label htmlFor="walk-in-guest-phone">Phone</label>
           <input
+            aria-describedby={phoneInvalid ? errorId : undefined}
             aria-invalid={phoneInvalid || undefined}
             autoComplete="tel"
             disabled={!canManage || pending}
             id="walk-in-guest-phone"
             inputMode="tel"
+            maxLength={30}
             name="guest-phone"
-            onChange={(event) => setGuestPhone(event.target.value)}
+            onChange={(event) => setField("guestPhone", event.target.value)}
             type="tel"
             value={guestPhone}
           />
@@ -239,11 +320,12 @@ export function CalendarWalkInForm({
         <div className="field-pair">
           <label htmlFor="walk-in-arrival">Arrival</label>
           <input
+            aria-describedby={datesInvalid ? errorId : undefined}
             aria-invalid={datesInvalid || undefined}
             disabled={!canManage || pending}
             id="walk-in-arrival"
             name="arrival"
-            onChange={(event) => setArrival(event.target.value)}
+            onChange={(event) => changeArrival(event.target.value)}
             required
             type="date"
             value={arrival}
@@ -252,12 +334,17 @@ export function CalendarWalkInForm({
         <div className="field-pair">
           <label htmlFor="walk-in-departure">Departure</label>
           <input
+            aria-describedby={
+              [datesInvalid ? errorId : null, quoteId].filter(Boolean).join(" ") ||
+              undefined
+            }
             aria-invalid={datesInvalid || undefined}
             disabled={!canManage || pending}
             id="walk-in-departure"
-            min={arrival || undefined}
+            max={departureBounds?.max}
+            min={departureBounds?.min}
             name="departure"
-            onChange={(event) => setDeparture(event.target.value)}
+            onChange={(event) => setField("departure", event.target.value)}
             required
             type="date"
             value={departure}
@@ -265,7 +352,7 @@ export function CalendarWalkInForm({
         </div>
 
         {quoteLabel ? (
-          <p className="detail-help" id="walk-in-quote">
+          <p className="detail-help" id={quoteId}>
             Usual rate: <strong>{quoteLabel}</strong>
             {quote.hasPromotion ? " (includes promo nights)" : ""}.
           </p>
@@ -275,13 +362,18 @@ export function CalendarWalkInForm({
           <div className="field-pair">
             <label htmlFor="walk-in-guest-email">Email</label>
             <input
-              aria-describedby={emailHelpId}
+              aria-describedby={
+                [emailInvalid ? errorId : null, emailHelpId]
+                  .filter(Boolean)
+                  .join(" ")
+              }
               aria-invalid={emailInvalid || undefined}
               autoComplete="email"
               disabled={!canManage || pending}
               id="walk-in-guest-email"
               name="guest-email"
-              onChange={(event) => setGuestEmail(event.target.value)}
+              onChange={(event) => setField("guestEmail", event.target.value)}
+              ref={emailRef}
               type="email"
               value={guestEmail}
             />
@@ -295,7 +387,10 @@ export function CalendarWalkInForm({
             <button
               className="button button--quiet"
               disabled={!canManage || pending}
-              onClick={() => setShowEmail(true)}
+              onClick={() => {
+                revealTarget.current = "email";
+                setField("showEmail", true);
+              }}
               type="button"
             >
               Add email
@@ -309,15 +404,20 @@ export function CalendarWalkInForm({
               Stay total (optional, {currency.toUpperCase()})
             </label>
             <input
-              aria-describedby={totalHelpId}
+              aria-describedby={
+                [totalInvalid ? errorId : null, totalHelpId]
+                  .filter(Boolean)
+                  .join(" ")
+              }
               aria-invalid={totalInvalid || undefined}
               disabled={!canManage || pending}
               id="walk-in-custom-total"
               inputMode="decimal"
               min={0}
               name="custom-total"
-              onChange={(event) => setCustomTotal(event.target.value)}
+              onChange={(event) => setField("customTotal", event.target.value)}
               placeholder={quote.nights > 0 ? String(quote.total) : undefined}
+              ref={totalRef}
               step="any"
               type="number"
               value={customTotal}
@@ -332,7 +432,10 @@ export function CalendarWalkInForm({
             <button
               className="button button--quiet"
               disabled={!canManage || pending}
-              onClick={() => setShowTotal(true)}
+              onClick={() => {
+                revealTarget.current = "total";
+                setField("showTotal", true);
+              }}
               type="button"
             >
               Adjust stay total
@@ -344,7 +447,7 @@ export function CalendarWalkInForm({
           <BookingSourceField
             disabled={!canManage || pending}
             id="walk-in-booking-source"
-            onChange={setBookingSource}
+            onChange={(value) => setField("bookingSource", value)}
             value={bookingSource}
           />
           <div className="field-pair field-pair--check">
@@ -354,7 +457,7 @@ export function CalendarWalkInForm({
                 disabled={!canManage || pending}
                 id="walk-in-deposit-paid"
                 name="deposit-paid"
-                onChange={(event) => setDepositPaid(event.target.checked)}
+                onChange={(event) => setField("depositPaid", event.target.checked)}
                 type="checkbox"
                 value="1"
               />
@@ -373,15 +476,21 @@ export function CalendarWalkInForm({
             disabled={!canManage || pending}
             id="walk-in-note"
             name="staff-note"
-            onChange={(event) => setStaffNote(event.target.value)}
+            onChange={(event) => setField("staffNote", event.target.value)}
+            placeholder="Arrival instructions, payment notes, or internal reminders."
             rows={3}
             value={staffNote}
           />
         </div>
         <div className="calendar-day-panel__actions">
-          <Link className="button button--quiet" href={dayHref}>
+          <button
+            className="button button--quiet"
+            disabled={pending}
+            onClick={onBack}
+            type="button"
+          >
             Back
-          </Link>
+          </button>
           <button className="button button--primary" disabled={!canManage || pending} type="submit">
             {pending ? "Saving…" : "Save"}
           </button>

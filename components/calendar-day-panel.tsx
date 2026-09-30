@@ -2,7 +2,7 @@
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   bulkUpdateRoomDayAllotment,
   bulkUpdateRoomDayRate,
@@ -168,9 +168,31 @@ export function CalendarDayPanel({
     date,
     unit: roomUnitId ?? undefined,
   });
-  const rateMenuHref = modeHref(dayHref, "rate-menu");
-  const closeMenuHref = modeHref(dayHref, "close-menu");
-  const errorMessage = getErrorMessage(error, overlap);
+
+  // Steps inside this dialog are local state, not navigation: the staff calendar
+  // page loads six months of bookings, blocks, inventory, and rates, so routing
+  // between steps would re-fetch all of it before staff can type anything.
+  // The page keys this component on the target day, so a new day or a server
+  // redirect remounts it and the step resets on its own.
+  const [activeMode, setActiveMode] = useState(mode);
+  const [showServerError, setShowServerError] = useState(true);
+
+  const goMode = useCallback(
+    (next?: string) => {
+      setActiveMode(next);
+      // A server redirect put the error in the URL for one step; a new step owns
+      // its own errors.
+      setShowServerError(false);
+      window.history.replaceState(
+        null,
+        "",
+        next ? modeHref(dayHref, next) : dayHref,
+      );
+    },
+    [dayHref],
+  );
+
+  const errorMessage = showServerError ? getErrorMessage(error, overlap) : null;
   const fullStatus = (
     <p className="detail-help" role="status">
       Full for <strong>{room.name}</strong>.
@@ -185,7 +207,7 @@ export function CalendarDayPanel({
 
   const doorBit = roomUnitNumber ? ` · #${roomUnitNumber}` : "";
 
-  if (mode === "stays") {
+  if (activeMode === "stays") {
     return (
       <>
         <p className="calendar-day-panel__intro">
@@ -208,24 +230,34 @@ export function CalendarDayPanel({
           {soldOutForNight ? (
             fullStatus
           ) : (
-            <Link className="calendar-day-choice" href={modeHref(dayHref, "walk-in")}>
+            <button
+              className="calendar-day-choice"
+              onClick={() => goMode("walk-in")}
+              type="button"
+            >
               <strong>New booking</strong>
               <span>
                 {roomUnitNumber
                   ? `Assign to #${roomUnitNumber}`
                   : "Walk-in or OTA stay"}
               </span>
-            </Link>
+            </button>
           )}
         </div>
-        <p className="detail-help">
-          <Link href={dayHref}>Back</Link>
-        </p>
+        <div className="calendar-day-panel__actions">
+          <button
+            className="button button--quiet"
+            onClick={() => goMode(undefined)}
+            type="button"
+          >
+            Back
+          </button>
+        </div>
       </>
     );
   }
 
-  if (mode === "rate-menu") {
+  if (activeMode === "rate-menu") {
     return (
       <>
         <p className="calendar-day-panel__intro">
@@ -233,26 +265,40 @@ export function CalendarDayPanel({
           {doorBit} · {formatDisplayDate(date)}
         </p>
         <div className="calendar-day-panel__choices">
-          <Link className="calendar-day-choice" href={modeHref(dayHref, "rate")}>
+          <button
+            className="calendar-day-choice"
+            onClick={() => goMode("rate")}
+            type="button"
+          >
             <strong>{room.name}</strong>
             <span>
               Nightly price for this type
               {hasRateOverride ? ` · now ${currentRate}` : ` · default ${room.rate}`}
             </span>
-          </Link>
-          <Link className="calendar-day-choice" href={modeHref(dayHref, "bulk-rate")}>
+          </button>
+          <button
+            className="calendar-day-choice"
+            onClick={() => goMode("bulk-rate")}
+            type="button"
+          >
             <strong>All room types</strong>
             <span>Set one nightly rate across every type for these dates</span>
-          </Link>
+          </button>
         </div>
-        <p className="detail-help">
-          <Link href={dayHref}>Back</Link>
-        </p>
+        <div className="calendar-day-panel__actions">
+          <button
+            className="button button--quiet"
+            onClick={() => goMode(undefined)}
+            type="button"
+          >
+            Back
+          </button>
+        </div>
       </>
     );
   }
 
-  if (mode === "close-menu") {
+  if (activeMode === "close-menu") {
     return (
       <>
         <p className="calendar-day-panel__intro">
@@ -260,28 +306,39 @@ export function CalendarDayPanel({
           {doorBit} · {formatDisplayDate(date)}
         </p>
         <div className="calendar-day-panel__choices">
-          <Link className="calendar-day-choice" href={modeHref(dayHref, "block")}>
+          <button
+            className="calendar-day-choice"
+            onClick={() => goMode("block")}
+            type="button"
+          >
             <strong>Close {room.name}</strong>
             <span>Not for sale for this type</span>
-          </Link>
-          <Link
+          </button>
+          <button
             className="calendar-day-choice"
-            href={modeHref(dayHref, "bulk-allotment")}
+            onClick={() => goMode("bulk-allotment")}
+            type="button"
           >
             <strong>Bulk allotment</strong>
             <span>Rooms to sell for every room type on these dates</span>
-          </Link>
+          </button>
         </div>
-        <p className="detail-help">
-          <Link href={dayHref}>Back</Link>
-        </p>
+        <div className="calendar-day-panel__actions">
+          <button
+            className="button button--quiet"
+            onClick={() => goMode(undefined)}
+            type="button"
+          >
+            Back
+          </button>
+        </div>
       </>
     );
   }
 
-  if (mode === "allotment" || mode === "bulk-allotment") {
-    const isBulk = mode === "bulk-allotment";
-    const backHref = isBulk ? closeMenuHref : dayHref;
+  if (activeMode === "allotment" || activeMode === "bulk-allotment") {
+    const isBulk = activeMode === "bulk-allotment";
+    const backMode = isBulk ? "close-menu" : undefined;
     return (
       <>
         <p className="calendar-day-panel__intro">
@@ -352,9 +409,13 @@ export function CalendarDayPanel({
             </span>
           </div>
           <div className="calendar-day-panel__actions">
-            <Link className="button button--quiet" href={backHref}>
+            <button
+              className="button button--quiet"
+              onClick={() => goMode(backMode)}
+              type="button"
+            >
               Back
-            </Link>
+            </button>
             <div className="calendar-day-panel__actions-end">
               <button
                 className="button button--quiet"
@@ -385,9 +446,8 @@ export function CalendarDayPanel({
     );
   }
 
-  if (mode === "rate" || mode === "bulk-rate") {
-    const isBulk = mode === "bulk-rate";
-    const backHref = rateMenuHref;
+  if (activeMode === "rate" || activeMode === "bulk-rate") {
+    const isBulk = activeMode === "bulk-rate";
     return (
       <>
         <p className="calendar-day-panel__intro">
@@ -456,9 +516,13 @@ export function CalendarDayPanel({
             </span>
           </div>
           <div className="calendar-day-panel__actions">
-            <Link className="button button--quiet" href={backHref}>
+            <button
+              className="button button--quiet"
+              onClick={() => goMode("rate-menu")}
+              type="button"
+            >
               Back
-            </Link>
+            </button>
             <div className="calendar-day-panel__actions-end">
               <button
                 className="button button--quiet"
@@ -489,14 +553,14 @@ export function CalendarDayPanel({
     );
   }
 
-  if (mode === "walk-in") {
+  if (activeMode === "walk-in") {
     return (
       <CalendarWalkInForm
         canManage={canManage}
         currency={currency}
         date={date}
-        dayHref={dayHref}
         errorMessage={errorMessage}
+        onBack={() => goMode(undefined)}
         fromIso={fromIso}
         monthKey={monthKey}
         promotions={promotions}
@@ -511,7 +575,7 @@ export function CalendarDayPanel({
     );
   }
 
-  if (mode === "block") {
+  if (activeMode === "block") {
     return (
       <>
         <p className="calendar-day-panel__intro">
@@ -572,9 +636,13 @@ export function CalendarDayPanel({
             />
           </div>
           <div className="calendar-day-panel__actions">
-            <Link className="button button--quiet" href={closeMenuHref}>
+            <button
+              className="button button--quiet"
+              onClick={() => goMode("close-menu")}
+              type="button"
+            >
               Back
-            </Link>
+            </button>
             <button className="button button--primary" disabled={!canManage} type="submit">
               Close
             </button>
@@ -612,26 +680,38 @@ export function CalendarDayPanel({
         {soldOutForNight ? (
           fullStatus
         ) : (
-          <Link className="calendar-day-choice" href={modeHref(dayHref, "walk-in")}>
+          <button
+            className="calendar-day-choice"
+            onClick={() => goMode("walk-in")}
+            type="button"
+          >
             <strong>New booking</strong>
             <span>
               {roomUnitNumber
                 ? `Assign to #${roomUnitNumber}`
                 : "Walk-in or OTA stay"}
             </span>
-          </Link>
+          </button>
         )}
-        <Link className="calendar-day-choice" href={rateMenuHref}>
+        <button
+          className="calendar-day-choice"
+          onClick={() => goMode("rate-menu")}
+          type="button"
+        >
           <strong>Change rate</strong>
           <span>
             This type or all types
             {hasRateOverride ? ` · now ${currentRate}` : ""}
           </span>
-        </Link>
-        <Link className="calendar-day-choice" href={closeMenuHref}>
+        </button>
+        <button
+          className="calendar-day-choice"
+          onClick={() => goMode("close-menu")}
+          type="button"
+        >
           <strong>Close date</strong>
           <span>Close this type or set bulk allotment</span>
-        </Link>
+        </button>
       </div>
     </>
   );

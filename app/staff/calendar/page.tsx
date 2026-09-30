@@ -756,6 +756,9 @@ export default async function StaffCalendarPage({
             }
           >
             <CalendarDayPanel
+              // Steps run as local state inside the panel; remount only when the
+              // server actually points it at a different day, door, or step.
+              key={`${selectedRoom.id}|${selectedDate}|${selectedDoorUnit?.id ?? ""}|${mode ?? ""}|${error ?? ""}`}
               canManage={mode === "rate" ? canManageRates : canManage}
               currentAllotment={
                 selectedRoom && selectedDate
