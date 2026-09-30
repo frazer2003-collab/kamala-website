@@ -20,6 +20,10 @@ pnpm-debug.log*
 
 # misc
 .DS_Store
+tsconfig.tsbuildinfo
+
+# browser session scratch (screenshots, previews)
+.playwright-mcp/
 
 # local photo scratch / scrape workspace
 tmp-room-photos/
