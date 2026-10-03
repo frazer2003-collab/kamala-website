@@ -25,6 +25,7 @@ import {
   releaseBookingReservation,
 } from "@/lib/booking-payments";
 import { getBankClaimCardError } from "@/lib/booking-payment-race";
+import { resolveConfirmPaidAt } from "@/lib/booking-confirm";
 import { isStaffCalendarManageableStay } from "@/lib/staff-calendar-stay";
 import { PUBLIC_CACHE_TAGS, revalidatePublicCache } from "@/lib/public-cache";
 import { revalidatePath } from "next/cache";
@@ -1027,10 +1028,12 @@ export async function confirmBookingRequest(formData: FormData) {
   }
 
   const supabase = createStaffSupabaseClient();
-  const confirmedAt =
-    booking.bank_transfer_claimed_at && !booking.deposit_paid_at
-      ? booking.bank_transfer_claimed_at
-      : booking.deposit_paid_at;
+  const confirmedAt = resolveConfirmPaidAt({
+    status: booking.status,
+    depositPaidAt: booking.deposit_paid_at,
+    bankTransferClaimedAt: booking.bank_transfer_claimed_at,
+    now: new Date().toISOString(),
+  });
   await supabase
     .from("booking_requests")
     .update({

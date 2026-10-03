@@ -28,7 +28,7 @@ const COPY: Record<
     title: "Unfinished checkout",
     summary:
       "The guest started booking but has not paid and has not tapped “I've paid” on QR/bank transfer. These dates stay available for other guests.",
-    help: "Cancel if the guest abandoned checkout or asked you to remove the record.",
+    help: "Cancel if the guest abandoned checkout or asked you to remove the record. If their transfer did arrive, use Confirm stay below instead.",
     confirmTitle: "Cancel unfinished checkout",
     confirmSummary: (guest) =>
       `Remove ${guest}'s unfinished booking record. These dates were never held — no payment was received and no email is sent.`,

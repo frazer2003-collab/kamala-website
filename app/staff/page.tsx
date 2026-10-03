@@ -187,7 +187,7 @@ function getMoneyState(booking: StaffBooking) {
     return {
       tone: "muted" as const,
       title: "Checkout not finished",
-      body: "The guest has not paid and has not reported a bank transfer. Dates stay available.",
+      body: "The guest never tapped “I've paid”. Check your bank app — if the transfer arrived you can still confirm the stay. Dates stay available until you do.",
     };
   }
 
@@ -760,41 +760,42 @@ export default async function StaffBookingsPage({
               </div>
 
               {!isClosedConversation ? (
-                selectedCheckoutHold ? (
-                  <StaffCancelHoldPanel
-                    bookingId={selected.databaseId ?? ""}
-                    canManage={canManageSelected}
-                    guestName={selected.guest}
-                    holdKind="unfinished-checkout"
-                  />
-                ) : (
-                  <>
-                    {selectedBankHold ? (
-                      <StaffCancelHoldPanel
-                        bookingId={selected.databaseId ?? ""}
-                        canManage={canManageSelected}
-                        guestName={selected.guest}
-                        holdKind="bank-transfer-hold"
-                      />
-                    ) : null}
-                    <StaffRequestDecisionPanel
-                      alreadyConfirmed={
-                        selected.status === "confirmed" ||
-                        (selected.status === "needs-reply" && selected.depositPaid)
-                      }
+                <>
+                  {selectedCheckoutHold || selectedBankHold ? (
+                    <StaffCancelHoldPanel
                       bookingId={selected.databaseId ?? ""}
                       canManage={canManageSelected}
-                      currency={settings.currency}
-                      depositAmount={selected.depositAmount}
-                      depositPaid={selected.depositPaid}
-                      bankTransferClaimed={selected.bankTransferClaimed}
-                      guestEmail={selected.contact}
                       guestName={selected.guest}
-                      needsReply={selectedNeedsReply}
-                      practiceMode={isPracticeMode}
+                      holdKind={
+                        selectedCheckoutHold
+                          ? "unfinished-checkout"
+                          : "bank-transfer-hold"
+                      }
                     />
-                  </>
-                )
+                  ) : null}
+                  {/*
+                    An unfinished checkout can still be a real transfer the guest
+                    never reported, so staff get Confirm here too — gated on
+                    seeing the money.
+                  */}
+                  <StaffRequestDecisionPanel
+                    alreadyConfirmed={
+                      selected.status === "confirmed" ||
+                      (selected.status === "needs-reply" && selected.depositPaid)
+                    }
+                    bookingId={selected.databaseId ?? ""}
+                    canManage={canManageSelected}
+                    currency={settings.currency}
+                    depositAmount={selected.depositAmount}
+                    depositPaid={selected.depositPaid}
+                    bankTransferClaimed={selected.bankTransferClaimed}
+                    guestEmail={selected.contact}
+                    guestName={selected.guest}
+                    needsReply={selectedNeedsReply}
+                    practiceMode={isPracticeMode}
+                    unclaimedCheckout={selectedCheckoutHold}
+                  />
+                </>
               ) : (
                 <p className="detail-help">
                   This request is closed. Conversation history is read-only.

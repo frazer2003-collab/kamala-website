@@ -33,6 +33,8 @@ type StaffRequestDecisionPanelProps = {
   needsReply?: boolean;
   /** Stay is already confirmed — Confirm/Decline are not available. */
   alreadyConfirmed?: boolean;
+  /** Guest reached the transfer screen but never tapped "I've paid". */
+  unclaimedCheckout?: boolean;
   /** Sample inbox: full decide UI without writing to Supabase or emailing guests. */
   practiceMode?: boolean;
 };
@@ -48,6 +50,7 @@ export function StaffRequestDecisionPanel({
   canManage,
   needsReply = false,
   alreadyConfirmed = false,
+  unclaimedCheckout = false,
   practiceMode = false,
 }: StaffRequestDecisionPanelProps) {
   const depositLabel = formatMoneySuffix(depositAmount, currency);
@@ -57,7 +60,10 @@ export function StaffRequestDecisionPanel({
   const [practiceResult, setPracticeResult] = useState<PracticeResult>(null);
   const [transferVerified, setTransferVerified] = useState(false);
 
-  const needsTransferGate = bankTransferClaimed && !depositPaid && !alreadyConfirmed;
+  // Whether the guest reported the transfer or not, confirming an unpaid stay
+  // means staff have seen the money, so both routes pass the same gate.
+  const needsTransferGate =
+    (bankTransferClaimed || unclaimedCheckout) && !depositPaid && !alreadyConfirmed;
   const confirmBlockedByTransfer = needsTransferGate && !transferVerified;
   const decisionsLocked = alreadyConfirmed;
   const confirmBlocked = decisionsLocked || confirmBlockedByTransfer;
@@ -144,7 +150,9 @@ export function StaffRequestDecisionPanel({
             ? ` They already paid ${depositLabel} — card-paid stays are already on the calendar; Confirm closes the inbox request and emails arrival details.`
             : bankTransferClaimed
               ? " The guest reported a bank transfer; verify it before sending confirmation."
-              : " No payment is on record yet."}
+              : unclaimedCheckout
+                ? ` The guest never tapped “I've paid”, so confirm only once you can see their ${depositLabel} transfer in the bank app. Confirming records it as paid.`
+                : " No payment is on record yet."}
         </p>
         <form
           action={practiceMode ? undefined : confirmBookingRequest}
@@ -279,8 +287,9 @@ export function StaffRequestDecisionPanel({
       ) : null}
       {needsTransferGate ? (
         <p className="staff-decide__summary" role="status">
-          Guest reported a bank transfer — verify it in your bank app before
-          confirming.
+          {bankTransferClaimed
+            ? "Guest reported a bank transfer — verify it in your bank app before confirming."
+            : `Guest never tapped “I've paid”. If their ${depositLabel} transfer arrived, verify it in your bank app and you can still confirm the stay.`}
         </p>
       ) : null}
       {!alreadyConfirmed && !needsReply && !needsTransferGate ? (
