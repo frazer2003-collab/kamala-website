@@ -132,6 +132,7 @@ export function computeGuestNightAvailability({
   staffClosures,
   inventoryLookup,
   units,
+  excludeBookingId,
 }: {
   rooms: Room[];
   fromIso: string;
@@ -141,10 +142,16 @@ export function computeGuestNightAvailability({
   staffClosures: StaffClosure[];
   inventoryLookup: Map<string, number>;
   units: RoomUnit[];
+  /** A guest changing their stay must not be blocked by their own booking. */
+  excludeBookingId?: string;
 }): Record<string, GuestNightStatus> {
   const nights: Record<string, GuestNightStatus> = {};
   if (rooms.length === 0 || toIso < fromIso) {
     return nights;
+  }
+
+  if (excludeBookingId) {
+    bookings = bookings.filter((booking) => booking.databaseId !== excludeBookingId);
   }
 
   const occupancies: UnitOccupancy[] = [

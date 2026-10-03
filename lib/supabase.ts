@@ -50,6 +50,13 @@ export type BookingRequestRow = {
   bed_setup?: string | null;
   discount_code_id?: string | null;
   discount_code_text?: string | null;
+  /** Guest-requested move waiting on a Thai bank top-up that staff must confirm. */
+  pending_room_id?: string | null;
+  pending_arrival_date?: string | null;
+  pending_departure_date?: string | null;
+  pending_balance?: number | null;
+  /** Bank-transfer refund staff still owe the guest after a cheaper change. */
+  refund_due?: number | null;
   created_at: string;
   updated_at: string;
 };

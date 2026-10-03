@@ -210,6 +210,10 @@ export function getGuestChatUrl(token: string) {
   return `${getAppBaseUrl()}${getGuestChatPath(token)}`;
 }
 
+export function getGuestChangeUrl(token: string) {
+  return `${getAppBaseUrl()}/booking/change?token=${encodeURIComponent(token)}`;
+}
+
 export function parseBookingRefFromSubject(subject: string) {
   const match = subject.match(/\[Kamala #([A-F0-9]{8})\]/i);
   return match?.[1]?.toUpperCase() ?? null;
@@ -736,6 +740,7 @@ export async function recordStaffChatMessage({
         roomName: booking.room_name,
         message: trimmed,
         chatUrl: getGuestChatUrl(token),
+        changeUrl: emailKind === "confirmation" ? getGuestChangeUrl(token) : null,
         kind: emailKind,
       });
       emailSent = notify.ok;

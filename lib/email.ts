@@ -2,6 +2,7 @@ import { formatBedSetup, parseBedSetup } from "@/lib/bed-setup";
 import {
   buildGuestChatNotificationCopy,
   buildGuestChatNotificationHtml,
+  guestChangeStayText,
 } from "@/lib/guest-chat-email";
 import {
   guestConversationBlockHtml,
@@ -317,12 +318,128 @@ export async function sendStaffChatNotificationEmail({
   return { ok: true };
 }
 
+export async function sendStaffStayChangeEmail({
+  kind,
+  guestName,
+  guestEmail,
+  roomName,
+  arrivalDate,
+  departureDate,
+  pendingRoomName,
+  pendingArrivalDate,
+  pendingDepartureDate,
+  amountLabel,
+  chatUrl,
+}: {
+  kind: "changed" | "transfer-to-confirm" | "refund-to-send";
+  guestName: string;
+  guestEmail: string;
+  roomName: string;
+  arrivalDate: string;
+  departureDate: string;
+  pendingRoomName: string | null;
+  pendingArrivalDate: string | null;
+  pendingDepartureDate: string | null;
+  amountLabel: string | null;
+  chatUrl: string | null;
+}): Promise<EmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.BOOKING_EMAIL_FROM;
+  const staffRecipients = await getStaffNotificationRecipients();
+
+  if (!apiKey || !from || staffRecipients.length === 0) {
+    return { ok: false, reason: "missing-config" };
+  }
+
+  const copy = {
+    changed: {
+      subject: `Stay changed: ${guestName}`,
+      intro: `${guestName} changed their stay. It is already updated on the calendar.`,
+      next: null,
+    },
+    "transfer-to-confirm": {
+      subject: `Transfer to confirm: ${guestName}`,
+      intro: `${guestName} wants to change their stay and says they sent ${amountLabel ?? "the difference"} by bank transfer.`,
+      next: "Check the transfer, then open Requests and tap Confirm transfer. The stay moves only after you confirm.",
+    },
+    "refund-to-send": {
+      subject: `Refund to send: ${guestName}`,
+      intro: `${guestName} changed to a cheaper stay. Send them ${amountLabel ?? "the difference"} by bank transfer.`,
+      next: "Open Requests and tap Mark refund sent once the money is on its way.",
+    },
+  }[kind];
+
+  const lines: [string, string][] = [
+    ["Guest", `${guestName} (${guestEmail})`],
+    ["Stay", `${roomName}, ${arrivalDate} to ${departureDate}`],
+  ];
+  if (kind === "transfer-to-confirm" && pendingArrivalDate && pendingDepartureDate) {
+    lines.push([
+      "Wants",
+      `${pendingRoomName ?? roomName}, ${pendingArrivalDate} to ${pendingDepartureDate}`,
+    ]);
+  }
+  if (amountLabel) {
+    lines.push([kind === "refund-to-send" ? "Refund" : "Amount", amountLabel]);
+  }
+
+  const text = [
+    copy.intro,
+    "",
+    ...lines.map(([label, value]) => `${label}: ${value}`),
+    copy.next ? "" : null,
+    copy.next,
+    chatUrl ? "" : null,
+    chatUrl ? `Guest conversation: ${chatUrl}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
+
+  const html = `
+    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5;">
+      <p>${escapeHtml(copy.intro)}</p>
+      <table style="border-collapse: collapse; width: 100%; max-width: 560px;">
+        ${lines
+          .map(
+            ([label, value]) =>
+              `<tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`,
+          )
+          .join("")}
+      </table>
+      ${copy.next ? `<p>${escapeHtml(copy.next)}</p>` : ""}
+    </div>
+  `;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: staffRecipients,
+      reply_to: guestEmail,
+      subject: copy.subject,
+      text,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    return { ok: false, reason: "send-failed" };
+  }
+
+  return { ok: true };
+}
+
 export async function sendGuestChatNotificationEmail({
   to,
   guestName,
   roomName,
   message,
   chatUrl,
+  changeUrl = null,
   kind = "new-message",
 }: {
   to: string;
@@ -330,6 +447,8 @@ export async function sendGuestChatNotificationEmail({
   roomName: string;
   message: string;
   chatUrl: string;
+  /** Used only for confirmation emails. */
+  changeUrl?: string | null;
   kind?: "welcome" | "new-message" | "confirmation";
 }): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -346,10 +465,13 @@ export async function sendGuestChatNotificationEmail({
     message,
   });
 
+  const showChangeLink = kind === "confirmation" && Boolean(changeUrl);
   const text = [
     copy.introText,
     message.trim() ? "" : null,
     message.trim() || null,
+    showChangeLink ? "" : null,
+    showChangeLink && changeUrl ? guestChangeStayText(changeUrl) : null,
     "",
     guestConversationBlockText(chatUrl),
   ]
@@ -362,6 +484,7 @@ export async function sendGuestChatNotificationEmail({
     roomName,
     message,
     chatUrl,
+    changeUrl,
   });
 
   const response = await fetch("https://api.resend.com/emails", {

@@ -98,6 +98,21 @@ export function buildGuestChatNotificationCopy(input: {
   };
 }
 
+export const GUEST_CHANGE_STAY_PROMPT = "Need different dates or another room?";
+export const GUEST_CHANGE_STAY_LINK = "Change your stay";
+
+export function guestChangeStayText(changeUrl: string) {
+  return `${GUEST_CHANGE_STAY_PROMPT} ${GUEST_CHANGE_STAY_LINK}:\n${changeUrl}`;
+}
+
+function changeStayHtml(changeUrl: string) {
+  return `
+<p style="margin:20px 0 0;font-family:${EMAIL_FONT_BODY};font-size:15px;line-height:1.55;color:${EMAIL.ink};">
+  ${escapeHtml(GUEST_CHANGE_STAY_PROMPT)}
+  <a href="${escapeHtml(changeUrl)}" target="_blank" style="color:${EMAIL.maroon};font-weight:700;text-decoration:underline;">${escapeHtml(GUEST_CHANGE_STAY_LINK)}</a>
+</p>`.trim();
+}
+
 /** HTML for guest chat / stay emails — hex colors, table layout, maroon pill CTA. */
 export function buildGuestChatNotificationHtml(input: {
   kind: GuestChatEmailKind;
@@ -105,9 +120,12 @@ export function buildGuestChatNotificationHtml(input: {
   roomName: string;
   message: string;
   chatUrl: string;
+  /** Confirmation emails only: link to change dates or room. */
+  changeUrl?: string | null;
 }) {
   const copy = buildGuestChatNotificationCopy(input);
   const showMessage = Boolean(input.message.trim());
+  const changeUrl = input.kind === "confirmation" ? input.changeUrl : null;
 
   const inner = `
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;">
@@ -128,6 +146,7 @@ export function buildGuestChatNotificationHtml(input: {
       ? `<tr><td>${messagePanelHtml(input.message)}</td></tr>`
       : ""
   }
+  ${changeUrl ? `<tr><td>${changeStayHtml(changeUrl)}</td></tr>` : ""}
   <tr>
     <td>
       ${guestConversationBlockHtml(input.chatUrl)}

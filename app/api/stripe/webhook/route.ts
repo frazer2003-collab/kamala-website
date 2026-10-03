@@ -2,6 +2,10 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { canCleanupPendingBooking } from "@/lib/booking-payment-race";
 import { fulfillBookingDeposit } from "@/lib/booking-payments";
+import {
+  applyPaidStayChange,
+  isStayChangePaymentIntent,
+} from "@/lib/guest-stay-change-server";
 import { getStripe } from "@/lib/stripe";
 import { createStaffSupabaseClient } from "@/lib/supabase";
 
@@ -52,6 +56,14 @@ export async function POST(request: Request) {
     event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  if (
+    event.type === "payment_intent.succeeded" &&
+    isStayChangePaymentIntent(event.data.object)
+  ) {
+    const result = await applyPaidStayChange(event.data.object);
+    return NextResponse.json({ received: true, stayChange: result.status });
   }
 
   if (event.type === "payment_intent.succeeded") {

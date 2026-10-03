@@ -35,7 +35,15 @@ type GuestStayCalendarProps = {
   onClose: () => void;
   onChange: (next: { arrival: string; departure: string }) => void;
   todayIso?: string;
+  /** Night-availability endpoint; `from` and `to` are appended. Defaults to the whole property. */
+  availabilityUrl?: string;
+  /** Hint shown while choosing check-in. */
+  fullHint?: string;
+  /** Stop check-out at the first Full night so the whole stay is bookable. */
+  blockFullRanges?: boolean;
 };
+
+const DEFAULT_AVAILABILITY_URL = "/api/guest/night-availability";
 
 type CacheEntry = {
   status: "ok" | "verify-failed";
@@ -57,7 +65,12 @@ function parseMonthFromIso(iso: string) {
   };
 }
 
-function windowForMonth(year: number, month: number, todayIso: string) {
+function windowForMonth(
+  year: number,
+  month: number,
+  todayIso: string,
+  source: string,
+) {
   const start = `${monthKey(year, month)}-01`;
   const daysInMonth = new Date(year, month, 0).getDate();
   const endOfMonth = `${monthKey(year, month)}-${String(daysInMonth).padStart(2, "0")}`;
@@ -80,17 +93,23 @@ function windowForMonth(year: number, month: number, todayIso: string) {
     }
   }
 
-  return { from, to, cacheKey: `${from}|${to}` };
+  return { from, to, cacheKey: `${source}|${from}|${to}` };
 }
 
-async function fetchNightWindow(from: string, to: string): Promise<CacheEntry> {
-  const cached = nightCache.get(`${from}|${to}`);
+async function fetchNightWindow(
+  source: string,
+  from: string,
+  to: string,
+  cacheKey: string,
+): Promise<CacheEntry> {
+  const cached = nightCache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
     return cached;
   }
 
+  const separator = source.includes("?") ? "&" : "?";
   const response = await fetch(
-    `/api/guest/night-availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    `${source}${separator}from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
   );
   if (!response.ok) {
     const failed: CacheEntry = {
@@ -98,7 +117,7 @@ async function fetchNightWindow(from: string, to: string): Promise<CacheEntry> {
       nights: {},
       fetchedAt: Date.now(),
     };
-    nightCache.set(`${from}|${to}`, failed);
+    nightCache.set(cacheKey, failed);
     return failed;
   }
 
@@ -111,7 +130,7 @@ async function fetchNightWindow(from: string, to: string): Promise<CacheEntry> {
     nights: data.nights ?? {},
     fetchedAt: Date.now(),
   };
-  nightCache.set(`${from}|${to}`, entry);
+  nightCache.set(cacheKey, entry);
   return entry;
 }
 
@@ -124,6 +143,9 @@ export function GuestStayCalendar({
   onClose,
   onChange,
   todayIso: todayProp,
+  availabilityUrl = DEFAULT_AVAILABILITY_URL,
+  fullHint = "Dates marked Full have no rooms left that night.",
+  blockFullRanges = false,
 }: GuestStayCalendarProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -174,6 +196,7 @@ export function GuestStayCalendar({
       visible.year,
       visible.month,
       todayIso,
+      availabilityUrl,
     );
 
     const cached = nightCache.get(cacheKey);
@@ -184,7 +207,7 @@ export function GuestStayCalendar({
     }
 
     setLoadStatus("loading");
-    fetchNightWindow(from, to).then((entry) => {
+    fetchNightWindow(availabilityUrl, from, to, cacheKey).then((entry) => {
       if (cancelled) {
         return;
       }
@@ -195,7 +218,7 @@ export function GuestStayCalendar({
     return () => {
       cancelled = true;
     };
-  }, [visible.year, visible.month, todayIso]);
+  }, [visible.year, visible.month, todayIso, availabilityUrl]);
 
   const days = useMemo(
     () => buildCalendarDays(visible.year, visible.month),
@@ -227,6 +250,21 @@ export function GuestStayCalendar({
     [loadStatus, nights],
   );
 
+  const firstFullNightFrom = useCallback(
+    (fromIso: string) => {
+      if (!blockFullRanges || loadStatus !== "ok" || !fromIso) {
+        return null;
+      }
+      return (
+        Object.keys(nights)
+          .filter((iso) => iso >= fromIso && nights[iso] === "full")
+          .sort()[0] ?? null
+      );
+    },
+    [blockFullRanges, loadStatus, nights],
+  );
+  const firstFullAfterArrival = firstFullNightFrom(draftArrival);
+
   function commit(nextArrival: string, nextDeparture: string) {
     setDraftArrival(nextArrival);
     setDraftDeparture(nextDeparture);
@@ -244,9 +282,11 @@ export function GuestStayCalendar({
     setStatusNote(null);
 
     if (picking === "arrival") {
+      const fullAhead = firstFullNightFrom(iso);
       const nextDeparture =
         draftDeparture > addIsoDays(iso, 1) &&
-        draftDeparture <= addIsoDays(iso, MAX_STAY_NIGHTS)
+        draftDeparture <= addIsoDays(iso, MAX_STAY_NIGHTS) &&
+        (!fullAhead || draftDeparture <= fullAhead)
           ? draftDeparture
           : addIsoDays(iso, 1);
       commit(iso, nextDeparture);
@@ -290,7 +330,10 @@ export function GuestStayCalendar({
       // Allow restarting the range from an earlier open night.
       selectable = selectable && !full;
     } else {
-      selectable = selectable && iso <= maxDeparture;
+      selectable =
+        selectable &&
+        iso <= maxDeparture &&
+        (!firstFullAfterArrival || iso <= firstFullAfterArrival);
       // Checkout morning may land on a "full" night cell — still allow it.
     }
 
@@ -341,7 +384,7 @@ export function GuestStayCalendar({
             >
               {statusNote ??
                 (picking === "arrival"
-                  ? "Dates marked Full have no rooms left that night."
+                  ? fullHint
                   : "Check-out can land on a Full morning.")}
             </p>
           </div>

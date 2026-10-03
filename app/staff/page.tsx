@@ -4,6 +4,7 @@ import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form"
 import { StaffCancelHoldPanel } from "@/components/staff-cancel-hold-panel";
 import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
 import { StaffShell } from "@/components/staff-shell";
+import { StaffStayChangePanel } from "@/components/staff-stay-change-panel";
 import {
   getInboxMessagePreviews,
   guestHasConversationLink,
@@ -14,6 +15,7 @@ import {
   getDeclinedBookings,
   getStaffBookingById,
   getStaffBookingRequests,
+  hasStaffStayChangeTask,
   isAbandonedCheckoutHold,
   isUnverifiedBankHold,
   type StaffBooking,
@@ -27,6 +29,7 @@ import {
   parseOverlapDays,
 } from "@/lib/stay-overlap";
 import { formatBedSetup } from "@/lib/bed-setup";
+import { formatStayDateRange } from "@/lib/stay-dates";
 import { formatStayEndReason } from "@/lib/stay-end-reason";
 import type { BookingStatus } from "@/lib/content";
 
@@ -55,6 +58,14 @@ const statusCopy: Record<BookingStatus, string> = {
 };
 
 function getBookingStatusCopy(booking: StaffBooking) {
+  if (booking.pendingStayChange) {
+    return "Transfer to confirm";
+  }
+
+  if ((booking.refundDue ?? 0) > 0) {
+    return "Refund to send";
+  }
+
   if (
     booking.status === "awaiting" &&
     booking.bankTransferClaimed &&
@@ -126,9 +137,14 @@ function sortInboxBookings(
   bookings: StaffBooking[],
   previews: Map<string, InboxMessagePreview>,
 ) {
+  const rank = (booking: StaffBooking) =>
+    hasStaffStayChangeTask(booking)
+      ? (STATUS_SORT.awaiting ?? 9)
+      : (STATUS_SORT[booking.status] ?? 9);
+
   return [...bookings].sort((left, right) => {
-    const leftRank = STATUS_SORT[left.status] ?? 9;
-    const rightRank = STATUS_SORT[right.status] ?? 9;
+    const leftRank = rank(left);
+    const rightRank = rank(right);
     if (leftRank !== rightRank) {
       return leftRank - rightRank;
     }
@@ -158,7 +174,31 @@ function getRowSecondaryLine(
   return `${booking.room} · ${booking.dates}`;
 }
 
+function getStatusTone(booking: StaffBooking): BookingStatus {
+  return hasStaffStayChangeTask(booking) ? "awaiting" : booking.status;
+}
+
+function matchesInboxFilter(booking: StaffBooking, filter: InboxFilter) {
+  if (filter === "all") {
+    return true;
+  }
+  if (filter === "awaiting" && hasStaffStayChangeTask(booking)) {
+    return true;
+  }
+  return booking.status === filter;
+}
+
 function getMoneyState(booking: StaffBooking) {
+  if (hasStaffStayChangeTask(booking)) {
+    return {
+      tone: "warning" as const,
+      title: booking.pendingStayChange ? "Guest change — transfer to check" : "Guest change — refund owed",
+      body: booking.pendingStayChange
+        ? "The guest asked to change their confirmed stay and reported a bank transfer for the difference."
+        : "The guest moved to a cheaper stay that they paid for by bank transfer.",
+    };
+  }
+
   if (booking.bankTransferClaimed && !booking.depositPaid) {
     return {
       tone: "warning" as const,
@@ -205,6 +245,7 @@ export default async function StaffBookingsPage({
     detail?: string;
     overlap?: string;
     "hold-cancelled"?: string;
+    "stay-change"?: string;
   }>;
 }) {
   await requireStaffSession();
@@ -217,6 +258,7 @@ export default async function StaffBookingsPage({
     detail: errorDetail,
     overlap,
     "hold-cancelled": holdCancelled,
+    "stay-change": stayChangeResult,
   } = await searchParams;
   const inboxFilter = parseInboxFilter(filterParam);
   const preferInboxView = viewParam === "inbox";
@@ -237,10 +279,9 @@ export default async function StaffBookingsPage({
   const messagePreviews = await getInboxMessagePreviews(previewIds);
 
   const sortedOpen = sortInboxBookings(staffBookings.bookings, messagePreviews);
-  const visibleOpen =
-    inboxFilter === "all"
-      ? sortedOpen
-      : sortedOpen.filter((booking) => booking.status === inboxFilter);
+  const visibleOpen = sortedOpen.filter((booking) =>
+    matchesInboxFilter(booking, inboxFilter),
+  );
 
   let selected =
     staffBookings.bookings.find(
@@ -280,9 +321,14 @@ export default async function StaffBookingsPage({
   const needsReplyCount = staffBookings.bookings.filter(
     (booking) => booking.status === "needs-reply",
   ).length;
-  const awaitingCount = staffBookings.bookings.filter(
-    (booking) => booking.status === "awaiting",
+  const awaitingCount = staffBookings.bookings.filter((booking) =>
+    matchesInboxFilter(booking, "awaiting"),
   ).length;
+  const selectedStayChangeTask = selected ? hasStaffStayChangeTask(selected) : false;
+  const pendingChangeRoomName = selected?.pendingStayChange
+    ? (rooms.find((room) => room.id === selected.pendingStayChange?.roomId)?.name ??
+      selected.pendingStayChange.roomId)
+    : null;
   const checkoutHoldCount = staffBookings.bookings.filter(isAbandonedCheckoutHold)
     .length;
   const focusDetailOnMobile = Boolean(selected) && !preferInboxView;
@@ -417,6 +463,33 @@ export default async function StaffBookingsPage({
             confirmed — refresh and try again.
           </p>
         ) : null}
+        {error === "stay-change-unavailable" ? (
+          <p className="form-message form-message--error" role="alert">
+            Those nights are no longer free, so the stay was not moved. Message
+            the guest about other dates or refund their transfer.
+          </p>
+        ) : null}
+        {error === "stay-change-missing" || error === "stay-change-stale" ? (
+          <p className="form-message form-message--error" role="alert">
+            That change was already handled or the stay changed since. Refresh
+            and check the calendar.
+          </p>
+        ) : null}
+        {stayChangeResult === "confirmed" ? (
+          <p className="form-message form-message--success" role="status">
+            Transfer confirmed — the stay is moved and the guest has been told.
+          </p>
+        ) : null}
+        {stayChangeResult === "declined" ? (
+          <p className="form-message form-message--success" role="status">
+            Old stay kept — the guest has been told.
+          </p>
+        ) : null}
+        {stayChangeResult === "refund-sent" ? (
+          <p className="form-message form-message--success" role="status">
+            Refund marked as sent — the guest has been told.
+          </p>
+        ) : null}
         {holdCancelled === "1" ? (
           <p className="form-message form-message--success" role="status">
             Booking hold cancelled — dates are available again.
@@ -522,7 +595,7 @@ export default async function StaffBookingsPage({
                           </span>
                         </div>
                         <div
-                          className={`staff-status staff-status--${booking.status}`}
+                          className={`staff-status staff-status--${getStatusTone(booking)}`}
                         >
                           <span aria-hidden="true" />
                           {getBookingStatusCopy(booking)}
@@ -624,7 +697,7 @@ export default async function StaffBookingsPage({
               </Link>
               <div className="reservation-detail__top">
                 <span>{selected.id}</span>
-                <div className={`staff-status staff-status--${selected.status}`}>
+                <div className={`staff-status staff-status--${getStatusTone(selected)}`}>
                   <span aria-hidden="true" />
                   {getBookingStatusCopy(selected)}
                 </div>
@@ -759,7 +832,27 @@ export default async function StaffBookingsPage({
                 </dl>
               </div>
 
-              {!isClosedConversation ? (
+              {selectedStayChangeTask && selected.databaseId ? (
+                <StaffStayChangePanel
+                  bookingId={selected.databaseId}
+                  canManage={canManageSelected}
+                  currency={settings.currency}
+                  guestName={selected.guest}
+                  pending={
+                    selected.pendingStayChange && pendingChangeRoomName
+                      ? {
+                          roomName: pendingChangeRoomName,
+                          dates: formatStayDateRange(
+                            selected.pendingStayChange.arrivalDate,
+                            selected.pendingStayChange.departureDate,
+                          ),
+                          balance: selected.pendingStayChange.balance,
+                        }
+                      : null
+                  }
+                  refundDue={selected.refundDue ?? 0}
+                />
+              ) : !isClosedConversation ? (
                 <>
                   {selectedCheckoutHold || selectedBankHold ? (
                     <StaffCancelHoldPanel

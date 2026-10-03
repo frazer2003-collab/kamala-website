@@ -340,6 +340,19 @@ alter table public.booking_requests
   add column if not exists discount_code_id uuid references public.discount_codes(id) on delete set null,
   add column if not exists discount_code_text text;
 
+alter table public.booking_requests
+  add column if not exists pending_room_id text references public.rooms(id) on delete set null,
+  add column if not exists pending_arrival_date date,
+  add column if not exists pending_departure_date date,
+  add column if not exists pending_balance integer,
+  add column if not exists refund_due integer not null default 0;
+
+alter table public.booking_requests
+  drop constraint if exists booking_requests_refund_due_check;
+
+alter table public.booking_requests
+  add constraint booking_requests_refund_due_check check (refund_due >= 0);
+
 create table if not exists public.property_settings (
   id text primary key default 'default',
   property_name text not null default 'Kamala''s Boutique Guesthouse',

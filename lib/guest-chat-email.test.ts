@@ -62,4 +62,21 @@ describe("guest chat notification email", () => {
     assert.doesNotMatch(html, /oklch/i);
     assert.doesNotMatch(html, /border-left:\s*3px/);
   });
+
+  it("adds the Change your stay link to confirmation emails only", () => {
+    const base = {
+      guestName: "Jongjit",
+      roomName: "Superior Double or Twin Room",
+      message: "See you soon",
+      chatUrl: "https://www.kamalaguesthouse.com/booking/messages?token=abc",
+      changeUrl: "https://www.kamalaguesthouse.com/booking/change?token=abc",
+    };
+
+    const confirmation = buildGuestChatNotificationHtml({ ...base, kind: "confirmation" });
+    assert.match(confirmation, /Change your stay/);
+    assert.match(confirmation, /booking\/change\?token=abc/);
+
+    const message = buildGuestChatNotificationHtml({ ...base, kind: "new-message" });
+    assert.doesNotMatch(message, /Change your stay/);
+  });
 });

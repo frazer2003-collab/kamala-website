@@ -38,6 +38,7 @@ export async function getGuestNightAvailability(
   rooms: Room[],
   fromIso: string,
   toIso: string,
+  options: { excludeBookingId?: string } = {},
 ): Promise<GuestNightAvailabilityResult> {
   if (rooms.length === 0 || toIso < fromIso) {
     return { status: "ok", nights: {} };
@@ -127,6 +128,7 @@ export async function getGuestNightAvailability(
         staffClosures,
         inventoryLookup: buildInventoryLookup(inventoryResult.entries),
         units,
+        excludeBookingId: options.excludeBookingId,
       }),
     };
   } catch {

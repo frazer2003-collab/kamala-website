@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { sendStaffBookingEmail, sendGuestChatNotificationEmail } from "@/lib/email";
 import {
   ensureConversationToken,
+  getGuestChangeUrl,
   getGuestChatUrl,
   guestHasConversationLink,
 } from "@/lib/booking-chat";
@@ -194,6 +195,7 @@ export async function fulfillBookingDeposit({
           ? "Thank you — we received payment for your stay. Kamala will message you here shortly with confirmation of your dates and arrival details."
           : "Thank you — we received payment and your stay is confirmed.\nMessage us here any time about arrival details.",
         chatUrl: getGuestChatUrl(token),
+        changeUrl: overbooked ? null : getGuestChangeUrl(token),
         kind: overbooked ? "welcome" : "confirmation",
       });
     }

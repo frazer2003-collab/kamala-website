@@ -21,11 +21,26 @@ export const PENDING_BOOKING_STATUSES = ["awaiting", "needs-reply", "new"] as co
 export const CALENDAR_BOOKING_FILTER =
   "status.eq.confirmed,deposit_paid_at.not.is.null,bank_transfer_claimed_at.not.is.null";
 
+export type StaffStayChange = {
+  roomId: string;
+  arrivalDate: string;
+  departureDate: string;
+  balance: number;
+};
+
 export type StaffBooking = Booking & {
   databaseId: string | null;
   bankTransferClaimed: boolean;
   stripePaymentIntentId: string | null;
+  /** Guest move waiting on a bank top-up staff must confirm. */
+  pendingStayChange?: StaffStayChange | null;
+  /** Bank refund staff still owe after a cheaper guest change. */
+  refundDue?: number;
 };
+
+export function hasStaffStayChangeTask(booking: StaffBooking) {
+  return Boolean(booking.pendingStayChange) || (booking.refundDue ?? 0) > 0;
+}
 
 export function getStaffBookingKey(booking: StaffBooking) {
   return booking.databaseId ?? booking.id;
@@ -108,6 +123,16 @@ export function mapBookingRequest(
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
     roomNumber: null,
     bedSetup: parseBedSetup(row.bed_setup),
+    pendingStayChange:
+      row.pending_room_id && row.pending_arrival_date && row.pending_departure_date
+        ? {
+            roomId: row.pending_room_id,
+            arrivalDate: row.pending_arrival_date,
+            departureDate: row.pending_departure_date,
+            balance: row.pending_balance ?? 0,
+          }
+        : null,
+    refundDue: row.refund_due ?? 0,
   };
 }
 
@@ -369,15 +394,43 @@ async function fetchBookingsFromSupabase(
   }
 }
 
+/** Confirmed stays with a guest-change transfer to confirm or a refund to send. */
+async function getStayChangeTasks(): Promise<StaffBooking[]> {
+  if (!hasStaffSupabaseConfig()) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await createStaffSupabaseClient()
+      .from("booking_requests")
+      .select("*")
+      .eq("status", "confirmed")
+      .or("pending_room_id.not.is.null,refund_due.gt.0")
+      .order("updated_at", { ascending: false })
+      .limit(50);
+
+    // Columns are missing until supabase/migrate-guest-stay-change.sql runs.
+    if (error || !data) {
+      return [];
+    }
+    return data.map((row) => mapBookingRequest(row));
+  } catch {
+    return [];
+  }
+}
+
 export async function getStaffBookingRequests() {
-  const result = await fetchBookingsFromSupabase(
-    [...PENDING_BOOKING_STATUSES, "pending_payment"],
-    "created_at",
-  );
+  const [result, stayChangeTasks] = await Promise.all([
+    fetchBookingsFromSupabase(
+      [...PENDING_BOOKING_STATUSES, "pending_payment"],
+      "created_at",
+    ),
+    getStayChangeTasks(),
+  ]);
 
   return {
     ...result,
-    bookings: result.bookings.filter(isPendingBooking),
+    bookings: [...stayChangeTasks, ...result.bookings.filter(isPendingBooking)],
   };
 }
 
