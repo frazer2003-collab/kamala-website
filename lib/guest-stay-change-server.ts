@@ -15,6 +15,7 @@ import {
   resolveStayChangePayment,
   type StayChangeEligibility,
   type StayChangeOutcome,
+  type StayChangePayMethod,
 } from "@/lib/guest-stay-change";
 import { resolveBookingStayTotal } from "@/lib/payment-pricing";
 import { getPropertySettings } from "@/lib/property-settings";
@@ -31,8 +32,10 @@ import { parseStayDates } from "@/lib/stay-dates";
 import {
   getStripe,
   getStripeMinimumChargeAmount,
+  hasStripeConfig,
   hasStripeServerConfig,
 } from "@/lib/stripe";
+import { isBankTransferAvailable } from "@/lib/bank-transfer";
 import { createStaffSupabaseClient, type BookingRequestRow } from "@/lib/supabase";
 
 export const STAY_CHANGE_PAYMENT_KIND = "stay-change";
@@ -234,6 +237,16 @@ export async function quoteStayChange(
         stripePaymentIntentId: booking.stripe_payment_intent_id,
       }),
       minimumCardCharge: getStripeMinimumChargeAmount(settings.currency),
+      cardAvailable: hasStripeConfig(),
+      bankAvailable: isBankTransferAvailable(
+        {
+          promptPayId: settings.promptPayId,
+          bankName: settings.bankName,
+          accountName: settings.accountName,
+          accountNumber: settings.accountNumber,
+        },
+        settings.currency,
+      ),
     }),
   };
 }
@@ -331,6 +344,7 @@ const STALE_MESSAGE = "Your stay changed while you were choosing. Reload the pag
 export async function applyStayChange(
   booking: BookingRequestRow,
   quote: Extract<StayChangeQuote, { ok: true }>,
+  method?: StayChangePayMethod,
 ): Promise<ApplyStayChangeResult> {
   const { outcome, room, target } = quote;
 
@@ -398,7 +412,15 @@ export async function applyStayChange(
       return { ok: true, result: "applied" };
     }
 
-    case "pay-bank": {
+    case "pay-more": {
+      const payBy = method ?? outcome.preferred;
+      if (payBy === "card" && outcome.card) {
+        return startCardTopUp(booking, quote, outcome.difference, outcome.card);
+      }
+      if (payBy !== "bank" || !outcome.bank) {
+        return { ok: false, message: "That payment method isn’t available right now. Message us to change your stay." };
+      }
+
       const { data, error } = await createStaffSupabaseClient()
         .from("booking_requests")
         .update({
@@ -420,46 +442,52 @@ export async function applyStayChange(
       await notifyStaff(data, "transfer-to-confirm", outcome.difference);
       return { ok: true, result: "bank-pending" };
     }
+  }
+}
 
-    case "pay-card": {
-      if (!hasStripeServerConfig()) {
-        return { ok: false, message: "Card payments aren’t available right now. Message us to change your stay." };
-      }
-      const settings = await getPropertySettings();
-      try {
-        const intent = await getStripe().paymentIntents.create({
-          amount: outcome.totalDue * 100,
-          currency: getStripeCurrencyCode(settings.currency),
-          receipt_email: booking.guest_email,
-          description: `${settings.propertyName} stay change — ${room.name}`,
-          payment_method_types: ["card"],
-          metadata: {
-            kind: STAY_CHANGE_PAYMENT_KIND,
-            stay_change_booking_id: booking.id,
-            from_room_id: booking.room_id,
-            from_arrival: booking.arrival_date,
-            from_departure: booking.departure_date,
-            to_room_id: target.roomId,
-            to_arrival: target.arrivalDate,
-            to_departure: target.departureDate,
-            new_total: String(outcome.newTotal),
-            stay_difference: String(outcome.difference),
-            bank_charge: String(outcome.surcharge),
-          },
-        });
-        if (!intent.client_secret) {
-          return { ok: false, message: "We couldn’t start the card payment. Please try again." };
-        }
-        return {
-          ok: true,
-          result: "card",
-          clientSecret: intent.client_secret,
-          totalDue: outcome.totalDue,
-        };
-      } catch {
-        return { ok: false, message: "We couldn’t start the card payment. Please try again." };
-      }
+async function startCardTopUp(
+  booking: BookingRequestRow,
+  quote: Extract<StayChangeQuote, { ok: true }>,
+  difference: number,
+  card: { surcharge: number; totalDue: number },
+): Promise<ApplyStayChangeResult> {
+  if (!hasStripeServerConfig()) {
+    return { ok: false, message: "Card payments aren’t available right now. Message us to change your stay." };
+  }
+  const { room, target, newTotal } = quote;
+  const settings = await getPropertySettings();
+  try {
+    const intent = await getStripe().paymentIntents.create({
+      amount: card.totalDue * 100,
+      currency: getStripeCurrencyCode(settings.currency),
+      receipt_email: booking.guest_email,
+      description: `${settings.propertyName} stay change — ${room.name}`,
+      payment_method_types: ["card"],
+      metadata: {
+        kind: STAY_CHANGE_PAYMENT_KIND,
+        stay_change_booking_id: booking.id,
+        from_room_id: booking.room_id,
+        from_arrival: booking.arrival_date,
+        from_departure: booking.departure_date,
+        to_room_id: target.roomId,
+        to_arrival: target.arrivalDate,
+        to_departure: target.departureDate,
+        new_total: String(newTotal),
+        stay_difference: String(difference),
+        bank_charge: String(card.surcharge),
+      },
+    });
+    if (!intent.client_secret) {
+      return { ok: false, message: "We couldn’t start the card payment. Please try again." };
     }
+    return {
+      ok: true,
+      result: "card",
+      clientSecret: intent.client_secret,
+      totalDue: card.totalDue,
+    };
+  } catch {
+    return { ok: false, message: "We couldn’t start the card payment. Please try again." };
   }
 }
 

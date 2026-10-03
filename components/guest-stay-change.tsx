@@ -11,15 +11,17 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   finishGuestCardStayChange,
   quoteGuestStayChange,
   submitGuestStayChange,
   type GuestStayChangeQuote,
 } from "@/app/booking/change/actions";
-import type { BankTransferDetails } from "@/lib/bank-transfer";
+import { hasBankAccountDetails, type BankTransferDetails } from "@/lib/bank-transfer";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
+import type { StayChangePayMethod } from "@/lib/guest-stay-change";
+import { t } from "@/lib/i18n";
 import { buildPromptPayPayload } from "@/lib/promptpay";
 
 const GuestStayCalendar = dynamic(
@@ -52,7 +54,6 @@ type RoomChoice = { id: string; name: string; sleeps: string };
 
 type Phase =
   | { step: "choose" }
-  | { step: "card"; clientSecret: string; totalDue: number }
   | { step: "done"; kind: "applied" | "bank-pending"; showStay: boolean }
   | { step: "finishing" };
 
@@ -106,13 +107,11 @@ function CardTopUpForm({
   currency,
   returnUrl,
   onPaid,
-  onBack,
 }: {
   totalDue: number;
   currency: PropertyCurrency;
   returnUrl: string;
   onPaid: (paymentIntentId: string) => void;
-  onBack: () => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -143,13 +142,15 @@ function CardTopUpForm({
 
   return (
     <form className="stay-change__card" onSubmit={handlePay}>
-      <PaymentElement
-        options={{
-          layout: "tabs",
-          paymentMethodOrder: ["card"],
-          wallets: { applePay: "never", googlePay: "never" },
-        }}
-      />
+      <div className="booking-payment__element">
+        <PaymentElement
+          options={{
+            layout: "tabs",
+            paymentMethodOrder: ["card"],
+            wallets: { applePay: "never", googlePay: "never" },
+          }}
+        />
+      </div>
       {error ? (
         <p className="form-message form-message--error" role="alert">
           {error}
@@ -163,16 +164,212 @@ function CardTopUpForm({
         >
           {isPaying ? "Paying…" : `Pay ${formatMoney(totalDue, currency)}`}
         </button>
-        <button
-          className="button button--quiet"
-          disabled={isPaying}
-          onClick={onBack}
-          type="button"
-        >
-          Back
-        </button>
       </div>
     </form>
+  );
+}
+
+type PayMore = NonNullable<Extract<GuestStayChangeQuote, { ok: true }>["payMore"]>;
+
+/** Checkout-style payment for the extra: bank transfer or card, guest's choice. */
+function PayMorePanel({
+  bankTransfer,
+  currency,
+  onBankSent,
+  onCardPaid,
+  payMore,
+  publishableKey,
+  returnUrl,
+  startPayment,
+}: {
+  bankTransfer: BankTransferDetails | null;
+  currency: PropertyCurrency;
+  onBankSent: () => Promise<string | null>;
+  onCardPaid: (paymentIntentId: string) => void;
+  payMore: PayMore;
+  publishableKey: string | null;
+  returnUrl: string;
+  startPayment: () => Promise<
+    { ok: true; clientSecret: string } | { ok: false; message: string }
+  >;
+}) {
+  const cardOn = Boolean(payMore.card && publishableKey);
+  const bankOn = Boolean(payMore.bank && bankTransfer);
+  const [method, setMethod] = useState<StayChangePayMethod | null>(
+    payMore.preferred === "card" && cardOn
+      ? "card"
+      : bankOn
+        ? "bank"
+        : cardOn
+          ? "card"
+          : null,
+  );
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [cardError, setCardError] = useState<string | null>(null);
+  const [bankError, setBankError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const stripe = useMemo(
+    () => (publishableKey ? getStripePromise(publishableKey) : null),
+    [publishableKey],
+  );
+  const startingCard = method === "card" && !clientSecret && !cardError;
+
+  useEffect(() => {
+    if (!startingCard) {
+      return;
+    }
+    let cancelled = false;
+    void startPayment()
+      .catch(() => ({ ok: false as const, message: "We couldn’t start the card payment. Please try again." }))
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (result.ok) {
+          setClientSecret(result.clientSecret);
+        } else {
+          setCardError(result.message);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [startPayment, startingCard]);
+
+  if (!method) {
+    return (
+      <p className="stay-change__problem">
+        Online payment isn’t available right now. Message us and we’ll arrange the extra.
+      </p>
+    );
+  }
+
+  const options: StripeElementsOptions | null = clientSecret
+    ? { clientSecret, appearance: stripeAppearance }
+    : null;
+
+  return (
+    <div className="booking-payment-shell stay-change__pay">
+      {cardOn && bankOn ? (
+        <div
+          aria-label={t("en", "paymentMethodLabel")}
+          className="booking-payment__method-toggle"
+          role="group"
+        >
+          <button
+            aria-pressed={method === "bank"}
+            className={`booking-payment__method-btn${method === "bank" ? " booking-payment__method-btn--active" : ""}`}
+            onClick={() => setMethod("bank")}
+            type="button"
+          >
+            {t("en", "payWithBankTransfer")}
+          </button>
+          <button
+            aria-pressed={method === "card"}
+            className={`booking-payment__method-btn${method === "card" ? " booking-payment__method-btn--active" : ""}`}
+            onClick={() => {
+              setCardError(null);
+              setMethod("card");
+            }}
+            type="button"
+          >
+            {t("en", "payWithCard")}
+          </button>
+        </div>
+      ) : null}
+
+      <p className="booking-payment-shell__secure">
+        {method === "bank" ? t("en", "bankTransferSecureBadge") : t("en", "paymentSecureBadge")}
+      </p>
+      <p className="booking-payment-shell__trust">
+        {method === "bank" ? t("en", "bankTransferTrust") : t("en", "stripeSecureCheckout")}
+      </p>
+      <p className="booking-payment-shell__legal">
+        {t("en", "paymentTrustPolicies")}{" "}
+        <Link href="/privacy">{t("en", "paymentPrivacyLink")}</Link>
+        {" · "}
+        <Link href="/terms">{t("en", "paymentTermsLink")}</Link>
+      </p>
+
+      {method === "card" && payMore.card ? (
+        <>
+          <div className="booking-payment__charge-lines">
+            <div>
+              <span>Extra for the new stay</span>
+              <span>{formatMoney(payMore.difference, currency)}</span>
+            </div>
+            <div>
+              <span>{t("en", "bankChargeLabel")}</span>
+              <span>{formatMoney(payMore.card.surcharge, currency)}</span>
+            </div>
+            <div className="booking-payment__charge-total">
+              <strong>{t("en", "depositDue")}</strong>
+              <strong>{formatMoney(payMore.card.totalDue, currency)}</strong>
+            </div>
+          </div>
+          {cardError ? (
+            <div className="stay-change__card-error">
+              <p className="form-message form-message--error" role="alert">
+                {cardError}
+              </p>
+              <button
+                className="button button--secondary"
+                onClick={() => setCardError(null)}
+                type="button"
+              >
+                {t("en", "tryCardAgain")}
+              </button>
+            </div>
+          ) : !stripe || !options ? (
+            <p className="booking-summary__hint" aria-live="polite">
+              {t("en", "startingCheckout")}
+            </p>
+          ) : (
+            <Elements key={clientSecret} options={options} stripe={stripe}>
+              <CardTopUpForm
+                currency={currency}
+                onPaid={onCardPaid}
+                returnUrl={returnUrl}
+                totalDue={payMore.card.totalDue}
+              />
+            </Elements>
+          )}
+        </>
+      ) : bankTransfer ? (
+        <>
+          <TransferQr
+            amount={payMore.difference}
+            bankTransfer={bankTransfer}
+            currency={currency}
+          />
+          {bankError ? (
+            <p className="form-message form-message--error" role="alert">
+              {bankError}
+            </p>
+          ) : null}
+          <div className="stay-change__actions">
+            <button
+              className="button button--primary"
+              disabled={isSending}
+              onClick={async () => {
+                setIsSending(true);
+                setBankError(null);
+                const message = await onBankSent();
+                if (message) {
+                  setBankError(message);
+                  setIsSending(false);
+                }
+              }}
+              type="button"
+            >
+              {isSending
+                ? t("en", "bankTransferWaiting")
+                : `I've sent ${formatMoney(payMore.difference, currency)}`}
+            </button>
+          </div>
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -209,28 +406,51 @@ function TransferQr({
   }, [amount, bankTransfer.promptPayId]);
 
   return (
-    <div className="stay-change__transfer">
+    <>
+      <div className="booking-payment__amount-due">
+        <span>{t("en", "depositDue")}</span>
+        <strong>{formatMoney(amount, currency)}</strong>
+      </div>
       {bankTransfer.promptPayId ? (
-        qr ? (
-          <Image
-            alt={`PromptPay QR code for ${formatMoney(amount, currency)}`}
-            className="stay-change__qr"
-            height={280}
-            src={qr}
-            unoptimized
-            width={280}
-          />
-        ) : (
-          <div aria-hidden="true" className="stay-change__qr stay-change__qr--loading" />
-        )
+        <div className="booking-payment__qr">
+          {qr ? (
+            <Image
+              alt={t("en", "promptPayQrAlt")}
+              className="booking-payment__qr-image"
+              height={280}
+              src={qr}
+              unoptimized
+              width={280}
+            />
+          ) : (
+            <p className="booking-summary__hint" aria-live="polite">
+              {t("en", "bankTransferQrLoading")}
+            </p>
+          )}
+          <p className="booking-payment__qr-amount">{formatMoney(amount, currency)}</p>
+          <p className="booking-payment__qr-hint">{t("en", "bankTransferExactAmount")}</p>
+        </div>
       ) : null}
-      {bankTransfer.accountNumber ? (
-        <p className="stay-change__account">
-          {bankTransfer.bankName} · {bankTransfer.accountName} ·{" "}
-          <span className="stay-change__account-number">{bankTransfer.accountNumber}</span>
-        </p>
+      {hasBankAccountDetails(bankTransfer) ? (
+        <div className="booking-payment__account">
+          <p className="booking-payment__account-title">{t("en", "bankTransferAccountTitle")}</p>
+          <dl className="booking-payment__account-details">
+            <div>
+              <dt>{t("en", "bankNameLabel")}</dt>
+              <dd>{bankTransfer.bankName}</dd>
+            </div>
+            <div>
+              <dt>{t("en", "accountNameLabel")}</dt>
+              <dd>{bankTransfer.accountName}</dd>
+            </div>
+            <div>
+              <dt>{t("en", "accountNumberLabel")}</dt>
+              <dd className="booking-payment__account-number">{bankTransfer.accountNumber}</dd>
+            </div>
+          </dl>
+        </div>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -282,10 +502,47 @@ export function GuestStayChange({
   const selectedRoom = rooms.find((room) => room.id === roomId);
   const selectedRoomName = selectedRoom?.name ?? current.roomName;
   const availabilityUrl = `/api/guest/change-availability?token=${encodeURIComponent(token)}&room=${encodeURIComponent(roomId)}`;
-  const stripe = useMemo(
-    () => (publishableKey ? getStripePromise(publishableKey) : null),
-    [publishableKey],
-  );
+  const quotedTotal = quote?.ok ? quote.newTotal : null;
+
+  const startCardPayment = useCallback(async () => {
+    if (quotedTotal === null) {
+      return { ok: false as const, message: "Pick your dates again." };
+    }
+    const result = await submitGuestStayChange(
+      token,
+      { roomId, arrivalDate: arrival, departureDate: departure },
+      quotedTotal,
+      "card",
+    );
+    if (!result.ok) {
+      return result;
+    }
+    if (result.result !== "card") {
+      return { ok: false as const, message: "We couldn’t start the card payment. Please try again." };
+    }
+    return { ok: true as const, clientSecret: result.clientSecret };
+  }, [arrival, departure, quotedTotal, roomId, token]);
+
+  async function sendBankTopUp(): Promise<string | null> {
+    if (quotedTotal === null) {
+      return "Pick your dates again.";
+    }
+    try {
+      const result = await submitGuestStayChange(
+        token,
+        { roomId, arrivalDate: arrival, departureDate: departure },
+        quotedTotal,
+        "bank",
+      );
+      if (!result.ok) {
+        return result.message;
+      }
+      setPhase({ step: "done", kind: "bank-pending", showStay: true });
+      return null;
+    } catch {
+      return "Something went wrong. Your stay is unchanged — please try again.";
+    }
+  }
 
   useEffect(() => {
     if (!returnedPaymentIntent) {
@@ -355,9 +612,7 @@ export function GuestStayChange({
           departureDate: departure,
         });
         setQuoted({ key: selectionKey, quote: fresh });
-      } else if (result.result === "card") {
-        setPhase({ step: "card", clientSecret: result.clientSecret, totalDue: result.totalDue });
-      } else {
+      } else if (result.result !== "card") {
         setPhase({ step: "done", kind: result.result, showStay: true });
       }
     } catch {
@@ -411,38 +666,8 @@ export function GuestStayChange({
     );
   }
 
-  if (phase.step === "card") {
-    return (
-      <div className="stay-change__panel">
-        <h1>Pay the difference</h1>
-        <p className="stay-change__now">
-          {selectedRoomName} · {formatRange(arrival, departure)}
-        </p>
-        {stripe ? (
-          <Elements
-            options={{ clientSecret: phase.clientSecret, appearance: stripeAppearance }}
-            stripe={stripe}
-          >
-            <CardTopUpForm
-              currency={currency}
-              onBack={() => setPhase({ step: "choose" })}
-              onPaid={(id) => void handleCardPaid(id)}
-              returnUrl={`${window.location.origin}/booking/change?token=${encodeURIComponent(token)}`}
-              totalDue={phase.totalDue}
-            />
-          </Elements>
-        ) : (
-          <p className="form-message form-message--error" role="alert">
-            Card payments aren’t available right now. Message us to change your stay.
-          </p>
-        )}
-      </div>
-    );
-  }
-
   const roomLegendId = `${formId}-room`;
   const datesLegendId = `${formId}-dates`;
-  const bankUnavailable = quote?.ok && quote.kind === "pay-bank" && !bankTransfer;
 
   return (
     <div className="stay-change__panel">
@@ -526,20 +751,27 @@ export function GuestStayChange({
               New: {selectedRoomName} · {formatRange(arrival, departure)} ·{" "}
               {nightsLabel(quote.nights)}
             </p>
-            {bankUnavailable ? (
-              <p className="stay-change__problem">
-                This change costs more and needs a bank transfer. Message us and we’ll arrange it.
-              </p>
+            {quote.payMore ? (
+              <>
+                <p className="stay-change__money">
+                  This stay costs {formatMoney(quote.payMore.difference, currency)} more.
+                  Pay by bank transfer or card.
+                </p>
+                <PayMorePanel
+                  bankTransfer={bankTransfer}
+                  currency={currency}
+                  key={selectionKey}
+                  onBankSent={sendBankTopUp}
+                  onCardPaid={(id) => void handleCardPaid(id)}
+                  payMore={quote.payMore}
+                  publishableKey={publishableKey}
+                  returnUrl={`${typeof window === "undefined" ? "" : window.location.origin}/booking/change?token=${encodeURIComponent(token)}`}
+                  startPayment={startCardPayment}
+                />
+              </>
             ) : (
               <>
                 <p className="stay-change__money">{quote.sentence}</p>
-                {quote.kind === "pay-bank" && bankTransfer && quote.transferAmount ? (
-                  <TransferQr
-                    amount={quote.transferAmount}
-                    bankTransfer={bankTransfer}
-                    currency={currency}
-                  />
-                ) : null}
                 {submitError ? (
                   <p className="form-message form-message--error" role="alert">
                     {submitError}

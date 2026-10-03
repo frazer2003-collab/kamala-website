@@ -3,17 +3,24 @@ import { calculateStripeChargeAmount } from "@/lib/payment-pricing";
 /** How the guest paid for the stay they are changing. */
 export type StayChangePayment = "card" | "bank" | "unpaid";
 
+/** How the guest pays the extra for a dearer stay — same choice as checkout. */
+export type StayChangePayMethod = "card" | "bank";
+
+export type StayChangeCardCharge = { surcharge: number; totalDue: number };
+
 export type StayChangeOutcome =
   | { kind: "same"; newTotal: number }
   | { kind: "unpaid"; newTotal: number }
   | {
-      kind: "pay-card";
+      kind: "pay-more";
       newTotal: number;
       difference: number;
-      surcharge: number;
-      totalDue: number;
+      /** Null when card payments are off or the charge is under the processor minimum. */
+      card: StayChangeCardCharge | null;
+      bank: boolean;
+      /** Method shown first: how they paid for the stay, when still offered. */
+      preferred: StayChangePayMethod | null;
     }
-  | { kind: "pay-bank"; newTotal: number; difference: number }
   | { kind: "refund-card"; newTotal: number; difference: number }
   | { kind: "refund-bank"; newTotal: number; difference: number };
 
@@ -67,20 +74,25 @@ export function isSameStay(
 }
 
 /**
- * What changing the stay costs or returns. The card fee applies only to the
- * extra amount charged; a refund returns the stay difference, not the old fee.
- * Card top-ups under the processor minimum are waived rather than blocked.
+ * What changing the stay costs or returns. Extra money can be paid by card
+ * (with the card fee on the extra only) or bank transfer, like checkout.
+ * A refund returns the stay difference on the rail they paid with, not the old fee.
+ * A tiny extra that only a card could take, but is under the card minimum, is waived.
  */
 export function resolveStayChangeOutcome({
   currentTotal,
   newTotal,
   payment,
   minimumCardCharge = 0,
+  cardAvailable = true,
+  bankAvailable = true,
 }: {
   currentTotal: number;
   newTotal: number;
   payment: StayChangePayment;
   minimumCardCharge?: number;
+  cardAvailable?: boolean;
+  bankAvailable?: boolean;
 }): StayChangeOutcome {
   const current = Math.max(0, Math.round(currentTotal));
   const next = Math.max(0, Math.round(newTotal));
@@ -95,19 +107,35 @@ export function resolveStayChangeOutcome({
   }
 
   if (difference > 0) {
-    if (payment === "bank") {
-      return { kind: "pay-bank", newTotal: next, difference };
-    }
     const charge = calculateStripeChargeAmount(difference);
-    if (charge.totalDue < minimumCardCharge) {
+    const underMinimum = charge.totalDue < minimumCardCharge;
+    const card =
+      cardAvailable && !underMinimum
+        ? { surcharge: charge.surcharge, totalDue: charge.totalDue }
+        : null;
+
+    if (!card && !bankAvailable && cardAvailable && underMinimum) {
       return { kind: "same", newTotal: next };
     }
+
+    const preferred: StayChangePayMethod | null =
+      payment === "card" && card
+        ? "card"
+        : payment === "bank" && bankAvailable
+          ? "bank"
+          : bankAvailable
+            ? "bank"
+            : card
+              ? "card"
+              : null;
+
     return {
-      kind: "pay-card",
+      kind: "pay-more",
       newTotal: next,
       difference,
-      surcharge: charge.surcharge,
-      totalDue: charge.totalDue,
+      card,
+      bank: bankAvailable,
+      preferred,
     };
   }
 
@@ -120,6 +148,7 @@ export function resolveStayChangeOutcome({
 export function describeStayChangeOutcome(
   outcome: StayChangeOutcome,
   formatAmount: (amount: number) => string,
+  method?: StayChangePayMethod,
 ): { sentence: string; action: string } {
   switch (outcome.kind) {
     case "same":
@@ -129,16 +158,19 @@ export function describeStayChangeOutcome(
         sentence: `Your new total is ${formatAmount(outcome.newTotal)}.`,
         action: "Update stay",
       };
-    case "pay-card":
-      return {
-        sentence: `Pay ${formatAmount(outcome.difference)} more, plus a ${formatAmount(outcome.surcharge)} card fee.`,
-        action: `Pay ${formatAmount(outcome.totalDue)}`,
-      };
-    case "pay-bank":
+    case "pay-more": {
+      const payBy = method ?? outcome.preferred;
+      if (payBy === "card" && outcome.card) {
+        return {
+          sentence: `Pay ${formatAmount(outcome.difference)} more, plus a ${formatAmount(outcome.card.surcharge)} card fee.`,
+          action: `Pay ${formatAmount(outcome.card.totalDue)}`,
+        };
+      }
       return {
         sentence: `Transfer ${formatAmount(outcome.difference)} more. Your dates change once we see it.`,
         action: `I've sent ${formatAmount(outcome.difference)}`,
       };
+    }
     case "refund-card":
       return {
         sentence: `We refund ${formatAmount(outcome.difference)} to your card.`,

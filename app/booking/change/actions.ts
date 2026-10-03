@@ -1,7 +1,11 @@
 "use server";
 
 import { formatMoney } from "@/lib/currency";
-import { describeStayChangeOutcome } from "@/lib/guest-stay-change";
+import {
+  describeStayChangeOutcome,
+  type StayChangeOutcome,
+  type StayChangePayMethod,
+} from "@/lib/guest-stay-change";
 import {
   applyPaidStayChange,
   applyStayChange,
@@ -18,10 +22,16 @@ export type GuestStayChangeQuote =
       ok: true;
       nights: number;
       newTotal: number;
-      kind: string;
+      kind: StayChangeOutcome["kind"];
       sentence: string;
       action: string;
-      transferAmount: number | null;
+      /** Set when the new stay costs more: the guest picks card or bank, like checkout. */
+      payMore: {
+        difference: number;
+        card: { surcharge: number; totalDue: number } | null;
+        bank: boolean;
+        preferred: StayChangePayMethod | null;
+      } | null;
     }
   | { ok: false; message: string };
 
@@ -58,7 +68,15 @@ export async function quoteGuestStayChange(
     kind: quote.outcome.kind,
     sentence: copy.sentence,
     action: copy.action,
-    transferAmount: quote.outcome.kind === "pay-bank" ? quote.outcome.difference : null,
+    payMore:
+      quote.outcome.kind === "pay-more"
+        ? {
+            difference: quote.outcome.difference,
+            card: quote.outcome.card,
+            bank: quote.outcome.bank,
+            preferred: quote.outcome.preferred,
+          }
+        : null,
   };
 }
 
@@ -66,6 +84,7 @@ export async function submitGuestStayChange(
   token: string,
   target: StayChangeTarget,
   expectedTotal: number,
+  method?: StayChangePayMethod,
 ): Promise<ApplyStayChangeResult> {
   const booking = await loadEligibleStay(token);
   if (!booking) {
@@ -83,7 +102,7 @@ export async function submitGuestStayChange(
     };
   }
 
-  return applyStayChange(booking, quote);
+  return applyStayChange(booking, quote, method);
 }
 
 /** Runs after the card form succeeds (or Stripe redirects back) so the guest sees the result at once. */

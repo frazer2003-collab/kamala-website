@@ -23,39 +23,78 @@ describe("resolveStayChangeOutcome", () => {
     assert.equal(describeStayChangeOutcome(outcome, thb).sentence, "No extra to pay.");
   });
 
-  it("charges a card top-up with the card fee on the difference only", () => {
+  it("offers card and bank for a dearer stay, card fee on the difference only", () => {
     const outcome = resolveStayChangeOutcome({
       currentTotal: 2100,
       newTotal: 2800,
       payment: "card",
     });
     assert.deepEqual(outcome, {
-      kind: "pay-card",
+      kind: "pay-more",
       newTotal: 2800,
       difference: 700,
-      surcharge: 42,
-      totalDue: 742,
+      card: { surcharge: 42, totalDue: 742 },
+      bank: true,
+      preferred: "card",
     });
     assert.equal(describeStayChangeOutcome(outcome, thb).action, "Pay 742 THB");
+    assert.equal(
+      describeStayChangeOutcome(outcome, thb, "bank").action,
+      "I've sent 700 THB",
+    );
   });
 
-  it("waives a card top-up below the processor minimum", () => {
-    const outcome = resolveStayChangeOutcome({
-      currentTotal: 2100,
-      newTotal: 2105,
-      payment: "card",
-      minimumCardCharge: 10,
-    });
-    assert.equal(outcome.kind, "same");
-  });
-
-  it("asks a bank payer to transfer the difference with no fee", () => {
+  it("lets a bank payer pay the extra by card too, bank shown first", () => {
     const outcome = resolveStayChangeOutcome({
       currentTotal: 2100,
       newTotal: 2800,
       payment: "bank",
     });
-    assert.deepEqual(outcome, { kind: "pay-bank", newTotal: 2800, difference: 700 });
+    assert.equal(outcome.kind, "pay-more");
+    assert.equal(outcome.kind === "pay-more" && outcome.preferred, "bank");
+    assert.deepEqual(outcome.kind === "pay-more" && outcome.card, {
+      surcharge: 42,
+      totalDue: 742,
+    });
+  });
+
+  it("falls back to the method that is switched on", () => {
+    const cardOnly = resolveStayChangeOutcome({
+      currentTotal: 2100,
+      newTotal: 2800,
+      payment: "bank",
+      bankAvailable: false,
+    });
+    assert.equal(cardOnly.kind === "pay-more" && cardOnly.preferred, "card");
+
+    const bankOnly = resolveStayChangeOutcome({
+      currentTotal: 2100,
+      newTotal: 2800,
+      payment: "card",
+      cardAvailable: false,
+    });
+    assert.equal(bankOnly.kind === "pay-more" && bankOnly.preferred, "bank");
+    assert.equal(bankOnly.kind === "pay-more" && bankOnly.card, null);
+  });
+
+  it("drops card under the minimum, and waives it when card was the only way", () => {
+    const withBank = resolveStayChangeOutcome({
+      currentTotal: 2100,
+      newTotal: 2105,
+      payment: "card",
+      minimumCardCharge: 10,
+    });
+    assert.equal(withBank.kind === "pay-more" && withBank.card, null);
+    assert.equal(withBank.kind === "pay-more" && withBank.preferred, "bank");
+
+    const cardOnly = resolveStayChangeOutcome({
+      currentTotal: 2100,
+      newTotal: 2105,
+      payment: "card",
+      minimumCardCharge: 10,
+      bankAvailable: false,
+    });
+    assert.equal(cardOnly.kind, "same");
   });
 
   it("refunds a card payer the stay difference", () => {
