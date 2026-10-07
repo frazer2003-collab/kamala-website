@@ -7,10 +7,10 @@ import {
   buildHomePageDescription,
   buildLocationPageFaqJsonLd,
 } from "@/lib/home-seo";
-import { getMetadataBase } from "@/lib/site-metadata";
+import { buildGuestPageMetadata } from "@/lib/site-metadata";
 import { getPropertySettings } from "@/lib/property-settings";
 import {
-  buildThaPhaeMetaDescription,
+  buildThaPhaeLocationDescription,
   isThaPhaeSeoContext,
   THA_PHAE_GATE_GEO,
   THA_PHAE_LOCATION_HEADLINE,
@@ -28,26 +28,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const nearThaPhae = isThaPhaeSeoContext(locationLabel, settings.addressLine);
   const title = nearThaPhae
     ? "Guesthouse near Tha Pae Gate, Chiang Mai"
-    : `Location · ${settings.propertyName}`;
+    : "Location";
   const description = nearThaPhae
-    ? buildThaPhaeMetaDescription(settings.propertyName)
+    ? buildThaPhaeLocationDescription(settings.propertyName)
     : buildHomePageDescription(settings);
-  const metadataBase = getMetadataBase();
 
-  return {
-    title,
-    description,
-    alternates: metadataBase
-      ? { canonical: new URL("/location", metadataBase).toString() }
-      : undefined,
-    openGraph: {
-      title,
-      description,
-      type: "website",
-      siteName: settings.propertyName,
-      url: metadataBase ? new URL("/location", metadataBase).toString() : undefined,
-    },
-  };
+  return buildGuestPageMetadata({ settings, path: "/location", title, description });
 }
 
 export default async function LocationPage() {

@@ -5,6 +5,7 @@ import { PropertyGallery } from "@/components/property-gallery";
 import { SiteFooter } from "@/components/site-footer";
 import { getGuestGallerySections } from "@/lib/gallery-sections";
 import { getPropertySettings } from "@/lib/property-settings";
+import { buildGuestPageMetadata } from "@/lib/site-metadata";
 
 export const revalidate = 300;
 
@@ -13,10 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = settings.showRoomPhotosOnGallery
     ? `Photos of ${settings.propertyName} near Tha Pae Gate — rooms, garden, and the guesthouse.`
     : `Photos of ${settings.propertyName} near Tha Pae Gate — garden and common areas.`;
-  return {
-    title: "Gallery",
-    description,
-  };
+  return buildGuestPageMetadata({ settings, path: "/gallery", title: "Gallery", description });
 }
 
 export default async function GalleryPage() {

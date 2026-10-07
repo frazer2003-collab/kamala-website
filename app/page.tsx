@@ -17,6 +17,7 @@ import { HomePageJsonLd } from "@/components/home-page-json-ld";
 import { resolveHeroImageUrl } from "@/lib/home-hero-media";
 import { buildHomePageJsonLd, buildHomePageMetadata, buildHomePageWebSiteJsonLd } from "@/lib/home-seo";
 import { getPropertySettings } from "@/lib/property-settings";
+import { getMetadataBase } from "@/lib/site-metadata";
 import { hasStripeClientConfig, getStripePublishableKey } from "@/lib/stripe-public";
 import { getPublicRooms } from "@/lib/rooms";
 import { getPublicRoomPromotions } from "@/lib/room-promotions";
@@ -150,7 +151,7 @@ export default async function Home({
   const quotesByRoomId = stayDates
     ? await getBookingQuotesForRooms(rooms, stayDates.arrival, stayDates.departure, promotions)
     : {};
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? null;
+  const appUrl = getMetadataBase()?.origin ?? null;
   const lodgingJsonLd = buildHomePageJsonLd(
     settings,
     rooms,

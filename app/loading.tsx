@@ -7,7 +7,7 @@ export default function Loading() {
       <section className="hero">
         <div>
           <div className="skeleton-line skeleton-line--short" />
-          <h1 className="skeleton-title">{THA_PHAE_PRIMARY_HEADLINE}</h1>
+          <div className="skeleton-title">{THA_PHAE_PRIMARY_HEADLINE}</div>
           <div className="skeleton-line" />
           <div className="skeleton-line skeleton-line--medium" />
         </div>

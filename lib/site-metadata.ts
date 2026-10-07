@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import type { PropertySettings } from "@/lib/property-settings";
 import {
   buildHomePageDescription,
   buildHomePageTitle,
 } from "@/lib/home-seo";
+import { resolveHeroImageUrl } from "@/lib/home-hero-media";
 import { normalizeSiteUrl } from "@/lib/site-url";
 
 export type SiteMetadataCopy = {
@@ -58,4 +60,60 @@ export function getMetadataBase() {
     return undefined;
   }
   return new URL(`${normalizeSiteUrl(appUrl)}/`);
+}
+
+type GuestPageMetadataInput = {
+  settings: PropertySettings;
+  path: string;
+  title: string;
+  description: string;
+  /** Use when `title` already names the property, so the layout template doesn't repeat it. */
+  absoluteTitle?: boolean;
+  metadataBase?: URL;
+};
+
+/**
+ * Guest page metadata with a canonical URL and share card. Page-level
+ * `openGraph` replaces the layout's wholesale, so every field is restated here.
+ */
+export function buildGuestPageMetadata({
+  settings,
+  path,
+  title,
+  description,
+  absoluteTitle = false,
+  metadataBase = getMetadataBase(),
+}: GuestPageMetadataInput): Metadata {
+  const propertyName = settings.propertyName.trim() || "Guesthouse";
+  const fullTitle = absoluteTitle ? title : `${title} · ${propertyName}`;
+  const url = metadataBase ? new URL(path, metadataBase).toString() : undefined;
+  const heroImage = resolveHeroImageUrl(settings.heroImageUrl);
+  const imageUrl =
+    heroImage && heroImage.startsWith("/")
+      ? metadataBase
+        ? new URL(heroImage.slice(1), metadataBase).toString()
+        : undefined
+      : heroImage || undefined;
+  const images = imageUrl ? [{ url: imageUrl, alt: propertyName }] : undefined;
+
+  return {
+    title: absoluteTitle ? { absolute: title } : title,
+    description,
+    alternates: url ? { canonical: url } : undefined,
+    openGraph: {
+      title: fullTitle,
+      description,
+      type: "website",
+      siteName: propertyName,
+      locale: "en_TH",
+      url,
+      images,
+    },
+    twitter: {
+      card: images ? "summary_large_image" : "summary",
+      title: fullTitle,
+      description,
+      images: images?.map((image) => image.url),
+    },
+  };
 }

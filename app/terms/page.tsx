@@ -3,12 +3,19 @@ import Link from "next/link";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { getPropertySettings } from "@/lib/property-settings";
+import { buildGuestPageMetadata } from "@/lib/site-metadata";
 
 /** Booking terms change rarely; staff settings save already revalidatePath's this route. */
 export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Booking terms" };
+  const settings = await getPropertySettings();
+  return buildGuestPageMetadata({
+    settings,
+    path: "/terms",
+    title: "Booking terms",
+    description: `Booking terms for ${settings.propertyName}: payment, check-in times and quiet hours for stays booked on this website.`,
+  });
 }
 
 export default async function TermsPage() {

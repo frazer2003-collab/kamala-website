@@ -88,6 +88,10 @@ export function buildThaPhaeMetaDescription(propertyName: string): string {
   return `${propertyName}: a Chiang Mai guesthouse in the Old City — garden rooms with breakfast, two minutes from ${THAE_PHAE_GATE_NAME}. Book direct.`;
 }
 
+export function buildThaPhaeLocationDescription(propertyName: string): string {
+  return `${propertyName} is on Tha Phae Road Soi 6, about 100 metres from ${THAE_PHAE_GATE_NAME} and across from the Sunday Walking Street. Map and directions.`;
+}
+
 export function buildThaPhaeHeroLede(): string {
   return `A family-run Chiang Mai guesthouse in the Old City. Reserve directly on this website. We are in front of ${THAE_PHAE_GATE_NAME} — just across from the Sunday Walking Street.`;
 }

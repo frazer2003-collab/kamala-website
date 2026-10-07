@@ -15,17 +15,18 @@ import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { getTurnstileSiteKey } from "@/lib/contact-spam";
 import { getPropertySettings } from "@/lib/property-settings";
+import { buildGuestPageMetadata } from "@/lib/site-metadata";
 
 export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
-  const title = `Contact · ${settings.propertyName}`;
-  const description = `Message ${settings.propertyName} by email, or reach us on LINE, WhatsApp, or telephone.`;
-  return {
-    title,
-    description,
-  };
+  return buildGuestPageMetadata({
+    settings,
+    path: "/contact",
+    title: "Contact",
+    description: `Message ${settings.propertyName} by email, or reach us on LINE, WhatsApp, or telephone.`,
+  });
 }
 
 export default async function ContactPage() {

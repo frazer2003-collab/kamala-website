@@ -4,16 +4,19 @@ import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import { ToursCatalog } from "@/components/tours-catalog";
 import { getPropertySettings } from "@/lib/property-settings";
+import { buildGuestPageMetadata } from "@/lib/site-metadata";
 import { getPublicTours } from "@/lib/tours";
 
 export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
-  return {
+  return buildGuestPageMetadata({
+    settings,
+    path: "/tours",
     title: "Tours",
     description: `Chiang Mai tours from ${settings.propertyName} near Tha Pae Gate — temples, cooking, and day trips while you stay.`,
-  };
+  });
 }
 
 export default async function ToursPage() {
