@@ -49,6 +49,13 @@ const nextConfig = {
       bodySizeLimit: "20mb",
     },
   },
+  // Old Wix URLs that Google still shows in search results.
+  async redirects() {
+    return [
+      { source: "/direct-booking", destination: "/", permanent: true },
+      { source: "/photo-gallery", destination: "/gallery", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

@@ -10,6 +10,8 @@ type PropertyLocationProps = {
   showMap?: boolean;
   /** When set, show a working map embed (OpenStreetMap). */
   coordinates?: MapCoordinates | null;
+  /** Business-profile link; defaults to a Google Maps search for the address. */
+  mapsUrl?: string;
 };
 
 function MapPinIcon() {
@@ -37,6 +39,7 @@ export function PropertyLocation({
   contactPhone,
   showMap = true,
   coordinates = null,
+  mapsUrl: mapsUrlOverride,
 }: PropertyLocationProps) {
   if (!addressLine) {
     return (
@@ -49,7 +52,7 @@ export function PropertyLocation({
     );
   }
 
-  const mapsUrl = buildGoogleMapsSearchUrl(addressLine);
+  const mapsUrl = mapsUrlOverride ?? buildGoogleMapsSearchUrl(addressLine);
   const embedUrl = coordinates ? buildMapEmbedUrl(coordinates) : null;
 
   return (

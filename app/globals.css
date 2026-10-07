@@ -1372,6 +1372,9 @@ html.guest-dates-busy .home-sticky-dates {
 }
 
 .location-page__details,
+.location-page__nearby,
+.location-page__arrive,
+.location-page__area,
 .location-page__faq {
   display: grid;
   gap: var(--space-4);
@@ -1380,6 +1383,9 @@ html.guest-dates-busy .home-sticky-dates {
 }
 
 .location-page__details h2,
+.location-page__nearby h2,
+.location-page__arrive h2,
+.location-page__area h2,
 .location-page__faq h2 {
   margin: 0;
   font-size: 1.35rem;
@@ -1425,6 +1431,132 @@ html.guest-dates-busy .home-sticky-dates {
   margin: 0;
   color: var(--color-muted);
   line-height: 1.55;
+}
+
+.location-page__nearby > p,
+.location-page__area p,
+.location-page__faq > p {
+  margin: 0;
+  max-width: 65ch;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.location-page__distances {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface);
+  font-size: 0.95rem;
+}
+
+.location-page__distances th,
+.location-page__distances td {
+  padding: 0.7rem 0.95rem;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.4;
+}
+
+.location-page__distances thead th {
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.location-page__distances tbody tr + tr > * {
+  border-top: 1px solid var(--color-border);
+}
+
+.location-page__distances tbody th {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.location-page__distances td {
+  color: var(--color-muted);
+}
+
+.location-page__distances td:nth-child(2) {
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.location-page__routes {
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.location-page__routes dt {
+  margin: 0 0 0.2rem;
+  font-weight: 750;
+}
+
+.location-page__routes dd {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.location-page__driver {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.95rem 1.05rem;
+  border: 1px solid oklch(48% 0.18 12 / 0.2);
+  border-radius: var(--radius-md);
+  background: var(--color-maroon-wash);
+}
+
+.location-page__driver p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.location-page__driver .location-page__driver-address {
+  color: var(--color-ink);
+  font-size: 1.08rem;
+  line-height: 1.6;
+}
+
+.location-page__driver a {
+  color: var(--color-maroon);
+  text-underline-offset: 0.18em;
+}
+
+@media (max-width: 640px) {
+  .location-page__distances thead {
+    display: none;
+  }
+
+  .location-page__distances tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.15rem var(--space-3);
+    padding: 0.7rem 0.95rem;
+  }
+
+  .location-page__distances tbody tr + tr {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .location-page__distances tbody tr + tr > * {
+    border-top: 0;
+  }
+
+  .location-page__distances th,
+  .location-page__distances td {
+    padding: 0;
+  }
+
+  .location-page__distances td:last-child {
+    grid-column: 1 / -1;
+  }
 }
 
 .gallery-page__intro {

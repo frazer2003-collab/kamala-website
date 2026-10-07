@@ -8,11 +8,14 @@ import { resolveHeroImageUrl } from "@/lib/home-hero-media";
 import { getMetadataBase } from "@/lib/site-metadata";
 import type { PropertySettings } from "@/lib/property-settings";
 import {
-  buildGoogleMapsSearchUrl,
+  buildThaPhaeLocationFaq,
   buildThaPhaeMetaDescription,
+  GUESTHOUSE_GEO,
+  GUESTHOUSE_MAPS_URL,
+  GUESTHOUSE_THAI_NAME,
+  THA_PHAE_THAI_FAQ,
   isThaPhaeSeoContext,
   THAE_PHAE_GATE_NAME,
-  THA_PHAE_GATE_GEO,
   THA_PHAE_PRIMARY_TITLE,
   THA_PHAE_SEO_KEYWORDS,
   toSchemaTime,
@@ -239,14 +242,11 @@ export function buildHomePageJsonLd(
     geo: nearThaPhae
       ? {
           "@type": "GeoCoordinates",
-          latitude: THA_PHAE_GATE_GEO.latitude,
-          longitude: THA_PHAE_GATE_GEO.longitude,
+          latitude: GUESTHOUSE_GEO.latitude,
+          longitude: GUESTHOUSE_GEO.longitude,
         }
       : undefined,
-    hasMap:
-      addressLine?.trim() && nearThaPhae
-        ? buildGoogleMapsSearchUrl(addressLine)
-        : undefined,
+    hasMap: nearThaPhae ? GUESTHOUSE_MAPS_URL : undefined,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
     openingHoursSpecification:
       checkInOpens && checkInCloses
@@ -325,43 +325,55 @@ export function buildHomePageWebSiteJsonLd(
   };
 }
 
-export function buildLocationPageFaqJsonLd(propertyName: string) {
-  return {
+/**
+ * Location page graphs. The LodgingBusiness node reuses the home page `@id`
+ * so Google merges it with the main listing instead of seeing a second business.
+ */
+export function buildLocationPageJsonLd(settings: PropertySettings, appUrl: string | null) {
+  const siteUrl = appUrl?.replace(/\/$/, "") ?? undefined;
+  const faq = [...buildThaPhaeLocationFaq(settings), ...THA_PHAE_THAI_FAQ];
+
+  const faqPage = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "Looking for a Chiang Mai guest house near Tha Pae Gate?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `Yes. ${propertyName} is a Chiang Mai guesthouse on Tha Phae Road Soi 6 — about a two-minute walk from Tha Pae Gate (also spelled Tha Phae / Thapae), just across from the Sunday Walking Street.`,
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Is this one of the guesthouses in Chiang Mai Old City?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `Yes. ${propertyName} is a family-run guesthouse in Chiang Mai Old City, with garden rooms and included breakfast.`,
-        },
-      },
-      {
-        "@type": "Question",
-        name: "How far is Kamala's Boutique Guesthouse from Tha Pae Gate?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Tha Pae Gate is about 100 metres away — roughly a two-minute walk from the guesthouse entrance.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Is the Sunday Walking Street close by?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Yes. The guesthouse sits just across from the Sunday Walking Street route, so evening market walks start almost at the door.",
-        },
-      },
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  };
+
+  if (!siteUrl) {
+    return [faqPage];
+  }
+
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+      { "@type": "ListItem", position: 2, name: "Location", item: `${siteUrl}/location` },
     ],
   };
+
+  const address = parseAddressParts(settings.addressLine);
+  const lodging = {
+    "@context": "https://schema.org",
+    "@type": "LodgingBusiness",
+    "@id": `${siteUrl}/#lodging`,
+    name: settings.propertyName,
+    alternateName: GUESTHOUSE_THAI_NAME,
+    url: `${siteUrl}/`,
+    telephone: settings.contactPhone ?? undefined,
+    address: address ? { "@type": "PostalAddress", ...address } : undefined,
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: GUESTHOUSE_GEO.latitude,
+      longitude: GUESTHOUSE_GEO.longitude,
+    },
+    hasMap: GUESTHOUSE_MAPS_URL,
+    containedInPlace: { "@type": "City", name: "Chiang Mai" },
+  };
+
+  return [faqPage, breadcrumbs, lodging];
 }
