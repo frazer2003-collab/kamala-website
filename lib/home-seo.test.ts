@@ -107,9 +107,8 @@ describe("Tha Pae Gate SEO copy", () => {
       "Chiang Mai guest house",
       "Guesthouse Chiang Mai",
     ]);
-    assert.ok(Array.isArray(jsonLd["@type"]));
-    assert.ok(jsonLd["@type"]?.includes("GuestHouse"));
-    assert.ok(jsonLd["@type"]?.includes("Hotel"));
+    assert.deepEqual(jsonLd["@type"], ["LodgingBusiness", "Organization"]);
+    assert.equal("makesOffer" in jsonLd, false);
     assert.deepEqual(jsonLd.sameAs, [
       "https://line.me/R/ti/p/@example",
       "https://wa.me/66986494996",

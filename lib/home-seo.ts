@@ -173,21 +173,15 @@ export function buildHomePageMetadata(settings: PropertySettings): Metadata {
   };
 }
 
-function roomOfferAvailability(
-  room: Room,
-  availabilityByRoomId?: Record<string, number>,
-): string {
-  const count = availabilityByRoomId?.[room.id] ?? room.availableCount;
-  return count > 0
-    ? "https://schema.org/InStock"
-    : "https://schema.org/SoldOut";
-}
-
+/**
+ * Plain LodgingBusiness on purpose: a `Hotel` type or room `makesOffer` list
+ * opts into Google's Hotel Center price feature, which needs partner IDs and
+ * per-offer check-in data, so the Rich Results Test marks the page invalid.
+ */
 export function buildHomePageJsonLd(
   settings: PropertySettings,
   rooms: Room[],
   appUrl: string | null,
-  availabilityByRoomId?: Record<string, number>,
 ) {
   const { propertyName, addressLine, contactEmail, contactPhone, checkInFrom, checkInUntil } =
     settings;
@@ -221,7 +215,7 @@ export function buildHomePageJsonLd(
 
   return {
     "@context": "https://schema.org",
-    "@type": ["LodgingBusiness", "GuestHouse", "Hotel", "Organization"],
+    "@type": ["LodgingBusiness", "Organization"],
     "@id": siteUrl ? `${siteUrl}/#lodging` : undefined,
     name: propertyName,
     alternateName: [
@@ -304,14 +298,6 @@ export function buildHomePageJsonLd(
             "guesthouse Chiang Mai",
           ]
         : undefined,
-    makesOffer: rooms.map((room) => ({
-      "@type": "Offer",
-      name: room.name,
-      price: room.rate,
-      priceCurrency: settings.currency.toUpperCase(),
-      availability: roomOfferAvailability(room, availabilityByRoomId),
-      url: siteUrl ? `${siteUrl}/#rooms` : undefined,
-    })),
   };
 }
 

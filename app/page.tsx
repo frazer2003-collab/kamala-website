@@ -152,12 +152,7 @@ export default async function Home({
     ? await getBookingQuotesForRooms(rooms, stayDates.arrival, stayDates.departure, promotions)
     : {};
   const appUrl = getMetadataBase()?.origin ?? null;
-  const lodgingJsonLd = buildHomePageJsonLd(
-    settings,
-    rooms,
-    appUrl,
-    availabilityByRoomId,
-  );
+  const lodgingJsonLd = buildHomePageJsonLd(settings, rooms, appUrl);
   const websiteJsonLd = buildHomePageWebSiteJsonLd(settings, appUrl);
   const jsonLd = websiteJsonLd ? [lodgingJsonLd, websiteJsonLd] : lodgingJsonLd;
 
