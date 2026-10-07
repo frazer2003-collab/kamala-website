@@ -176,6 +176,29 @@ export function buildHomePageMetadata(settings: PropertySettings): Metadata {
   };
 }
 
+function resolveLodgingImageUrl(settings: PropertySettings, siteUrl: string | undefined) {
+  const heroImage = resolveHeroImageUrl(settings.heroImageUrl);
+
+  if (!heroImage || !siteUrl) {
+    return undefined;
+  }
+
+  return heroImage.startsWith("/") ? `${siteUrl}${heroImage}` : heroImage;
+}
+
+function buildRoomPriceRange(rooms: Room[]) {
+  const rates = rooms.map((room) => room.rate).filter((rate) => rate > 0);
+
+  if (rates.length === 0) {
+    return undefined;
+  }
+
+  const minRate = Math.min(...rates);
+  const maxRate = Math.max(...rates);
+
+  return minRate === maxRate ? `${minRate} THB` : `${minRate}-${maxRate} THB`;
+}
+
 /**
  * Plain LodgingBusiness on purpose: a `Hotel` type or room `makesOffer` list
  * opts into Google's Hotel Center price feature, which needs partner IDs and
@@ -191,26 +214,10 @@ export function buildHomePageJsonLd(
   const locationLabel = getGuesthouseLocationLabel(addressLine, propertyName);
   const nearThaPhae = isThaPhaeSeoContext(locationLabel, addressLine);
   const address = parseAddressParts(addressLine);
-  const heroImage = resolveHeroImageUrl(settings.heroImageUrl);
   const siteUrl = appUrl?.replace(/\/$/, "") ?? undefined;
-  const imageUrl =
-    heroImage && siteUrl
-      ? heroImage.startsWith("/")
-        ? `${siteUrl}${heroImage}`
-        : heroImage
-      : undefined;
+  const imageUrl = resolveLodgingImageUrl(settings, siteUrl);
   const sameAs = buildSameAsProfiles(settings);
-
-  const rates = rooms.map((room) => room.rate).filter((rate) => rate > 0);
-  const minRate = rates.length > 0 ? Math.min(...rates) : null;
-  const maxRate = rates.length > 0 ? Math.max(...rates) : null;
-
-  const priceRange =
-    minRate && maxRate
-      ? minRate === maxRate
-        ? `${minRate} THB`
-        : `${minRate}-${maxRate} THB`
-      : undefined;
+  const priceRange = buildRoomPriceRange(rooms);
 
   const description = buildHomePageDescription(settings);
   const checkInOpens = toSchemaTime(checkInFrom);
@@ -329,7 +336,11 @@ export function buildHomePageWebSiteJsonLd(
  * Location page graphs. The LodgingBusiness node reuses the home page `@id`
  * so Google merges it with the main listing instead of seeing a second business.
  */
-export function buildLocationPageJsonLd(settings: PropertySettings, appUrl: string | null) {
+export function buildLocationPageJsonLd(
+  settings: PropertySettings,
+  rooms: Room[],
+  appUrl: string | null,
+) {
   const siteUrl = appUrl?.replace(/\/$/, "") ?? undefined;
   const faq = [...buildThaPhaeLocationFaq(settings), ...THA_PHAE_THAI_FAQ];
 
@@ -364,7 +375,9 @@ export function buildLocationPageJsonLd(settings: PropertySettings, appUrl: stri
     name: settings.propertyName,
     alternateName: GUESTHOUSE_THAI_NAME,
     url: `${siteUrl}/`,
+    image: resolveLodgingImageUrl(settings, siteUrl),
     telephone: settings.contactPhone ?? undefined,
+    priceRange: buildRoomPriceRange(rooms),
     address: address ? { "@type": "PostalAddress", ...address } : undefined,
     geo: {
       "@type": "GeoCoordinates",

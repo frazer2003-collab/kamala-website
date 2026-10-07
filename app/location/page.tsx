@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { buildHomePageDescription, buildLocationPageJsonLd } from "@/lib/home-seo";
 import { buildGuestPageMetadata, getMetadataBase } from "@/lib/site-metadata";
 import { getPropertySettings } from "@/lib/property-settings";
+import { getPublicRooms } from "@/lib/rooms";
 import {
   buildThaPhaeLocationDescription,
   buildThaPhaeLocationFaq,
@@ -77,7 +78,8 @@ export default async function LocationPage() {
   }
 
   const faq = buildThaPhaeLocationFaq(settings);
-  const jsonLd = buildLocationPageJsonLd(settings, getMetadataBase()?.origin ?? null);
+  const rooms = await getPublicRooms();
+  const jsonLd = buildLocationPageJsonLd(settings, rooms, getMetadataBase()?.origin ?? null);
 
   return (
     <main className="guest-site site-shell guest-page location-page">

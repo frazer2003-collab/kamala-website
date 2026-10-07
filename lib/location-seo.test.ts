@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import robots from "../app/robots";
 import { buildHomePageJsonLd, buildLocationPageJsonLd } from "./home-seo";
 import { buildLlmsFaqSection, buildLlmsLocationSection } from "./llms-text";
+import type { Room } from "./content";
 import type { PropertySettings } from "./property-settings";
 import {
   buildThaPhaeLocationDescription,
@@ -23,6 +24,7 @@ const settings = {
 } as PropertySettings;
 
 const site = "https://www.kamalaguesthouse.com";
+const rooms = [{ rate: 900 }, { rate: 1500 }] as Room[];
 
 describe("location page SEO", () => {
   it("keeps the title and description within SERP lengths", () => {
@@ -32,7 +34,7 @@ describe("location page SEO", () => {
   });
 
   it("publishes every visible FAQ answer in the FAQPage graph", () => {
-    const [faqPage] = buildLocationPageJsonLd(settings, site) as unknown as [
+    const [faqPage] = buildLocationPageJsonLd(settings, rooms, site) as unknown as [
       { mainEntity: { name: string; acceptedAnswer: { text: string } }[] },
     ];
     const visible = [...buildThaPhaeLocationFaq(settings), ...THA_PHAE_THAI_FAQ];
@@ -51,11 +53,13 @@ describe("location page SEO", () => {
   });
 
   it("links the location business to the home page listing and the real pin", () => {
-    const graphs = buildLocationPageJsonLd(settings, site) as Record<string, unknown>[];
+    const graphs = buildLocationPageJsonLd(settings, rooms, site) as Record<string, unknown>[];
     const lodging = graphs.find((graph) => graph["@type"] === "LodgingBusiness");
-    const home = buildHomePageJsonLd(settings, [], site);
+    const home = buildHomePageJsonLd(settings, rooms, site);
 
     assert.equal(lodging?.["@id"], home["@id"]);
+    assert.equal(lodging?.image, home.image);
+    assert.equal(lodging?.priceRange, "900-1500 THB");
     assert.deepEqual(lodging?.geo, {
       "@type": "GeoCoordinates",
       latitude: GUESTHOUSE_GEO.latitude,
