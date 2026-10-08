@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
     settings,
     path: "/contact",
     title: "Contact",
-    description: `Message ${settings.propertyName} by email, or reach us on LINE, WhatsApp, or telephone.`,
+    description: `Contact ${settings.propertyName}, a pet-friendly Thai traditional style guesthouse near Tha Phae Gate, by email, LINE, WhatsApp or phone.`,
   });
 }
 

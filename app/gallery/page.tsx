@@ -12,9 +12,15 @@ export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPropertySettings();
   const description = settings.showRoomPhotosOnGallery
-    ? `Photos of ${settings.propertyName} near Tha Pae Gate — rooms, garden, and the guesthouse.`
-    : `Photos of ${settings.propertyName} near Tha Pae Gate — garden and common areas.`;
-  return buildGuestPageMetadata({ settings, path: "/gallery", title: "Gallery", description });
+    ? `Photos of ${settings.propertyName}, a pet-friendly Thai traditional style guesthouse near Tha Pae Gate: wooden rooms, garden and courtyard.`
+    : `Photos of ${settings.propertyName}, a pet-friendly Thai traditional style guesthouse near Tha Pae Gate: garden and courtyard.`;
+  return buildGuestPageMetadata({
+    settings,
+    path: "/gallery",
+    title: "Photos: Thai Traditional Style Guesthouse, Chiang Mai",
+    description,
+    absoluteTitle: true,
+  });
 }
 
 export default async function GalleryPage() {

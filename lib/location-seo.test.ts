@@ -31,6 +31,22 @@ describe("location page SEO", () => {
     assert.ok(THA_PHAE_LOCATION_TITLE.length <= 60, `title ${THA_PHAE_LOCATION_TITLE.length}`);
     const description = buildThaPhaeLocationDescription(settings.propertyName);
     assert.ok(description.length <= 160, `description ${description.length}`);
+    assert.match(THA_PHAE_LOCATION_TITLE, /Pet-Friendly/);
+    assert.match(description, /pet-friendly/);
+    assert.match(description, /Thai traditional style/);
+  });
+
+  it("answers pet and style questions in both languages and in the business schema", () => {
+    const english = buildThaPhaeLocationFaq(settings).map((item) => item.question);
+    assert.ok(english.includes("Is the guesthouse pet friendly?"));
+    assert.ok(english.includes("What style is the guesthouse?"));
+    assert.ok(THA_PHAE_THAI_FAQ.some((item) => item.answer.includes("Pet Friendly")));
+    assert.ok(THA_PHAE_THAI_FAQ.some((item) => item.answer.includes("สไตล์ไทยดั้งเดิม")));
+
+    const graphs = buildLocationPageJsonLd(settings, rooms, site) as Record<string, unknown>[];
+    const lodging = graphs.find((graph) => graph["@type"] === "LodgingBusiness");
+    assert.equal(lodging?.petsAllowed, true);
+    assert.match(String(lodging?.description), /Thai traditional style/);
   });
 
   it("publishes every visible FAQ answer in the FAQPage graph", () => {

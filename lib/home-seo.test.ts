@@ -44,8 +44,24 @@ describe("Tha Pae Gate SEO copy", () => {
     );
     assert.match(title, /Chiang Mai Guesthouse/i);
     assert.match(title, /Thae Phae Gate/i);
+    assert.match(title, /Pet-Friendly/i);
     assert.match(description, /Chiang Mai guesthouse/i);
+    assert.match(description, /pet-friendly/i);
+    assert.match(description, /Thai traditional style/i);
     assert.match(description, /Book direct/i);
+    assert.doesNotMatch(description, /[\u2013\u2014]/);
+  });
+
+  it("declares pets and the Thai traditional style in the lodging schema", () => {
+    const jsonLd = buildHomePageJsonLd(thaPhaeSettings, [], "https://kamalaguesthouse.com");
+    assert.equal(jsonLd.petsAllowed, true);
+    assert.match(jsonLd.description, /pet-friendly/i);
+    assert.match(jsonLd.description, /Thai traditional style/i);
+    const amenities = jsonLd.amenityFeature.map((feature) => feature.name);
+    assert.ok(amenities.includes("Pets allowed"));
+    assert.ok(amenities.some((name) => /Thai traditional style/i.test(name)));
+    assert.match(buildThaPhaeStayStoryLede(thaPhaeSettings.propertyName), /Thai traditional style/);
+    assert.match(buildThaPhaeStayStoryLede(thaPhaeSettings.propertyName), /pets/i);
   });
 
   it("uses a host-voiced H1 and a natural hero lede that names a Chiang Mai guesthouse", () => {

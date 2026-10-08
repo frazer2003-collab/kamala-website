@@ -2,6 +2,7 @@ import { getPropertySettings } from "@/lib/property-settings";
 import { buildHomePageDescription } from "@/lib/home-seo";
 import { buildLlmsLocationSection } from "@/lib/llms-text";
 import { getMetadataBase } from "@/lib/site-metadata";
+import { GUESTHOUSE_PET_POLICY, GUESTHOUSE_STYLE } from "@/lib/tha-phae-seo";
 
 export const revalidate = 3600;
 
@@ -14,11 +15,13 @@ export async function GET() {
 
 > ${description}
 
-${settings.propertyName} is a family-run Chiang Mai guesthouse (also written guest house) at the edge of the Old City, near Tha Phae Gate (also spelled Tha Pae / Thapae). Guests book rooms directly on this website.
+${settings.propertyName} is a family-run, pet-friendly, ${GUESTHOUSE_STYLE} Chiang Mai guesthouse (also written guest house) at the edge of the Old City, near Tha Phae Gate (also spelled Tha Pae / Thapae). Guests book rooms directly on this website.
 
 ## At a glance
 
 - Type: family-run garden guesthouse (guest house) by Chiang Mai Old City
+- Style: ${GUESTHOUSE_STYLE}, with wooden rooms around a courtyard garden
+- Pets: ${GUESTHOUSE_PET_POLICY}
 - Area: Tha Phae Road Soi 6, Changklan, about a two-minute walk to Tha Phae Gate
 - Nearby: Sunday Walking Street starts at the gate; Night Bazaar and Warorot Market about 10 to 12 minutes on foot
 - Breakfast: included with rooms booked on this site
@@ -30,9 +33,9 @@ More detail, including common questions in English and Thai: ${base}/llms-full.t
 
 ## Main pages
 
-- [Home](${base}/): Chiang Mai guesthouse rooms near Tha Phae Gate
+- [Home](${base}/): Pet-friendly, ${GUESTHOUSE_STYLE} Chiang Mai guesthouse rooms near Tha Phae Gate
 - [Location](${base}/location): Map, distances, getting here from the airport, FAQ in English and Thai
-- [Gallery](${base}/gallery): Photos of the guesthouse and rooms
+- [Gallery](${base}/gallery): Photos of the ${GUESTHOUSE_STYLE} rooms, garden and courtyard
 - [Tours](${base}/tours): Local Chiang Mai experiences
 - [Contact](${base}/contact): Message the house
 - [Privacy](${base}/privacy)

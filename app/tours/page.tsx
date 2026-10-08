@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
     settings,
     path: "/tours",
     title: "Tours",
-    description: `Chiang Mai tours from ${settings.propertyName} near Tha Pae Gate — temples, cooking, and day trips while you stay.`,
+    description: `Chiang Mai tours from ${settings.propertyName}, a pet-friendly Thai traditional style guesthouse near Tha Pae Gate: temples, cooking and day trips.`,
   });
 }
 

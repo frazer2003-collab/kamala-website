@@ -8,10 +8,12 @@ import { resolveHeroImageUrl } from "@/lib/home-hero-media";
 import { getMetadataBase } from "@/lib/site-metadata";
 import type { PropertySettings } from "@/lib/property-settings";
 import {
+  buildThaPhaeLocationDescription,
   buildThaPhaeLocationFaq,
   buildThaPhaeMetaDescription,
   GUESTHOUSE_GEO,
   GUESTHOUSE_MAPS_URL,
+  GUESTHOUSE_STYLE,
   GUESTHOUSE_THAI_NAME,
   THA_PHAE_THAI_FAQ,
   isThaPhaeSeoContext,
@@ -78,10 +80,10 @@ export function buildHomePageDescription(settings: PropertySettings): string {
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `Book ${propertyName} — a Chiang Mai guesthouse in the Old City with breakfast included. Request dates here and we reply to confirm.`;
+    return `Book ${propertyName}, a pet-friendly, ${GUESTHOUSE_STYLE} Chiang Mai guesthouse in the Old City with breakfast included. Book direct.`;
   }
 
-  return `Book a room at ${propertyName} in ${locationLabel}. Garden rooms, breakfast included — request dates on this site and staff confirm every stay.`;
+  return `Book ${propertyName}, a pet-friendly, ${GUESTHOUSE_STYLE} guesthouse in ${locationLabel}. Garden rooms and breakfast included. Book direct.`;
 }
 
 function buildOpenGraphImageAlt(settings: PropertySettings): string {
@@ -91,14 +93,14 @@ function buildOpenGraphImageAlt(settings: PropertySettings): string {
   );
 
   if (isThaPhaeSeoContext(locationLabel, settings.addressLine)) {
-    return `${settings.propertyName} — Chiang Mai guesthouse near ${THAE_PHAE_GATE_NAME}`;
+    return `${settings.propertyName}, a pet-friendly ${GUESTHOUSE_STYLE} guesthouse near ${THAE_PHAE_GATE_NAME}, Chiang Mai`;
   }
 
   if (isChiangMaiLocation(locationLabel)) {
-    return `${settings.propertyName} — garden guesthouse in Chiang Mai Old City`;
+    return `${settings.propertyName}, a pet-friendly ${GUESTHOUSE_STYLE} guesthouse in Chiang Mai Old City`;
   }
 
-  return `${settings.propertyName} — garden guesthouse in ${locationLabel}`;
+  return `${settings.propertyName}, a pet-friendly ${GUESTHOUSE_STYLE} guesthouse in ${locationLabel}`;
 }
 
 function buildSameAsProfiles(settings: PropertySettings) {
@@ -240,6 +242,7 @@ export function buildHomePageJsonLd(
     telephone: contactPhone ?? undefined,
     email: contactEmail ?? undefined,
     priceRange,
+    petsAllowed: true,
     address: address
       ? {
           "@type": "PostalAddress",
@@ -283,6 +286,13 @@ export function buildHomePageJsonLd(
       { "@type": "LocationFeatureSpecification", name: "Breakfast included", value: true },
       { "@type": "LocationFeatureSpecification", name: "Air conditioning", value: true },
       { "@type": "LocationFeatureSpecification", name: "Garden", value: true },
+      { "@type": "LocationFeatureSpecification", name: "Pets allowed", value: true },
+      { "@type": "LocationFeatureSpecification", name: "No pet fee", value: true },
+      {
+        "@type": "LocationFeatureSpecification",
+        name: "Thai traditional style wooden rooms",
+        value: true,
+      },
     ],
     knowsAbout: nearThaPhae
       ? [
@@ -296,6 +306,8 @@ export function buildHomePageJsonLd(
           "guesthouse Chiang Mai",
           "guesthouses in Chiang Mai",
           "Hotels in Chiang Mai Old City",
+          "pet friendly guesthouse Chiang Mai",
+          "Thai traditional style guesthouse",
         ]
       : isChiangMaiLocation(locationLabel)
         ? [
@@ -303,6 +315,8 @@ export function buildHomePageJsonLd(
             "Chiang Mai guesthouse",
             "Chiang Mai guest house",
             "guesthouse Chiang Mai",
+            "pet friendly guesthouse Chiang Mai",
+            "Thai traditional style guesthouse",
           ]
         : undefined,
   };
@@ -374,10 +388,12 @@ export function buildLocationPageJsonLd(
     "@id": `${siteUrl}/#lodging`,
     name: settings.propertyName,
     alternateName: GUESTHOUSE_THAI_NAME,
+    description: buildThaPhaeLocationDescription(settings.propertyName),
     url: `${siteUrl}/`,
     image: resolveLodgingImageUrl(settings, siteUrl),
     telephone: settings.contactPhone ?? undefined,
     priceRange: buildRoomPriceRange(rooms),
+    petsAllowed: true,
     address: address ? { "@type": "PostalAddress", ...address } : undefined,
     geo: {
       "@type": "GeoCoordinates",
