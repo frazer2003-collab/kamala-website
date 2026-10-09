@@ -97,9 +97,8 @@ export default async function LocationPage() {
         <h1>{THA_PHAE_LOCATION_H1}</h1>
         <p>
           {settings.propertyName} is a family-run, Thai traditional style guesthouse on Tha Phae
-          Road Soi 6, 100 metres from Tha Phae Gate at the edge of Chiang Mai Old City. Pets are
-          welcome. The Sunday Walking Street starts two minutes from the door, and the Night Bazaar
-          is a 12-minute walk.
+          Road Soi 6, 100 metres from Tha Phae Gate at the edge of Chiang Mai Old City. The Sunday
+          Walking Street starts two minutes from the door, and the Night Bazaar is a 12-minute walk.
         </p>
       </div>
 
@@ -199,7 +198,7 @@ export default async function LocationPage() {
       <section className="location-page__faq" aria-labelledby="location-thai-title" lang="th">
         <h2 id="location-thai-title">ที่พักใกล้ประตูท่าแพ เชียงใหม่</h2>
         <p>
-          {GUESTHOUSE_THAI_NAME} เกสท์เฮาส์สไตล์ไทยดั้งเดิม สัตว์เลี้ยงเข้าพักได้ ตั้งอยู่ที่{" "}
+          {GUESTHOUSE_THAI_NAME} เกสท์เฮาส์สไตล์ไทยดั้งเดิม ตั้งอยู่ที่{" "}
           {GUESTHOUSE_THAI_ADDRESS} ห่างจากประตูท่าแพประมาณ 100 เมตร ใกล้ถนนคนเดินท่าแพและไนท์บาซาร์
         </p>
         <dl className="location-page__faq-list">

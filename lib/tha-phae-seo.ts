@@ -18,11 +18,8 @@ export const GUESTHOUSE_THAI_NAME = "กมลา บูทีค เกสท�
 export const GUESTHOUSE_THAI_ADDRESS =
   "ถนนท่าแพ ซอย 6 ตำบลช้างคลาน อำเภอเมืองเชียงใหม่ จังหวัดเชียงใหม่ 50100";
 
-/** Searched phrasing; keep both in every title, description and schema block that can fit them. */
+/** Searched phrasing; keep it in every description and schema block that can fit it. */
 export const GUESTHOUSE_STYLE = "Thai traditional style";
-
-export const GUESTHOUSE_PET_POLICY =
-  "Pet friendly: well-behaved pets of any kind are welcome, with no pet fee and no need to ask ahead.";
 
 export type NearbyPlace = {
   name: string;
@@ -96,10 +93,6 @@ export function buildThaPhaeLocationFaq({
       answer: `Check-in is from ${checkInFrom} to ${checkInUntil}. Message us if you will arrive outside those hours.`,
     },
     {
-      question: "Is the guesthouse pet friendly?",
-      answer: `Yes. ${propertyName} is a pet-friendly guesthouse. Well-behaved pets of any kind are welcome, there is no pet fee, and you do not need to tell us in advance.`,
-    },
-    {
       question: "What style is the guesthouse?",
       answer: `${propertyName} is a Thai traditional style guesthouse: wooden rooms set around a courtyard garden, run by a local family.`,
     },
@@ -123,11 +116,6 @@ export const THA_PHAE_THAI_FAQ: readonly FaqItem[] = [
   {
     question: "ใกล้ถนนคนเดินท่าแพไหม",
     answer: "ถนนคนเดินวันอาทิตย์เริ่มที่ประตูท่าแพ เดินจากที่พักเพียง 2 นาที",
-  },
-  {
-    question: "พาสัตว์เลี้ยงมาพักได้ไหม",
-    answer:
-      "ได้ ที่นี่เป็นที่พักสัตว์เลี้ยงเข้าพักได้ (Pet Friendly) ยินดีต้อนรับสัตว์เลี้ยงทุกชนิดที่เชื่อง ไม่มีค่าใช้จ่ายเพิ่ม และไม่ต้องแจ้งล่วงหน้า",
   },
   {
     question: "ที่พักเป็นสไตล์ไหน",
@@ -155,14 +143,14 @@ export const THAE_PHAE_GATE_NAME = "Thae Phae Gate";
  * “Guesthouse” and “guest house” are near-synonyms; cover both once, naturally.
  */
 export const THA_PHAE_PRIMARY_TITLE =
-  "Pet-Friendly Chiang Mai Guesthouse near Thae Phae Gate";
+  "Chiang Mai Guesthouse near Thae Phae Gate";
 
 /** Guest-facing H1 — host voice, still names Chiang Mai Old City. */
 export const THA_PHAE_PRIMARY_HEADLINE =
   "A garden guesthouse in Chiang Mai Old City";
 
 /** Absolute title (no brand suffix) so it stays near 50 characters. */
-export const THA_PHAE_LOCATION_TITLE = "Pet-Friendly Guesthouse near Tha Phae Gate, Chiang Mai";
+export const THA_PHAE_LOCATION_TITLE = "Guesthouse near Tha Phae Gate, Chiang Mai Old City";
 
 export const THA_PHAE_LOCATION_H1 = "Guesthouse near Tha Phae Gate, Chiang Mai";
 
@@ -181,8 +169,6 @@ export const THA_PHAE_SEO_KEYWORDS = [
   "guesthouse in Chiang Mai Old City",
   "hotels in Chiang Mai old city",
   "boutique hotel Chiang Mai old city",
-  "pet friendly guesthouse Chiang Mai",
-  "pet friendly hotel Chiang Mai",
   "Thai traditional style guesthouse Chiang Mai",
   "Thai style guesthouse Chiang Mai",
 ] as const;
@@ -227,11 +213,11 @@ export function normalizeTelHref(phone: string): string {
 }
 
 export function buildThaPhaeMetaDescription(propertyName: string): string {
-  return `${propertyName}: a pet-friendly, ${GUESTHOUSE_STYLE} Chiang Mai guesthouse by ${THAE_PHAE_GATE_NAME}, Old City. Breakfast included. Book direct.`;
+  return `${propertyName}: a ${GUESTHOUSE_STYLE} Chiang Mai guesthouse by ${THAE_PHAE_GATE_NAME}, Old City. Garden rooms, breakfast included. Book direct.`;
 }
 
 export function buildThaPhaeLocationDescription(propertyName: string): string {
-  return `${propertyName} is a pet-friendly, ${GUESTHOUSE_STYLE} Chiang Mai guesthouse 100 m from Tha Phae Gate, by the Old City. Map and directions.`;
+  return `${propertyName} is a ${GUESTHOUSE_STYLE} Chiang Mai guesthouse 100 m from Tha Phae Gate, by the Old City. Map, distances and directions.`;
 }
 
 export function buildThaPhaeHeroLede(): string {
@@ -239,5 +225,5 @@ export function buildThaPhaeHeroLede(): string {
 }
 
 export function buildThaPhaeStayStoryLede(propertyName: string): string {
-  return `${propertyName} is a family-run, ${GUESTHOUSE_STYLE} Chiang Mai guest house: wooden rooms around a courtyard garden in the Old City, and pets are always welcome. We sit just across the street from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market are about six minutes away.`;
+  return `${propertyName} is a family-run, ${GUESTHOUSE_STYLE} Chiang Mai guest house: wooden rooms around a courtyard garden in the Old City. We sit just across the street from the Sunday Walking Street, with ${THAE_PHAE_GATE_NAME} about 100 metres away (a two-minute walk). Everyday essentials — 7-Eleven, ATMs, Boots, McDonald’s, and Starbucks — are steps from the door. Nawarat Bridge and its night market are about six minutes away.`;
 }
