@@ -56,6 +56,41 @@ export function promotionCoversNight(promotion: RoomPromotionRate, night: string
   return night >= promotion.startDate && night <= promotion.endDate;
 }
 
+/** Whole-stay saving as a rounded percent; null when nothing is saved. */
+export function getStayPercentOff(quote: Pick<StayQuote, "baseTotal" | "total">) {
+  if (quote.baseTotal <= 0 || quote.total >= quote.baseTotal) {
+    return null;
+  }
+  return Math.round(((quote.baseTotal - quote.total) / quote.baseTotal) * 100);
+}
+
+/**
+ * Staff label of a promotion that actually priced a night of this stay.
+ * Shown only as a note under the discount line: staff write free text here
+ * (perks, offer names), so it must never stand in for the discount itself.
+ */
+export function getPromotionNoteForStay(
+  roomId: string,
+  arrival: string,
+  departure: string,
+  promotions: RoomPromotionRate[],
+) {
+  for (const night of eachStayNight(arrival, departure)) {
+    const best = getBestPercentOffForNight(roomId, night, promotions);
+    const label = promotions.find(
+      (promotion) =>
+        promotion.roomId === roomId &&
+        promotion.percentOff === best &&
+        promotionCoversNight(promotion, night) &&
+        promotion.label?.trim(),
+    )?.label;
+    if (best > 0 && label) {
+      return label.trim();
+    }
+  }
+  return null;
+}
+
 export function getBestPercentOffForNight(
   roomId: string,
   night: string,

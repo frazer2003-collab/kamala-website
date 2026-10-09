@@ -20,8 +20,13 @@ import {
 import type { Room } from "@/lib/content";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
 import { GUEST_LOCALE_COOKIE } from "@/lib/guest-locale-cookie";
-import { isLocale, t, type Locale } from "@/lib/i18n";
-import { calculateStayQuote, type RoomPromotionRate } from "@/lib/pricing";
+import { isLocale, t, tReplace, type Locale } from "@/lib/i18n";
+import {
+  calculateStayQuote,
+  getPromotionNoteForStay,
+  getStayPercentOff,
+  type RoomPromotionRate,
+} from "@/lib/pricing";
 import { getRoomAvailabilityLabel, isRoomBookable } from "@/lib/room-availability";
 import { getBookingPaymentReturnUrl } from "@/lib/booking-payment-url";
 import type { BankTransferDetails } from "@/lib/bank-transfer";
@@ -179,7 +184,8 @@ function emptyDisplayQuote(baseRate: number): BookingQuoteResult {
     hasPromotion: false,
     baseNightlyRate: baseRate,
     effectiveNightlyRate: null,
-    promoLabel: null,
+    promoPercentOff: null,
+    promoNote: null,
     discountCodeApplied: false,
     discountCodeError: null,
     discountCodeId: null,
@@ -419,12 +425,14 @@ export function BookingRequest({
       baseNightlyRate: selectedRoom.rate,
       effectiveNightlyRate:
         calculated.nights > 0 ? Math.round(calculated.total / calculated.nights) : null,
-      promoLabel: calculated.hasPromotion
-        ? promotions.find(
-            (promotion) =>
-              promotion.roomId === selectedRoom.id && promotion.label,
-          )?.label ??
-          `${Math.round(((calculated.baseTotal - calculated.total) / calculated.baseTotal) * 100)}% off`
+      promoPercentOff: calculated.hasPromotion ? getStayPercentOff(calculated) : null,
+      promoNote: calculated.hasPromotion
+        ? getPromotionNoteForStay(
+            selectedRoom.id,
+            fields.arrival,
+            fields.departure,
+            promotions,
+          )
         : null,
       discountCodeApplied: false,
       discountCodeError: null,
@@ -458,6 +466,15 @@ export function BookingRequest({
   const promoSavings = showPromoPricing
     ? displayQuote.baseTotal - displayQuote.total
     : 0;
+  const promoPercent = displayQuote.promoPercentOff ?? getStayPercentOff(displayQuote);
+  const promoLineTitle = !promoPercent
+    ? t(locale, "promoSavings")
+    : displayQuote.discountCodeApplied && displayQuote.discountCodeText
+      ? tReplace(locale, "promoCodeDiscountLine", {
+          code: displayQuote.discountCodeText,
+          percent: String(promoPercent),
+        })
+      : tReplace(locale, "roomDiscountLine", { percent: String(promoPercent) });
 
   function handleCancelPayment() {
     if (!paymentStep) {
@@ -841,7 +858,14 @@ export function BookingRequest({
                 </div>
                 {showPromoPricing ? (
                   <div className="booking-receipt__line booking-receipt__line--promo">
-                    <span>{displayQuote.promoLabel ?? t(locale, "promoSavings")}</span>
+                    <span className="booking-receipt__promo-text">
+                      <span>{promoLineTitle}</span>
+                      {displayQuote.promoNote ? (
+                        <span className="booking-receipt__promo-note">
+                          {displayQuote.promoNote}
+                        </span>
+                      ) : null}
+                    </span>
                     <QuoteAmount
                       amount={-promoSavings}
                       className="booking-receipt__value booking-receipt__value--promo"

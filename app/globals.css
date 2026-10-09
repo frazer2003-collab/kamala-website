@@ -3351,6 +3351,18 @@ html.guest-dates-busy .home-sticky-dates {
   color: var(--color-maroon-deep);
 }
 
+.booking-receipt__promo-text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.booking-receipt__promo-note {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .booking-receipt__line--total {
   align-items: end;
 }

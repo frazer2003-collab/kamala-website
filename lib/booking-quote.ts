@@ -9,6 +9,8 @@ import {
 } from "@/lib/discount-codes";
 import {
   calculateStayQuoteWithOptionalCode,
+  getPromotionNoteForStay,
+  getStayPercentOff,
   type RoomPromotionRate,
   type StayQuote,
 } from "@/lib/pricing";
@@ -22,7 +24,10 @@ import { getRoomPromotionsForStay } from "@/lib/room-promotions";
 export type BookingQuoteResult = StayQuote & {
   baseNightlyRate: number;
   effectiveNightlyRate: number | null;
-  promoLabel: string | null;
+  /** Real saving on the stay; the receipt line is always built from this. */
+  promoPercentOff: number | null;
+  /** Optional staff-written label, shown as a small note under the line. */
+  promoNote: string | null;
   discountCodeApplied: boolean;
   discountCodeError: string | null;
   discountCodeId: string | null;
@@ -37,7 +42,8 @@ const emptyQuote: BookingQuoteResult = {
   hasPromotion: false,
   baseNightlyRate: 0,
   effectiveNightlyRate: null,
-  promoLabel: null,
+  promoPercentOff: null,
+  promoNote: null,
   discountCodeApplied: false,
   discountCodeError: null,
   discountCodeId: null,
@@ -172,21 +178,20 @@ export async function buildBookingQuote({
     codePercentOff,
   });
 
-  let promoLabel: string | null = null;
-  if (quote.codeApplied && matchedCode) {
-    promoLabel = matchedCode.label ?? `${matchedCode.percentOff}% off · ${matchedCode.code}`;
-  } else if (quote.hasPromotion) {
-    promoLabel =
-      stayPromotions.find((promotion) => promotion.label)?.label ??
-      `${Math.round(((quote.baseTotal - quote.total) / quote.baseTotal) * 100)}% off`;
-  }
+  const promoNote =
+    quote.codeApplied && matchedCode
+      ? matchedCode.label?.trim() || null
+      : quote.hasPromotion
+        ? getPromotionNoteForStay(roomId, arrival, departure, stayPromotions)
+        : null;
 
   return {
     ...quote,
     baseNightlyRate: baseRate,
     effectiveNightlyRate:
       quote.nights > 0 ? Math.round(quote.total / quote.nights) : null,
-    promoLabel,
+    promoPercentOff: quote.hasPromotion ? getStayPercentOff(quote) : null,
+    promoNote,
     discountCodeApplied: quote.codeApplied,
     discountCodeError,
     discountCodeId,
