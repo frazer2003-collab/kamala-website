@@ -53,7 +53,9 @@ export function HomeStayStory({
                 ? `Location near ${THAE_PHAE_GATE_NAME} →`
                 : "Find us on the map →"}
             </Link>
-            {" · "}
+            <span aria-hidden="true" className="stay-story__link-sep">
+              {" · "}
+            </span>
             <Link className="stay-story__gallery-link" href="/gallery">
               View the garden →
             </Link>

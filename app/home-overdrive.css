@@ -1,28 +1,9 @@
-/* Homepage overdrive — cinematic hero, scroll narrative, booking counter peak. */
-
-/* --- Hero: slow Ken Burns (copy entrance lives in globals elevate) --- */
-
-@media (prefers-reduced-motion: no-preference) and (min-width: 720px) {
-  .home-page .home-hero--atmosphere .home-hero__image {
-    animation: home-hero-ken-burns 32s ease-in-out infinite alternate;
-    transform-origin: center center;
-  }
-}
-
-@keyframes home-hero-ken-burns {
-  from {
-    transform: scale(1);
-  }
-
-  to {
-    transform: scale(1.06);
-  }
-}
+/* Homepage overdrive — film-still hero, quiet counter below it. */
 
 .home-page .home-hero--atmosphere .search-bar--atmosphere {
   transition:
-    box-shadow 220ms var(--ease-out-quint),
-    border-color 220ms var(--ease-out-quint);
+    box-shadow 200ms var(--ease-out-quint),
+    border-color 200ms var(--ease-out-quint);
 }
 
 .home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within {
@@ -51,6 +32,11 @@
   border: 0;
   box-shadow: none;
   background: transparent;
+}
+
+/* Without the booking form below, the stay story's top rule already closes the rooms. */
+.home-page .home-book-zone:not(:has(#booking)) > .section--listings {
+  border-bottom: 0;
 }
 
 .home-page .home-book-zone .section__heading--compact h2 {
@@ -100,6 +86,11 @@
   transition: color 180ms var(--ease-out-quint);
 }
 
+/* Rail rows have no inline padding, so a hover wash would clip at the text edge. */
+.home-page .listing-card--rail:hover {
+  background: transparent;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .home-page .listing-card--rail:hover .listing-card__rail-copy h3 {
     color: var(--color-maroon-deep);
@@ -138,19 +129,25 @@
 
   .home-page .stay-story__aside {
     position: sticky;
-    top: calc(var(--home-topbar-sticky-offset, 4.25rem) + var(--space-5));
-    padding: var(--space-5) 0 0 var(--space-6);
+    top: calc(var(--home-topbar-sticky-offset, 4.25rem) + 3.25rem + var(--space-5));
+    padding: 0.5rem 0 0 var(--space-6);
     border-left: 1px solid var(--color-border);
   }
 
   .home-page .stay-story__aside li {
-    font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype", serif;
-    font-size: clamp(1.05rem, 1.2vw, 1.2rem);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1.35;
-    text-wrap: balance;
     color: var(--color-ink);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .home-page .site-footer__nav {
+    justify-content: flex-end;
+    max-width: none;
+    margin-right: -0.45rem;
+  }
+
+  .home-page .site-footer__follow {
+    margin-right: calc((2.75rem - 1.15rem) / -2);
   }
 }
 
@@ -176,6 +173,10 @@
     gap: var(--space-3);
   }
 
+  .home-page .stay-story__link-sep {
+    display: none;
+  }
+
   .home-page .stay-story__gallery-link {
     min-height: 2.75rem;
     display: inline-flex;
@@ -183,69 +184,49 @@
   }
 }
 
-/* --- Sticky reserve: counter slides up --- */
-
-@keyframes home-sticky-rise {
-  from {
-    transform: translateY(100%);
-  }
-
-  to {
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .home-page .home-sticky-reserve {
-    animation: home-sticky-rise 320ms var(--ease-out-quint) both;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within {
-    transform: none;
-  }
-
-  .home-page .listing-card--feature:hover {
-    transform: none;
-  }
-}
-
 /* ─────────────────────────────────────────────
    Motion language — Garden Key / calm counter
-   Focal: hero still entrance
-   Continuity: menu + sticky chrome (transitions)
-   Feedback: press + quiet hover (fine pointer)
+   Focal: the film still comes into focus once (camera settles, type
+     pulls focus in reading order, the date counter lands last).
+   Continuity: topbar solidifies, date strip and reserve bar arrive
+     with the scroll state they describe; the room rail stays beside
+     the featured room.
+   Feedback: press scale + colour on fine-pointer hover. No ambient
+     loops, no scroll-scrubbed fades that can rest half-visible.
    ───────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: no-preference) {
-  /* Focal: still arrives, then the counter. */
-  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__brand,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy h1,
   .home-page .hero-atmosphere--elevate .hero-atmosphere__lede,
   .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
-    animation: home-hero-arrive 440ms var(--ease-out-quint) both;
+    animation: home-hero-rise 420ms var(--ease-out-quint) backwards;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy h1 {
+    animation-delay: 50ms;
   }
 
   .home-page .hero-atmosphere--elevate .hero-atmosphere__lede {
-    animation-delay: 60ms;
+    animation-delay: 100ms;
   }
 
   .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
-    animation-delay: 110ms;
+    animation-delay: 150ms;
   }
 
   .home-page .home-hero--atmosphere .home-hero__overlay {
-    animation: home-veil-settle 520ms var(--ease-out-quint) both;
+    animation: home-veil-settle 600ms var(--ease-out-quint) backwards;
   }
 
   /* Continuity: mobile menu panel grows from the chrome. */
   .home-page .topbar--home.topbar--menu-open .topbar__nav {
-    animation: home-nav-panel-in 240ms var(--ease-out-quint) both;
+    animation: home-nav-panel-in 240ms var(--ease-out-quint) backwards;
     transform-origin: top center;
   }
 
   .home-page .topbar--home.topbar--menu-open .topbar__nav a {
-    animation: home-nav-link-in 260ms var(--ease-out-quint) both;
+    animation: home-nav-link-in 260ms var(--ease-out-quint) backwards;
   }
 
   .home-page .topbar--home.topbar--menu-open .topbar__nav-primary a:nth-child(1) {
@@ -267,57 +248,75 @@
   .home-page .topbar--home.topbar--menu-open .topbar__nav-secondary a:nth-child(2) {
     animation-delay: 144ms;
   }
+
+  /* Continuity: the reserve counter rises from the bottom edge it docks to. */
+  .home-page .home-sticky-reserve {
+    animation: home-sticky-rise 320ms var(--ease-out-quint) backwards;
+  }
 }
 
-/* Shorter hero entrance on small / coarse screens (less jank on scroll). */
-@media (prefers-reduced-motion: no-preference) and (max-width: 719px) {
-  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy,
+/* Desktop focal: the camera settles on the courtyard and the type pulls focus.
+   Phones keep the lighter rise above: no image scale, no blur. */
+@media (prefers-reduced-motion: no-preference) and (min-width: 720px) {
+  .home-page .home-hero--atmosphere .home-hero__image {
+    animation: home-hero-settle 1400ms var(--ease-out-quint) backwards;
+    transform-origin: center 40%;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__brand,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy h1,
   .home-page .hero-atmosphere--elevate .hero-atmosphere__lede,
   .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
-    animation-duration: 360ms;
+    animation-name: home-hero-focus;
+    animation-duration: 600ms;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__brand {
+    animation-delay: 60ms;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy h1 {
+    animation-delay: 120ms;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__lede {
+    animation-delay: 180ms;
+  }
+
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__search {
+    animation-delay: 240ms;
   }
 
   .home-page .home-hero--atmosphere .home-hero__overlay {
-    animation-duration: 420ms;
+    animation-duration: 900ms;
   }
 }
 
-/* Scroll-driven narrative: desktop / fine pointer only — mobile view() is janky. */
-@media (prefers-reduced-motion: no-preference) and (min-width: 720px) and (hover: hover) {
-  @supports (animation-timeline: view()) {
-    .home-page .home-stay-assurances-list li {
-      animation: home-phrase-in linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 32%;
-    }
-
-    .home-page .listing-card--feature .listing-card__media {
-      animation: home-media-settle linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 40%;
-    }
-  }
-}
-
-@keyframes home-hero-arrive {
+/* Opacity starts at 0.001, not 0, so the hero text still counts toward LCP. */
+@keyframes home-hero-rise {
   from {
     opacity: 0.001;
-    transform: translateY(0.55rem);
+    transform: translateY(0.45rem);
   }
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
+@keyframes home-hero-focus {
+  from {
+    opacity: 0.001;
+    transform: translateY(0.6rem);
+    filter: blur(6px);
+  }
+}
+
+@keyframes home-hero-settle {
+  from {
+    transform: scale(1.045);
   }
 }
 
 @keyframes home-veil-settle {
   from {
-    opacity: 0.78;
-  }
-
-  to {
-    opacity: 1;
+    opacity: 0.72;
   }
 }
 
@@ -326,11 +325,6 @@
     opacity: 0.001;
     transform: translateY(-0.3rem) scale(0.988);
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 @keyframes home-nav-link-in {
@@ -338,68 +332,20 @@
     opacity: 0.001;
     transform: translateY(0.28rem);
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
-@keyframes home-phrase-in {
+@keyframes home-sticky-rise {
   from {
-    opacity: 0.35;
-    transform: translateY(0.4rem);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateY(100%);
   }
 }
 
-@keyframes home-media-settle {
-  from {
-    opacity: 0.72;
-    transform: scale(1.015);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Feedback + fluid chrome — hover lifts only on fine pointers. */
-
-.home-page .home-hero--atmosphere .search-bar--atmosphere {
-  transition:
-    box-shadow 200ms var(--ease-out-quint),
-    border-color 200ms var(--ease-out-quint),
-    transform 200ms var(--ease-out-quint);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .home-page .home-hero--atmosphere .search-bar--atmosphere:hover,
-  .home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within {
-    transform: translateY(-1px);
-  }
-}
+/* Feedback — press everywhere, colour-only hover on fine pointers. */
 
 .home-page .listing-card--rail {
   transition:
     background-color 180ms var(--ease-out-quint),
-    border-color 180ms var(--ease-out-quint),
-    transform 180ms var(--ease-out-quint);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .home-page .listing-card--rail:hover {
-    transform: translateY(-1px);
-  }
-
-  .home-page .listing-card--feature:hover .listing-card__media img {
-    transform: scale(1.03);
-  }
+    border-color 180ms var(--ease-out-quint);
 }
 
 .home-page .listing-card--feature .button,
@@ -418,30 +364,12 @@
   transform: scale(0.97);
 }
 
-.home-page .stay-story__gallery-link {
-  transition:
-    color 180ms var(--ease-out-quint),
-    transform 180ms var(--ease-out-quint);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .home-page .stay-story__gallery-link:hover {
-    transform: translateX(0.12rem);
-  }
-}
-
+.home-page .stay-story__gallery-link,
 .home-page .site-footer__contact-link,
 .home-page .site-footer__nav a {
   transition:
     color 180ms var(--ease-out-quint),
-    background-color 180ms var(--ease-out-quint),
-    transform 160ms var(--ease-out-quint);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .home-page .site-footer__contact-link:hover {
-    transform: translateX(0.1rem);
-  }
+    text-decoration-color 180ms var(--ease-out-quint);
 }
 
 .home-page .home-sticky-dates__change {
@@ -454,29 +382,24 @@
   transform: scale(0.97);
 }
 
+/* Reduced motion: no travel, no scale, no blur. The veil still fades so the still arrives softly. */
 @media (prefers-reduced-motion: reduce) {
-  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__brand,
+  .home-page .hero-atmosphere--elevate .hero-atmosphere__copy h1,
   .home-page .hero-atmosphere--elevate .hero-atmosphere__lede,
   .home-page .hero-atmosphere--elevate .hero-atmosphere__search,
-  .home-page .home-hero--atmosphere .home-hero__overlay,
+  .home-page .home-hero--atmosphere .home-hero__image,
   .home-page .topbar--home.topbar--menu-open .topbar__nav,
   .home-page .topbar--home.topbar--menu-open .topbar__nav a,
-  .home-page .home-stay-assurances-list li,
-  .home-page .listing-card--feature .listing-card__media,
   .home-page .home-sticky-reserve {
-    animation: none !important;
-    opacity: 1;
-    transform: none;
+    animation: none;
   }
 
-  .home-page .home-hero--atmosphere .search-bar--atmosphere,
-  .home-page .home-hero--atmosphere .search-bar--atmosphere:hover,
-  .home-page .home-hero--atmosphere .search-bar--atmosphere:focus-within,
-  .home-page .listing-card--rail,
-  .home-page .listing-card--rail:hover,
+  .home-page .home-hero--atmosphere .home-hero__overlay {
+    animation: home-veil-settle 400ms linear backwards;
+  }
+
   .home-page .listing-card--feature:hover .listing-card__media img,
-  .home-page .stay-story__gallery-link:hover,
-  .home-page .site-footer__contact-link:hover,
   .home-page .listing-card--feature .button:active,
   .home-page .listing-card--rail .button:active,
   .home-page .home-hero--atmosphere .search-bar--atmosphere .search-bar__submit:active,

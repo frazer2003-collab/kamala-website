@@ -372,29 +372,31 @@ export function HomeRoomCatalog({
 
           {otherRooms.length > 0 ? (
             <div className="listing-rail">
-              <p className="listing-rail__label" id="rooms-rail-label">
-                {otherRooms.length === 1
-                  ? "1 more room type"
-                  : `${otherRooms.length} more room types`}
-              </p>
-              <div
-                aria-labelledby="rooms-rail-label"
-                className="listing-rail__track"
-                role="list"
-              >
-                {otherRooms.map((room) => (
-                  <RoomListingCard
-                    availabilityByRoomId={availabilityByRoomId}
-                    currency={currency}
-                    hasStayDates={hasStayDates}
-                    key={room.id}
-                    onOpenDetails={setSelectedRoomId}
-                    price={pricesByRoomId[room.id]}
-                    room={room}
-                    stayDates={stayDates}
-                    variant="standard"
-                  />
-                ))}
+              <div className="listing-rail__sticky">
+                <p className="listing-rail__label" id="rooms-rail-label">
+                  {otherRooms.length === 1
+                    ? "1 more room type"
+                    : `${otherRooms.length} more room types`}
+                </p>
+                <div
+                  aria-labelledby="rooms-rail-label"
+                  className="listing-rail__track"
+                  role="list"
+                >
+                  {otherRooms.map((room) => (
+                    <RoomListingCard
+                      availabilityByRoomId={availabilityByRoomId}
+                      currency={currency}
+                      hasStayDates={hasStayDates}
+                      key={room.id}
+                      onOpenDetails={setSelectedRoomId}
+                      price={pricesByRoomId[room.id]}
+                      room={room}
+                      stayDates={stayDates}
+                      variant="standard"
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}

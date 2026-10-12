@@ -215,6 +215,23 @@
   );
 }
 
+/* The footer sits inside .home-body; a second shell would inset it from the column. */
+.home-page .home-body .site-footer__shell {
+  width: 100%;
+}
+
+/* One gutter for chrome and content: matches the topbar row and date strip. */
+@media (max-width: 719px) {
+  .home-page .site-shell {
+    width: calc(100% - 2 * var(--space-4));
+  }
+
+  .home-page .topbar--home .topbar__row,
+  .home-page .home-sticky-dates {
+    padding-inline: var(--space-4);
+  }
+}
+
 @media (min-width: 720px) {
   .home-page {
     --home-topbar-sticky-offset: 4.25rem;
@@ -359,10 +376,7 @@
 
   /* Sticky dates: counter strip that respects the shell. */
   .home-page .home-sticky-dates {
-    padding-inline: max(
-      var(--space-5),
-      calc((100vw - min(1280px, calc(100% - 2.5rem))) / 2 + var(--space-5))
-    );
+    padding-inline: calc((100% - min(1280px, calc(100% - 2.5rem))) / 2);
     background: color-mix(in oklch, var(--color-maroon-wash) 55%, var(--color-surface-muted));
   }
 

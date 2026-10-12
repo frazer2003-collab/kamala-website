@@ -1,5 +1,15 @@
 /* Homepage navigation — immersive film-still bar over the hero. */
 
+.home-page .topbar__scroll-sentinel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 12px;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .home-page .topbar--home {
   position: fixed;
   top: 0;
@@ -282,10 +292,12 @@ html.home-topbar-menu-open {
 }
 
 @media (min-width: 720px) {
+  /* Bar content shares the page column edges (.site-shell). */
   .home-page .topbar--home {
     flex-direction: row;
     align-items: center;
     min-height: var(--home-topbar-sticky-offset);
+    padding-inline: calc((100% - min(1280px, calc(100% - 2.5rem))) / 2);
   }
 
   .home-page .topbar--home .topbar__row {
@@ -296,7 +308,7 @@ html.home-topbar-menu-open {
     align-items: center;
     gap: var(--space-5);
     min-height: var(--home-topbar-sticky-offset);
-    padding: 0.35rem var(--space-6);
+    padding: 0.35rem 0;
   }
 
   .home-page .topbar--home .topbar__brand {
@@ -345,7 +357,9 @@ html.home-topbar-menu-open {
     gap: var(--space-1);
     width: auto;
     margin-left: auto;
-    padding: 0 var(--space-6) 0 0;
+    /* Optical edge: last label's text, not its pill, meets the column edge. */
+    margin-right: calc(var(--space-3) * -1);
+    padding: 0;
     border-top: 0;
     background: transparent;
   }
@@ -399,12 +413,8 @@ html.home-topbar-menu-open {
 }
 
 @media (min-width: 960px) {
-  .home-page .topbar--home .topbar__row {
-    padding-inline: var(--space-6);
-  }
-
   .home-page .topbar--home .topbar__nav {
-    padding-right: var(--space-6);
+    margin-right: calc(var(--space-4) * -1);
   }
 
   .home-page .topbar--home .topbar__nav a {

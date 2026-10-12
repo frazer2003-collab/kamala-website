@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
 import type { PropertySettings } from "@/lib/property-settings";
@@ -18,19 +19,26 @@ export function GuestTopbarHome({ settings }: GuestTopbarHomeProps) {
   const navId = useId();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const sentinelRef = useRef<HTMLSpanElement>(null);
 
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
   }, []);
 
   useEffect(() => {
-    const onScroll = () => {
-      setScrolled(window.scrollY > 12);
-    };
+    const sentinel = sentinelRef.current;
+    if (!sentinel) {
+      return;
+    }
 
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry) {
+        setScrolled(!entry.isIntersecting);
+      }
+    });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -68,86 +76,89 @@ export function GuestTopbarHome({ settings }: GuestTopbarHomeProps) {
     .join(" ");
 
   return (
-    <header className={headerClassName} aria-label="Main navigation">
-      <div className="topbar__row">
-        <Link
-          aria-current="page"
-          className="brand brand--logo topbar__brand"
-          href="/"
-          onClick={closeMenu}
-        >
-          <Image
-            alt=""
-            aria-hidden
-            className="brand__logo"
-            height={47}
-            src="/guesthouse-logo.png"
-            width={70}
-          />
-          <span className="brand__name">
-            <strong>{settings.propertyName}</strong>
-          </span>
-        </Link>
-
-        <div className="topbar__mobile-actions">
-          <button
-            aria-controls={navId}
-            aria-expanded={menuOpen}
-            className="topbar__menu-toggle"
-            onClick={() => setMenuOpen((open) => !open)}
-            type="button"
+    <>
+      <span aria-hidden="true" className="topbar__scroll-sentinel" ref={sentinelRef} />
+      <header className={headerClassName} aria-label="Main navigation">
+        <div className="topbar__row">
+          <Link
+            aria-current="page"
+            className="brand brand--logo topbar__brand"
+            href="/"
+            onClick={closeMenu}
           >
-            <span aria-hidden="true" className="topbar__menu-icon" />
-            <span className="sr-only">{menuOpen ? "Close menu" : "Open menu"}</span>
-          </button>
-        </div>
-      </div>
+            <Image
+              alt=""
+              aria-hidden
+              className="brand__logo"
+              height={47}
+              src="/guesthouse-logo.png"
+              width={70}
+            />
+            <span className="brand__name">
+              <strong>{settings.propertyName}</strong>
+            </span>
+          </Link>
 
-      <nav aria-label="Guest navigation" className="topbar__nav" id={navId}>
-        <div className="topbar__nav-primary">
-          <Link href="/gallery" onClick={closeMenu}>
-            Gallery
-          </Link>
-          <Link href="/location" onClick={closeMenu}>
-            Location
-          </Link>
-          <Link href="/contact" onClick={closeMenu}>
-            Contact
-          </Link>
+          <div className="topbar__mobile-actions">
+            <button
+              aria-controls={navId}
+              aria-expanded={menuOpen}
+              className="topbar__menu-toggle"
+              onClick={() => setMenuOpen((open) => !open)}
+              type="button"
+            >
+              <span aria-hidden="true" className="topbar__menu-icon" />
+              <span className="sr-only">{menuOpen ? "Close menu" : "Open menu"}</span>
+            </button>
+          </div>
         </div>
 
-        {settings.lineUrl || settings.whatsappUrl ? (
-          <>
-            <div aria-hidden="true" className="topbar__nav-divider" />
-            <div className="topbar__nav-secondary">
-              {settings.lineUrl ? (
-                <a
-                  className="topbar__nav-external"
-                  href={settings.lineUrl}
-                  onClick={closeMenu}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  LINE
-                  <span className="sr-only"> (opens in new tab)</span>
-                </a>
-              ) : null}
-              {settings.whatsappUrl ? (
-                <a
-                  className="topbar__nav-external"
-                  href={settings.whatsappUrl}
-                  onClick={closeMenu}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  WhatsApp
-                  <span className="sr-only"> (opens in new tab)</span>
-                </a>
-              ) : null}
-            </div>
-          </>
-        ) : null}
-      </nav>
-    </header>
+        <nav aria-label="Guest navigation" className="topbar__nav" id={navId}>
+          <div className="topbar__nav-primary">
+            <Link href="/gallery" onClick={closeMenu}>
+              Gallery
+            </Link>
+            <Link href="/location" onClick={closeMenu}>
+              Location
+            </Link>
+            <Link href="/contact" onClick={closeMenu}>
+              Contact
+            </Link>
+          </div>
+
+          {settings.lineUrl || settings.whatsappUrl ? (
+            <>
+              <div aria-hidden="true" className="topbar__nav-divider" />
+              <div className="topbar__nav-secondary">
+                {settings.lineUrl ? (
+                  <a
+                    className="topbar__nav-external"
+                    href={settings.lineUrl}
+                    onClick={closeMenu}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    LINE
+                    <span className="sr-only"> (opens in new tab)</span>
+                  </a>
+                ) : null}
+                {settings.whatsappUrl ? (
+                  <a
+                    className="topbar__nav-external"
+                    href={settings.whatsappUrl}
+                    onClick={closeMenu}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    WhatsApp
+                    <span className="sr-only"> (opens in new tab)</span>
+                  </a>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+        </nav>
+      </header>
+    </>
   );
 }
