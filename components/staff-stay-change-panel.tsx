@@ -8,6 +8,7 @@ import {
 } from "@/app/staff/stay-change-actions";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
+import { staffBankRefundPanel } from "@/lib/refund-notice";
 
 type StaffStayChangePanelProps = {
   bookingId: string;
@@ -109,10 +110,8 @@ export function StaffStayChangePanel({
         <div className="staff-decide staff-decide--quiet staff-decide--prereq">
           <h3 className="staff-decide__title">Refund to send</h3>
           <p className="staff-decide__summary" role="status">
-            {guestName} changed to a cheaper stay. Send them{" "}
-            <strong>{formatMoneySuffix(refundDue, currency)}</strong> by bank
-            transfer, then mark it sent. Ask for their account in the
-            conversation if you don’t have it.
+            {guestName} changed to a cheaper stay.{" "}
+            {staffBankRefundPanel(formatMoneySuffix(refundDue, currency))}
           </p>
           <form action={markStayChangeRefundSent} className="staff-decide__form">
             <StaffFormBusyBridge />

@@ -1,4 +1,5 @@
 import { calculateStripeChargeAmount } from "@/lib/payment-pricing";
+import { guestBankRefundSentence, guestCardRefundSentence } from "@/lib/refund-notice";
 
 /** How the guest paid for the stay they are changing. */
 export type StayChangePayment = "card" | "bank" | "unpaid";
@@ -173,12 +174,12 @@ export function describeStayChangeOutcome(
     }
     case "refund-card":
       return {
-        sentence: `We refund ${formatAmount(outcome.difference)} to your card.`,
+        sentence: guestCardRefundSentence(formatAmount(outcome.difference)),
         action: "Update stay",
       };
     case "refund-bank":
       return {
-        sentence: `We will refund ${formatAmount(outcome.difference)} by bank transfer.`,
+        sentence: guestBankRefundSentence(formatAmount(outcome.difference)),
         action: "Update stay",
       };
   }

@@ -9,6 +9,7 @@ import {
   guestConversationBlockText,
 } from "@/lib/guest-email-conversation";
 import { EMAIL_FONT_BODY, escapeHtml } from "@/lib/email-theme";
+import { staffBankRefundCopy, staffCardRefundCopy } from "@/lib/refund-notice";
 import { getStaffNotificationRecipients } from "@/lib/staff-notification-emails";
 
 type StaffBookingEmail = {
@@ -330,8 +331,13 @@ export async function sendStaffStayChangeEmail({
   pendingDepartureDate,
   amountLabel,
   chatUrl,
+  refundReason = "cheaper-stay",
+  cardRefundFailed = false,
+  preface = null,
 }: {
-  kind: "changed" | "transfer-to-confirm" | "refund-to-send";
+  kind: "changed" | "transfer-to-confirm" | "refund-to-send" | "refund-card";
+  refundReason?: "cheaper-stay" | "declined" | "top-up-voided";
+  cardRefundFailed?: boolean;
   guestName: string;
   guestEmail: string;
   roomName: string;
@@ -342,6 +348,8 @@ export async function sendStaffStayChangeEmail({
   pendingDepartureDate: string | null;
   amountLabel: string | null;
   chatUrl: string | null;
+  /** Extra first paragraph, used when a notice is sent after the fact. */
+  preface?: string | null;
 }): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.BOOKING_EMAIL_FROM;
@@ -362,11 +370,17 @@ export async function sendStaffStayChangeEmail({
       intro: `${guestName} wants to change their stay and says they sent ${amountLabel ?? "the difference"} by bank transfer.`,
       next: "Check the transfer, then open Requests and tap Confirm transfer. The stay moves only after you confirm.",
     },
-    "refund-to-send": {
-      subject: `Refund to send: ${guestName}`,
-      intro: `${guestName} changed to a cheaper stay. Send them ${amountLabel ?? "the difference"} by bank transfer.`,
-      next: "Open Requests and tap Mark refund sent once the money is on its way.",
-    },
+    "refund-to-send": staffBankRefundCopy(
+      guestName,
+      amountLabel ?? "the difference",
+      refundReason === "declined" ? "declined" : "cheaper-stay",
+    ),
+    "refund-card": staffCardRefundCopy(
+      guestName,
+      amountLabel ?? "the payment",
+      refundReason,
+      cardRefundFailed,
+    ),
   }[kind];
 
   const lines: [string, string][] = [
@@ -380,10 +394,15 @@ export async function sendStaffStayChangeEmail({
     ]);
   }
   if (amountLabel) {
-    lines.push([kind === "refund-to-send" ? "Refund" : "Amount", amountLabel]);
+    lines.push([
+      kind === "refund-to-send" || kind === "refund-card" ? "Refund" : "Amount",
+      amountLabel,
+    ]);
   }
 
   const text = [
+    preface,
+    preface ? "" : null,
     copy.intro,
     "",
     ...lines.map(([label, value]) => `${label}: ${value}`),
@@ -397,6 +416,7 @@ export async function sendStaffStayChangeEmail({
 
   const html = `
     <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5;">
+      ${preface ? `<p>${escapeHtml(preface)}</p>` : ""}
       <p>${escapeHtml(copy.intro)}</p>
       <table style="border-collapse: collapse; width: 100%; max-width: 560px;">
         ${lines

@@ -487,7 +487,7 @@ export default async function StaffBookingsPage({
         ) : null}
         {stayChangeResult === "refund-sent" ? (
           <p className="form-message form-message--success" role="status">
-            Refund marked as sent — the guest has been told.
+            Refund marked as sent. The guest has been told it usually arrives the same day, or the next business day if it went out after bank hours.
           </p>
         ) : null}
         {holdCancelled === "1" ? (

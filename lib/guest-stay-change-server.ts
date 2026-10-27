@@ -311,8 +311,12 @@ async function moveStay({
 
 async function notifyStaff(
   booking: BookingRequestRow,
-  kind: "changed" | "transfer-to-confirm" | "refund-to-send",
+  kind: "changed" | "transfer-to-confirm" | "refund-to-send" | "refund-card",
   amount: number,
+  options?: {
+    refundReason?: "cheaper-stay" | "declined" | "top-up-voided";
+    cardRefundFailed?: boolean;
+  },
 ) {
   const settings = await getPropertySettings();
   await sendStaffStayChangeEmail({
@@ -329,6 +333,8 @@ async function notifyStaff(
     pendingDepartureDate: booking.pending_departure_date ?? null,
     amountLabel: amount > 0 ? formatMoneySuffix(amount, settings.currency) : null,
     chatUrl: booking.conversation_token ? getGuestChatUrl(booking.conversation_token) : null,
+    refundReason: options?.refundReason,
+    cardRefundFailed: options?.cardRefundFailed,
   }).catch(() => null);
 }
 
@@ -393,7 +399,9 @@ export async function applyStayChange(
         revalidateStayChange();
         return { ok: false, message: "We couldn’t refund your card just now, so your stay is unchanged. Please try again or message us." };
       }
-      await notifyStaff(moved.booking, "changed", 0);
+      await notifyStaff(moved.booking, "refund-card", outcome.difference, {
+        refundReason: "cheaper-stay",
+      });
       return { ok: true, result: "applied" };
     }
 
@@ -548,12 +556,18 @@ export async function applyPaidStayChange(
   }
 
   const refundTopUp = async (reason: "unavailable" | "stay-changed") => {
-    await getStripe()
+    const refunded = await getStripe()
       .refunds.create(
         { payment_intent: intent.id },
         { idempotencyKey: `stay-change-void-${intent.id}` },
       )
-      .catch(() => null);
+      .then(() => true)
+      .catch(() => false);
+    const amount = (intent.amount_received || intent.amount || 0) / 100;
+    await notifyStaff(booking, "refund-card", amount, {
+      refundReason: "top-up-voided",
+      cardRefundFailed: !refunded,
+    });
     return { status: "refunded" as const, reason };
   };
 

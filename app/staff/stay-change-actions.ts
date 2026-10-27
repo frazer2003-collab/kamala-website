@@ -9,6 +9,7 @@ import {
   confirmPendingStayChange,
 } from "@/lib/guest-stay-change-server";
 import { getPropertySettings } from "@/lib/property-settings";
+import { guestBankRefundSentMessage } from "@/lib/refund-notice";
 import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { formatStayDateRange } from "@/lib/stay-dates";
 
@@ -65,7 +66,7 @@ export async function markStayChangeRefundSent(formData: FormData) {
     const settings = await getPropertySettings();
     await recordStaffChatMessage({
       booking,
-      body: `We’ve sent your refund of ${formatMoneySuffix(amount, settings.currency)} by bank transfer.`,
+      body: guestBankRefundSentMessage(formatMoneySuffix(amount, settings.currency)),
     });
   }
 

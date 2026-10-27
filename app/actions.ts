@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { after } from "next/server";
 import { createStaffSupabaseClient, type BookingRequestRow } from "@/lib/supabase";
-import { sendGuestBookingEmail, sendStaffBookingEmail } from "@/lib/email";
+import { sendGuestBookingEmail, sendStaffBookingEmail, sendStaffStayChangeEmail } from "@/lib/email";
 import {
   ensureConversationToken,
   getGuestChatUrl,
@@ -1551,7 +1551,46 @@ export async function declineBookingRequest(formData: FormData) {
         `/staff?booking=${encodeURIComponent(bookingId)}&error=refund-failed`,
       );
     }
+    const settings = await getPropertySettings();
+    const refundAmount = booking.deposit_amount ?? booking.estimated_total;
+    await sendStaffStayChangeEmail({
+      kind: "refund-card",
+      refundReason: "declined",
+      guestName: booking.guest_name,
+      guestEmail: booking.guest_email,
+      roomName: booking.room_name,
+      arrivalDate: booking.arrival_date,
+      departureDate: booking.departure_date,
+      pendingRoomName: null,
+      pendingArrivalDate: null,
+      pendingDepartureDate: null,
+      amountLabel:
+        refundAmount > 0 ? formatMoneySuffix(refundAmount, settings.currency) : null,
+      chatUrl: booking.conversation_token
+        ? getGuestChatUrl(booking.conversation_token)
+        : null,
+    }).catch(() => null);
     await releaseBookingReservation(bookingId);
+  } else if (booking.deposit_paid_at) {
+    const settings = await getPropertySettings();
+    const refundAmount = booking.deposit_amount ?? booking.estimated_total;
+    await sendStaffStayChangeEmail({
+      kind: "refund-to-send",
+      refundReason: "declined",
+      guestName: booking.guest_name,
+      guestEmail: booking.guest_email,
+      roomName: booking.room_name,
+      arrivalDate: booking.arrival_date,
+      departureDate: booking.departure_date,
+      pendingRoomName: null,
+      pendingArrivalDate: null,
+      pendingDepartureDate: null,
+      amountLabel:
+        refundAmount > 0 ? formatMoneySuffix(refundAmount, settings.currency) : null,
+      chatUrl: booking.conversation_token
+        ? getGuestChatUrl(booking.conversation_token)
+        : null,
+    }).catch(() => null);
   }
 
   if (booking.guest_email !== "walk-in@kamala.local") {

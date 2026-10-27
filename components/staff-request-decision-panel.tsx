@@ -210,7 +210,7 @@ export function StaffRequestDecisionPanel({
           {depositPaid ? ` and refund their ${depositLabel} payment` : ""}.
           This cannot be undone from here.
           {depositPaid && !practiceMode
-            ? " If the refund fails, the request stays open so you can retry."
+            ? " Staff get an email with the refund steps and when the guest should see the money. If a card refund fails, the request stays open so you can retry."
             : null}
         </p>
         <form
