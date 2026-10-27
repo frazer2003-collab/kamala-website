@@ -6,6 +6,7 @@ import { StaffSidebar } from "@/components/staff-sidebar";
 
 type StaffShellProps = {
   current:
+    | "home"
     | "requests"
     | "calendar"
     | "reservations"

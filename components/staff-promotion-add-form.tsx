@@ -19,6 +19,7 @@ type StaffPromotionAddFormProps = {
   editing?: StaffRoomPromotion | null;
   currency: PropertyCurrency;
   existingPromotions: StaffRoomPromotion[];
+  initialRoomId?: string;
 };
 
 function rangesOverlap(startA: string, endA: string, startB: string, endB: string) {
@@ -39,10 +40,11 @@ export function StaffPromotionAddForm({
   editing = null,
   currency,
   existingPromotions,
+  initialRoomId = "",
 }: StaffPromotionAddFormProps) {
   const [state, formAction, pending] = useActionState(addRoomPromotion, initialState);
   const [showLabel, setShowLabel] = useState(Boolean(editing?.label));
-  const [roomId, setRoomId] = useState(editing?.roomId ?? "");
+  const [roomId, setRoomId] = useState(editing?.roomId ?? initialRoomId);
   const [startDate, setStartDate] = useState(editing?.startDate ?? "");
   const [endDate, setEndDate] = useState(editing?.endDate ?? "");
   const [percentOff, setPercentOff] = useState(

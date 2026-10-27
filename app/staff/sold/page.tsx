@@ -5,6 +5,7 @@ import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-pick
 import { StaffShell } from "@/components/staff-shell";
 import { getTodayIso, parseStaffTimelineRange } from "@/lib/calendar";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
+import { ownerAttentionLabel, ownerBookingHref, ownerRateAction } from "@/lib/owner-check";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
 import { loadStaffFinancePageData } from "@/lib/staff-finance-data";
 import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
@@ -244,7 +245,9 @@ function FinancePriceGuide({
         </p>
       ) : (
         <ol className="staff-sold__list" aria-label="Published rate against agreed rate">
-          {priceRooms.map((row) => (
+          {priceRooms.map((row) => {
+            const rateAction = ownerRateAction(row, fromIso, toIso);
+            return (
             <li className="staff-sold__row" key={row.roomId}>
               <div className="staff-sold__row-main">
                 <h3>
@@ -276,6 +279,9 @@ function FinancePriceGuide({
                   <span>Still open {nightLabel(row.nightsStillOpen)}</span>
                 </p>
                 {row.priceCue ? <p className="staff-sold__cue">{row.priceCue}</p> : null}
+                <p className="staff-sold__action">
+                  <Link href={rateAction.href}>{rateAction.label}</Link>
+                </p>
               </div>
               <div className="staff-sold__row-money">
                 {row.publishedRate !== null && row.agreedNightlyRate !== null ? (
@@ -291,7 +297,8 @@ function FinancePriceGuide({
                 )}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
       )}
       {report.totals.unpricedNights > 0 ? (
@@ -338,6 +345,7 @@ function FinanceAccounts({
         the guest has not paid for yet.
       </p>
       {hasCheck ? (
+        <>
         <dl className="staff-sold__accounts">
           <div>
             <dt>Collected</dt>
@@ -370,6 +378,19 @@ function FinanceAccounts({
             </div>
           ) : null}
         </dl>
+        {report.attention.length > 0 ? (
+          <ul className="staff-sold__attention">
+            {report.attention.map((item) => (
+              <li key={`${item.kind}-${item.bookingId}`}>
+                <Link href={ownerBookingHref(item.bookingId)}>
+                  <span>{ownerAttentionLabel(item)}</span>
+                  <span>{formatMoneySuffix(item.amount, currency)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        </>
       ) : (
         <p className="staff-sold__empty" role="status">
           No payments to check in this range.

@@ -85,6 +85,15 @@ export type StaffInsightsRoomRow = {
   bankClaimedUnpaid: number;
   /** Bank refunds staff still have to send. */
   refundsToSend: number;
+  attention: StaffInsightsAttention[];
+};
+
+export type StaffInsightsAttention = {
+  kind: "unpaid-stayed" | "bank-claimed" | "refund";
+  bookingId: string;
+  guestName: string;
+  roomName: string;
+  amount: number;
 };
 
 export type StaffInsightsReport = {
@@ -136,6 +145,8 @@ export type StaffInsightsReport = {
     /** Bank refunds staff still have to send. The site does not move this money. */
     refundsToSend: number;
   };
+  /** Stays the owner should open: unpaid nights already stayed, claimed transfers, refunds to send. */
+  attention: StaffInsightsAttention[];
   revenueNote: string;
 };
 
@@ -468,6 +479,16 @@ export function describeRoomPriceChoice({
   return "Guests paid a little under the published rate, and nights are still open.";
 }
 
+function attentionKindOrder(kind: StaffInsightsAttention["kind"]) {
+  if (kind === "unpaid-stayed") {
+    return 0;
+  }
+  if (kind === "bank-claimed") {
+    return 1;
+  }
+  return 2;
+}
+
 function soldPercentOf(nightsSold: number, nightsAvailable: number) {
   if (nightsAvailable <= 0) {
     return null;
@@ -607,6 +628,7 @@ export function buildStaffInsightsReport({
     let unpaidEarned = 0;
     let bankClaimedUnpaid = 0;
     let refundsToSend = 0;
+    const attention: StaffInsightsAttention[] = [];
     const nightsAvailable = countSellableDoorNights({
       availableCount,
       calendarDays,
@@ -627,7 +649,18 @@ export function buildStaffInsightsReport({
       nightsSold += nights;
       stayCount += 1;
       bumpSource(sources, websiteSourceLabel(booking.bookingSource));
-      refundsToSend += Math.max(0, booking.refundDue ?? 0);
+      const refundOwed = Math.max(0, booking.refundDue ?? 0);
+      refundsToSend += refundOwed;
+      const bookingId = booking.databaseId ?? booking.id;
+      if (refundOwed > 0) {
+        attention.push({
+          kind: "refund",
+          bookingId,
+          guestName: booking.guest,
+          roomName,
+          amount: refundOwed,
+        });
+      }
       // The saved total is the room price that was agreed. A 0 is a comp, not
       // a missing number, so it is not replaced with the rack rate.
       if (!hasRecordedTotal(booking.estimatedTotal)) {
@@ -686,8 +719,23 @@ export function buildStaffInsightsReport({
       } else {
         unpaid += roomMoney.inRange;
         unpaidEarned += roomMoney.earned;
-        if (booking.bankTransferClaimed) {
+        if (booking.bankTransferClaimed && roomMoney.inRange > 0) {
           bankClaimedUnpaid += roomMoney.inRange;
+          attention.push({
+            kind: "bank-claimed",
+            bookingId,
+            guestName: booking.guest,
+            roomName,
+            amount: roomMoney.inRange,
+          });
+        } else if (roomMoney.earned > 0) {
+          attention.push({
+            kind: "unpaid-stayed",
+            bookingId,
+            guestName: booking.guest,
+            roomName,
+            amount: roomMoney.earned,
+          });
         }
       }
     }
@@ -776,6 +824,7 @@ export function buildStaffInsightsReport({
       unpaidEarned,
       bankClaimedUnpaid,
       refundsToSend,
+      attention,
     } satisfies StaffInsightsRoomRow;
   }
 
@@ -886,6 +935,14 @@ export function buildStaffInsightsReport({
     bankClaimedUnpaid: rows.reduce((sum, row) => sum + row.bankClaimedUnpaid, 0),
     refundsToSend: rows.reduce((sum, row) => sum + row.refundsToSend, 0),
   };
+  const attention = rows
+    .flatMap((row) => row.attention)
+    .sort(
+      (a, b) =>
+        attentionKindOrder(a.kind) - attentionKindOrder(b.kind) ||
+        b.amount - a.amount ||
+        a.guestName.localeCompare(b.guestName),
+    );
 
   return {
     year: resolvedYear,
@@ -897,6 +954,7 @@ export function buildStaffInsightsReport({
     rooms: rows,
     totals,
     accounts,
+    attention,
     revenueNote:
       "Earned money is the saved room price for nights in this range that have already happened, plus the card bank charge on those nights. The bank charge is not part of the room price. Nights still ahead are not earned yet. Booking-channel nights have no saved price, so they are left out of the money. A stay saved at 0 stays at 0.",
   };
