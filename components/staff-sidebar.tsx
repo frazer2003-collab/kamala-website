@@ -3,7 +3,6 @@ import { StaffLogoutForm } from "@/components/staff-logout-form";
 
 type StaffSidebarProps = {
   current:
-    | "home"
     | "requests"
     | "calendar"
     | "reservations"
@@ -26,57 +25,42 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         </span>
       </Link>
       <nav className="staff-nav">
-        <Link data-owner-nav aria-current={current === "home" ? "page" : undefined} href="/staff">
-          Check
-        </Link>
-        <Link
-          data-owner-nav
-          aria-current={current === "requests" ? "page" : undefined}
-          href="/staff?view=inbox"
-        >
+        <Link aria-current={current === "requests" ? "page" : undefined} href="/staff">
           Requests
         </Link>
         <Link
-          data-owner-nav
           aria-current={current === "calendar" ? "page" : undefined}
           href="/staff/calendar"
         >
           Calendar
         </Link>
         <Link
-          data-owner-nav
+          aria-current={current === "reservations" ? "page" : undefined}
+          href="/staff/reservations"
+        >
+          Reservations
+        </Link>
+        <Link
           aria-current={current === "sold" ? "page" : undefined}
           href="/staff/sold"
         >
           Finance
         </Link>
-        <input className="staff-nav-more" id="staff-nav-more" type="checkbox" />
-        <label className="staff-nav-more-toggle" htmlFor="staff-nav-more">
-          More
-        </label>
-        <div className="staff-nav__extra">
-          <Link
-            aria-current={current === "reservations" ? "page" : undefined}
-            href="/staff/reservations"
-          >
-            Reservations
-          </Link>
-          <Link
-            aria-current={current === "promotions" ? "page" : undefined}
-            href="/staff/promotions"
-          >
-            Discounts
-          </Link>
-          <Link aria-current={current === "gallery" ? "page" : undefined} href="/staff/gallery">
-            Gallery
-          </Link>
-          <Link
-            aria-current={current === "settings" ? "page" : undefined}
-            href="/staff/settings"
-          >
-            Settings
-          </Link>
-        </div>
+        <Link
+          aria-current={current === "promotions" ? "page" : undefined}
+          href="/staff/promotions"
+        >
+          Discounts
+        </Link>
+        <Link aria-current={current === "gallery" ? "page" : undefined} href="/staff/gallery">
+          Gallery
+        </Link>
+        <Link
+          aria-current={current === "settings" ? "page" : undefined}
+          href="/staff/settings"
+        >
+          Settings
+        </Link>
       </nav>
       <StaffLogoutForm />
     </aside>

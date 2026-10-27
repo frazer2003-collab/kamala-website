@@ -36,8 +36,6 @@ import { formatBedSetup } from "@/lib/bed-setup";
 import { formatStayDateRange } from "@/lib/stay-dates";
 import { formatStayEndReason } from "@/lib/stay-end-reason";
 import type { BookingStatus } from "@/lib/content";
-import { OwnerCheck } from "@/components/owner-check";
-import { isStaffInboxQuery } from "@/lib/owner-check";
 
 const BookingChat = nextDynamic(
   () => import("@/components/booking-chat").then((module) => module.BookingChat),
@@ -255,11 +253,6 @@ export default async function StaffBookingsPage({
     refund?: string;
   }>;
 }) {
-  const inboxParams = await searchParams;
-  if (!isStaffInboxQuery(inboxParams)) {
-    return <OwnerCheck />;
-  }
-
   const staffSession = await requireStaffSessionDetails();
   const canWrite = staffCanWriteCalendar(staffSession);
 

@@ -79,11 +79,11 @@ function parseTab(value?: string): DiscountsTab {
 export default async function StaffPromotionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string; updated?: string; tab?: string; room?: string }>;
+  searchParams: Promise<{ edit?: string; updated?: string; tab?: string }>;
 }) {
   await requireStaffCalendarWrite();
 
-  const { edit: editId, updated, tab: tabParam, room: roomParam } = await searchParams;
+  const { edit: editId, updated, tab: tabParam } = await searchParams;
   const tab = parseTab(tabParam);
   const [promotions, discountCodes, rooms, settings, supabaseReady] = await Promise.all([
     getStaffRoomPromotions(),
@@ -101,7 +101,6 @@ export default async function StaffPromotionsPage({
     .filter((promotion) => promotion.endDate < today)
     .sort((left, right) => right.endDate.localeCompare(left.endDate));
   const editing = editId ? promotions.find((promotion) => promotion.id === editId) ?? null : null;
-  const presetRoomId = rooms.some((room) => room.id === roomParam) ? roomParam : undefined;
   const showUpdated = updated === "1" && !editing;
 
   const liveCodes = discountCodes.filter(
@@ -240,8 +239,7 @@ export default async function StaffPromotionsPage({
                 disabled={!supabaseReady}
                 editing={editing}
                 existingPromotions={promotions}
-                initialRoomId={presetRoomId}
-                key={editing?.id ?? presetRoomId ?? "new"}
+                key={editing?.id ?? "new"}
                 rooms={rooms}
               />
             </section>

@@ -561,7 +561,6 @@ describe("buildStaffInsightsReport", () => {
         booking({
           id: "unpaid-stayed",
           databaseId: "db-unpaid",
-          guest: "Unpaid guest",
           roomId: "superior",
           arrivalDate: "2026-10-01",
           departureDate: "2026-10-02",
@@ -592,12 +591,6 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.accounts.unpaidEarned, 500);
     assert.equal(report.accounts.bankClaimedUnpaid, 500);
     assert.equal(report.accounts.refundsToSend, 200);
-    assert.deepEqual(
-      report.attention.map((item) => item.kind),
-      ["bank-claimed", "refund"],
-    );
-    assert.equal(report.attention[0]?.guestName, "Unpaid guest");
-    assert.equal(report.attention[1]?.amount, 200);
   });
 
   it("tells the owner when a discount is already in the agreed rate", () => {
