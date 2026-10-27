@@ -35,6 +35,22 @@ describe("refund notices", () => {
     assert.match(copy.next, /same day/);
   });
 
+  it("uses the same timing when a calendar stay is cancelled", () => {
+    const card = staffCardRefundCopy("Ada", "2,380 THB", "cancelled");
+    assert.match(card.intro, /stay was cancelled/);
+    assert.match(card.intro, /Stripe is refunding 2,380 THB/);
+    assert.match(card.next, /5 to 10 business days/);
+    assert.match(
+      staffCardRefundCopy("Ada", "2,380 THB", "cancelled", false, "143 THB").intro,
+      /143 THB bank charge stays with the guesthouse/,
+    );
+
+    const bank = staffBankRefundCopy("Ada", "2,380 THB", "cancelled");
+    assert.match(bank.intro, /guesthouse bank account/);
+    assert.match(bank.next, /already closed/);
+    assert.match(bank.next, /same day/);
+  });
+
   it("tells the guest when a sent bank refund should arrive", () => {
     assert.match(guestBankRefundSentMessage("700 THB"), /same day/);
   });

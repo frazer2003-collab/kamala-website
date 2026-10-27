@@ -194,6 +194,8 @@ export function CalendarStayDialogs({
             databaseId={selectedBooking.databaseId ?? ""}
             departureDate={selectedBooking.departureDate}
             depositPaid={selectedBooking.depositPaid}
+            depositAmount={selectedBooking.depositAmount}
+            paidByCard={Boolean(selectedBooking.stripePaymentIntentId)}
             estimatedTotal={selectedBooking.estimatedTotal}
             formError={formError}
             guestEmail={selectedBooking.contact}

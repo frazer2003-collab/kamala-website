@@ -2,6 +2,7 @@ import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form";
 import { StaffCancelHoldPanel } from "@/components/staff-cancel-hold-panel";
+import { StaffClosedRefundPanel } from "@/components/staff-closed-refund-panel";
 import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
 import { StaffShell } from "@/components/staff-shell";
 import { StaffStayChangePanel } from "@/components/staff-stay-change-panel";
@@ -23,7 +24,10 @@ import {
 import { formatMoneySuffix } from "@/lib/currency";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRooms } from "@/lib/rooms";
-import { requireStaffSession } from "@/lib/staff-auth";
+import {
+  requireStaffSessionDetails,
+  staffCanWriteCalendar,
+} from "@/lib/staff-auth";
 import {
   formatOverlapErrorMessage,
   parseOverlapDays,
@@ -246,9 +250,11 @@ export default async function StaffBookingsPage({
     overlap?: string;
     "hold-cancelled"?: string;
     "stay-change"?: string;
+    refund?: string;
   }>;
 }) {
-  await requireStaffSession();
+  const staffSession = await requireStaffSessionDetails();
+  const canWrite = staffCanWriteCalendar(staffSession);
 
   const {
     booking: selectedBookingId,
@@ -259,6 +265,7 @@ export default async function StaffBookingsPage({
     overlap,
     "hold-cancelled": holdCancelled,
     "stay-change": stayChangeResult,
+    refund,
   } = await searchParams;
   const inboxFilter = parseInboxFilter(filterParam);
   const preferInboxView = viewParam === "inbox";
@@ -500,6 +507,39 @@ export default async function StaffBookingsPage({
             The Stripe refund did not go through, so this request is still open
             and the guest may still be charged. Check the payment in Stripe,
             then try Decline again — or settle the refund with the guest first.
+          </p>
+        ) : null}
+        {error === "refund-closed-failed" ? (
+          <p className="form-message form-message--error" role="alert">
+            The card refund did not go through. The stay stays closed. Refund
+            it in Stripe, then tell the guest. It usually shows on the card in
+            5 to 10 business days.
+          </p>
+        ) : null}
+        {refund === "card" ? (
+          <p className="form-message form-message--success" role="status">
+            Card refund started for the stay. The 6% bank charge stays with the
+            guesthouse. The guest usually sees the refund in 5 to 10 business
+            days. Staff have been emailed.
+          </p>
+        ) : null}
+        {refund === "card-full" ? (
+          <p className="form-message form-message--success" role="status">
+            Card refund started, including the bank charge. The guest usually
+            sees it in 5 to 10 business days. Staff have been emailed.
+          </p>
+        ) : null}
+        {refund === "card-already" ? (
+          <p className="form-message form-message--success" role="status">
+            This card payment was already refunded. The guest usually sees it
+            in 5 to 10 business days.
+          </p>
+        ) : null}
+        {refund === "bank" ? (
+          <p className="form-message form-message--success" role="status">
+            Staff have been emailed to send the bank transfer. Once it is sent,
+            it usually arrives the same day, or the next business day if it
+            goes out after bank hours.
           </p>
         ) : null}
         {staffBookings.error ? (
@@ -881,6 +921,7 @@ export default async function StaffBookingsPage({
                     currency={settings.currency}
                     depositAmount={selected.depositAmount}
                     depositPaid={selected.depositPaid}
+                    paidByCard={Boolean(selected.stripePaymentIntentId)}
                     bankTransferClaimed={selected.bankTransferClaimed}
                     guestEmail={selected.contact}
                     guestName={selected.guest}
@@ -890,9 +931,26 @@ export default async function StaffBookingsPage({
                   />
                 </>
               ) : (
-                <p className="detail-help">
-                  This request is closed. Conversation history is read-only.
-                </p>
+                <>
+                  {selected.databaseId &&
+                  selected.depositPaid &&
+                  (selected.depositAmount > 0 || selected.estimatedTotal > 0) ? (
+                    <StaffClosedRefundPanel
+                      amount={
+                        selected.depositAmount > 0
+                          ? selected.depositAmount
+                          : selected.estimatedTotal
+                      }
+                      bookingId={selected.databaseId}
+                      canManage={canWrite}
+                      currency={settings.currency}
+                      paidByCard={Boolean(selected.stripePaymentIntentId)}
+                    />
+                  ) : null}
+                  <p className="detail-help">
+                    This request is closed. Conversation history is read-only.
+                  </p>
+                </>
               )}
             </aside>
           ) : (

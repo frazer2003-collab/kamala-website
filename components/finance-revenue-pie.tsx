@@ -8,17 +8,23 @@ type FinanceSoldPieProps = {
   nightsSold: number;
   nightsAvailable: number;
   nightsOverCapacity?: number;
+  nightsStillOpen?: number;
+  nightsPassedUnsold?: number;
 };
 
 export function FinanceSoldPie({
   nightsSold,
   nightsAvailable,
   nightsOverCapacity = 0,
+  nightsStillOpen,
+  nightsPassedUnsold = 0,
 }: FinanceSoldPieProps) {
   const model = buildFinanceSoldPieModel(
     nightsSold,
     nightsAvailable,
     nightsOverCapacity,
+    nightsStillOpen,
+    nightsPassedUnsold,
   );
 
   return (
@@ -73,9 +79,21 @@ export function FinanceSoldPie({
               />
               <span className="staff-sold__chart-legend-copy">
                 <strong>Still open</strong>
-                <span>{nightWord(model.nightsUnsold)}</span>
+                <span>{nightWord(model.nightsStillOpen)}</span>
               </span>
             </li>
+            {model.nightsPassedUnsold > 0 ? (
+              <li>
+                <span
+                  aria-hidden="true"
+                  className="staff-sold__chart-swatch staff-sold__chart-swatch--passed"
+                />
+                <span className="staff-sold__chart-legend-copy">
+                  <strong>Unsold, already passed</strong>
+                  <span>{nightWord(model.nightsPassedUnsold)}</span>
+                </span>
+              </li>
+            ) : null}
             {model.isOverCapacity ? (
               <li>
                 <span

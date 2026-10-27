@@ -1,4 +1,8 @@
 "use client";
+import {
+  StaffBankChargeChoice,
+  type BankChargeChoice,
+} from "@/components/staff-bank-charge-choice";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useState, type FormEvent } from "react";
@@ -25,6 +29,8 @@ type StaffRequestDecisionPanelProps = {
   guestName: string;
   guestEmail: string;
   depositPaid: boolean;
+  /** Card payment, so staff can choose whether the 6% bank charge is refunded. */
+  paidByCard?: boolean;
   bankTransferClaimed: boolean;
   depositAmount: number;
   currency?: PropertyCurrency;
@@ -44,6 +50,7 @@ export function StaffRequestDecisionPanel({
   guestName,
   guestEmail,
   depositPaid,
+  paidByCard = false,
   bankTransferClaimed,
   depositAmount,
   currency = "thb",
@@ -59,6 +66,7 @@ export function StaffRequestDecisionPanel({
   const [declineMessage, setDeclineMessage] = useState(DECLINE_DEFAULT);
   const [practiceResult, setPracticeResult] = useState<PracticeResult>(null);
   const [transferVerified, setTransferVerified] = useState(false);
+  const [bankCharge, setBankCharge] = useState<BankChargeChoice>("keep");
 
   // Whether the guest reported the transfer or not, confirming an unpaid stay
   // means staff have seen the money, so both routes pass the same gate.
@@ -207,7 +215,12 @@ export function StaffRequestDecisionPanel({
         <p className="staff-decide__summary">
           Email <strong>{guestName}</strong> at <strong>{guestEmail}</strong>,
           then close this request
-          {depositPaid ? ` and refund their ${depositLabel} payment` : ""}.
+          {depositPaid
+            ? paidByCard
+              ? ` and refund their ${depositLabel} stay. Choose whether the bank charge stays`
+              : ` and refund their ${depositLabel} stay`
+            : ""}
+          .
           This cannot be undone from here.
           {depositPaid && !practiceMode
             ? " Staff get an email with the refund steps and when the guest should see the money. If a card refund fails, the request stays open so you can retry."
@@ -225,6 +238,15 @@ export function StaffRequestDecisionPanel({
           <StaffFormBusyBridge />
           {!practiceMode ? (
             <input name="booking-id" type="hidden" value={bookingId} />
+          ) : null}
+          {depositPaid && paidByCard && !practiceMode ? (
+            <StaffBankChargeChoice
+              currency={currency}
+              disabled={!canManage}
+              onChange={setBankCharge}
+              stayAmount={depositAmount}
+              value={bankCharge}
+            />
           ) : null}
           <div className="field-pair">
             <label htmlFor="decline-staff-message">Email to guest</label>

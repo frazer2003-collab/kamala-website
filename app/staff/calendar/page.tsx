@@ -91,6 +91,7 @@ export default async function StaffCalendarPage({
     detail?: string;
     assignGuest?: string;
     assignUnit?: string;
+    refund?: string;
     conversation?: string;
     "confirm-email"?: string;
   }>;
@@ -115,6 +116,7 @@ export default async function StaffCalendarPage({
     detail: errorDetail,
     assignGuest,
     assignUnit,
+    refund,
     conversation,
     "confirm-email": confirmEmail,
   } = await searchParams;
@@ -307,6 +309,9 @@ export default async function StaffCalendarPage({
   if (assignUnit) {
     flashParams.set("assignUnit", assignUnit);
   }
+  if (refund) {
+    flashParams.set("refund", refund);
+  }
   // Keep flash messages when closing the dialog; drop booking/block/room/date so the panel closes.
   const closeHref = `/staff/calendar?${flashParams.toString()}`;
   const dismissFlashHref = `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}`;
@@ -328,6 +333,8 @@ export default async function StaffCalendarPage({
             ? "Choose a booking source."
           : error === "cancel-reason"
             ? "Choose whether this is a cancellation or a no-show before removing the stay."
+          : error === "refund-failed"
+            ? "The card refund did not go through, so the stay is still on the calendar. Check the payment in Stripe, then try again."
           : error === "invalid-name"
             ? "Enter the guest name before saving."
             : error === "invalid-phone"
@@ -525,6 +532,44 @@ export default async function StaffCalendarPage({
         {confirmedBookings.source === "sample" && !confirmedBookings.error ? (
           <p className="form-message form-message--setup" role="status">
             Add Supabase env vars for live bookings.
+          </p>
+        ) : null}
+        {refund === "card" ? (
+          <p className="form-message form-message--success" role="status">
+            Card refund started for the stay. The 6% bank charge stays with the
+            guesthouse. The guest usually sees the refund in 5 to 10 business
+            days. Staff have been emailed.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {refund === "card-full" ? (
+          <p className="form-message form-message--success" role="status">
+            Card refund started, including the bank charge. The guest usually
+            sees it in 5 to 10 business days. Staff have been emailed.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {refund === "card-already" ? (
+          <p className="form-message form-message--success" role="status">
+            This card payment was already refunded. The guest usually sees it in
+            5 to 10 business days. The stay is now off the calendar.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {refund === "bank" ? (
+          <p className="form-message form-message--success" role="status">
+            Stay cancelled. Staff have been emailed to send the bank transfer.
+            Once it is sent, it usually arrives the same day, or the next
+            business day if it goes out after bank hours.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
           </p>
         ) : null}
         {pageFormError ? (

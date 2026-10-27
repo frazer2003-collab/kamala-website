@@ -27,6 +27,11 @@ import {
 import { getBankClaimCardError } from "@/lib/booking-payment-race";
 import { resolveConfirmPaidAt } from "@/lib/booking-confirm";
 import { isStaffCalendarManageableStay } from "@/lib/staff-calendar-stay";
+import {
+  guestBankRefundSentence,
+  guestCardRefundSentence,
+} from "@/lib/refund-notice";
+import { isStripeChargeAlreadyRefunded } from "@/lib/stripe-refund";
 import { PUBLIC_CACHE_TAGS, revalidatePublicCache } from "@/lib/public-cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -67,6 +72,7 @@ import { parseStayEndReason } from "@/lib/stay-end-reason";
 import { getConfirmedBookings } from "@/lib/booking-requests";
 import {
   calculateStripeChargeAmount,
+  cardRefundKeepingCharge,
   resolveBookingStayTotal,
   STRIPE_BANK_CHARGE_RATE,
 } from "@/lib/payment-pricing";
@@ -1528,6 +1534,72 @@ export async function assignStayRoomUnit(formData: FormData) {
   );
 }
 
+function staffKeepsBankCharge(formData: FormData) {
+  return getValue(formData, "bank-charge") !== "waive";
+}
+
+async function refundCardPaymentKeepingCharge(
+  booking: BookingRequestRow,
+  keepBankCharge = true,
+): Promise<
+  | { ok: true; already: boolean; refundMajor: number; keptMajor: number }
+  | { ok: false }
+> {
+  if (!booking.stripe_payment_intent_id || !hasStripeConfig()) {
+    return { ok: false };
+  }
+
+  try {
+    const stripe = getStripe();
+    const prior = await stripe.refunds.list({
+      payment_intent: booking.stripe_payment_intent_id,
+      limit: 100,
+    });
+    const intent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id);
+    const covered = prior.data
+      .filter((refund) => refund.status === "succeeded" || refund.status === "pending")
+      .reduce((sum, refund) => sum + refund.amount, 0);
+    const metaStay = Number(intent.metadata?.stay_total);
+    const stayMajor =
+      Number.isFinite(metaStay) && metaStay > 0
+        ? metaStay
+        : Math.max(0, Math.round(booking.deposit_amount ?? booking.estimated_total ?? 0));
+    const decision = cardRefundKeepingCharge({
+      amountReceivedMinor: intent.amount_received,
+      alreadyRefundedMinor: covered,
+      stayTotalMajor: stayMajor,
+      keepBankCharge,
+    });
+    const keptMajor = decision.keptChargeMinor / 100;
+
+    if (decision.action === "done") {
+      return { ok: true, already: true, refundMajor: 0, keptMajor };
+    }
+
+    await stripe.refunds.create({
+      payment_intent: booking.stripe_payment_intent_id,
+      amount: decision.amountMinor,
+      metadata: {
+        booking_id: booking.id,
+        kind: "stay-refund",
+        kept_charge: String(keptMajor),
+      },
+    });
+
+    return {
+      ok: true,
+      already: false,
+      refundMajor: decision.amountMinor / 100,
+      keptMajor,
+    };
+  } catch (error) {
+    if (!isStripeChargeAlreadyRefunded(error)) {
+      return { ok: false };
+    }
+    return { ok: true, already: true, refundMajor: 0, keptMajor: 0 };
+  }
+}
+
 export async function declineBookingRequest(formData: FormData) {
   await requireStaffCalendarWrite();
 
@@ -1542,17 +1614,19 @@ export async function declineBookingRequest(formData: FormData) {
   }
 
   if (booking.deposit_paid_at && booking.stripe_payment_intent_id && hasStripeConfig()) {
-    try {
-      await getStripe().refunds.create({
-        payment_intent: booking.stripe_payment_intent_id,
-      });
-    } catch {
+    const cardRefund = await refundCardPaymentKeepingCharge(
+      booking,
+      staffKeepsBankCharge(formData),
+    );
+    if (!cardRefund.ok) {
       redirect(
         `/staff?booking=${encodeURIComponent(bookingId)}&error=refund-failed`,
       );
     }
     const settings = await getPropertySettings();
-    const refundAmount = booking.deposit_amount ?? booking.estimated_total;
+    const refundAmount = cardRefund.already
+      ? (booking.deposit_amount ?? booking.estimated_total)
+      : cardRefund.refundMajor;
     await sendStaffStayChangeEmail({
       kind: "refund-card",
       refundReason: "declined",
@@ -1566,6 +1640,10 @@ export async function declineBookingRequest(formData: FormData) {
       pendingDepartureDate: null,
       amountLabel:
         refundAmount > 0 ? formatMoneySuffix(refundAmount, settings.currency) : null,
+      keptChargeLabel:
+        cardRefund.keptMajor > 0
+          ? formatMoneySuffix(cardRefund.keptMajor, settings.currency)
+          : null,
       chatUrl: booking.conversation_token
         ? getGuestChatUrl(booking.conversation_token)
         : null,
@@ -1608,6 +1686,128 @@ export async function declineBookingRequest(formData: FormData) {
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
   redirect("/staff");
+}
+
+type StayRefundOutcome = "card" | "card-full" | "card-already" | "bank" | "failed" | "skipped";
+
+async function refundPaidStay(
+  booking: BookingRequestRow,
+  reason: "declined" | "cancelled",
+  options: { notifyGuest: boolean; keepBankCharge: boolean },
+): Promise<StayRefundOutcome> {
+  if (!booking.deposit_paid_at) {
+    return "skipped";
+  }
+
+  const settings = await getPropertySettings();
+  const stayAmount = booking.deposit_amount ?? booking.estimated_total ?? 0;
+  let amountLabel =
+    stayAmount > 0 ? formatMoneySuffix(stayAmount, settings.currency) : null;
+  let keptChargeLabel: string | null = null;
+  const chatUrl = booking.conversation_token
+    ? getGuestChatUrl(booking.conversation_token)
+    : null;
+  const mail = {
+    refundReason: reason,
+    guestName: booking.guest_name,
+    guestEmail: booking.guest_email,
+    roomName: booking.room_name,
+    arrivalDate: booking.arrival_date,
+    departureDate: booking.departure_date,
+    pendingRoomName: null,
+    pendingArrivalDate: null,
+    pendingDepartureDate: null,
+    amountLabel,
+    keptChargeLabel,
+    chatUrl,
+  };
+
+  if (booking.stripe_payment_intent_id) {
+    const cardRefund = await refundCardPaymentKeepingCharge(
+      booking,
+      options.keepBankCharge,
+    );
+    if (!cardRefund.ok) {
+      return "failed";
+    }
+    if (cardRefund.already) {
+      return "card-already";
+    }
+
+    amountLabel =
+      cardRefund.refundMajor > 0
+        ? formatMoneySuffix(cardRefund.refundMajor, settings.currency)
+        : amountLabel;
+    keptChargeLabel =
+      cardRefund.keptMajor > 0
+        ? formatMoneySuffix(cardRefund.keptMajor, settings.currency)
+        : null;
+
+    await sendStaffStayChangeEmail({
+      kind: "refund-card",
+      refundReason: reason,
+      guestName: booking.guest_name,
+      guestEmail: booking.guest_email,
+      roomName: booking.room_name,
+      arrivalDate: booking.arrival_date,
+      departureDate: booking.departure_date,
+      pendingRoomName: null,
+      pendingArrivalDate: null,
+      pendingDepartureDate: null,
+      amountLabel,
+      keptChargeLabel,
+      chatUrl,
+    }).catch(() => null);
+
+    if (options.notifyGuest && amountLabel) {
+      await recordStaffChatMessage({
+        booking: { ...booking, status: "declined" },
+        body: guestCardRefundSentence(amountLabel, keptChargeLabel),
+      }).catch(() => null);
+    }
+
+    return options.keepBankCharge ? "card" : "card-full";
+  }
+
+  await sendStaffStayChangeEmail({
+    kind: "refund-to-send",
+    ...mail,
+  }).catch(() => null);
+
+  if (options.notifyGuest && amountLabel) {
+    await recordStaffChatMessage({
+      booking: { ...booking, status: "declined" },
+      body: guestBankRefundSentence(amountLabel),
+    }).catch(() => null);
+  }
+
+  return "bank";
+}
+
+export async function refundClosedBooking(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const bookingId = getValue(formData, "booking-id");
+  const back = bookingId
+    ? `/staff?booking=${encodeURIComponent(bookingId)}`
+    : "/staff";
+  const booking = bookingId ? await getBookingForStaff(bookingId) : null;
+
+  if (!booking || booking.status !== "declined" || !booking.deposit_paid_at) {
+    redirect(`${back}${back.includes("?") ? "&" : "?"}error=refund-closed-failed`);
+  }
+
+  const outcome = await refundPaidStay(booking, "cancelled", {
+    notifyGuest: true,
+    keepBankCharge: staffKeepsBankCharge(formData),
+  });
+  if (outcome === "failed" || outcome === "skipped") {
+    redirect(`${back}&error=refund-closed-failed`);
+  }
+
+  revalidatePath("/staff");
+  revalidatePath("/staff/calendar");
+  redirect(`${back}&refund=${outcome}`);
 }
 
 export async function cancelConfirmedBooking(
@@ -1656,6 +1856,24 @@ export async function cancelConfirmedBooking(
     );
   }
 
+  const refundPayment = getValue(formData, "refund-payment") === "1";
+  let refundOutcome: StayRefundOutcome = "skipped";
+  if (refundPayment && booking.deposit_paid_at) {
+    refundOutcome = await refundPaidStay(booking, "cancelled", {
+      notifyGuest: true,
+      keepBankCharge: staffKeepsBankCharge(formData),
+    });
+    if (refundOutcome === "failed") {
+      redirect(
+        appendCalendarError(
+          bookingHref,
+          "refund-failed",
+          "The stay is still on the calendar.",
+        ),
+      );
+    }
+  }
+
   if (booking.deposit_paid_at) {
     await releaseBookingReservation(bookingId);
   }
@@ -1675,10 +1893,30 @@ export async function cancelConfirmedBooking(
         .eq("id", bookingId);
 
       if (fallbackError) {
-        redirect(appendCalendarError(bookingHref, "save-failed", fallbackError.message));
+        redirect(
+          appendCalendarError(
+            bookingHref,
+            "save-failed",
+            refundOutcome === "card" ||
+            refundOutcome === "card-full" ||
+            refundOutcome === "card-already"
+              ? "The card refund already started. The stay could not be closed."
+              : fallbackError.message,
+          ),
+        );
       }
     } else {
-      redirect(appendCalendarError(bookingHref, "save-failed", error.message));
+      redirect(
+        appendCalendarError(
+          bookingHref,
+          "save-failed",
+          refundOutcome === "card" ||
+          refundOutcome === "card-full" ||
+          refundOutcome === "card-already"
+            ? "The card refund already started. The stay could not be closed."
+            : error.message,
+        ),
+      );
     }
   }
 
@@ -1686,7 +1924,14 @@ export async function cancelConfirmedBooking(
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
   revalidatePath("/staff/reservations");
-  redirect(calendarHref);
+  redirect(
+    refundOutcome === "skipped"
+      ? calendarHref
+      : calendarHrefFromFormData(formData, {
+          month,
+          extras: { refund: refundOutcome },
+        }),
+  );
 }
 
 const walkInEmailFallback = "walk-in@kamala.local";

@@ -333,11 +333,14 @@ export async function sendStaffStayChangeEmail({
   chatUrl,
   refundReason = "cheaper-stay",
   cardRefundFailed = false,
+  keptChargeLabel = null,
   preface = null,
 }: {
   kind: "changed" | "transfer-to-confirm" | "refund-to-send" | "refund-card";
-  refundReason?: "cheaper-stay" | "declined" | "top-up-voided";
+  refundReason?: "cheaper-stay" | "declined" | "cancelled" | "top-up-voided";
   cardRefundFailed?: boolean;
+  /** Bank charge left on the card so the guest pays it. */
+  keptChargeLabel?: string | null;
   guestName: string;
   guestEmail: string;
   roomName: string;
@@ -373,13 +376,16 @@ export async function sendStaffStayChangeEmail({
     "refund-to-send": staffBankRefundCopy(
       guestName,
       amountLabel ?? "the difference",
-      refundReason === "declined" ? "declined" : "cheaper-stay",
+      refundReason === "declined" || refundReason === "cancelled"
+        ? refundReason
+        : "cheaper-stay",
     ),
     "refund-card": staffCardRefundCopy(
       guestName,
       amountLabel ?? "the payment",
       refundReason,
       cardRefundFailed,
+      keptChargeLabel,
     ),
   }[kind];
 

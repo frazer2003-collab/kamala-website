@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   buildStaffInsightsReport,
   countNightsInMonth,
+  describeRoomPriceChoice,
 } from "@/lib/staff-insights";
 import type { StaffBooking } from "@/lib/booking-requests";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
@@ -146,8 +147,9 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.rooms[0]?.nightsSold, 7); // 2 walk-in + 5 airbnb
     assert.equal(report.rooms[0]?.stayCount, 2);
     assert.equal(report.rooms[0]?.websiteRevenue, 1400);
-    assert.equal(report.rooms[0]?.channelRevenue, 3500); // 5 × 700
-    assert.equal(report.rooms[0]?.estimatedRevenue, 4900);
+    assert.equal(report.rooms[0]?.channelRevenue, 0);
+    assert.equal(report.rooms[0]?.unpricedNights, 5);
+    assert.equal(report.rooms[0]?.estimatedRevenue, 1400);
     assert.equal(report.rooms[1]?.roomId, "family");
     assert.equal(report.rooms[1]?.nightsSold, 3);
     assert.equal(report.rooms[1]?.websiteRevenue, 2700);
@@ -155,9 +157,11 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.totals.nightsSold, 10);
     assert.equal(report.totals.stayCount, 3);
     assert.equal(report.totals.websiteRevenue, 4100);
-    assert.equal(report.totals.channelRevenue, 3500);
-    assert.equal(report.totals.estimatedRevenue, 7600);
-    assert.equal(report.totals.averageNightlyRate, 760);
+    assert.equal(report.totals.channelRevenue, 0);
+    assert.equal(report.totals.unpricedNights, 5);
+    assert.equal(report.totals.estimatedRevenue, 4100);
+    assert.equal(report.totals.earnedRevenue, 4100);
+    assert.equal(report.totals.averageNightlyRate, 820);
     // July = 31 days; Superior ×2 doors, Family ×1.
     assert.equal(report.rooms[0]?.nightsAvailable, 62);
     assert.equal(report.rooms[0]?.soldPercent, Math.round((7 / 62) * 100));
@@ -258,7 +262,7 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.rooms[0]?.nightsOverCapacity, 1);
   });
 
-  it("estimates channel money with the website quote rules and ignores closed blocks", () => {
+  it("leaves channel nights out of the money when no price was saved", () => {
     const promotions: RoomPromotionRate[] = [
       {
         roomId: "superior",
@@ -314,15 +318,15 @@ describe("buildStaffInsightsReport", () => {
       rateOverrides,
     });
 
-    // Superior: 2 nights × 630 (10% off 700)
     assert.equal(report.rooms.find((row) => row.roomId === "superior")?.nightsSold, 2);
-    assert.equal(report.rooms.find((row) => row.roomId === "superior")?.channelRevenue, 1260);
-    // Family: 2 nights × day override 1200
-    assert.equal(report.rooms.find((row) => row.roomId === "family")?.channelRevenue, 2400);
+    assert.equal(report.rooms.find((row) => row.roomId === "superior")?.channelRevenue, 0);
+    assert.equal(report.rooms.find((row) => row.roomId === "superior")?.unpricedNights, 2);
+    assert.equal(report.rooms.find((row) => row.roomId === "family")?.unpricedNights, 2);
     assert.equal(report.totals.websiteRevenue, 0);
-    assert.equal(report.totals.channelRevenue, 3660);
-    assert.equal(report.totals.estimatedRevenue, 3660);
-    assert.match(report.revenueNote, /website|quote|channel|payout/i);
+    assert.equal(report.totals.channelRevenue, 0);
+    assert.equal(report.totals.estimatedRevenue, 0);
+    assert.equal(report.totals.unpricedNights, 4);
+    assert.match(report.revenueNote, /channel|saved price/i);
   });
 
   it("honours a stay saved at zero instead of charging the rack rate", () => {
@@ -457,7 +461,7 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.totals.estimatedRevenue, 0);
   });
 
-  it("quotes only channel nights that fall inside the month", () => {
+  it("counts only the channel nights that fall inside the month", () => {
     const report = buildStaffInsightsReport({
       year: 2026,
       month: 7,
@@ -473,6 +477,171 @@ describe("buildStaffInsightsReport", () => {
     });
 
     assert.equal(report.rooms[0]?.nightsSold, 2);
-    assert.equal(report.rooms[0]?.channelRevenue, 1400); // Jul 1–2 only
+    assert.equal(report.rooms[0]?.channelRevenue, 0);
+    assert.equal(report.rooms[0]?.unpricedNights, 2);
+  });
+
+  it("keeps the card bank charge beside the room price", () => {
+    const report = buildStaffInsightsReport({
+      year: 2026,
+      month: 7,
+      rooms,
+      bookings: [
+        booking({
+          roomId: "superior",
+          arrivalDate: "2026-07-01",
+          departureDate: "2026-07-03",
+          estimatedTotal: 2380,
+          depositPaid: true,
+          stripePaymentIntentId: "pi_test",
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.totals.websiteRevenue, 2380);
+    assert.equal(report.totals.bankCharge, 143);
+    assert.equal(report.totals.earnedRevenue, 2523);
+    assert.equal(report.totals.averageNightlyRate, 1190);
+  });
+
+  it("holds back nights in the range that have not happened yet", () => {
+    const report = buildStaffInsightsReport({
+      fromIso: "2026-07-01",
+      toIso: "2026-07-04",
+      todayIso: "2026-07-02",
+      rooms,
+      bookings: [
+        booking({
+          roomId: "superior",
+          arrivalDate: "2026-07-01",
+          departureDate: "2026-07-05",
+          estimatedTotal: 4000,
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.totals.websiteRevenue, 4000);
+    assert.equal(report.totals.earnedRevenue, 2000);
+    assert.equal(report.totals.unearnedRevenue, 2000);
+  });
+
+  it("counts still-open nights only from today forward", () => {
+    const report = buildStaffInsightsReport({
+      fromIso: "2026-10-01",
+      toIso: "2026-10-03",
+      todayIso: "2026-10-03",
+      rooms: [{ ...rooms[0]!, availableCount: 2 }],
+      bookings: [],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.totals.nightsAvailable, 6);
+    assert.equal(report.totals.nightsStillOpen, 2);
+    assert.equal(report.totals.nightsPassedUnsold, 4);
+    assert.equal(report.rooms[0]?.nightsStillOpen, 2);
+  });
+
+  it("separates money already collected from money still owed", () => {
+    const report = buildStaffInsightsReport({
+      fromIso: "2026-10-01",
+      toIso: "2026-10-04",
+      todayIso: "2026-10-03",
+      rooms: [{ ...rooms[0]!, availableCount: 1 }],
+      bookings: [
+        booking({
+          id: "paid-ahead",
+          roomId: "superior",
+          arrivalDate: "2026-10-04",
+          departureDate: "2026-10-05",
+          estimatedTotal: 700,
+          depositPaid: true,
+        }),
+        booking({
+          id: "unpaid-stayed",
+          databaseId: "db-unpaid",
+          roomId: "superior",
+          arrivalDate: "2026-10-01",
+          departureDate: "2026-10-02",
+          estimatedTotal: 500,
+          depositPaid: false,
+          depositAmount: 500,
+          bankTransferClaimed: true,
+          refundDue: 0,
+        }),
+        booking({
+          id: "refund-owed",
+          databaseId: "db-refund",
+          roomId: "superior",
+          arrivalDate: "2026-10-02",
+          departureDate: "2026-10-03",
+          estimatedTotal: 700,
+          depositPaid: true,
+          refundDue: 200,
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.accounts.collected, 1400);
+    assert.equal(report.accounts.collectedEarned, 700);
+    assert.equal(report.accounts.collectedAhead, 700);
+    assert.equal(report.accounts.unpaid, 500);
+    assert.equal(report.accounts.unpaidEarned, 500);
+    assert.equal(report.accounts.bankClaimedUnpaid, 500);
+    assert.equal(report.accounts.refundsToSend, 200);
+  });
+
+  it("tells the owner when a discount is already in the agreed rate", () => {
+    const report = buildStaffInsightsReport({
+      fromIso: "2026-10-03",
+      toIso: "2026-10-04",
+      todayIso: "2026-10-03",
+      rooms: [{ ...rooms[0]!, availableCount: 1, rate: 700 }],
+      bookings: [
+        booking({
+          roomId: "superior",
+          arrivalDate: "2026-10-03",
+          departureDate: "2026-10-04",
+          estimatedTotal: 500,
+          depositPaid: true,
+        }),
+      ],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.rooms[0]?.agreedNightlyRate, 500);
+    assert.equal(report.rooms[0]?.publishedRate, 700);
+    assert.equal(report.rooms[0]?.nightsStillOpen, 1);
+    assert.match(report.rooms[0]?.priceCue ?? "", /under the published rate/i);
+  });
+});
+
+describe("describeRoomPriceChoice", () => {
+  it("points a full-price room with empty nights at a short discount", () => {
+    assert.match(
+      describeRoomPriceChoice({
+        publishedRate: 700,
+        agreedNightlyRate: 700,
+        nightsStillOpen: 4,
+        pricedNights: 2,
+        datesHavePassed: false,
+      }),
+      /short discount/i,
+    );
+  });
+
+  it("does not suggest a discount after the dates have passed", () => {
+    assert.match(
+      describeRoomPriceChoice({
+        publishedRate: 700,
+        agreedNightlyRate: 500,
+        nightsStillOpen: 0,
+        pricedNights: 2,
+        datesHavePassed: true,
+      }),
+      /dates have passed/i,
+    );
   });
 });

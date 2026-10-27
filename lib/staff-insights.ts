@@ -15,6 +15,7 @@ import {
   getNightlyRateDetails,
   type RoomPromotionRate,
 } from "@/lib/pricing";
+import { calculateStripeChargeAmount } from "@/lib/payment-pricing";
 import {
   isChannelReservation,
   type StaffRoomBlock,
@@ -37,8 +38,23 @@ export type StaffInsightsRoomRow = {
   nightsOverCapacity: number;
   stayCount: number;
   websiteRevenue: number;
+  /** Card bank charge on saved stays, for nights in the range. Kept out of the room price. */
+  bankCharge: number;
+  /** Room price for nights in the range that have already happened. */
+  earnedRoomRevenue: number;
+  /** Bank charge for nights in the range that have already happened. */
+  earnedBankCharge: number;
+  /** Nights with a saved room price that have already happened. */
+  earnedPricedNights: number;
   channelRevenue: number;
+  /** Room price plus bank charge for nights in the range. */
   estimatedRevenue: number;
+  /** Room price plus bank charge for nights in the range that have already happened. */
+  earnedRevenue: number;
+  /** Room price plus bank charge for nights in the range that are still ahead. */
+  unearnedRevenue: number;
+  /** Channel nights in range with no saved price. Left out of the money. */
+  unpricedNights: number;
   /**
    * Stays in range whose recorded stay total was used as-is. Above zero means
    * the money shown is what staff entered, so a 0 figure is a real 0 and not a
@@ -48,6 +64,27 @@ export type StaffInsightsRoomRow = {
   /** Stays on record for a room type that is no longer configured. */
   isUnconfigured: boolean;
   sources: StaffInsightsSourceCount[];
+  /** Current published nightly rate. Null when the room type was removed. */
+  publishedRate: number | null;
+  /** Nights in range with a saved room price. Channel nights are not included. */
+  pricedNights: number;
+  /** Saved room price per priced night. The card bank charge is not included. */
+  agreedNightlyRate: number | null;
+  /** Empty door-nights from today through the end of the range. */
+  nightsStillOpen: number;
+  /** What the published rate and the empty nights suggest. */
+  priceCue: string;
+  /** Paid stays: room price plus card bank charge for nights in the range. */
+  collected: number;
+  collectedEarned: number;
+  collectedBankCharge: number;
+  /** Stays on the books with no payment marked. */
+  unpaid: number;
+  unpaidEarned: number;
+  /** Part of unpaid where the guest claimed a bank transfer. */
+  bankClaimedUnpaid: number;
+  /** Bank refunds staff still have to send. */
+  refundsToSend: number;
 };
 
 export type StaffInsightsReport = {
@@ -62,8 +99,14 @@ export type StaffInsightsReport = {
     nightsSold: number;
     stayCount: number;
     websiteRevenue: number;
+    bankCharge: number;
+    earnedRoomRevenue: number;
+    earnedBankCharge: number;
     channelRevenue: number;
     estimatedRevenue: number;
+    earnedRevenue: number;
+    unearnedRevenue: number;
+    unpricedNights: number;
     averageNightlyRate: number | null;
     /** Stays in range whose recorded stay total was used as-is. */
     recordedStayCount: number;
@@ -72,6 +115,26 @@ export type StaffInsightsReport = {
     nightsAvailable: number;
     nightsOverCapacity: number;
     soldPercent: number | null;
+    /** Empty door-nights from today through the end of the range. */
+    nightsStillOpen: number;
+    /** Empty door-nights before today. Already passed, not still for sale. */
+    nightsPassedUnsold: number;
+  };
+  accounts: {
+    /** Paid stays: room price plus card bank charge for nights in the range. */
+    collected: number;
+    collectedEarned: number;
+    /** Paid, and the night has not happened yet. */
+    collectedAhead: number;
+    collectedBankCharge: number;
+    /** Stays on the books with no payment marked. */
+    unpaid: number;
+    /** Unpaid money for nights that have already happened. */
+    unpaidEarned: number;
+    /** Part of unpaid where the guest claimed a bank transfer. */
+    bankClaimedUnpaid: number;
+    /** Bank refunds staff still have to send. The site does not move this money. */
+    refundsToSend: number;
   };
   revenueNote: string;
 };
@@ -197,6 +260,49 @@ export function prorateStayMoneyInRange({
   return Math.round(estimatedTotal * (nightsInRange / stayNights));
 }
 
+/**
+ * Split a saved amount into nights inside the range, then into nights that
+ * have already happened. Omitting today treats the whole range as earned.
+ */
+export function splitStayMoneyInRange({
+  amount,
+  arrival,
+  departure,
+  rangeStart,
+  rangeEnd,
+  todayIso,
+}: {
+  amount: number;
+  arrival: string;
+  departure: string;
+  rangeStart: string;
+  rangeEnd: string;
+  todayIso?: string;
+}) {
+  const inRange = prorateStayMoneyInRange({
+    estimatedTotal: amount,
+    arrival,
+    departure,
+    rangeStart,
+    rangeEnd,
+  });
+  if (inRange <= 0) {
+    return { inRange: 0, earned: 0 };
+  }
+  if (!todayIso || todayIso >= rangeEnd) {
+    return { inRange, earned: inRange };
+  }
+  if (todayIso < rangeStart) {
+    return { inRange, earned: 0 };
+  }
+
+  const stayNights = eachStayNight(arrival, departure).length;
+  const earnedNights = countNightsInMonth(arrival, departure, rangeStart, todayIso);
+  const earned =
+    stayNights > 0 ? Math.min(inRange, Math.round(amount * (earnedNights / stayNights))) : 0;
+  return { inRange, earned };
+}
+
 /** Door-nights that could sell: open days × doors (staff closes remove the day). */
 export function countSellableDoorNights({
   availableCount,
@@ -228,6 +334,138 @@ export function countSellableDoorNights({
     }
   }
   return total;
+}
+
+/**
+ * Empty door-nights. Days before today have already passed, so they are not
+ * still open. Omitting today treats the whole range as still ahead.
+ */
+export function countUnsoldDoorNights({
+  rooms,
+  calendarDays,
+  staffClosures,
+  bookings,
+  channelStays,
+  todayIso,
+}: {
+  rooms: Array<{ id: string; availableCount: number }>;
+  calendarDays: CalendarDay[];
+  staffClosures: Array<{ roomId: string; startDate: string; endDate: string }>;
+  bookings: Array<{ roomId: string; arrivalDate: string; departureDate: string }>;
+  channelStays: Array<{ roomId: string; startDate: string; endDate: string }>;
+  todayIso?: string;
+}) {
+  let nightsStillOpen = 0;
+  let nightsPassedUnsold = 0;
+
+  for (const room of rooms) {
+    const doors = Math.max(0, room.availableCount);
+    if (doors <= 0) {
+      continue;
+    }
+    const roomClosures = staffClosures.filter((block) => block.roomId === room.id);
+    for (const day of calendarDays) {
+      const closed = roomClosures.some((block) =>
+        bookingOccupiesDay(
+          { arrivalDate: block.startDate, departureDate: block.endDate },
+          day.iso,
+        ),
+      );
+      if (closed) {
+        continue;
+      }
+      let occupied = 0;
+      for (const booking of bookings) {
+        if (booking.roomId === room.id && bookingOccupiesDay(booking, day.iso)) {
+          occupied += 1;
+        }
+      }
+      for (const stay of channelStays) {
+        if (
+          stay.roomId === room.id &&
+          bookingOccupiesDay(
+            { arrivalDate: stay.startDate, departureDate: stay.endDate },
+            day.iso,
+          )
+        ) {
+          occupied += 1;
+        }
+      }
+      const open = Math.max(0, doors - occupied);
+      if (todayIso && day.iso < todayIso) {
+        nightsPassedUnsold += open;
+      } else {
+        nightsStillOpen += open;
+      }
+    }
+  }
+
+  return { nightsStillOpen, nightsPassedUnsold };
+}
+
+/**
+ * Plain reading of the published rate against what guests paid, and whether
+ * any nights are still for sale. Amounts stay in the table; this is the decision.
+ */
+export function describeRoomPriceChoice({
+  publishedRate,
+  agreedNightlyRate,
+  nightsStillOpen,
+  pricedNights,
+  datesHavePassed,
+}: {
+  publishedRate: number | null;
+  agreedNightlyRate: number | null;
+  nightsStillOpen: number;
+  pricedNights: number;
+  datesHavePassed: boolean;
+}) {
+  if (pricedNights <= 0 || agreedNightlyRate === null) {
+    if (datesHavePassed) {
+      return "These dates have passed, and no room price was saved.";
+    }
+    if (nightsStillOpen > 0) {
+      return "No saved room price yet. The nights still open are the ones a discount can fill.";
+    }
+    return "No saved room price in this range.";
+  }
+
+  if (publishedRate === null || publishedRate <= 0) {
+    return "Set a published nightly rate before comparing discounts.";
+  }
+
+  const ratio = agreedNightlyRate / publishedRate;
+  const above = ratio > 1.02;
+  const close = ratio >= 0.95;
+  const paidLine = above
+    ? "Guests paid above the current published rate."
+    : close
+      ? "Guests paid close to the published rate."
+      : ratio < 0.92
+        ? "Guests paid under the published rate."
+        : "Guests paid a little under the published rate.";
+
+  if (datesHavePassed) {
+    return `These dates have passed. ${paidLine}`;
+  }
+
+  if (nightsStillOpen <= 0) {
+    if (!close && !above) {
+      return "Every night still ahead is sold. Guests paid under the published rate, so the next gap can stay closer to the published rate.";
+    }
+    return `Every night still ahead is sold. ${paidLine}`;
+  }
+
+  if (above) {
+    return "Guests paid above the current published rate, and nights are still open. Raise the published rate before discounting the empty nights.";
+  }
+  if (close) {
+    return "Guests paid close to the published rate, and nights are still open. A short discount on the empty nights can fill them.";
+  }
+  if (ratio < 0.92) {
+    return "Guests already paid under the published rate, and nights are still open. Check the empty dates before lowering the published rate again.";
+  }
+  return "Guests paid a little under the published rate, and nights are still open.";
 }
 
 function soldPercentOf(nightsSold: number, nightsAvailable: number) {
@@ -293,8 +531,7 @@ export function buildStaffInsightsReport({
   bookings,
   channelBlocks,
   monthBlocks = [],
-  promotions = [],
-  rateOverrides,
+  todayIso,
 }: {
   year?: number;
   month?: number;
@@ -309,6 +546,11 @@ export function buildStaffInsightsReport({
   monthBlocks?: StaffRoomBlock[];
   promotions?: RoomPromotionRate[];
   rateOverrides?: Map<string, number>;
+  /**
+   * Nights after this date are booked but not yet earned. The staff page
+   * passes today in Thailand. Tests omit it and treat the range as finished.
+   */
+  todayIso?: string;
 }): StaffInsightsReport {
   const resolvedYear = year ?? Number((fromIso ?? "1970-01-01").slice(0, 4));
   const resolvedMonth =
@@ -351,8 +593,20 @@ export function buildStaffInsightsReport({
     let nightsSold = 0;
     let stayCount = 0;
     let websiteRevenue = 0;
-    let channelRevenue = 0;
+    let bankCharge = 0;
+    let earnedRoom = 0;
+    let earnedBank = 0;
+    let earnedPricedNights = 0;
+    let unpricedNights = 0;
     let recordedStayCount = 0;
+    let pricedNights = 0;
+    let collected = 0;
+    let collectedEarned = 0;
+    let collectedBank = 0;
+    let unpaid = 0;
+    let unpaidEarned = 0;
+    let bankClaimedUnpaid = 0;
+    let refundsToSend = 0;
     const nightsAvailable = countSellableDoorNights({
       availableCount,
       calendarDays,
@@ -373,30 +627,68 @@ export function buildStaffInsightsReport({
       nightsSold += nights;
       stayCount += 1;
       bumpSource(sources, websiteSourceLabel(booking.bookingSource));
-      // Every write path stores a stay total, so that figure is the price the
-      // property agreed to. Trust it even when it is 0 (comped or a full
-      // discount); substituting the rack rate would invent revenue nobody
-      // charged. Only a truly absent number falls back to a quote.
-      if (hasRecordedTotal(booking.estimatedTotal)) {
-        recordedStayCount += 1;
-        websiteRevenue += prorateStayMoneyInRange({
-          estimatedTotal: booking.estimatedTotal,
+      refundsToSend += Math.max(0, booking.refundDue ?? 0);
+      // The saved total is the room price that was agreed. A 0 is a comp, not
+      // a missing number, so it is not replaced with the rack rate.
+      if (!hasRecordedTotal(booking.estimatedTotal)) {
+        unpricedNights += nights;
+        continue;
+      }
+      recordedStayCount += 1;
+      const roomMoney = splitStayMoneyInRange({
+        amount: booking.estimatedTotal,
+        arrival: booking.arrivalDate,
+        departure: booking.departureDate,
+        rangeStart,
+        rangeEnd,
+        todayIso,
+      });
+      websiteRevenue += roomMoney.inRange;
+      earnedRoom += roomMoney.earned;
+      const earnedEnd =
+        !todayIso || todayIso >= rangeEnd
+          ? rangeEnd
+          : todayIso < rangeStart
+            ? null
+            : todayIso;
+      earnedPricedNights += earnedEnd
+        ? countNightsInMonth(
+            booking.arrivalDate,
+            booking.departureDate,
+            rangeStart,
+            earnedEnd,
+          )
+        : 0;
+      let chargeInRange = 0;
+      let chargeEarned = 0;
+      if (booking.depositPaid && booking.stripePaymentIntentId && booking.estimatedTotal > 0) {
+        const charge = calculateStripeChargeAmount(booking.estimatedTotal).surcharge;
+        const chargeMoney = splitStayMoneyInRange({
+          amount: charge,
           arrival: booking.arrivalDate,
           departure: booking.departureDate,
           rangeStart,
           rangeEnd,
+          todayIso,
         });
+        bankCharge += chargeMoney.inRange;
+        earnedBank += chargeMoney.earned;
+        chargeInRange = chargeMoney.inRange;
+        chargeEarned = chargeMoney.earned;
+      }
+      pricedNights += nights;
+      const stayInRange = roomMoney.inRange + chargeInRange;
+      const stayEarned = roomMoney.earned + chargeEarned;
+      if (booking.depositPaid) {
+        collected += stayInRange;
+        collectedEarned += stayEarned;
+        collectedBank += chargeInRange;
       } else {
-        websiteRevenue += estimateQuotedMoneyInMonth({
-          roomId,
-          baseRate,
-          arrival: booking.arrivalDate,
-          departure: booking.departureDate,
-          monthStart: rangeStart,
-          monthEnd: rangeEnd,
-          promotions,
-          rateOverrides,
-        });
+        unpaid += roomMoney.inRange;
+        unpaidEarned += roomMoney.earned;
+        if (booking.bankTransferClaimed) {
+          bankClaimedUnpaid += roomMoney.inRange;
+        }
       }
     }
 
@@ -413,26 +705,33 @@ export function buildStaffInsightsReport({
       nightsSold += nights;
       stayCount += 1;
       bumpSource(sources, channelSourceLabel(stay));
-      // Channel closures carry no price of their own, so these nights stay an
-      // estimate from the property's own rates.
-      channelRevenue += estimateQuotedMoneyInMonth({
-        roomId,
-        baseRate,
-        arrival: stay.startDate,
-        departure: stay.endDate,
-        monthStart: rangeStart,
-        monthEnd: rangeEnd,
-        promotions,
-        rateOverrides,
-      });
+      // No OTA selling price is stored. Quoting our own rate would invent revenue.
+      unpricedNights += nights;
     }
 
-    const estimatedRevenue = websiteRevenue + channelRevenue;
+    const estimatedRevenue = websiteRevenue + bankCharge;
+    const earnedRevenue = earnedRoom + earnedBank;
+    const unearnedRevenue = estimatedRevenue - earnedRevenue;
     // A removed room type has no capacity left to compare against, so its nights
     // are not overbooking.
     const nightsOverCapacity = isUnconfigured
       ? 0
       : Math.max(0, nightsSold - nightsAvailable);
+    const publishedRate = isUnconfigured ? null : baseRate;
+    const agreedNightlyRate = pricedNights > 0 ? websiteRevenue / pricedNights : null;
+    const doorNights = isUnconfigured
+      ? { nightsStillOpen: 0, nightsPassedUnsold: 0 }
+      : countUnsoldDoorNights({
+          rooms: [{ id: roomId, availableCount }],
+          calendarDays,
+          staffClosures,
+          bookings: roomBookings,
+          channelStays: roomChannels,
+          todayIso,
+        });
+    const datesHavePassed = todayIso
+      ? calendarDays.every((day) => day.iso < todayIso)
+      : false;
 
     return {
       roomId,
@@ -443,13 +742,40 @@ export function buildStaffInsightsReport({
       nightsOverCapacity,
       stayCount,
       websiteRevenue,
-      channelRevenue,
+      bankCharge,
+      earnedRoomRevenue: earnedRoom,
+      earnedBankCharge: earnedBank,
+      earnedPricedNights,
+      channelRevenue: 0,
       estimatedRevenue,
+      earnedRevenue,
+      unearnedRevenue,
+      unpricedNights,
       recordedStayCount,
       isUnconfigured,
       sources: [...sources.entries()]
         .map(([label, stays]) => ({ label, stays }))
         .sort((a, b) => b.stays - a.stays || a.label.localeCompare(b.label)),
+      publishedRate,
+      pricedNights,
+      agreedNightlyRate,
+      nightsStillOpen: doorNights.nightsStillOpen,
+      priceCue: isUnconfigured
+        ? ""
+        : describeRoomPriceChoice({
+            publishedRate,
+            agreedNightlyRate,
+            nightsStillOpen: doorNights.nightsStillOpen,
+            pricedNights,
+            datesHavePassed,
+          }),
+      collected,
+      collectedEarned,
+      collectedBankCharge: collectedBank,
+      unpaid,
+      unpaidEarned,
+      bankClaimedUnpaid,
+      refundsToSend,
     } satisfies StaffInsightsRoomRow;
   }
 
@@ -518,18 +844,47 @@ export function buildStaffInsightsReport({
     0,
   );
 
+  const earnedRoomRevenue = rows.reduce((sum, row) => sum + row.earnedRoomRevenue, 0);
+  const earnedPricedNights = rows.reduce((sum, row) => sum + row.earnedPricedNights, 0);
   const totals = {
     nightsSold,
     stayCount: rows.reduce((sum, row) => sum + row.stayCount, 0),
     websiteRevenue: rows.reduce((sum, row) => sum + row.websiteRevenue, 0),
-    channelRevenue: rows.reduce((sum, row) => sum + row.channelRevenue, 0),
+    bankCharge: rows.reduce((sum, row) => sum + row.bankCharge, 0),
+    earnedRoomRevenue,
+    earnedBankCharge: rows.reduce((sum, row) => sum + row.earnedBankCharge, 0),
+    channelRevenue: 0,
     estimatedRevenue,
-    averageNightlyRate: nightsSold > 0 ? estimatedRevenue / nightsSold : null,
+    earnedRevenue: rows.reduce((sum, row) => sum + row.earnedRevenue, 0),
+    unearnedRevenue: rows.reduce((sum, row) => sum + row.unearnedRevenue, 0),
+    unpricedNights: rows.reduce((sum, row) => sum + row.unpricedNights, 0),
+    averageNightlyRate:
+      earnedPricedNights > 0 ? earnedRoomRevenue / earnedPricedNights : null,
     recordedStayCount: rows.reduce((sum, row) => sum + row.recordedStayCount, 0),
     nightsSoldInCapacity,
     nightsAvailable,
     nightsOverCapacity,
     soldPercent: soldPercentOf(nightsSoldInCapacity, nightsAvailable),
+    ...countUnsoldDoorNights({
+      rooms,
+      calendarDays,
+      staffClosures,
+      bookings,
+      channelStays: uniqueChannelStays,
+      todayIso,
+    }),
+  };
+  const collected = rows.reduce((sum, row) => sum + row.collected, 0);
+  const collectedEarned = rows.reduce((sum, row) => sum + row.collectedEarned, 0);
+  const accounts = {
+    collected,
+    collectedEarned,
+    collectedAhead: collected - collectedEarned,
+    collectedBankCharge: rows.reduce((sum, row) => sum + row.collectedBankCharge, 0),
+    unpaid: rows.reduce((sum, row) => sum + row.unpaid, 0),
+    unpaidEarned: rows.reduce((sum, row) => sum + row.unpaidEarned, 0),
+    bankClaimedUnpaid: rows.reduce((sum, row) => sum + row.bankClaimedUnpaid, 0),
+    refundsToSend: rows.reduce((sum, row) => sum + row.refundsToSend, 0),
   };
 
   return {
@@ -541,7 +896,8 @@ export function buildStaffInsightsReport({
     monthEnd: rangeEnd,
     rooms: rows,
     totals,
+    accounts,
     revenueNote:
-      "Booking money is the total saved on each stay, counted only for nights in this range. A stay saved at 0 counts as 0. Channel closures carry no total, so those nights are quoted from your own rates — not the OTA payout.",
+      "Earned money is the saved room price for nights in this range that have already happened, plus the card bank charge on those nights. The bank charge is not part of the room price. Nights still ahead are not earned yet. Booking-channel nights have no saved price, so they are left out of the money. A stay saved at 0 stays at 0.",
   };
 }
