@@ -3,7 +3,13 @@
 import { randomUUID } from "node:crypto";
 import { after } from "next/server";
 import { createStaffSupabaseClient, type BookingRequestRow } from "@/lib/supabase";
-import { sendGuestBookingEmail, sendStaffBookingEmail, sendStaffStayChangeEmail } from "@/lib/email";
+import {
+  sendGuestBookingEmail,
+  sendStaffBankPaymentToConfirmEmail,
+  sendStaffBookingEmail,
+  sendStaffStayChangeEmail,
+} from "@/lib/email";
+import { getSiteUrl } from "@/lib/site-url";
 import {
   ensureConversationToken,
   getGuestChatUrl,
@@ -69,7 +75,11 @@ import {
 import { isRoomBookable } from "@/lib/room-availability";
 import { resolveStayStatusFromDates } from "@/lib/stay-status";
 import { parseStayEndReason } from "@/lib/stay-end-reason";
-import { getConfirmedBookings } from "@/lib/booking-requests";
+import {
+  getConfirmedBookings,
+  getConfirmedBookingsOverlappingRange,
+  getStaffBookingById,
+} from "@/lib/booking-requests";
 import {
   calculateStripeChargeAmount,
   cardRefundKeepingCharge,
@@ -87,7 +97,12 @@ import {
   occupancyFromBooking,
   occupancyFromChannelBlock,
 } from "@/lib/room-units";
-import { getChannelReservations } from "@/lib/room-blocks";
+import {
+  getChannelBlocksOverlappingRange,
+  getChannelReservations,
+  getRoomBlockById,
+  isChannelReservation,
+} from "@/lib/room-blocks";
 import {
   createDepositPaymentIntent,
   getStripe,
@@ -99,6 +114,7 @@ import {
   resolveBedSetupForRoom,
 } from "@/lib/bed-setup";
 import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS, countStayNights, isStayLengthAllowed } from "@/lib/stay-dates";
+import { cleanFoundViaDetail, parseFoundVia } from "@/lib/found-via";
 
 export { getBookingQuote };
 
@@ -111,6 +127,8 @@ export type BookingFormValues = {
   departure: string;
   note: string;
   bedSetup: string;
+  foundVia?: string;
+  foundViaDetail?: string;
 };
 
 export type BookingActionState = {
@@ -196,7 +214,27 @@ function getBookingFormValues(formData: FormData): BookingFormValues {
     departure: getValue(formData, "departure"),
     note: getValue(formData, "guest-note"),
     bedSetup: getValue(formData, "bed-setup"),
+    foundVia: getValue(formData, "found-via"),
+    foundViaDetail: getValue(formData, "found-via-detail"),
   };
+}
+
+/** Optional marketing answer. Never blocks or fails a booking. */
+async function saveFoundVia(bookingId: string, formData: FormData) {
+  const foundVia = parseFoundVia(getValue(formData, "found-via"));
+  if (!foundVia) {
+    return;
+  }
+  const { error } = await createStaffSupabaseClient()
+    .from("booking_requests")
+    .update({
+      found_via: foundVia,
+      found_via_detail: cleanFoundViaDetail(foundVia, getValue(formData, "found-via-detail")),
+    })
+    .eq("id", bookingId);
+  if (error) {
+    console.error("Could not save found_via:", error.message);
+  }
 }
 
 function bookingErrorState(
@@ -490,7 +528,7 @@ export async function createBookingRequest(
       );
     }
 
-    await seedGuestNoteMessage(booking);
+    await Promise.all([seedGuestNoteMessage(booking), saveFoundVia(booking.id, formData)]);
 
     const stayTotal = resolveBookingStayTotal({
       depositAmount: booking.deposit_amount,
@@ -507,6 +545,23 @@ export async function createBookingRequest(
     }
 
     if (bankTransferConfigured) {
+      // Notify as soon as bank/QR checkout is offered — guests often transfer
+      // and forget I've paid, which otherwise leaves the request silent.
+      const bankAmount = booking.deposit_amount ?? booking.estimated_total ?? stayTotal;
+      after(() =>
+        sendStaffBankPaymentToConfirmEmail({
+          guestName: booking.guest_name,
+          guestEmail: booking.guest_email,
+          guestPhone: booking.guest_phone ?? "",
+          roomName: booking.room_name,
+          arrivalDate: booking.arrival_date,
+          departureDate: booking.departure_date,
+          nights: booking.nights,
+          amountLabel: formatMoneySuffix(bankAmount, propertySettings.currency),
+          staffUrl: `${getSiteUrl()}/staff?booking=${encodeURIComponent(booking.id)}&view=inbox`,
+        }).catch(() => null),
+      );
+
       return {
         status: "payment_ready",
         message: "",
@@ -948,23 +1003,6 @@ export async function claimBankTransferPayment(
     }
   }
 
-  await sendStaffBookingEmail({
-    guestName: booking.guest_name,
-    guestEmail: booking.guest_email,
-    guestPhone: booking.guest_phone,
-    roomName: booking.room_name,
-    arrivalDate: booking.arrival_date,
-    departureDate: booking.departure_date,
-    nights: booking.nights,
-    estimatedTotal: booking.estimated_total,
-    note: [
-      "Bank transfer claimed by guest — verify the transfer before confirming.",
-      booking.note ?? "",
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
-  });
-
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
   return { ok: true };
@@ -1401,21 +1439,17 @@ export async function assignStayRoomUnit(formData: FormData) {
     redirect(fallbackHref);
   }
 
-  const [{ units }, confirmed, channels] = await Promise.all([
+  // Look the stay up by id. getConfirmedBookings() only returns the oldest 300
+  // rows, so recent unassigned stays never matched and this dropdown did nothing.
+  const [{ units }, booking, roomBlock] = await Promise.all([
     getStaffRoomUnits(),
-    getConfirmedBookings(),
-    getChannelReservations(),
+    kind === "booking" ? getStaffBookingById(stayId) : Promise.resolve(null),
+    kind === "channel" ? getRoomBlockById(stayId) : Promise.resolve(null),
   ]);
 
-  const occupancies = [
-    ...confirmed.bookings.map(occupancyFromBooking),
-    ...channels.blocks.map(occupancyFromChannelBlock),
-  ];
-
   if (kind === "booking") {
-    const booking = confirmed.bookings.find((entry) => entry.databaseId === stayId);
     if (!booking) {
-      redirect(fallbackHref);
+      redirect(appendCalendarError(fallbackHref, "invalid-stay"));
     }
 
     if (!isStaffCalendarManageableStay(booking)) {
@@ -1426,6 +1460,16 @@ export async function assignStayRoomUnit(formData: FormData) {
     if (!unit || !isUnitEligibleForRoom(unit, booking.roomId)) {
       redirect(appendCalendarError(fallbackHref, "invalid-room-number"));
     }
+
+    const nightEnd = addIsoDays(booking.departureDate, -1);
+    const [confirmed, channels] = await Promise.all([
+      getConfirmedBookingsOverlappingRange(booking.arrivalDate, nightEnd),
+      getChannelBlocksOverlappingRange(booking.arrivalDate, nightEnd),
+    ]);
+    const occupancies = [
+      ...confirmed.bookings.map(occupancyFromBooking),
+      ...channels.blocks.map(occupancyFromChannelBlock),
+    ];
 
     const conflict = findUnitAssignmentConflict({
       units,
@@ -1470,15 +1514,26 @@ export async function assignStayRoomUnit(formData: FormData) {
     redirect(assignedRedirect(guestLabel || booking.guest, unit.number));
   }
 
-  const channel = channels.blocks.find((entry) => entry.databaseId === stayId);
+  const channel =
+    roomBlock && isChannelReservation(roomBlock) ? roomBlock : null;
   if (!channel) {
-    redirect(fallbackHref);
+    redirect(appendCalendarError(fallbackHref, "invalid-stay"));
   }
 
   const unit = getRoomUnitById(units, roomUnitId);
   if (!unit || !isUnitEligibleForRoom(unit, channel.roomId)) {
     redirect(appendCalendarError(fallbackHref, "invalid-room-number"));
   }
+
+  const nightEnd = addIsoDays(channel.endDate, -1);
+  const [confirmed, channels] = await Promise.all([
+    getConfirmedBookingsOverlappingRange(channel.startDate, nightEnd),
+    getChannelBlocksOverlappingRange(channel.startDate, nightEnd),
+  ]);
+  const occupancies = [
+    ...confirmed.bookings.map(occupancyFromBooking),
+    ...channels.blocks.map(occupancyFromChannelBlock),
+  ];
 
   const conflict = findUnitAssignmentConflict({
     units,

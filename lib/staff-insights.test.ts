@@ -543,6 +543,29 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.rooms[0]?.nightsStillOpen, 2);
   });
 
+  it("scales still-open nights by sellable doors, not phantom capacity", () => {
+    const threeDoors = buildStaffInsightsReport({
+      fromIso: "2026-11-10",
+      toIso: "2026-11-12",
+      todayIso: "2026-11-10",
+      rooms: [{ ...rooms[0]!, availableCount: 3 }],
+      bookings: [],
+      channelBlocks: [],
+    });
+    const fourDoors = buildStaffInsightsReport({
+      fromIso: "2026-11-10",
+      toIso: "2026-11-12",
+      todayIso: "2026-11-10",
+      rooms: [{ ...rooms[0]!, availableCount: 4 }],
+      bookings: [],
+      channelBlocks: [],
+    });
+
+    assert.equal(threeDoors.totals.nightsStillOpen, 9);
+    assert.equal(fourDoors.totals.nightsStillOpen, 12);
+    assert.equal(fourDoors.totals.nightsStillOpen - threeDoors.totals.nightsStillOpen, 3);
+  });
+
   it("separates money already collected from money still owed", () => {
     const report = buildStaffInsightsReport({
       fromIso: "2026-10-01",

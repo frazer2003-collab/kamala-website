@@ -43,6 +43,8 @@ function AssignSelect({
         disabled={pending}
         id={`inline-assign-${stayId}`}
         name="room-unit-id"
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
         onChange={(event) => {
           if (!event.currentTarget.value || pending) {
             return;

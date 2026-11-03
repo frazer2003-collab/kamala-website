@@ -126,6 +126,113 @@ export async function sendStaffBookingEmail(
   return { ok: true };
 }
 
+/**
+ * Guest reached Thai bank / QR checkout (before I've paid).
+ * Some guests transfer and never tap I've paid — staff still need the heads-up.
+ */
+export function staffBankPaymentToConfirmCopy({
+  guestName,
+  guestEmail,
+  guestPhone,
+  roomName,
+  arrivalDate,
+  departureDate,
+  nights,
+  amountLabel,
+  staffUrl,
+}: {
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  roomName: string;
+  arrivalDate: string;
+  departureDate: string;
+  nights: number;
+  amountLabel: string;
+  staffUrl: string;
+}) {
+  const subject = `Thai bank / QR booking: ${roomName}`;
+  const headline = "Thai bank / QR payment started";
+  const intro =
+    "A guest is paying by Thai bank or QR. Watch your bank app for the transfer — they may forget to tap I've paid. If the money arrives, confirm the stay in Requests; otherwise clear the unfinished checkout.";
+  const text = [
+    headline,
+    "",
+    intro,
+    "",
+    `Guest: ${guestName}`,
+    `Email: ${guestEmail}`,
+    `Phone: ${guestPhone}`,
+    `Room: ${roomName}`,
+    `Dates: ${arrivalDate} to ${departureDate}`,
+    `Nights: ${nights}`,
+    `Amount to look for: ${amountLabel}`,
+    "",
+    `Open Requests: ${staffUrl}`,
+  ].join("\n");
+  const html = `
+    <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
+      <h1 style="font-size: 1.25rem;">${escapeHtml(headline)}</h1>
+      <p>${escapeHtml(intro)}</p>
+      <table style="border-collapse: collapse; width: 100%; max-width: 560px;">
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Guest</td><td>${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Email</td><td>${escapeHtml(guestEmail)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Phone</td><td>${escapeHtml(guestPhone)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Room</td><td>${escapeHtml(roomName)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Dates</td><td>${escapeHtml(arrivalDate)} to ${escapeHtml(departureDate)}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Nights</td><td>${nights}</td></tr>
+        <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Amount to look for</td><td>${escapeHtml(amountLabel)}</td></tr>
+      </table>
+      <p style="margin-top: 24px;"><a href="${escapeHtml(staffUrl)}">Open in Requests</a></p>
+    </div>
+  `;
+  return { subject, text, html };
+}
+
+export async function sendStaffBankPaymentToConfirmEmail(booking: {
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  roomName: string;
+  arrivalDate: string;
+  departureDate: string;
+  nights: number;
+  amountLabel: string;
+  staffUrl: string;
+}): Promise<EmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.BOOKING_EMAIL_FROM;
+  const staffRecipients = await getStaffNotificationRecipients();
+
+  if (!apiKey || !from || staffRecipients.length === 0) {
+    return { ok: false, reason: "missing-config" };
+  }
+
+  const { subject, text, html } = staffBankPaymentToConfirmCopy(booking);
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: staffRecipients,
+      reply_to: booking.guestEmail,
+      subject,
+      text,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    return { ok: false, reason: "send-failed" };
+  }
+
+  return { ok: true };
+}
+
 export async function sendStaffContactMessageEmail({
   propertyName,
   to,

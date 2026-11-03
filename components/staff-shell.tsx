@@ -12,6 +12,7 @@ type StaffShellProps = {
     | "sold"
     | "promotions"
     | "gallery"
+    | "ai"
     | "settings";
   children: ReactNode;
 };

@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+import { recordAiVisit } from "@/lib/ai-visit-log";
 import {
   buildStaffLoginUrl,
   isInternalStaffReferer,
@@ -10,10 +11,14 @@ import {
   STAFF_SENSITIVE_COOKIE_NAME,
 } from "@/lib/staff-session-edge";
 
-export async function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const { pathname, search } = request.nextUrl;
 
   if (!isStaffProtectedPath(pathname)) {
+    const visit = recordAiVisit(request);
+    if (visit) {
+      event.waitUntil(visit);
+    }
     return NextResponse.next();
   }
 
@@ -41,5 +46,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/staff", "/staff/:path*"],
+  matcher: [
+    "/staff",
+    "/staff/:path*",
+    "/((?!_next/static|_next/image|api/|favicon\\.ico|.*\\.(?:png|jpg|jpeg|webp|avif|gif|svg|ico|woff2?|css|js|map)$).*)",
+  ],
 };

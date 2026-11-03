@@ -20,6 +20,11 @@ import {
 import type { Room } from "@/lib/content";
 import { formatMoney, type PropertyCurrency } from "@/lib/currency";
 import { GUEST_LOCALE_COOKIE } from "@/lib/guest-locale-cookie";
+import {
+  FOUND_VIA_DETAIL_MAX,
+  FOUND_VIA_OPTIONS,
+  foundViaDetailPrompt,
+} from "@/lib/found-via";
 import { isLocale, t, tReplace, type Locale } from "@/lib/i18n";
 import {
   calculateStayQuote,
@@ -231,6 +236,7 @@ export function BookingRequest({
   const [fields, setFields] = useState<BookingFormValues>(() =>
     emptyFormFields(initialRoom, initialArrival ?? "", initialDeparture ?? ""),
   );
+  const foundViaDetail = foundViaDetailPrompt(fields.foundVia);
   const [state, formAction] = useActionState(createBookingRequest, initialState);
   const [paymentStep, setPaymentStep] = useState<{
     bookingId: string;
@@ -765,6 +771,55 @@ export function BookingRequest({
             placeholder={t(locale, "notePlaceholder")}
           />
         </div>
+        <div className="field-pair field-pair--wide">
+          <label htmlFor="found-via">{t(locale, "foundViaLabel")}</label>
+          <select
+            id="found-via"
+            name="found-via"
+            value={fields.foundVia ?? ""}
+            onChange={(event) =>
+              setFields((current) => ({ ...current, foundVia: event.target.value }))
+            }
+          >
+            <option value="">{t(locale, "foundViaChoose")}</option>
+            {FOUND_VIA_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label[locale]}
+              </option>
+            ))}
+          </select>
+        </div>
+        {foundViaDetail ? (
+          <div className="field-pair field-pair--wide">
+            <label htmlFor="found-via-detail">
+              {t(
+                locale,
+                foundViaDetail === "ai"
+                  ? "foundViaDetailAi"
+                  : foundViaDetail === "search"
+                    ? "foundViaDetailSearch"
+                    : "foundViaDetailOther",
+              )}
+            </label>
+            <input
+              id="found-via-detail"
+              maxLength={FOUND_VIA_DETAIL_MAX}
+              name="found-via-detail"
+              type="text"
+              value={fields.foundViaDetail ?? ""}
+              onChange={(event) =>
+                setFields((current) => ({ ...current, foundViaDetail: event.target.value }))
+              }
+              placeholder={
+                foundViaDetail === "ai"
+                  ? t(locale, "foundViaDetailPlaceholderAi")
+                  : foundViaDetail === "search"
+                    ? t(locale, "foundViaDetailPlaceholderSearch")
+                    : undefined
+              }
+            />
+          </div>
+        ) : null}
 
         <div className="booking-summary booking-summary--receipt" aria-live="polite">
           {quotePending && hasDates ? (

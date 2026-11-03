@@ -3,7 +3,7 @@ import { CalendarDateStrip } from "@/components/calendar-date-strip";
 import { FinanceSoldPie } from "@/components/finance-revenue-pie";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffShell } from "@/components/staff-shell";
-import { getTodayIso, parseStaffTimelineRange } from "@/lib/calendar";
+import { getPropertyTodayIso, parseStaffTimelineRange } from "@/lib/calendar";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
 import { loadStaffFinancePageData } from "@/lib/staff-finance-data";
@@ -455,7 +455,9 @@ export default async function StaffSoldPage({
     monthBlocks: closuresResult.blocks,
     promotions,
     rateOverrides,
-    todayIso: getTodayIso(),
+    // Desk clock in Thailand — not the Vercel UTC day — so still-open nights
+    // match what staff can still sell on the calendar.
+    todayIso: getPropertyTodayIso(),
   });
   const currency = settings.currency;
   const soldRooms = report.rooms.filter((row) => row.nightsSold > 0);

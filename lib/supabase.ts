@@ -57,8 +57,37 @@ export type BookingRequestRow = {
   pending_balance?: number | null;
   /** Bank-transfer refund staff still owe the guest after a cheaper change. */
   refund_due?: number | null;
+  /** Optional checkout answer to "How did you find us?". */
+  found_via?: string | null;
+  found_via_detail?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type AiVisitRow = {
+  id: string;
+  created_at: string;
+  kind: "answer" | "index" | "training" | "referral";
+  source: string;
+  agent: string | null;
+  path: string;
+  query: string | null;
+  referrer_host: string | null;
+  country: string | null;
+  user_agent: string | null;
+};
+
+export type AiVisibilityCheckRow = {
+  id: string;
+  checked_at: string;
+  prompt: string;
+  locale: string;
+  model: string;
+  mentioned: boolean;
+  cited: boolean;
+  cited_domains: string[];
+  answer_excerpt: string | null;
+  error: string | null;
 };
 
 export type RoomUnitRow = {
@@ -382,6 +411,21 @@ export type Database = {
           sort_order?: number;
         };
         Update: Partial<Omit<PropertyGalleryPhotoRow, "id" | "created_at">>;
+        Relationships: [];
+      };
+      ai_visits: {
+        Row: AiVisitRow;
+        Insert: Omit<AiVisitRow, "id" | "created_at"> & { id?: string; created_at?: string };
+        Update: Partial<Omit<AiVisitRow, "id">>;
+        Relationships: [];
+      };
+      ai_visibility_checks: {
+        Row: AiVisibilityCheckRow;
+        Insert: Omit<AiVisibilityCheckRow, "id" | "checked_at"> & {
+          id?: string;
+          checked_at?: string;
+        };
+        Update: Partial<Omit<AiVisibilityCheckRow, "id">>;
         Relationships: [];
       };
       tours: {

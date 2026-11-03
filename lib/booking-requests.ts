@@ -520,6 +520,11 @@ export async function getStaffBookingById(bookingId: string) {
   }
 }
 
+/**
+ * Calendar stays for a month, or the oldest 300 when no month is passed.
+ * Do not use the unscoped form to find a stay by id — recent stays fall off
+ * that list. Prefer getStaffBookingById or getConfirmedBookingsOverlappingRange.
+ */
 export async function getConfirmedBookings(month?: { year: number; month: number }) {
   if (!hasStaffSupabaseConfig()) {
     return {

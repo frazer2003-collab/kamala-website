@@ -9,6 +9,7 @@ type StaffSidebarProps = {
     | "sold"
     | "promotions"
     | "gallery"
+    | "ai"
     | "settings";
 };
 
@@ -54,6 +55,9 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         </Link>
         <Link aria-current={current === "gallery" ? "page" : undefined} href="/staff/gallery">
           Gallery
+        </Link>
+        <Link aria-current={current === "ai" ? "page" : undefined} href="/staff/ai-search">
+          AI search
         </Link>
         <Link
           aria-current={current === "settings" ? "page" : undefined}

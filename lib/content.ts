@@ -102,7 +102,7 @@ export const rooms: Room[] = [
     rate: 950,
     sleeps: "Sleeps 2",
     outlook: "45 sqm - king bed - balcony - garden view",
-    availableCount: 4,
+    availableCount: 3,
     summary:
       "More space for longer stays: 45 sqm with a private balcony over the guesthouse garden, seating for two, refrigerator, and en-suite bathroom. Quiet room facing greenery above the old city.",
     amenities: [

@@ -11,6 +11,7 @@ import {
   guestHasConversationLink,
   type InboxMessagePreview,
 } from "@/lib/booking-chat";
+import { purgeAbandonedCheckouts } from "@/lib/abandoned-checkout";
 import {
   getStaffBookingKey,
   getDeclinedBookings,
@@ -269,6 +270,10 @@ export default async function StaffBookingsPage({
   } = await searchParams;
   const inboxFilter = parseInboxFilter(filterParam);
   const preferInboxView = viewParam === "inbox";
+
+  // Drop abandoned Thai bank / QR carts (and leftover card checkouts) past 24h
+  // before listing Requests, so the inbox matches live inventory.
+  await purgeAbandonedCheckouts();
 
   const [staffBookings, declinedBookings, settings, rooms] = await Promise.all([
     getStaffBookingRequests(),
