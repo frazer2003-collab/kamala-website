@@ -7,6 +7,7 @@ import {
   type SelectRoomDetail,
 } from "@/components/book-room-link";
 import type { Room } from "@/lib/content";
+import { scrollToBookingForm } from "@/lib/scroll-to-booking";
 
 type HomeStickyReserveProps = {
   initialRoomId?: string;
@@ -88,7 +89,14 @@ export function HomeStickyReserve({ initialRoomId, rooms }: HomeStickyReservePro
           </span>
           <span>Ready to book</span>
         </p>
-        <a className="button button--primary home-sticky-reserve__cta" href="#booking">
+        <a
+          className="button button--primary home-sticky-reserve__cta"
+          href="#booking"
+          onClick={(event) => {
+            event.preventDefault();
+            scrollToBookingForm();
+          }}
+        >
           Book now
         </a>
       </div>

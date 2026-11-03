@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { scrollToBookingForm } from "@/lib/scroll-to-booking";
 
 export const SELECT_ROOM_EVENT = "kamala:select-room";
 export const SELECT_ROOM_STORAGE_KEY = "kamala:select-room";
@@ -60,12 +61,8 @@ export function BookRoomLink({
         );
         onNavigate?.();
         window.history.replaceState(null, "", `/?${params.toString()}#booking`);
-        document.getElementById("booking")?.scrollIntoView({
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-            ? "auto"
-            : "smooth",
-          block: "start",
-        });
+        // Form mounts only after the room is selected — wait for #booking.
+        scrollToBookingForm();
       }}
     >
       {children}

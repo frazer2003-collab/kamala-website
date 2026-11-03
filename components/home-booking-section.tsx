@@ -13,6 +13,7 @@ import type { RoomPromotionRate } from "@/lib/pricing";
 import type { Room } from "@/lib/content";
 import type { BankTransferDetails } from "@/lib/bank-transfer";
 import { t } from "@/lib/i18n";
+import { scrollToBookingForm } from "@/lib/scroll-to-booking";
 
 const BookingRequest = dynamic(
   () =>
@@ -86,6 +87,9 @@ export function HomeBookingSection({
 
   useEffect(() => {
     if (initialRoomId) {
+      if (window.location.hash === "#booking") {
+        scrollToBookingForm();
+      }
       return;
     }
 
@@ -94,6 +98,9 @@ export function HomeBookingSection({
       setSelectedRoomId(stored.roomId);
       setSelectedArrival(stored.arrival);
       setSelectedDeparture(stored.departure);
+      if (window.location.hash === "#booking") {
+        scrollToBookingForm();
+      }
     }
 
     function handleSelect(event: Event) {
@@ -105,6 +112,7 @@ export function HomeBookingSection({
       setSelectedRoomId(detail.roomId);
       setSelectedArrival(detail.arrival);
       setSelectedDeparture(detail.departure);
+      scrollToBookingForm();
     }
 
     window.addEventListener(SELECT_ROOM_EVENT, handleSelect);
