@@ -7,7 +7,7 @@ import {
   type RoomPromotionRate,
 } from "./pricing";
 
-const tourLabel = "10% discount on any tours .";
+const staffPromoLabel = "Low-season room rate";
 
 const promotions: RoomPromotionRate[] = [
   {
@@ -15,7 +15,7 @@ const promotions: RoomPromotionRate[] = [
     startDate: "2026-10-01",
     endDate: "2026-10-31",
     percentOff: 30,
-    label: tourLabel,
+    label: staffPromoLabel,
   },
   {
     roomId: "deluxe",
@@ -45,7 +45,7 @@ describe("checkout promotion line", () => {
     assert.equal(getStayPercentOff(quote), 30);
     assert.equal(
       getPromotionNoteForStay("superior", "2026-10-10", "2026-10-12", promotions),
-      tourLabel.trim(),
+      staffPromoLabel,
     );
   });
 
