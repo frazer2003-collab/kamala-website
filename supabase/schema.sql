@@ -200,7 +200,7 @@ create table if not exists public.booking_requests (
   deposit_paid_at timestamptz,
   booking_source text check (
     booking_source is null
-    or booking_source in ('walk-in', 'airbnb', 'expedia', 'booking')
+    or booking_source in ('website', 'walk-in', 'airbnb', 'expedia', 'booking')
   ),
   stripe_checkout_session_id text,
   stripe_payment_intent_id text,
@@ -249,7 +249,7 @@ create table if not exists public.room_blocks (
   guest_phone text,
   staff_booking_source text check (
     staff_booking_source is null
-    or staff_booking_source in ('walk-in', 'airbnb', 'expedia', 'booking')
+    or staff_booking_source in ('website', 'walk-in', 'airbnb', 'expedia', 'booking')
   ),
   room_unit_id uuid references public.room_units(id) on delete set null,
   created_at timestamptz not null default now()

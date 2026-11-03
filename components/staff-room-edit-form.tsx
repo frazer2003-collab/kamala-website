@@ -165,7 +165,7 @@ export function StaffRoomEditForm({
       </form>
 
       <p className="detail-help">
-        Add stays on the calendar — tap a day, then Book. Choose Airbnb, Booking.com, or Expedia
+        Add stays on the calendar — tap a day, then Book. Choose Website, Walk-in, Airbnb, Booking.com, or Expedia
         under Source when the guest booked elsewhere.
       </p>
     </article>

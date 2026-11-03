@@ -1,5 +1,6 @@
 /** Staff-facing booking channel labels on calendar stays. */
 export const BOOKING_SOURCES = [
+  "website",
   "walk-in",
   "airbnb",
   "expedia",
@@ -9,6 +10,7 @@ export const BOOKING_SOURCES = [
 export type BookingSource = (typeof BOOKING_SOURCES)[number];
 
 export const BOOKING_SOURCE_LABELS: Record<BookingSource, string> = {
+  website: "Website",
   "walk-in": "Walk-in",
   airbnb: "Airbnb",
   expedia: "Expedia",
