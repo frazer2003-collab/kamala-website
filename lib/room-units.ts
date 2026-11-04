@@ -123,6 +123,39 @@ export function getTimelineUnitsForRoomType(units: RoomUnit[], roomId: string) {
 }
 
 /**
+ * Sellable doors for Finance / occupancy math.
+ * Never count more doors than the door chart — Deluxe once stayed at 4 in
+ * `rooms.available_count` after loft took door 114, which inflated October
+ * capacity from 279 to 310.
+ * Staff can still lower available_count below the chart to soft-hold a door.
+ */
+export function sellableDoorCount(
+  room: { id: string; availableCount: number },
+  units: RoomUnit[],
+) {
+  const configured = Math.max(0, room.availableCount);
+  const physical = getUnitsForRoomType(units, room.id).length;
+  if (physical <= 0) {
+    return configured;
+  }
+  return Math.min(configured, physical);
+}
+
+/** Apply {@link sellableDoorCount} across the room catalog. */
+export function withSellableDoorCounts<T extends { id: string; availableCount: number }>(
+  rooms: T[],
+  units: RoomUnit[],
+): T[] {
+  if (units.length === 0) {
+    return rooms;
+  }
+  return rooms.map((room) => ({
+    ...room,
+    availableCount: sellableDoorCount(room, units),
+  }));
+}
+
+/**
  * Flat door list for the distilled tape chart — every physical room number.
  * Prefer property walk order; unknown doors fall back to type then number.
  */

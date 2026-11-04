@@ -31,9 +31,8 @@ function sourceLine(sources: { label: string; stays: number }[]) {
 }
 
 /**
- * Says where a row's money came from. A row built from saved totals shows its
- * amount even when that amount is 0, because a comped stay is a real answer and
- * not missing data.
+ * Says where a row's money came from. Only stays with a total above 0 feed
+ * Finance; a total of 0 is an owner stay or giveaway and stays out of the money.
  */
 function moneyCaption(row: {
   recordedStayCount: number;
@@ -43,7 +42,7 @@ function moneyCaption(row: {
 }) {
   const parts: string[] = [];
   if (row.recordedStayCount > 0) {
-    parts.push(row.bankCharge > 0 ? "Room price plus card bank charge" : "Saved room price");
+    parts.push(row.bankCharge > 0 ? "Stay total plus card bank charge" : "Saved stay total");
   }
   if (row.unpricedNights > 0) {
     parts.push(
@@ -109,8 +108,7 @@ type FinanceRangeOverviewProps = {
 };
 
 function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
-  // A range of comped stays totals 0 without being empty, so show the figure
-  // whenever any stay carried a saved total.
+  // Money only comes from stay totals above 0 (owner stays / giveaways are 0).
   const hasMoney =
     report.totals.earnedRevenue > 0 ||
     report.totals.unearnedRevenue > 0 ||
@@ -158,13 +156,16 @@ function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
             </p>
           ) : null}
           <p className="staff-sold__summary-line">
-            <span>{nightLabel(report.totals.nightsSold)}</span>
+            <span>
+              {nightLabel(report.totals.nightsSoldInCapacity)} of{" "}
+              {nightLabel(report.totals.nightsAvailable)} available
+            </span>
             <span aria-hidden="true">·</span>
             <span>{stayLabel(report.totals.stayCount)}</span>
             {report.totals.soldPercent !== null ? (
               <>
                 <span aria-hidden="true">·</span>
-                <span>{report.totals.soldPercent}% of capacity</span>
+                <span>{report.totals.soldPercent}%</span>
               </>
             ) : null}
           </p>

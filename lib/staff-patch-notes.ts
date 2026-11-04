@@ -18,6 +18,23 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-04-finance-capacity-comps",
+    date: "2026-11-04",
+    title: "Finance: true capacity and stay totals",
+    summary:
+      "October shows 279 nights available (9 doors × 31 days). Money uses the saved stay total — a total of 0 is left out.",
+    image: {
+      src: "/staff/patch-notes/finance-capacity.jpg",
+      alt: "Finance occupancy showing 248 of 279 nights available for October",
+    },
+    changes: [
+      "Available nights follow the door chart: Superior 4, Deluxe 3, Family 1, Family GF 1 — so October is 279, not a phantom tenth door.",
+      "Occupancy copy shows sold of available nights (for example 248 of 279).",
+      "Finance money, averages, and accounts use only stay totals above 0.",
+      "A stay total of 0 (owner stay or giveaway) still occupies the door for occupancy, but does not enter earned money.",
+    ],
+  },
+  {
     id: "2026-11-04-calendar-door-drag",
     date: "2026-11-04",
     title: "Drag bookings between doors",

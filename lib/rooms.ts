@@ -4,6 +4,11 @@ import { rooms as fallbackRooms, type Room } from "@/lib/content";
 import { sanitizeMediaUrl, sanitizeMediaUrlList } from "@/lib/media-url";
 import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache-tags";
 import {
+  SAMPLE_ROOM_UNITS,
+  getStaffRoomUnits,
+  withSellableDoorCounts,
+} from "@/lib/room-units";
+import {
   createGuestSupabaseClient,
   createStaffSupabaseClient,
   hasStaffSupabaseConfig,
@@ -70,12 +75,17 @@ async function fetchPublicRooms() {
       .order("rate", { ascending: true });
 
     if (error || !data || data.length === 0) {
-      return fallbackRooms;
+      return withSellableDoorCounts(fallbackRooms, SAMPLE_ROOM_UNITS);
     }
 
-    return withoutRetiredRooms(data.map((row) => mapRoom(row as RoomRow)));
+    // Same door-chart cap as staff — guest inventory must not sell a phantom
+    // Deluxe door after loft took 114.
+    return withSellableDoorCounts(
+      withoutRetiredRooms(data.map((row) => mapRoom(row as RoomRow))),
+      SAMPLE_ROOM_UNITS,
+    );
   } catch {
-    return fallbackRooms;
+    return withSellableDoorCounts(fallbackRooms, SAMPLE_ROOM_UNITS);
   }
 }
 
@@ -92,24 +102,32 @@ export async function getPublicRooms() {
 
 export async function getStaffRooms() {
   if (!hasStaffSupabaseConfig()) {
-    return fallbackRooms;
+    return withSellableDoorCounts(fallbackRooms, SAMPLE_ROOM_UNITS);
   }
 
   try {
     const supabase = createStaffSupabaseClient();
-    const { data, error } = await supabase
-      .from("rooms")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .order("rate", { ascending: true });
+    const [{ data, error }, unitsResult] = await Promise.all([
+      supabase
+        .from("rooms")
+        .select("*")
+        .order("sort_order", { ascending: true })
+        .order("rate", { ascending: true }),
+      getStaffRoomUnits(),
+    ]);
 
     if (error || !data || data.length === 0) {
-      return fallbackRooms;
+      return withSellableDoorCounts(fallbackRooms, unitsResult.units);
     }
 
-    return withoutRetiredRooms(data.map(mapRoom));
+    // Cap available_count to the door chart so Finance capacity cannot invent
+    // phantom doors (Deluxe once stayed at 4 after loft took 114 → Oct 310).
+    return withSellableDoorCounts(
+      withoutRetiredRooms(data.map(mapRoom)),
+      unitsResult.units,
+    );
   } catch {
-    return fallbackRooms;
+    return withSellableDoorCounts(fallbackRooms, SAMPLE_ROOM_UNITS);
   }
 }
 
@@ -121,19 +139,22 @@ export async function getRoomForBooking(roomId: string) {
   if (hasStaffSupabaseConfig()) {
     try {
       const supabase = createStaffSupabaseClient();
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("*")
-        .eq("id", roomId)
-        .single();
+      const [{ data, error }, unitsResult] = await Promise.all([
+        supabase.from("rooms").select("*").eq("id", roomId).single(),
+        getStaffRoomUnits(),
+      ]);
 
       if (!error && data) {
-        return mapRoom(data);
+        return withSellableDoorCounts([mapRoom(data)], unitsResult.units)[0] ?? null;
       }
     } catch {
       // Fall through to static room catalog.
     }
   }
 
-  return fallbackRooms.find((room) => room.id === roomId) ?? null;
+  const fallback = fallbackRooms.find((room) => room.id === roomId);
+  if (!fallback) {
+    return null;
+  }
+  return withSellableDoorCounts([fallback], SAMPLE_ROOM_UNITS)[0] ?? null;
 }

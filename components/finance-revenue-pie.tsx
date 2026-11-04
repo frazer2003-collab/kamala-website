@@ -69,7 +69,9 @@ export function FinanceSoldPie({
               />
               <span className="staff-sold__chart-legend-copy">
                 <strong>Sold</strong>
-                <span>{nightWord(model.nightsSold)}</span>
+                <span>
+                  {nightWord(model.nightsSold)} of {nightWord(model.capacity)} available
+                </span>
               </span>
             </li>
             <li>

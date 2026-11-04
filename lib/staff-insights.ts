@@ -56,9 +56,8 @@ export type StaffInsightsRoomRow = {
   /** Channel nights in range with no saved price. Left out of the money. */
   unpricedNights: number;
   /**
-   * Stays in range whose recorded stay total was used as-is. Above zero means
-   * the money shown is what staff entered, so a 0 figure is a real 0 and not a
-   * gap in the data.
+   * Stays in range with a stay total above 0 — those drive Finance money.
+   * A total of 0 is an owner stay or giveaway and is left out of the money.
    */
   recordedStayCount: number;
   /** Stays on record for a room type that is no longer configured. */
@@ -216,12 +215,12 @@ export function estimateQuotedMoneyInMonth({
 }
 
 /**
- * Whether a stay carries a price staff actually agreed to. Stay totals are
- * stored not-null and never negative, so anything in range counts — including 0
- * for a comped stay or a full discount.
+ * Whether a stay total should drive Finance money. Only totals above 0 count —
+ * 0 means the owner stayed or the room was given away, so it is left out of
+ * profit figures (it can still occupy a door for occupancy).
  */
 export function hasRecordedTotal(estimatedTotal: number | null | undefined) {
-  return typeof estimatedTotal === "number" && Number.isFinite(estimatedTotal) && estimatedTotal >= 0;
+  return typeof estimatedTotal === "number" && Number.isFinite(estimatedTotal) && estimatedTotal > 0;
 }
 
 /**
@@ -628,10 +627,16 @@ export function buildStaffInsightsReport({
       stayCount += 1;
       bumpSource(sources, websiteSourceLabel(booking.bookingSource));
       refundsToSend += Math.max(0, booking.refundDue ?? 0);
-      // The saved total is the room price that was agreed. A 0 is a comp, not
-      // a missing number, so it is not replaced with the rack rate.
+      // Finance money comes only from the saved stay total. Missing totals are
+      // unpriced; a total of 0 is an owner stay / giveaway — occupies the door
+      // but does not enter profit, averages, or accounts.
       if (!hasRecordedTotal(booking.estimatedTotal)) {
-        unpricedNights += nights;
+        if (
+          typeof booking.estimatedTotal !== "number" ||
+          !Number.isFinite(booking.estimatedTotal)
+        ) {
+          unpricedNights += nights;
+        }
         continue;
       }
       recordedStayCount += 1;
@@ -661,7 +666,7 @@ export function buildStaffInsightsReport({
         : 0;
       let chargeInRange = 0;
       let chargeEarned = 0;
-      if (booking.depositPaid && booking.stripePaymentIntentId && booking.estimatedTotal > 0) {
+      if (booking.depositPaid && booking.stripePaymentIntentId) {
         const charge = calculateStripeChargeAmount(booking.estimatedTotal).surcharge;
         const chargeMoney = splitStayMoneyInRange({
           amount: charge,
@@ -898,6 +903,6 @@ export function buildStaffInsightsReport({
     totals,
     accounts,
     revenueNote:
-      "Earned money is the saved room price for nights in this range that have already happened, plus the card bank charge on those nights. The bank charge is not part of the room price. Nights still ahead are not earned yet. Booking-channel nights have no saved price, so they are left out of the money. A stay saved at 0 stays at 0.",
+      "Earned money is the saved stay total for nights in this range that have already happened, plus the card bank charge on those nights. The bank charge is not part of the room price. Nights still ahead are not earned yet. Booking-channel nights have no saved price, so they are left out of the money. A stay total of 0 (owner stay or giveaway) is left out of the money too.",
   };
 }

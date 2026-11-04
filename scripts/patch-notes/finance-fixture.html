@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Finance patch fixture</title>
+    <style>
+      :root {
+        --color-canvas: #faf8f7;
+        --color-surface: #ffffff;
+        --color-ink: #2a1f1d;
+        --color-muted: #6e605c;
+        --color-border: #e3d9d6;
+        --color-maroon: #8b2e2a;
+        --color-surface-strong: #ebe4e1;
+        --radius-md: 10px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #d8d0cd;
+        color: var(--color-ink);
+        font: 15px/1.35 "Segoe UI", system-ui, sans-serif;
+      }
+      .shot {
+        width: 560px;
+        margin: 0;
+        padding: 18px;
+        border-radius: 14px;
+        background: var(--color-canvas);
+        border: 1px solid #cfc5c1;
+      }
+      .shot h1 {
+        margin: 0 0 12px;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        font-weight: 700;
+      }
+      .panel {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        display: grid;
+        gap: 0.85rem;
+      }
+      .chip {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 0.82rem;
+        font-weight: 650;
+      }
+      .title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 800;
+      }
+      .summary {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 0.88rem;
+        font-variant-numeric: tabular-nums;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 7.5rem 1fr;
+        gap: 1rem;
+        align-items: center;
+      }
+      .pie {
+        width: 7.5rem;
+        height: 7.5rem;
+        border-radius: 50%;
+        background: conic-gradient(
+          from -90deg,
+          var(--color-maroon) 0% 89%,
+          var(--color-surface-strong) 89% 100%
+        );
+        display: grid;
+        place-content: center;
+        text-align: center;
+        border: 1px solid var(--color-border);
+      }
+      .pie strong {
+        font-size: 1.15rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .pie span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+      }
+      .legend {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.55rem;
+      }
+      .legend li {
+        display: grid;
+        grid-template-columns: 0.7rem 1fr;
+        gap: 0.55rem;
+        align-items: start;
+      }
+      .swatch {
+        width: 0.7rem;
+        height: 0.7rem;
+        margin-top: 0.25rem;
+        border-radius: 2px;
+        background: var(--color-maroon);
+      }
+      .swatch--open { background: var(--color-surface-strong); border: 1px solid var(--color-border); }
+      .swatch--passed { background: var(--color-border); }
+      .legend strong {
+        display: block;
+        font-size: 0.88rem;
+        font-weight: 750;
+      }
+      .legend span {
+        color: var(--color-muted);
+        font-size: 0.82rem;
+        font-weight: 650;
+        font-variant-numeric: tabular-nums;
+      }
+      .note {
+        margin: 0;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--color-border);
+        color: var(--color-muted);
+        font-size: 0.8rem;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="shot" id="finance">
+      <h1>Finance · October</h1>
+      <div class="panel">
+        <p class="chip">1 Oct – 31 Oct 2026</p>
+        <h2 class="title">Occupancy</h2>
+        <p class="summary">248 of 279 nights available · 111 stays · 89%</p>
+        <div class="row">
+          <div class="pie" aria-hidden="true">
+            <strong>89%</strong>
+            <span>sold</span>
+          </div>
+          <ul class="legend">
+            <li>
+              <span class="swatch"></span>
+              <span>
+                <strong>Sold</strong>
+                <span>248 nights of 279 nights available</span>
+              </span>
+            </li>
+            <li>
+              <span class="swatch swatch--open"></span>
+              <span>
+                <strong>Still open</strong>
+                <span>0 nights</span>
+              </span>
+            </li>
+            <li>
+              <span class="swatch swatch--passed"></span>
+              <span>
+                <strong>Unsold, already passed</strong>
+                <span>31 nights</span>
+              </span>
+            </li>
+          </ul>
+        </div>
+        <p class="note">
+          Money uses the saved stay total only. A total of 0 (owner stay or
+          giveaway) is left out of Finance.
+        </p>
+      </div>
+    </section>
+  </body>
+</html>

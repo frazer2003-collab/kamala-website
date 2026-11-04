@@ -10,7 +10,40 @@ import {
   getUnitsForRoomType,
   hasAssignableUnitForStay,
   occupancyFromBooking,
+  sellableDoorCount,
+  withSellableDoorCounts,
 } from "@/lib/room-units";
+
+describe("sellableDoorCount", () => {
+  it("caps Deluxe at three doors when available_count still says four", () => {
+    assert.equal(
+      sellableDoorCount({ id: "garden", availableCount: 4 }, SAMPLE_ROOM_UNITS),
+      3,
+    );
+  });
+
+  it("still allows soft-holding a door below the chart", () => {
+    assert.equal(
+      sellableDoorCount({ id: "garden", availableCount: 2 }, SAMPLE_ROOM_UNITS),
+      2,
+    );
+  });
+
+  it("keeps October house capacity at 279 with a stale Deluxe count", () => {
+    const rooms = withSellableDoorCounts(
+      [
+        { id: "courtyard", availableCount: 4 },
+        { id: "garden", availableCount: 4 },
+        { id: "loft", availableCount: 1 },
+        { id: "ground", availableCount: 1 },
+      ],
+      SAMPLE_ROOM_UNITS,
+    );
+    const doors = rooms.reduce((sum, room) => sum + room.availableCount, 0);
+    assert.equal(doors, 9);
+    assert.equal(doors * 31, 279);
+  });
+});
 
 describe("getTimelineUnitsForRoomType", () => {
   it("assigns door 114 to Family only", () => {

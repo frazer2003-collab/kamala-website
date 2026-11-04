@@ -329,7 +329,7 @@ describe("buildStaffInsightsReport", () => {
     assert.match(report.revenueNote, /channel|saved price/i);
   });
 
-  it("honours a stay saved at zero instead of charging the rack rate", () => {
+  it("leaves a stay total of 0 out of Finance money (owner stay / giveaway)", () => {
     const report = buildStaffInsightsReport({
       year: 2026,
       month: 7,
@@ -341,17 +341,31 @@ describe("buildStaffInsightsReport", () => {
           departureDate: "2026-07-04",
           estimatedTotal: 0,
         }),
+        booking({
+          id: "paid-stay",
+          databaseId: "db-paid",
+          roomId: "superior",
+          arrivalDate: "2026-07-10",
+          departureDate: "2026-07-12",
+          estimatedTotal: 1400,
+        }),
       ],
       channelBlocks: [],
     });
 
-    assert.equal(report.rooms[0]?.nightsSold, 3);
-    assert.equal(report.rooms[0]?.websiteRevenue, 0);
-    assert.equal(report.rooms[0]?.estimatedRevenue, 0);
+    // Door still occupied — occupancy counts the nights.
+    assert.equal(report.rooms[0]?.nightsSold, 5);
+    assert.equal(report.rooms[0]?.stayCount, 2);
+    // Money and averages use only the paid stay total.
+    assert.equal(report.rooms[0]?.websiteRevenue, 1400);
+    assert.equal(report.rooms[0]?.estimatedRevenue, 1400);
     assert.equal(report.rooms[0]?.recordedStayCount, 1);
-    assert.equal(report.totals.estimatedRevenue, 0);
+    assert.equal(report.rooms[0]?.pricedNights, 2);
+    assert.equal(report.rooms[0]?.unpricedNights, 0);
+    assert.equal(report.totals.estimatedRevenue, 1400);
     assert.equal(report.totals.recordedStayCount, 1);
-    assert.equal(report.totals.averageNightlyRate, 0);
+    assert.equal(report.totals.averageNightlyRate, 700);
+    assert.equal(report.accounts.collected, 1400);
   });
 
   it("uses the entered price even when it undercuts the room's rate", () => {
@@ -541,6 +555,26 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(report.totals.nightsStillOpen, 2);
     assert.equal(report.totals.nightsPassedUnsold, 4);
     assert.equal(report.rooms[0]?.nightsStillOpen, 2);
+  });
+
+  it("counts October house capacity as 31 days × 9 doors = 279", () => {
+    const report = buildStaffInsightsReport({
+      fromIso: "2026-10-01",
+      toIso: "2026-10-31",
+      todayIso: "2026-11-04",
+      rooms: [
+        { ...rooms[0]!, id: "courtyard", availableCount: 4 },
+        { ...rooms[0]!, id: "garden", availableCount: 3 },
+        { ...rooms[1]!, id: "loft", availableCount: 1 },
+        { ...rooms[1]!, id: "ground", availableCount: 1 },
+      ],
+      bookings: [],
+      channelBlocks: [],
+    });
+
+    assert.equal(report.totals.nightsAvailable, 279);
+    assert.equal(report.totals.nightsStillOpen, 0);
+    assert.equal(report.totals.nightsPassedUnsold, 279);
   });
 
   it("scales still-open nights by sellable doors, not phantom capacity", () => {
