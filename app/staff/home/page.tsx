@@ -1,19 +1,70 @@
 import Link from "next/link";
 import { StaffShell } from "@/components/staff-shell";
+import { getPropertyTodayIso } from "@/lib/calendar";
 import {
+  getConfirmedBookingsOverlappingRange,
   getStaffBookingRequests,
+  openRequestsDetailParts,
   openRequestsHref,
   summarizeOpenRequests,
 } from "@/lib/booking-requests";
+import { getChannelBlocksOverlappingRange } from "@/lib/room-blocks";
+import { getKnownUnitIdSet, getStaffRoomUnits } from "@/lib/room-units";
 import { requireStaffSessionDetails } from "@/lib/staff-auth";
+import {
+  countUnassignedDoors,
+  staffHomeTodayHref,
+  staffHomeUnassignedHref,
+  summarizeStaffHomeToday,
+} from "@/lib/staff-home";
 
 export const dynamic = "force-dynamic";
 
+function addDaysIso(iso: string, days: number) {
+  const date = new Date(`${iso}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default async function StaffHomePage() {
   await requireStaffSessionDetails();
-  const staffBookings = await getStaffBookingRequests();
+
+  const todayIso = getPropertyTodayIso();
+  const horizonIso = addDaysIso(todayIso, 60);
+
+  const [staffBookings, staysResult, channelsResult, unitsResult] =
+    await Promise.all([
+      getStaffBookingRequests(),
+      getConfirmedBookingsOverlappingRange(todayIso, horizonIso),
+      getChannelBlocksOverlappingRange(todayIso, horizonIso),
+      getStaffRoomUnits(),
+    ]);
+
   const inbox = summarizeOpenRequests(staffBookings.bookings);
   const transfersHref = openRequestsHref(inbox);
+  const transferParts = openRequestsDetailParts(inbox);
+
+  const today = summarizeStaffHomeToday({
+    bookings: staysResult.bookings,
+    channelStays: channelsResult.blocks,
+    todayIso,
+  });
+  const todayHref = staffHomeTodayHref(todayIso);
+
+  const knownUnitIds = getKnownUnitIdSet(unitsResult.units);
+  const unassignedCount = countUnassignedDoors({
+    bookings: staysResult.bookings,
+    channelStays: channelsResult.blocks,
+    knownUnitIds,
+    todayIso,
+  });
+  const calendarHref = staffHomeUnassignedHref(todayIso);
+
+  const todayBusy =
+    today.arriving + today.departing + today.inHouse > 0;
 
   return (
     <StaffShell current="home">
@@ -22,27 +73,50 @@ export default async function StaffHomePage() {
           <div>
             <h1 id="staff-home-title">Home</h1>
             <p className="staff-home__lede">
-              Prototype overview — shortcuts for today. We will flesh this out
-              later.
+              Today at the desk — transfers first, then rooms.
             </p>
           </div>
         </div>
 
         <div className="staff-home-grid">
-          <Link className="staff-home-card" href={transfersHref}>
+          <Link
+            className={`staff-home-card${
+              inbox.total > 0 ? " staff-home-card--attention" : ""
+            }`}
+            href={transfersHref}
+          >
             <span className="staff-home-card__eyebrow">Thai bank</span>
             <strong>Transfers</strong>
             <p>
               {inbox.total > 0
-                ? `${inbox.total} open item${inbox.total === 1 ? "" : "s"} to check`
+                ? `${inbox.total} open · ${transferParts.join(" · ") || "review inbox"}`
                 : "No open bank items right now"}
             </p>
           </Link>
 
-          <Link className="staff-home-card" href="/staff/calendar">
+          <Link className="staff-home-card" href={todayHref}>
+            <span className="staff-home-card__eyebrow">Today</span>
+            <strong>At a glance</strong>
+            <p>
+              {todayBusy
+                ? `${today.arriving} in · ${today.departing} out · ${today.inHouse} in-house`
+                : "No arrivals, departures, or guests in-house today"}
+            </p>
+          </Link>
+
+          <Link
+            className={`staff-home-card${
+              unassignedCount > 0 ? " staff-home-card--attention" : ""
+            }`}
+            href={calendarHref}
+          >
             <span className="staff-home-card__eyebrow">Rooms</span>
             <strong>Calendar</strong>
-            <p>Stays, doors, and walk-ins.</p>
+            <p>
+              {unassignedCount > 0
+                ? `${unassignedCount} stay${unassignedCount === 1 ? "" : "s"} still need a door #`
+                : "All upcoming stays have a door number"}
+            </p>
           </Link>
 
           <Link className="staff-home-card" href="/staff/reservations">
@@ -54,14 +128,11 @@ export default async function StaffHomePage() {
           <Link className="staff-home-card" href="/staff/sold">
             <span className="staff-home-card__eyebrow">Money</span>
             <strong>Finance</strong>
-            <p>Collected, unpaid, and refunds to send.</p>
+            <p>
+              Month accounts and collected totals. Refunds to send live under
+              Transfers.
+            </p>
           </Link>
-
-          <div className="staff-home-card staff-home-card--muted" aria-disabled="true">
-            <span className="staff-home-card__eyebrow">Later</span>
-            <strong>Today at a glance</strong>
-            <p>Arrivals, departures, and open tasks — coming in a later pass.</p>
-          </div>
         </div>
       </section>
     </StaffShell>

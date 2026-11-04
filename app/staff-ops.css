@@ -628,6 +628,11 @@ a.staff-home-card:hover {
   background: var(--color-surface-muted);
 }
 
+.staff-home-card--attention {
+  border-color: color-mix(in srgb, var(--color-maroon) 42%, var(--color-border));
+  background: color-mix(in srgb, var(--color-maroon-wash) 55%, var(--color-surface));
+}
+
 .staff-login-shell {
   min-height: 100vh;
   display: grid;

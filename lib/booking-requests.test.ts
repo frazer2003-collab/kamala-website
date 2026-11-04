@@ -149,13 +149,50 @@ describe("staff booking requests", () => {
       checkoutHolds: 1,
       awaitingPayment: 1,
       newRequests: 0,
+      refundsToSend: 0,
+      stayChanges: 0,
     });
     assert.equal(
       openRequestsWarningCopy(summary),
       "3 open items in Transfers — 1 waiting for a reply, 1 checkout hold, 1 transfer to check. Check Thai bank payments there before assigning doors on the calendar.",
     );
     assert.equal(openRequestsHref(summary), "/staff?filter=needs-reply&view=inbox");
-    assert.equal(openRequestsWarningCopy({ total: 0, needsReply: 0, checkoutHolds: 0, awaitingPayment: 0, newRequests: 0 }), null);
+    assert.equal(
+      openRequestsWarningCopy({
+        total: 0,
+        needsReply: 0,
+        checkoutHolds: 0,
+        awaitingPayment: 0,
+        newRequests: 0,
+        refundsToSend: 0,
+        stayChanges: 0,
+      }),
+      null,
+    );
+  });
+
+  it("counts refunds to send and stay changes in the Transfers summary", () => {
+    const refund = mapBookingRequest({
+      ...bankClaimRow,
+      status: "declined",
+      deposit_paid_at: "2026-07-18T09:00:00.000Z",
+      refund_due: 1400,
+    });
+    const change = mapBookingRequest({
+      ...bankClaimRow,
+      status: "confirmed",
+      deposit_paid_at: "2026-07-18T09:00:00.000Z",
+      pending_room_id: "garden",
+      pending_arrival_date: "2026-08-02",
+      pending_departure_date: "2026-08-04",
+      pending_balance: 200,
+    });
+
+    const summary = summarizeOpenRequests([refund, change]);
+    assert.equal(summary.refundsToSend, 1);
+    assert.equal(summary.stayChanges, 1);
+    assert.equal(summary.total, 2);
+    assert.equal(openRequestsHref(summary), "/staff?view=inbox");
   });
 
   it("flags holds staff can cancel from Requests", () => {

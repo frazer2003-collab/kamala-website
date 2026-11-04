@@ -222,6 +222,8 @@ export type OpenRequestsSummary = {
   checkoutHolds: number;
   awaitingPayment: number;
   newRequests: number;
+  refundsToSend: number;
+  stayChanges: number;
 };
 
 export function summarizeOpenRequests(bookings: StaffBooking[]): OpenRequestsSummary {
@@ -229,8 +231,18 @@ export function summarizeOpenRequests(bookings: StaffBooking[]): OpenRequestsSum
   let checkoutHolds = 0;
   let awaitingPayment = 0;
   let newRequests = 0;
+  let refundsToSend = 0;
+  let stayChanges = 0;
 
   for (const booking of bookings) {
+    if (needsClosedRefund(booking)) {
+      refundsToSend += 1;
+      continue;
+    }
+    if (hasStaffStayChangeTask(booking)) {
+      stayChanges += 1;
+      continue;
+    }
     if (booking.status === "needs-reply") {
       needsReply += 1;
     } else if (isAbandonedCheckoutHold(booking)) {
@@ -248,12 +260,18 @@ export function summarizeOpenRequests(bookings: StaffBooking[]): OpenRequestsSum
     checkoutHolds,
     awaitingPayment,
     newRequests,
+    refundsToSend,
+    stayChanges,
   };
 }
 
 export function openRequestsHref(summary: OpenRequestsSummary) {
   if (summary.needsReply > 0) {
     return "/staff?filter=needs-reply&view=inbox";
+  }
+
+  if (summary.refundsToSend > 0 || summary.stayChanges > 0) {
+    return "/staff?view=inbox";
   }
 
   if (summary.awaitingPayment > 0) {
@@ -263,15 +281,21 @@ export function openRequestsHref(summary: OpenRequestsSummary) {
   return "/staff?view=inbox";
 }
 
-export function openRequestsWarningCopy(summary: OpenRequestsSummary) {
-  if (summary.total === 0) {
-    return null;
-  }
-
+export function openRequestsDetailParts(summary: OpenRequestsSummary) {
   const parts: string[] = [];
   if (summary.needsReply > 0) {
     parts.push(
       `${summary.needsReply} waiting for a reply`,
+    );
+  }
+  if (summary.refundsToSend > 0) {
+    parts.push(
+      `${summary.refundsToSend} refund${summary.refundsToSend === 1 ? "" : "s"} to send`,
+    );
+  }
+  if (summary.stayChanges > 0) {
+    parts.push(
+      `${summary.stayChanges} stay change${summary.stayChanges === 1 ? "" : "s"}`,
     );
   }
   if (summary.checkoutHolds > 0) {
@@ -287,7 +311,15 @@ export function openRequestsWarningCopy(summary: OpenRequestsSummary) {
   if (summary.newRequests > 0) {
     parts.push(`${summary.newRequests} new`);
   }
+  return parts;
+}
 
+export function openRequestsWarningCopy(summary: OpenRequestsSummary) {
+  if (summary.total === 0) {
+    return null;
+  }
+
+  const parts = openRequestsDetailParts(summary);
   const detail = parts.length > 0 ? ` — ${parts.join(", ")}` : "";
   const itemLabel = summary.total === 1 ? "item" : "items";
 
