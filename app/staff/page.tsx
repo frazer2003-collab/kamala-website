@@ -357,7 +357,7 @@ export default async function StaffBookingsPage({
   const filterTabs: { id: InboxFilter; label: string; count: number }[] = [
     { id: "needs-reply", label: "Need reply", count: needsReplyCount },
     { id: "new", label: "New", count: newRequestCount },
-    { id: "awaiting", label: "Payment", count: awaitingCount },
+    { id: "awaiting", label: "Bank check", count: awaitingCount },
     { id: "all", label: "All open", count: staffBookings.bookings.length },
   ];
 
@@ -366,12 +366,15 @@ export default async function StaffBookingsPage({
       <section className="staff-main" aria-labelledby="staff-title">
         <div className="staff-header staff-header--compact">
           <div>
-            <h1 id="staff-title">Requests</h1>
+            <h1 id="staff-title">Transfers</h1>
             <p>
+              Card stays confirm on their own. Use this page to verify Thai bank
+              transfers, answer guests, and send bank refunds.
               {staffBookings.bookings.length === 0 ? (
-                "No open requests. Confirmed stays live on the calendar."
+                <> No open bank items. Confirmed stays live on the calendar.</>
               ) : needsReplyCount > 0 ? (
                 <>
+                  {" "}
                   <Link
                     href={buildStaffHref({
                       filter: "needs-reply",
@@ -402,7 +405,7 @@ export default async function StaffBookingsPage({
                           view: "inbox",
                         })}
                       >
-                        {awaitingCount} payment review
+                        {awaitingCount} transfer to check
                       </Link>
                     </>
                   ) : null}
@@ -418,6 +421,7 @@ export default async function StaffBookingsPage({
                 </>
               ) : (
                 <>
+                  {" "}
                   <Link
                     href={buildStaffHref({ filter: "all", view: "inbox" })}
                   >
@@ -445,7 +449,7 @@ export default async function StaffBookingsPage({
                           view: "inbox",
                         })}
                       >
-                        {awaitingCount} payment review
+                        {awaitingCount} transfer to check
                       </Link>
                     </>
                   ) : null}
@@ -521,17 +525,18 @@ export default async function StaffBookingsPage({
             5 to 10 business days.
           </p>
         ) : null}
+        {refund === "needed" ? (
+          <p className="form-message form-message--setup" role="status">
+            Stay cancelled and off the calendar. Start the refund below — Stripe
+            can be done by staff (6% bank charge stays); Thai bank / QR is sent
+            by the owner from the guesthouse account.
+          </p>
+        ) : null}
         {refund === "card" ? (
           <p className="form-message form-message--success" role="status">
             Card refund started for the stay. The 6% bank charge stays with the
             guesthouse. The guest usually sees the refund in 5 to 10 business
             days. Staff have been emailed.
-          </p>
-        ) : null}
-        {refund === "card-full" ? (
-          <p className="form-message form-message--success" role="status">
-            Card refund started, including the bank charge. The guest usually
-            sees it in 5 to 10 business days. Staff have been emailed.
           </p>
         ) : null}
         {refund === "card-already" ? (
@@ -554,8 +559,8 @@ export default async function StaffBookingsPage({
         ) : null}
         {staffBookings.source === "sample" && !staffBookings.error ? (
           <p className="form-message form-message--setup" role="status">
-            Practice mode — confirm and decline work here without emailing
-            guests. Add Supabase environment variables for live requests.
+            Practice mode — bank confirm and decline work here without emailing
+            guests. Add Supabase environment variables for live transfers.
           </p>
         ) : null}
 
@@ -567,7 +572,7 @@ export default async function StaffBookingsPage({
         >
           <section className="booking-list" aria-labelledby="requests-title">
             <div className="booking-list__header">
-              <h2 id="requests-title">Open inbox</h2>
+              <h2 id="requests-title">Open transfers</h2>
               <span
                 className={`booking-list__source booking-list__source--${staffBookings.source}`}
               >
@@ -663,10 +668,10 @@ export default async function StaffBookingsPage({
               </div>
             ) : (
               <div className="staff-empty-state">
-                <h3>No open requests right now.</h3>
+                <h3>No bank items to check.</h3>
                 <p>
-                  New guest requests will appear here. Confirmed stays move to
-                  the calendar.
+                  Thai bank transfers, guest messages, and bank refunds show
+                  here. Card bookings confirm themselves and go to the calendar.
                 </p>
                 <Link className="button button--secondary" href="/staff/calendar">
                   Open calendar
@@ -942,18 +947,21 @@ export default async function StaffBookingsPage({
                   (selected.depositAmount > 0 || selected.estimatedTotal > 0) ? (
                     <StaffClosedRefundPanel
                       amount={
-                        selected.depositAmount > 0
-                          ? selected.depositAmount
-                          : selected.estimatedTotal
+                        (selected.refundDue ?? 0) > 0
+                          ? selected.refundDue!
+                          : selected.depositAmount > 0
+                            ? selected.depositAmount
+                            : selected.estimatedTotal
                       }
                       bookingId={selected.databaseId}
                       canManage={canWrite}
                       currency={settings.currency}
                       paidByCard={Boolean(selected.stripePaymentIntentId)}
+                      queued={(selected.refundDue ?? 0) > 0}
                     />
                   ) : null}
                   <p className="detail-help">
-                    This request is closed. Conversation history is read-only.
+                    This stay is closed. Conversation history is read-only.
                   </p>
                 </>
               )}

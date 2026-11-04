@@ -72,7 +72,7 @@ export async function sendStaffBookingEmail(
     "Guest note:",
     note,
     "",
-    "Open Requests → Payment to review and reply.",
+    "Open Transfers → Bank payment to review and reply.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -154,7 +154,7 @@ export function staffBankPaymentToConfirmCopy({
   const subject = `Thai bank / QR booking: ${roomName}`;
   const headline = "Thai bank / QR payment started";
   const intro =
-    "A guest is paying by Thai bank or QR. Watch your bank app for the transfer — they may forget to tap I've paid. If the money arrives, confirm the stay in Requests; otherwise clear the unfinished checkout.";
+    "A guest is paying by Thai bank or QR. Watch your bank app for the transfer — they may forget to tap I've paid. If the money arrives, confirm the stay in Transfers; otherwise clear the unfinished checkout.";
   const text = [
     headline,
     "",
@@ -168,7 +168,7 @@ export function staffBankPaymentToConfirmCopy({
     `Nights: ${nights}`,
     `Amount to look for: ${amountLabel}`,
     "",
-    `Open Requests: ${staffUrl}`,
+    `Open Transfers: ${staffUrl}`,
   ].join("\n");
   const html = `
     <div style="font-family: ${EMAIL_FONT}; color: oklch(22% 0.025 12); line-height: 1.5; max-width: 620px;">
@@ -183,7 +183,7 @@ export function staffBankPaymentToConfirmCopy({
         <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Nights</td><td>${nights}</td></tr>
         <tr><td style="padding: 8px 0; color: oklch(46% 0.022 12);">Amount to look for</td><td>${escapeHtml(amountLabel)}</td></tr>
       </table>
-      <p style="margin-top: 24px;"><a href="${escapeHtml(staffUrl)}">Open in Requests</a></p>
+      <p style="margin-top: 24px;"><a href="${escapeHtml(staffUrl)}">Open in Transfers</a></p>
     </div>
   `;
   return { subject, text, html };

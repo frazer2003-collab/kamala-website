@@ -18,31 +18,21 @@ export function calculateStripeChargeAmount(stayTotal: number) {
  * Refund the stay and leave the card's bank charge on the payment.
  * Amounts are in the currency's minor units (satang for THB).
  * A stay of 0 has no known charge, so the remaining card payment is refunded.
+ * The bank charge is never refunded — fees must not eat into profit.
  */
 export function cardRefundKeepingCharge({
   amountReceivedMinor,
   alreadyRefundedMinor,
   stayTotalMajor,
-  keepBankCharge = true,
 }: {
   amountReceivedMinor: number;
   alreadyRefundedMinor: number;
   stayTotalMajor: number;
-  /** False refunds the bank charge as well. Staff use that for a special case. */
-  keepBankCharge?: boolean;
 }):
   | { action: "refund"; amountMinor: number; keptChargeMinor: number }
   | { action: "done"; keptChargeMinor: number } {
   const received = Math.max(0, Math.round(amountReceivedMinor));
   const refunded = Math.max(0, Math.round(alreadyRefundedMinor));
-
-  if (!keepBankCharge) {
-    const remaining = received - refunded;
-    if (remaining <= 0) {
-      return { action: "done", keptChargeMinor: 0 };
-    }
-    return { action: "refund", amountMinor: remaining, keptChargeMinor: 0 };
-  }
 
   const stayMinor = Math.max(0, Math.round(stayTotalMajor)) * 100;
 

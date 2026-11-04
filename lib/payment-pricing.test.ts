@@ -63,40 +63,6 @@ describe("cardRefundKeepingCharge", () => {
     );
   });
 
-  it("refunds the bank charge too when staff waive it", () => {
-    const charge = calculateStripeChargeAmount(2380);
-    assert.deepEqual(
-      cardRefundKeepingCharge({
-        amountReceivedMinor: charge.totalDue * 100,
-        alreadyRefundedMinor: 0,
-        stayTotalMajor: 2380,
-        keepBankCharge: false,
-      }),
-      {
-        action: "refund",
-        amountMinor: charge.totalDue * 100,
-        keptChargeMinor: 0,
-      },
-    );
-  });
-
-  it("returns a bank charge that was kept on an earlier refund", () => {
-    const charge = calculateStripeChargeAmount(1000);
-    assert.deepEqual(
-      cardRefundKeepingCharge({
-        amountReceivedMinor: charge.totalDue * 100,
-        alreadyRefundedMinor: 1000 * 100,
-        stayTotalMajor: 1000,
-        keepBankCharge: false,
-      }),
-      {
-        action: "refund",
-        amountMinor: charge.surcharge * 100,
-        keptChargeMinor: 0,
-      },
-    );
-  });
-
   it("refunds only the rest of the stay after a partial refund", () => {
     const charge = calculateStripeChargeAmount(1000);
     assert.deepEqual(

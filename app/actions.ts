@@ -1589,13 +1589,8 @@ export async function assignStayRoomUnit(formData: FormData) {
   );
 }
 
-function staffKeepsBankCharge(formData: FormData) {
-  return getValue(formData, "bank-charge") !== "waive";
-}
-
 async function refundCardPaymentKeepingCharge(
   booking: BookingRequestRow,
-  keepBankCharge = true,
 ): Promise<
   | { ok: true; already: boolean; refundMajor: number; keptMajor: number }
   | { ok: false }
@@ -1619,11 +1614,11 @@ async function refundCardPaymentKeepingCharge(
       Number.isFinite(metaStay) && metaStay > 0
         ? metaStay
         : Math.max(0, Math.round(booking.deposit_amount ?? booking.estimated_total ?? 0));
+    // Always refund stay only — never the 6% bank charge.
     const decision = cardRefundKeepingCharge({
       amountReceivedMinor: intent.amount_received,
       alreadyRefundedMinor: covered,
       stayTotalMajor: stayMajor,
-      keepBankCharge,
     });
     const keptMajor = decision.keptChargeMinor / 100;
 
@@ -1669,10 +1664,7 @@ export async function declineBookingRequest(formData: FormData) {
   }
 
   if (booking.deposit_paid_at && booking.stripe_payment_intent_id && hasStripeConfig()) {
-    const cardRefund = await refundCardPaymentKeepingCharge(
-      booking,
-      staffKeepsBankCharge(formData),
-    );
+    const cardRefund = await refundCardPaymentKeepingCharge(booking);
     if (!cardRefund.ok) {
       redirect(
         `/staff?booking=${encodeURIComponent(bookingId)}&error=refund-failed`,
@@ -1743,12 +1735,12 @@ export async function declineBookingRequest(formData: FormData) {
   redirect("/staff");
 }
 
-type StayRefundOutcome = "card" | "card-full" | "card-already" | "bank" | "failed" | "skipped";
+type StayRefundOutcome = "card" | "card-already" | "bank" | "failed" | "skipped";
 
 async function refundPaidStay(
   booking: BookingRequestRow,
   reason: "declined" | "cancelled",
-  options: { notifyGuest: boolean; keepBankCharge: boolean },
+  options: { notifyGuest: boolean },
 ): Promise<StayRefundOutcome> {
   if (!booking.deposit_paid_at) {
     return "skipped";
@@ -1778,10 +1770,7 @@ async function refundPaidStay(
   };
 
   if (booking.stripe_payment_intent_id) {
-    const cardRefund = await refundCardPaymentKeepingCharge(
-      booking,
-      options.keepBankCharge,
-    );
+    const cardRefund = await refundCardPaymentKeepingCharge(booking);
     if (!cardRefund.ok) {
       return "failed";
     }
@@ -1821,7 +1810,7 @@ async function refundPaidStay(
       }).catch(() => null);
     }
 
-    return options.keepBankCharge ? "card" : "card-full";
+    return "card";
   }
 
   await sendStaffStayChangeEmail({
@@ -1854,10 +1843,16 @@ export async function refundClosedBooking(formData: FormData) {
 
   const outcome = await refundPaidStay(booking, "cancelled", {
     notifyGuest: true,
-    keepBankCharge: staffKeepsBankCharge(formData),
   });
   if (outcome === "failed" || outcome === "skipped") {
     redirect(`${back}&error=refund-closed-failed`);
+  }
+
+  if ((booking.refund_due ?? 0) > 0) {
+    await createStaffSupabaseClient()
+      .from("booking_requests")
+      .update({ refund_due: 0 })
+      .eq("id", bookingId);
   }
 
   revalidatePath("/staff");
@@ -1911,12 +1906,21 @@ export async function cancelConfirmedBooking(
     );
   }
 
-  const refundPayment = getValue(formData, "refund-payment") === "1";
+  const paid = Boolean(booking.deposit_paid_at);
+  const paidByCard = Boolean(booking.stripe_payment_intent_id);
+  // Cancel & refund button. Cancel alone still queues a Transfers refund when paid.
+  const cancelAndRefund = getValue(formData, "refund-payment") === "1";
+  const stayAmount = resolveBookingStayTotal({
+    depositAmount: booking.deposit_amount,
+    estimatedTotal: booking.estimated_total ?? 0,
+  });
+
+  // Bank Cancel & refund: email the bank steps now. Card Cancel & refund, and
+  // plain Cancel when paid: remove the stay and finish money on Transfers.
   let refundOutcome: StayRefundOutcome = "skipped";
-  if (refundPayment && booking.deposit_paid_at) {
+  if (paid && cancelAndRefund && !paidByCard) {
     refundOutcome = await refundPaidStay(booking, "cancelled", {
       notifyGuest: true,
-      keepBankCharge: staffKeepsBankCharge(formData),
     });
     if (refundOutcome === "failed") {
       redirect(
@@ -1929,49 +1933,50 @@ export async function cancelConfirmedBooking(
     }
   }
 
-  if (booking.deposit_paid_at) {
+  const handoffToTransfers =
+    paid && stayAmount > 0 && (paidByCard || !cancelAndRefund);
+
+  if (paid) {
     await releaseBookingReservation(bookingId);
   }
 
   const supabase = createStaffSupabaseClient();
+  const declinePayload: Record<string, unknown> = {
+    status: "declined",
+    stay_end_reason: stayEndReason,
+  };
+  if (handoffToTransfers) {
+    declinePayload.refund_due = stayAmount;
+  }
+
   const { error } = await supabase
     .from("booking_requests")
-    .update({ status: "declined", stay_end_reason: stayEndReason })
+    .update(declinePayload)
     .eq("id", bookingId);
 
   if (error) {
-    // Older DBs may lack stay_end_reason — still remove the stay from the tape.
-    if (/stay_end_reason|schema cache|Could not find/i.test(error.message)) {
+    // Older DBs may lack stay_end_reason / refund_due — still remove the stay.
+    const fallbackPayload: Record<string, unknown> = { status: "declined" };
+    if (handoffToTransfers) {
+      fallbackPayload.refund_due = stayAmount;
+    }
+    if (/stay_end_reason|refund_due|schema cache|Could not find/i.test(error.message)) {
       const { error: fallbackError } = await supabase
         .from("booking_requests")
-        .update({ status: "declined" })
+        .update(fallbackPayload)
         .eq("id", bookingId);
 
       if (fallbackError) {
-        redirect(
-          appendCalendarError(
-            bookingHref,
-            "save-failed",
-            refundOutcome === "card" ||
-            refundOutcome === "card-full" ||
-            refundOutcome === "card-already"
-              ? "The card refund already started. The stay could not be closed."
-              : fallbackError.message,
-          ),
-        );
+        const { error: bareError } = await supabase
+          .from("booking_requests")
+          .update({ status: "declined" })
+          .eq("id", bookingId);
+        if (bareError) {
+          redirect(appendCalendarError(bookingHref, "save-failed", bareError.message));
+        }
       }
     } else {
-      redirect(
-        appendCalendarError(
-          bookingHref,
-          "save-failed",
-          refundOutcome === "card" ||
-          refundOutcome === "card-full" ||
-          refundOutcome === "card-already"
-            ? "The card refund already started. The stay could not be closed."
-            : error.message,
-        ),
-      );
+      redirect(appendCalendarError(bookingHref, "save-failed", error.message));
     }
   }
 
@@ -1979,14 +1984,21 @@ export async function cancelConfirmedBooking(
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
   revalidatePath("/staff/reservations");
-  redirect(
-    refundOutcome === "skipped"
-      ? calendarHref
-      : calendarHrefFromFormData(formData, {
-          month,
-          extras: { refund: refundOutcome },
-        }),
-  );
+
+  if (handoffToTransfers) {
+    redirect(`/staff?booking=${encodeURIComponent(bookingId)}&refund=needed`);
+  }
+
+  if (refundOutcome !== "skipped") {
+    redirect(
+      calendarHrefFromFormData(formData, {
+        month,
+        extras: { refund: refundOutcome },
+      }),
+    );
+  }
+
+  redirect(calendarHref);
 }
 
 const walkInEmailFallback = "walk-in@kamala.local";

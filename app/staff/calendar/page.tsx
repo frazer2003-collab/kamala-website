@@ -352,7 +352,7 @@ export default async function StaffCalendarPage({
                       : error === "room-number-taken"
                         ? "That room number is already assigned for overlapping dates."
                         : error === "invalid-stay"
-                          ? "Confirm this booking in Requests before assigning a room."
+                          ? "Confirm this bank transfer in Transfers before assigning a room."
                         : error === "room-unit-cache"
                           ? "Room assignment isn’t available right now. Ask whoever set up the site to refresh the connection."
                           : error === "room-unit-rpc"
@@ -490,8 +490,8 @@ export default async function StaffCalendarPage({
           <div>
             <h1 id="calendar-title">Calendar</h1>
           </div>
-          <Link className="staff-header__quiet-link" href="/staff">
-            Requests
+          <Link className="staff-header__quiet-link" href="/staff/home">
+            Home
           </Link>
         </div>
 
@@ -499,7 +499,7 @@ export default async function StaffCalendarPage({
           <p className="form-message form-message--warning" role="status">
             {openRequestsWarning}{" "}
             <Link className="staff-header__quiet-link" href={openRequestsLink}>
-              Open Requests
+              Open Transfers
             </Link>
           </p>
         ) : null}
@@ -539,15 +539,6 @@ export default async function StaffCalendarPage({
             Card refund started for the stay. The 6% bank charge stays with the
             guesthouse. The guest usually sees the refund in 5 to 10 business
             days. Staff have been emailed.{" "}
-            <Link className="form-message__dismiss" href={dismissFlashHref}>
-              Dismiss
-            </Link>
-          </p>
-        ) : null}
-        {refund === "card-full" ? (
-          <p className="form-message form-message--success" role="status">
-            Card refund started, including the bank charge. The guest usually
-            sees it in 5 to 10 business days. Staff have been emailed.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>

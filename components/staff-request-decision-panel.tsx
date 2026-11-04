@@ -1,8 +1,5 @@
 "use client";
-import {
-  StaffBankChargeChoice,
-  type BankChargeChoice,
-} from "@/components/staff-bank-charge-choice";
+import { StaffBankChargeKeptNote } from "@/components/staff-bank-charge-choice";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 
 import { useState, type FormEvent } from "react";
@@ -29,7 +26,7 @@ type StaffRequestDecisionPanelProps = {
   guestName: string;
   guestEmail: string;
   depositPaid: boolean;
-  /** Card payment, so staff can choose whether the 6% bank charge is refunded. */
+  /** Card payment — refund keeps the 6% bank charge with the guesthouse. */
   paidByCard?: boolean;
   bankTransferClaimed: boolean;
   depositAmount: number;
@@ -66,7 +63,6 @@ export function StaffRequestDecisionPanel({
   const [declineMessage, setDeclineMessage] = useState(DECLINE_DEFAULT);
   const [practiceResult, setPracticeResult] = useState<PracticeResult>(null);
   const [transferVerified, setTransferVerified] = useState(false);
-  const [bankCharge, setBankCharge] = useState<BankChargeChoice>("keep");
 
   // Whether the guest reported the transfer or not, confirming an unpaid stay
   // means staff have seen the money, so both routes pass the same gate.
@@ -217,7 +213,7 @@ export function StaffRequestDecisionPanel({
           then close this request
           {depositPaid
             ? paidByCard
-              ? ` and refund their ${depositLabel} stay. Choose whether the bank charge stays`
+              ? ` and refund their ${depositLabel} stay (the bank charge stays with the guesthouse)`
               : ` and refund their ${depositLabel} stay`
             : ""}
           .
@@ -240,13 +236,7 @@ export function StaffRequestDecisionPanel({
             <input name="booking-id" type="hidden" value={bookingId} />
           ) : null}
           {depositPaid && paidByCard && !practiceMode ? (
-            <StaffBankChargeChoice
-              currency={currency}
-              disabled={!canManage}
-              onChange={setBankCharge}
-              stayAmount={depositAmount}
-              value={bankCharge}
-            />
+            <StaffBankChargeKeptNote currency={currency} stayAmount={depositAmount} />
           ) : null}
           <div className="field-pair">
             <label htmlFor="decline-staff-message">Email to guest</label>

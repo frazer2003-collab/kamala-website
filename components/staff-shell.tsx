@@ -2,18 +2,13 @@ import type { ReactNode } from "react";
 import { StaffBusyRoot } from "@/components/staff-busy";
 import { StaffSensitiveUnlockJanitor } from "@/components/staff-sensitive-unlock-janitor";
 import { StaffSessionIdleGuard } from "@/components/staff-session-idle";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import {
+  StaffSidebar,
+  type StaffNavCurrent,
+} from "@/components/staff-sidebar";
 
 type StaffShellProps = {
-  current:
-    | "requests"
-    | "calendar"
-    | "reservations"
-    | "sold"
-    | "promotions"
-    | "gallery"
-    | "ai"
-    | "settings";
+  current: StaffNavCurrent;
   children: ReactNode;
 };
 

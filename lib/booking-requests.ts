@@ -39,7 +39,20 @@ export type StaffBooking = Booking & {
 };
 
 export function hasStaffStayChangeTask(booking: StaffBooking) {
+  // Declined stays with refund_due are closed refunds on Transfers, not stay-change.
+  if (booking.status === "declined") {
+    return false;
+  }
   return Boolean(booking.pendingStayChange) || (booking.refundDue ?? 0) > 0;
+}
+
+/** Cancelled stay waiting for staff to start the refund on Transfers. */
+export function needsClosedRefund(booking: StaffBooking) {
+  return (
+    booking.status === "declined" &&
+    booking.depositPaid &&
+    (booking.refundDue ?? 0) > 0
+  );
 }
 
 export function getStaffBookingKey(booking: StaffBooking) {
@@ -268,7 +281,7 @@ export function openRequestsWarningCopy(summary: OpenRequestsSummary) {
   }
   if (summary.awaitingPayment > 0) {
     parts.push(
-      `${summary.awaitingPayment} payment review`,
+      `${summary.awaitingPayment} transfer to check`,
     );
   }
   if (summary.newRequests > 0) {
@@ -276,9 +289,9 @@ export function openRequestsWarningCopy(summary: OpenRequestsSummary) {
   }
 
   const detail = parts.length > 0 ? ` — ${parts.join(", ")}` : "";
-  const requestLabel = summary.total === 1 ? "request" : "requests";
+  const itemLabel = summary.total === 1 ? "item" : "items";
 
-  return `${summary.total} open ${requestLabel} in Requests${detail}. Review there before assigning doors on the calendar.`;
+  return `${summary.total} open ${itemLabel} in Transfers${detail}. Check Thai bank payments there before assigning doors on the calendar.`;
 }
 
 /**
@@ -419,18 +432,46 @@ async function getStayChangeTasks(): Promise<StaffBooking[]> {
   }
 }
 
+async function getDeclinedRefundTasks(): Promise<StaffBooking[]> {
+  if (!hasStaffSupabaseConfig()) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await createStaffSupabaseClient()
+      .from("booking_requests")
+      .select("*")
+      .eq("status", "declined")
+      .gt("refund_due", 0)
+      .order("updated_at", { ascending: false })
+      .limit(50);
+
+    if (error || !data) {
+      return [];
+    }
+    return data.map((row) => mapBookingRequest(row));
+  } catch {
+    return [];
+  }
+}
+
 export async function getStaffBookingRequests() {
-  const [result, stayChangeTasks] = await Promise.all([
+  const [result, stayChangeTasks, declinedRefunds] = await Promise.all([
     fetchBookingsFromSupabase(
       [...PENDING_BOOKING_STATUSES, "pending_payment"],
       "created_at",
     ),
     getStayChangeTasks(),
+    getDeclinedRefundTasks(),
   ]);
 
   return {
     ...result,
-    bookings: [...stayChangeTasks, ...result.bookings.filter(isPendingBooking)],
+    bookings: [
+      ...declinedRefunds,
+      ...stayChangeTasks,
+      ...result.bookings.filter(isPendingBooking),
+    ],
   };
 }
 

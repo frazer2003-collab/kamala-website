@@ -108,7 +108,7 @@ function safeStaffPath(value: string) {
     value.startsWith("/staff/login") ||
     value.startsWith("/staff/passcode")
   ) {
-    return "/staff";
+    return "/staff/home";
   }
 
   return value;

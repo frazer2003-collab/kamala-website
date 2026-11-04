@@ -20,7 +20,7 @@ describe("staffBankPaymentToConfirmCopy", () => {
     assert.match(copy.text, /Thai bank or QR/i);
     assert.match(copy.text, /forget to tap I've paid/i);
     assert.match(copy.text, /2,280 THB/);
-    assert.match(copy.text, /Open Requests/);
-    assert.match(copy.html, /Open in Requests/);
+    assert.match(copy.text, /Open Transfers/);
+    assert.match(copy.html, /Open in Transfers/);
   });
 });

@@ -68,7 +68,7 @@ export function staffBankRefundCopy(
     intro: `${whatHappened} Send ${amountLabel} from the guesthouse bank account.`,
     next:
       reason === "cheaper-stay"
-        ? `Ask for their account in the conversation if you do not have it. ${BANK_REFUND_GUEST_TIMING} Open Requests and tap Mark refund sent after it is on its way.`
+        ? `Ask for their account in the conversation if you do not have it. ${BANK_REFUND_GUEST_TIMING} Open Transfers and tap Mark refund sent after it is on its way.`
         : `Ask for their account in the conversation if you do not have it. ${BANK_REFUND_GUEST_TIMING} The request is already closed, so send it from the bank app and tell the guest once it is on its way.`,
   };
 }
