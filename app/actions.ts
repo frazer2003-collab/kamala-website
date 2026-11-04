@@ -1895,6 +1895,40 @@ export async function cancelConfirmedBooking(
     redirect(calendarHref);
   }
 
+  const paid = Boolean(booking.deposit_paid_at);
+  const supabase = createStaffSupabaseClient();
+
+  // Unpaid / wrong entry: wipe the booking so staff can start again cleanly.
+  if (!paid) {
+    if (booking.stripe_payment_intent_id) {
+      await cancelPaymentIntentBestEffort(booking.stripe_payment_intent_id);
+    }
+    if (booking.discount_code_id) {
+      await releaseDiscountCodeUse(booking.discount_code_id);
+    }
+    await releaseBookingReservation(bookingId);
+
+    const { error: deleteError } = await supabase
+      .from("booking_requests")
+      .delete()
+      .eq("id", bookingId);
+
+    if (deleteError) {
+      redirect(appendCalendarError(bookingHref, "save-failed", deleteError.message));
+    }
+
+    revalidatePath("/");
+    revalidatePath("/staff");
+    revalidatePath("/staff/calendar");
+    revalidatePath("/staff/reservations");
+    redirect(
+      calendarHrefFromFormData(formData, {
+        month,
+        extras: { removed: "1" },
+      }),
+    );
+  }
+
   const stayEndReason = parseStayEndReason(getValue(formData, "stay-end-reason"));
   if (!stayEndReason) {
     redirect(
@@ -1906,7 +1940,6 @@ export async function cancelConfirmedBooking(
     );
   }
 
-  const paid = Boolean(booking.deposit_paid_at);
   const paidByCard = Boolean(booking.stripe_payment_intent_id);
   // Cancel & refund button. Cancel alone still queues a Transfers refund when paid.
   const cancelAndRefund = getValue(formData, "refund-payment") === "1";
@@ -1918,7 +1951,7 @@ export async function cancelConfirmedBooking(
   // Bank Cancel & refund: email the bank steps now. Card Cancel & refund, and
   // plain Cancel when paid: remove the stay and finish money on Transfers.
   let refundOutcome: StayRefundOutcome = "skipped";
-  if (paid && cancelAndRefund && !paidByCard) {
+  if (cancelAndRefund && !paidByCard) {
     refundOutcome = await refundPaidStay(booking, "cancelled", {
       notifyGuest: true,
     });
@@ -1934,13 +1967,10 @@ export async function cancelConfirmedBooking(
   }
 
   const handoffToTransfers =
-    paid && stayAmount > 0 && (paidByCard || !cancelAndRefund);
+    stayAmount > 0 && (paidByCard || !cancelAndRefund);
 
-  if (paid) {
-    await releaseBookingReservation(bookingId);
-  }
+  await releaseBookingReservation(bookingId);
 
-  const supabase = createStaffSupabaseClient();
   const declinePayload: {
     status: "declined";
     stay_end_reason: typeof stayEndReason;

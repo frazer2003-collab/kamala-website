@@ -515,14 +515,15 @@ export function CalendarBookingPanel({
                 </>
               ) : (
                 <>
-                  Cancel <strong>{fields.guestName || guestName}</strong> for{" "}
+                  Remove <strong>{fields.guestName || guestName}</strong> for{" "}
                   <strong>
                     {formatStayDates(
                       fields.arrivalDate || arrivalDate,
                       fields.departureDate || departureDate,
                     )}
                   </strong>
-                  ? The stay leaves the calendar.
+                  ? This unpaid stay is deleted from the system so you can book
+                  again cleanly — it will not stay in cancelled history.
                 </>
               )}
             </p>
@@ -532,37 +533,39 @@ export function CalendarBookingPanel({
               {refundWithCancel ? (
                 <input name="refund-payment" type="hidden" value="1" />
               ) : null}
-              <fieldset className="calendar-cancel-reason">
-                <legend>What happened?</legend>
-                <label className="calendar-cancel-reason__option">
-                  <input
-                    checked={cancelReason === "cancellation"}
-                    disabled={!canManage}
-                    name="stay-end-reason"
-                    onChange={() => setCancelReason("cancellation")}
-                    type="radio"
-                    value="cancellation"
-                  />
-                  <span>
-                    <strong>Cancellation</strong>
-                    <span>Guest or staff cancelled before or during the stay.</span>
-                  </span>
-                </label>
-                <label className="calendar-cancel-reason__option">
-                  <input
-                    checked={cancelReason === "no-show"}
-                    disabled={!canManage}
-                    name="stay-end-reason"
-                    onChange={() => setCancelReason("no-show")}
-                    type="radio"
-                    value="no-show"
-                  />
-                  <span>
-                    <strong>No-show</strong>
-                    <span>Guest did not arrive and the room was not used.</span>
-                  </span>
-                </label>
-              </fieldset>
+              {depositPaid ? (
+                <fieldset className="calendar-cancel-reason">
+                  <legend>What happened?</legend>
+                  <label className="calendar-cancel-reason__option">
+                    <input
+                      checked={cancelReason === "cancellation"}
+                      disabled={!canManage}
+                      name="stay-end-reason"
+                      onChange={() => setCancelReason("cancellation")}
+                      type="radio"
+                      value="cancellation"
+                    />
+                    <span>
+                      <strong>Cancellation</strong>
+                      <span>Guest or staff cancelled before or during the stay.</span>
+                    </span>
+                  </label>
+                  <label className="calendar-cancel-reason__option">
+                    <input
+                      checked={cancelReason === "no-show"}
+                      disabled={!canManage}
+                      name="stay-end-reason"
+                      onChange={() => setCancelReason("no-show")}
+                      type="radio"
+                      value="no-show"
+                    />
+                    <span>
+                      <strong>No-show</strong>
+                      <span>Guest did not arrive and the room was not used.</span>
+                    </span>
+                  </label>
+                </fieldset>
+              ) : null}
               <div className="calendar-cancel-confirm__actions">
                 <button className="button button--danger" disabled={!canManage} type="submit">
                   {refundWithCancel
@@ -571,9 +574,7 @@ export function CalendarBookingPanel({
                       : "Confirm cancel & refund"
                     : depositPaid
                       ? "Cancel and go to Transfers"
-                      : cancelReason === "no-show"
-                        ? "Confirm no-show"
-                        : "Confirm cancel"}
+                      : "Delete unpaid stay"}
                 </button>
                 <button
                   className="button button--secondary"

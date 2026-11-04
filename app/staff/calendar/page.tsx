@@ -92,6 +92,7 @@ export default async function StaffCalendarPage({
     assignGuest?: string;
     assignUnit?: string;
     refund?: string;
+    removed?: string;
     conversation?: string;
     "confirm-email"?: string;
   }>;
@@ -117,6 +118,7 @@ export default async function StaffCalendarPage({
     assignGuest,
     assignUnit,
     refund,
+    removed,
     conversation,
     "confirm-email": confirmEmail,
   } = await searchParams;
@@ -311,6 +313,9 @@ export default async function StaffCalendarPage({
   }
   if (refund) {
     flashParams.set("refund", refund);
+  }
+  if (removed) {
+    flashParams.set("removed", removed);
   }
   // Keep flash messages when closing the dialog; drop booking/block/room/date so the panel closes.
   const closeHref = `/staff/calendar?${flashParams.toString()}`;
@@ -558,6 +563,15 @@ export default async function StaffCalendarPage({
             Stay cancelled. Staff have been emailed to send the bank transfer.
             Once it is sent, it usually arrives the same day, or the next
             business day if it goes out after bank hours.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
+        {removed === "1" ? (
+          <p className="form-message form-message--success" role="status">
+            Unpaid stay deleted. It is gone from the calendar and from history —
+            you can create the booking again.{" "}
             <Link className="form-message__dismiss" href={dismissFlashHref}>
               Dismiss
             </Link>
