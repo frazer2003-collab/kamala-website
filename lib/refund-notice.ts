@@ -73,6 +73,25 @@ export function staffBankRefundCopy(
   };
 }
 
+/** Calendar Cancel & refund queued a Thai bank refund for the owner on Transfers. */
+export function staffBankRefundWaitingCopy(
+  guestName: string,
+  amountLabel: string,
+  reason: BankRefundReason,
+) {
+  const whatHappened = {
+    "cheaper-stay": `${guestName} changed to a cheaper stay.`,
+    declined: `${guestName}'s request was declined and the booking is closed.`,
+    cancelled: `${guestName}'s stay was cancelled and the booking is closed.`,
+  }[reason];
+
+  return {
+    subject: `Thai bank refund waiting: ${guestName}`,
+    intro: `${whatHappened} A ${amountLabel} Thai bank / QR refund is waiting to be started in Transfers.`,
+    next: `Open Transfers and tap Start Thai bank / QR refund, then send it from the guesthouse bank account. ${BANK_REFUND_GUEST_TIMING}`,
+  };
+}
+
 export function staffBankRefundPanel(amountLabel: string) {
   return `Send ${amountLabel} from the guesthouse bank account, then mark it sent. Ask for their account in the conversation if you do not have it. ${BANK_REFUND_GUEST_TIMING}`;
 }

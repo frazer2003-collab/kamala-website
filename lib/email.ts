@@ -9,7 +9,11 @@ import {
   guestConversationBlockText,
 } from "@/lib/guest-email-conversation";
 import { EMAIL_FONT_BODY, escapeHtml } from "@/lib/email-theme";
-import { staffBankRefundCopy, staffCardRefundCopy } from "@/lib/refund-notice";
+import {
+  staffBankRefundCopy,
+  staffBankRefundWaitingCopy,
+  staffCardRefundCopy,
+} from "@/lib/refund-notice";
 import { getStaffNotificationRecipients } from "@/lib/staff-notification-emails";
 
 type StaffBookingEmail = {
@@ -438,12 +442,18 @@ export async function sendStaffStayChangeEmail({
   pendingDepartureDate,
   amountLabel,
   chatUrl,
+  staffUrl = null,
   refundReason = "cheaper-stay",
   cardRefundFailed = false,
   keptChargeLabel = null,
   preface = null,
 }: {
-  kind: "changed" | "transfer-to-confirm" | "refund-to-send" | "refund-card";
+  kind:
+    | "changed"
+    | "transfer-to-confirm"
+    | "refund-to-send"
+    | "refund-waiting"
+    | "refund-card";
   refundReason?: "cheaper-stay" | "declined" | "cancelled" | "top-up-voided";
   cardRefundFailed?: boolean;
   /** Bank charge left on the card so the guest pays it. */
@@ -458,6 +468,8 @@ export async function sendStaffStayChangeEmail({
   pendingDepartureDate: string | null;
   amountLabel: string | null;
   chatUrl: string | null;
+  /** Deep link into Transfers for owner-started Thai bank refunds. */
+  staffUrl?: string | null;
   /** Extra first paragraph, used when a notice is sent after the fact. */
   preface?: string | null;
 }): Promise<EmailResult> {
@@ -469,23 +481,31 @@ export async function sendStaffStayChangeEmail({
     return { ok: false, reason: "missing-config" };
   }
 
+  const bankReason =
+    refundReason === "declined" || refundReason === "cancelled"
+      ? refundReason
+      : "cheaper-stay";
+
   const copy = {
     changed: {
       subject: `Stay changed: ${guestName}`,
       intro: `${guestName} changed their stay. It is already updated on the calendar.`,
-      next: null,
+      next: null as string | null,
     },
     "transfer-to-confirm": {
       subject: `Transfer to confirm: ${guestName}`,
       intro: `${guestName} wants to change their stay and says they sent ${amountLabel ?? "the difference"} by bank transfer.`,
-      next: "Check the transfer, then open Requests and tap Confirm transfer. The stay moves only after you confirm.",
+      next: "Check the transfer, then open Transfers and tap Confirm transfer. The stay moves only after you confirm.",
     },
     "refund-to-send": staffBankRefundCopy(
       guestName,
       amountLabel ?? "the difference",
-      refundReason === "declined" || refundReason === "cancelled"
-        ? refundReason
-        : "cheaper-stay",
+      bankReason,
+    ),
+    "refund-waiting": staffBankRefundWaitingCopy(
+      guestName,
+      amountLabel ?? "the payment",
+      bankReason,
     ),
     "refund-card": staffCardRefundCopy(
       guestName,
@@ -508,7 +528,11 @@ export async function sendStaffStayChangeEmail({
   }
   if (amountLabel) {
     lines.push([
-      kind === "refund-to-send" || kind === "refund-card" ? "Refund" : "Amount",
+      kind === "refund-to-send" ||
+      kind === "refund-waiting" ||
+      kind === "refund-card"
+        ? "Refund"
+        : "Amount",
       amountLabel,
     ]);
   }
@@ -521,6 +545,8 @@ export async function sendStaffStayChangeEmail({
     ...lines.map(([label, value]) => `${label}: ${value}`),
     copy.next ? "" : null,
     copy.next,
+    staffUrl ? "" : null,
+    staffUrl ? `Open Transfers: ${staffUrl}` : null,
     chatUrl ? "" : null,
     chatUrl ? `Guest conversation: ${chatUrl}` : null,
   ]
@@ -540,6 +566,16 @@ export async function sendStaffStayChangeEmail({
           .join("")}
       </table>
       ${copy.next ? `<p>${escapeHtml(copy.next)}</p>` : ""}
+      ${
+        staffUrl
+          ? `<p style="margin-top: 24px;"><a href="${escapeHtml(staffUrl)}">Open in Transfers</a></p>`
+          : ""
+      }
+      ${
+        chatUrl
+          ? `<p><a href="${escapeHtml(chatUrl)}">Guest conversation</a></p>`
+          : ""
+      }
     </div>
   `;
 

@@ -527,9 +527,9 @@ export default async function StaffBookingsPage({
         ) : null}
         {refund === "needed" ? (
           <p className="form-message form-message--setup" role="status">
-            Stay cancelled and off the calendar. Start the refund below — Stripe
-            can be done by staff (6% bank charge stays); Thai bank / QR is sent
-            by the owner from the guesthouse account.
+            Stay cancelled and off the calendar. Staff were emailed — start the
+            Thai bank / QR refund below so the owner can send it from the
+            guesthouse account.
           </p>
         ) : null}
         {refund === "card" ? (

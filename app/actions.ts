@@ -1941,17 +1941,24 @@ export async function cancelConfirmedBooking(
   }
 
   const paidByCard = Boolean(booking.stripe_payment_intent_id);
-  // Cancel & refund button. Cancel alone still queues a Transfers refund when paid.
-  const cancelAndRefund = getValue(formData, "refund-payment") === "1";
   const stayAmount = resolveBookingStayTotal({
     depositAmount: booking.deposit_amount,
     estimatedTotal: booking.estimated_total ?? 0,
   });
+  const amountLabel =
+    stayAmount > 0
+      ? formatMoneySuffix(stayAmount, (await getPropertySettings()).currency)
+      : null;
+  const chatUrl = booking.conversation_token
+    ? getGuestChatUrl(booking.conversation_token)
+    : null;
+  const transfersUrl = `${getSiteUrl()}/staff?booking=${encodeURIComponent(bookingId)}&refund=needed`;
 
-  // Bank Cancel & refund: email the bank steps now. Card Cancel & refund, and
-  // plain Cancel when paid: remove the stay and finish money on Transfers.
+  // Paid Cancel & refund: Stripe refunds here; Thai bank queues on Transfers.
   let refundOutcome: StayRefundOutcome = "skipped";
-  if (cancelAndRefund && !paidByCard) {
+  const handoffBankRefund = !paidByCard && stayAmount > 0;
+
+  if (paidByCard) {
     refundOutcome = await refundPaidStay(booking, "cancelled", {
       notifyGuest: true,
     });
@@ -1966,9 +1973,6 @@ export async function cancelConfirmedBooking(
     }
   }
 
-  const handoffToTransfers =
-    stayAmount > 0 && (paidByCard || !cancelAndRefund);
-
   await releaseBookingReservation(bookingId);
 
   const declinePayload: {
@@ -1979,7 +1983,7 @@ export async function cancelConfirmedBooking(
     status: "declined",
     stay_end_reason: stayEndReason,
   };
-  if (handoffToTransfers) {
+  if (handoffBankRefund) {
     declinePayload.refund_due = stayAmount;
   }
 
@@ -1993,7 +1997,7 @@ export async function cancelConfirmedBooking(
     const fallbackPayload: { status: "declined"; refund_due?: number } = {
       status: "declined",
     };
-    if (handoffToTransfers) {
+    if (handoffBankRefund) {
       fallbackPayload.refund_due = stayAmount;
     }
     if (/stay_end_reason|refund_due|schema cache|Could not find/i.test(error.message)) {
@@ -2016,12 +2020,30 @@ export async function cancelConfirmedBooking(
     }
   }
 
+  if (handoffBankRefund) {
+    await sendStaffStayChangeEmail({
+      kind: "refund-waiting",
+      refundReason: "cancelled",
+      guestName: booking.guest_name,
+      guestEmail: booking.guest_email,
+      roomName: booking.room_name,
+      arrivalDate: booking.arrival_date,
+      departureDate: booking.departure_date,
+      pendingRoomName: null,
+      pendingArrivalDate: null,
+      pendingDepartureDate: null,
+      amountLabel,
+      chatUrl,
+      staffUrl: transfersUrl,
+    }).catch(() => null);
+  }
+
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
   revalidatePath("/staff/reservations");
 
-  if (handoffToTransfers) {
+  if (handoffBankRefund) {
     redirect(`/staff?booking=${encodeURIComponent(bookingId)}&refund=needed`);
   }
 
