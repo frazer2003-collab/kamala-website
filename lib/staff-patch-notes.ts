@@ -18,6 +18,23 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-04-calendar-door-drag",
+    date: "2026-11-04",
+    title: "Drag bookings between doors",
+    summary:
+      "Drag a stay onto another door to reassign it, or onto a replaceable stay to swap or take that door.",
+    image: {
+      src: "/staff/patch-notes/door-drag.jpg",
+      alt: "Dragging a stay from one door row onto another",
+    },
+    changes: [
+      "Drag a booking bar onto an empty door row to assign that number (same room type only).",
+      "Drop onto another booking when it is replaceable: swap doors if both fit, otherwise take the door and move the other stay to No #.",
+      "Drop onto No # to clear a door assignment.",
+      "Channel blocks stay put — only staff-managed bookings drag.",
+    ],
+  },
+  {
     id: "2026-11-04-paid-cash-or-bank",
     date: "2026-11-04",
     title: "Mark Paid: Cash or Thai bank",
@@ -45,9 +62,9 @@ export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
       alt: "Cancel and refund confirmation with Stripe refund button",
     },
     changes: [
-      "Paid calendar stays show Cancel & refund only (no separate Cancel).",
-      "Stripe Cancel & refund closes the stay and starts the card refund immediately (6% bank charge kept).",
-      "Thai bank Cancel & refund closes the stay, opens Transfers, and emails staff that a refund is waiting for the owner to start.",
+      "Paid stays show Cancel and Cancel & refund side by side (cash shows Cancel only).",
+      "Cancel & refund: Stripe refunds the card now; Thai bank opens Transfers and emails staff that a refund is waiting.",
+      "Cancel alone closes the stay and opens Transfers for a later refund — no automatic Stripe refund.",
       "Unpaid Cancel deletes the stay from the system so staff can rebook cleanly (not kept as cancelled history).",
     ],
   },

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Door drag fixture</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        background: #d8d0cd;
+        font: 14px/1.35 "Segoe UI", system-ui, sans-serif;
+        color: #2a1f1d;
+      }
+      .shot {
+        width: 560px;
+        padding: 16px;
+        border-radius: 14px;
+        background: #faf8f7;
+        border: 1px solid #cfc5c1;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 0.7rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #6e605c;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 3.5rem 1fr;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.45rem;
+      }
+      .door {
+        font-weight: 750;
+        color: #6e605c;
+      }
+      .lane {
+        position: relative;
+        height: 2rem;
+        border: 1px solid #e3d9d6;
+        border-radius: 8px;
+        background: #fff;
+      }
+      .bar {
+        position: absolute;
+        left: 8%;
+        width: 42%;
+        top: 0.28rem;
+        bottom: 0.28rem;
+        border-radius: 6px;
+        background: #8b2e2a;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        padding: 0 0.5rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+      .bar--ghost {
+        left: 55%;
+        width: 36%;
+        background: #c4a29e;
+        outline: 2px dashed #8b2e2a;
+        outline-offset: 1px;
+      }
+      .hint {
+        margin: 10px 0 0;
+        color: #6e605c;
+        font-size: 0.82rem;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="shot" id="door-drag">
+      <h1>Calendar doors</h1>
+      <div class="row">
+        <div class="door">#113</div>
+        <div class="lane"><div class="bar">Maya</div></div>
+      </div>
+      <div class="row">
+        <div class="door">#115</div>
+        <div class="lane">
+          <div class="bar bar--ghost">Maya →</div>
+        </div>
+      </div>
+      <p class="hint">Drag a stay onto another door or a replaceable booking.</p>
+    </section>
+  </body>
+</html>

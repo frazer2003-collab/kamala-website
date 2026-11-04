@@ -88,6 +88,7 @@ import {
   STRIPE_BANK_CHARGE_RATE,
 } from "@/lib/payment-pricing";
 import { isBankTransferAvailable } from "@/lib/bank-transfer";
+import { resolveCalendarDoorDrop } from "@/lib/calendar-door-drop";
 import {
   findUnitAssignmentConflict,
   getAssignableUnitsForStay,
@@ -1628,6 +1629,178 @@ export async function assignStayRoomUnit(formData: FormData) {
   );
 }
 
+async function setBookingRoomUnitId(
+  bookingId: string,
+  roomUnitId: string | null,
+) {
+  const supabase = createStaffSupabaseClient();
+  if (roomUnitId) {
+    const { error: unitError } = await supabase.rpc("staff_set_booking_room_unit", {
+      p_booking_id: bookingId,
+      p_room_unit_id: roomUnitId,
+    });
+    if (!unitError) {
+      return null;
+    }
+    if (!/Could not find the function|schema cache|PGRST202/i.test(unitError.message)) {
+      return unitError.message;
+    }
+  }
+  const { error } = await supabase
+    .from("booking_requests")
+    .update({ room_unit_id: roomUnitId })
+    .eq("id", bookingId);
+  return error?.message ?? null;
+}
+
+/** Drag a calendar booking onto a door, another booking, or No #. */
+export async function applyCalendarDoorDrop(formData: FormData) {
+  await requireStaffCalendarWrite();
+
+  const sourceId = getValue(formData, "source-booking-id");
+  const targetType = getValue(formData, "target-type");
+  const targetBookingId = getValue(formData, "target-booking-id");
+  const targetUnitId = getValue(formData, "target-unit-id");
+  const month = getValue(formData, "month");
+  const monthKey = month || new Date().toISOString().slice(0, 7);
+  const fallbackHref = calendarHrefFromFormData(formData, { month: monthKey });
+
+  if (!sourceId) {
+    redirect(fallbackHref);
+  }
+
+  const sourceBooking = await getStaffBookingById(sourceId);
+  if (!sourceBooking || !isStaffCalendarManageableStay(sourceBooking)) {
+    redirect(appendCalendarError(fallbackHref, "invalid-stay"));
+  }
+
+  let targetBooking =
+    targetType === "booking" && targetBookingId
+      ? await getStaffBookingById(targetBookingId)
+      : null;
+  if (targetType === "booking") {
+    if (!targetBooking || !isStaffCalendarManageableStay(targetBooking)) {
+      redirect(appendCalendarError(fallbackHref, "invalid-stay"));
+    }
+  }
+
+  const rangeEnd = addIsoDays(
+    targetBooking && targetBooking.departureDate > sourceBooking.departureDate
+      ? targetBooking.departureDate
+      : sourceBooking.departureDate,
+    -1,
+  );
+  const rangeArrival =
+    targetBooking && targetBooking.arrivalDate < sourceBooking.arrivalDate
+      ? targetBooking.arrivalDate
+      : sourceBooking.arrivalDate;
+
+  const [{ units }, confirmed, channels] = await Promise.all([
+    getStaffRoomUnits(),
+    getConfirmedBookingsOverlappingRange(rangeArrival, rangeEnd),
+    getChannelBlocksOverlappingRange(rangeArrival, rangeEnd),
+  ]);
+  const occupancies = [
+    ...confirmed.bookings.map(occupancyFromBooking),
+    ...channels.blocks.map(occupancyFromChannelBlock),
+  ];
+
+  const source = {
+    id: sourceBooking.databaseId ?? sourceId,
+    roomId: sourceBooking.roomId,
+    roomUnitId: sourceBooking.roomUnitId,
+    arrivalDate: sourceBooking.arrivalDate,
+    departureDate: sourceBooking.departureDate,
+  };
+
+  const plan = resolveCalendarDoorDrop({
+    source,
+    target:
+      targetType === "unassign"
+        ? { type: "unassign" }
+        : targetType === "unit"
+          ? { type: "unit", unitId: targetUnitId }
+          : {
+              type: "booking",
+              stay: {
+                id: targetBooking!.databaseId ?? targetBookingId,
+                roomId: targetBooking!.roomId,
+                roomUnitId: targetBooking!.roomUnitId,
+                arrivalDate: targetBooking!.arrivalDate,
+                departureDate: targetBooking!.departureDate,
+              },
+            },
+    units,
+    occupancies,
+  });
+
+  if (plan.action === "noop") {
+    redirect(fallbackHref);
+  }
+  if (plan.action === "reject") {
+    redirect(
+      appendCalendarError(
+        fallbackHref,
+        plan.reason === "conflict" ? "room-number-taken" : "invalid-room-number",
+      ),
+    );
+  }
+
+  if (plan.action === "assign") {
+    const errorMessage = await setBookingRoomUnitId(plan.bookingId, plan.unitId);
+    if (errorMessage) {
+      redirect(appendCalendarError(fallbackHref, "save-failed", errorMessage));
+    }
+  } else if (plan.action === "unassign") {
+    const errorMessage = await setBookingRoomUnitId(plan.bookingId, null);
+    if (errorMessage) {
+      redirect(appendCalendarError(fallbackHref, "save-failed", errorMessage));
+    }
+  } else if (plan.action === "replace") {
+    const displaceError = await setBookingRoomUnitId(plan.displacedId, null);
+    if (displaceError) {
+      redirect(appendCalendarError(fallbackHref, "save-failed", displaceError));
+    }
+    const assignError = await setBookingRoomUnitId(plan.sourceId, plan.unitId);
+    if (assignError) {
+      redirect(appendCalendarError(fallbackHref, "save-failed", assignError));
+    }
+  } else if (plan.action === "swap") {
+    // Clear one door first so a unique/check constraint cannot block the swap.
+    const clearError = await setBookingRoomUnitId(plan.sourceId, null);
+    if (clearError) {
+      redirect(appendCalendarError(fallbackHref, "save-failed", clearError));
+    }
+    const moveTargetError = await setBookingRoomUnitId(
+      plan.targetId,
+      plan.sourceUnitId,
+    );
+    if (moveTargetError) {
+      await setBookingRoomUnitId(plan.sourceId, plan.sourceUnitId);
+      redirect(appendCalendarError(fallbackHref, "save-failed", moveTargetError));
+    }
+    const moveSourceError = await setBookingRoomUnitId(
+      plan.sourceId,
+      plan.targetUnitId,
+    );
+    if (moveSourceError) {
+      await setBookingRoomUnitId(plan.targetId, plan.targetUnitId);
+      await setBookingRoomUnitId(plan.sourceId, plan.sourceUnitId);
+      redirect(appendCalendarError(fallbackHref, "save-failed", moveSourceError));
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/staff/calendar");
+  redirect(
+    calendarHrefFromFormData(formData, {
+      month: monthKey,
+      booking: sourceId,
+      extras: { saved: "door-drop" },
+    }),
+  );
+}
+
 async function refundCardPaymentKeepingCharge(
   booking: BookingRequestRow,
 ): Promise<
@@ -1982,6 +2155,7 @@ export async function cancelConfirmedBooking(
 
   const paidByCard = Boolean(booking.stripe_payment_intent_id);
   const collectedVia = parsePaymentCollectedVia(booking.payment_collected_via);
+  const cancelAndRefund = getValue(formData, "refund-payment") === "1";
   const stayAmount = resolveBookingStayTotal({
     depositAmount: booking.deposit_amount,
     estimatedTotal: booking.estimated_total ?? 0,
@@ -1995,12 +2169,15 @@ export async function cancelConfirmedBooking(
     : null;
   const transfersUrl = `${getSiteUrl()}/staff/transfers?booking=${encodeURIComponent(bookingId)}&refund=needed`;
 
-  // Paid Cancel & refund: Stripe here; Thai bank → Transfers; cash just closes.
+  // Cancel & refund: Stripe now; Thai bank → Transfers + waiting email.
+  // Plain Cancel: close stay and queue Transfers for a later refund (no auto Stripe).
+  // Cash: close only — never queue Transfers.
   let refundOutcome: StayRefundOutcome = "skipped";
-  const handoffBankRefund =
-    !paidByCard && collectedVia !== "cash" && stayAmount > 0;
+  const isCash = collectedVia === "cash";
+  const handoffRefundDue =
+    !isCash && stayAmount > 0 && (cancelAndRefund ? !paidByCard : true);
 
-  if (paidByCard) {
+  if (cancelAndRefund && paidByCard) {
     refundOutcome = await refundPaidStay(booking, "cancelled", {
       notifyGuest: true,
     });
@@ -2025,7 +2202,7 @@ export async function cancelConfirmedBooking(
     status: "declined",
     stay_end_reason: stayEndReason,
   };
-  if (handoffBankRefund) {
+  if (handoffRefundDue) {
     declinePayload.refund_due = stayAmount;
   }
 
@@ -2039,7 +2216,7 @@ export async function cancelConfirmedBooking(
     const fallbackPayload: { status: "declined"; refund_due?: number } = {
       status: "declined",
     };
-    if (handoffBankRefund) {
+    if (handoffRefundDue) {
       fallbackPayload.refund_due = stayAmount;
     }
     if (/stay_end_reason|refund_due|schema cache|Could not find/i.test(error.message)) {
@@ -2062,7 +2239,7 @@ export async function cancelConfirmedBooking(
     }
   }
 
-  if (handoffBankRefund) {
+  if (cancelAndRefund && handoffRefundDue) {
     await sendStaffStayChangeEmail({
       kind: "refund-waiting",
       refundReason: "cancelled",
@@ -2085,7 +2262,7 @@ export async function cancelConfirmedBooking(
   revalidatePath("/staff/calendar");
   revalidatePath("/staff/reservations");
 
-  if (handoffBankRefund) {
+  if (handoffRefundDue) {
     redirect(`/staff/transfers?booking=${encodeURIComponent(bookingId)}&refund=needed`);
   }
 

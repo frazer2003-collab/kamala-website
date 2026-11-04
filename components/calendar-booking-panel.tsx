@@ -107,9 +107,13 @@ export function CalendarBookingPanel({
   const initialEmail = guestEmail === WALK_IN_EMAIL_PLACEHOLDER ? "" : guestEmail;
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState<StayEndReason>("cancellation");
+  /** Locked by which action was opened — never a free checkbox. */
+  const [refundWithCancel, setRefundWithCancel] = useState(false);
   const refundAmount = depositAmount > 0 ? depositAmount : estimatedTotal;
   const refundLabel =
     refundAmount > 0 ? formatMoneySuffix(refundAmount, currency) : "";
+  const canOfferRefund =
+    depositPaid && refundAmount > 0 && paymentCollectedVia !== "cash";
   const [fields, setFields] = useState({
     guestName,
     guestEmail: initialEmail,
@@ -128,6 +132,7 @@ export function CalendarBookingPanel({
   useEffect(() => {
     setConfirmCancel(false);
     setCancelReason("cancellation");
+    setRefundWithCancel(false);
     setFields({
       guestName,
       guestEmail: guestEmail === WALK_IN_EMAIL_PLACEHOLDER ? "" : guestEmail,
@@ -524,7 +529,7 @@ export function CalendarBookingPanel({
         confirmCancel ? (
           <div className="calendar-cancel-confirm">
             <p className="calendar-cancel-confirm__summary">
-              {depositPaid ? (
+              {refundWithCancel ? (
                 paidByCard ? (
                   <>
                     Cancel and refund{" "}
@@ -539,7 +544,23 @@ export function CalendarBookingPanel({
                     {refundLabel || "the stay"} now (the 6% bank charge stays with
                     the guesthouse).
                   </>
-                ) : paymentCollectedVia === "cash" ? (
+                ) : (
+                  <>
+                    Cancel and refund{" "}
+                    <strong>{fields.guestName || guestName}</strong> for{" "}
+                    <strong>
+                      {formatStayDates(
+                        fields.arrivalDate || arrivalDate,
+                        fields.departureDate || departureDate,
+                      )}
+                    </strong>
+                    . The stay leaves the calendar, staff are emailed, and
+                    Transfers opens so the owner can start the{" "}
+                    {refundLabel || "Thai bank / QR"} refund.
+                  </>
+                )
+              ) : depositPaid ? (
+                paymentCollectedVia === "cash" ? (
                   <>
                     Cancel{" "}
                     <strong>{fields.guestName || guestName}</strong> for{" "}
@@ -554,7 +575,7 @@ export function CalendarBookingPanel({
                   </>
                 ) : (
                   <>
-                    Cancel and refund{" "}
+                    Cancel{" "}
                     <strong>{fields.guestName || guestName}</strong> for{" "}
                     <strong>
                       {formatStayDates(
@@ -562,9 +583,9 @@ export function CalendarBookingPanel({
                         fields.departureDate || departureDate,
                       )}
                     </strong>
-                    . The stay leaves the calendar, staff are emailed, and
-                    Transfers opens so the owner can start the{" "}
-                    {refundLabel || "Thai bank / QR"} refund.
+                    . The stay leaves the calendar, then Transfers opens so the
+                    owner can refund later (no automatic Stripe refund, no waiting
+                    email).
                   </>
                 )
               ) : (
@@ -584,6 +605,9 @@ export function CalendarBookingPanel({
             <form action={cancelAction} className="calendar-cancel-confirm__form">
               <StaffFormBusyBridge />
               <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
+              {refundWithCancel ? (
+                <input name="refund-payment" type="hidden" value="1" />
+              ) : null}
               {depositPaid ? (
                 <fieldset className="calendar-cancel-reason">
                   <legend>What happened?</legend>
@@ -619,13 +643,15 @@ export function CalendarBookingPanel({
               ) : null}
               <div className="calendar-cancel-confirm__actions">
                 <button className="button button--danger" disabled={!canManage} type="submit">
-                  {depositPaid
+                  {refundWithCancel
                     ? paidByCard
                       ? "Confirm cancel & Stripe refund"
-                      : paymentCollectedVia === "cash"
+                      : "Cancel and go to Transfers"
+                    : depositPaid
+                      ? paymentCollectedVia === "cash"
                         ? "Confirm cancel"
                         : "Cancel and go to Transfers"
-                    : "Delete unpaid stay"}
+                      : "Delete unpaid stay"}
                 </button>
                 <button
                   className="button button--secondary"
@@ -633,6 +659,7 @@ export function CalendarBookingPanel({
                   onClick={() => {
                     setConfirmCancel(false);
                     setCancelReason("cancellation");
+                    setRefundWithCancel(false);
                   }}
                   type="button"
                 >
@@ -643,33 +670,32 @@ export function CalendarBookingPanel({
           </div>
         ) : (
           <div className="detail-actions detail-actions--cancel">
-            {depositPaid ? (
+            <button
+              className="button button--secondary"
+              disabled={!canManage}
+              onClick={() => {
+                setRefundWithCancel(false);
+                setCancelReason("cancellation");
+                setConfirmCancel(true);
+              }}
+              type="button"
+            >
+              Cancel
+            </button>
+            {canOfferRefund ? (
               <button
                 className="button button--danger"
                 disabled={!canManage}
                 onClick={() => {
+                  setRefundWithCancel(true);
                   setCancelReason("cancellation");
                   setConfirmCancel(true);
                 }}
                 type="button"
               >
-                {paymentCollectedVia === "cash"
-                  ? "Cancel"
-                  : "Cancel & refund"}
+                Cancel &amp; refund
               </button>
-            ) : (
-              <button
-                className="button button--secondary"
-                disabled={!canManage}
-                onClick={() => {
-                  setCancelReason("cancellation");
-                  setConfirmCancel(true);
-                }}
-                type="button"
-              >
-                Cancel
-              </button>
-            )}
+            ) : null}
           </div>
         )
       ) : null}

@@ -1107,11 +1107,36 @@ button.calendar-day-choice:active {
   z-index: 4;
 }
 
+.extranet-bar-shell--draggable {
+  cursor: grab;
+}
+
+.extranet-bar-shell--draggable:active {
+  cursor: grabbing;
+}
+
+.extranet-bar-shell--drop-replace {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 1px;
+  border-radius: 0.35rem;
+  z-index: 5;
+}
+
 .extranet-bar-shell .extranet-bar {
   position: static;
   margin-top: 0;
   width: 100%;
   flex: 0 0 auto;
+}
+
+.extranet-reservations--droppable .extranet-reservations__day {
+  pointer-events: none;
+}
+
+.extranet-reservations--drop-hover,
+.extranet-doors__unassigned--drop-hover .extranet-reservations {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-maroon) 55%, transparent);
+  border-radius: 0.35rem;
 }
 
 .extranet-bar__open:focus-visible {

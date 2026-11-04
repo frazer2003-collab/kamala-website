@@ -605,6 +605,14 @@ export default async function StaffCalendarPage({
             </Link>
           </p>
         ) : null}
+        {saved === "door-drop" ? (
+          <p className="form-message form-message--success" role="status">
+            Door updated.{" "}
+            <Link className="form-message__dismiss" href={dismissFlashHref}>
+              Dismiss
+            </Link>
+          </p>
+        ) : null}
         {created === "walk-in" ? (
           <p className="form-message form-message--success" role="status">
             Booking added.{" "}

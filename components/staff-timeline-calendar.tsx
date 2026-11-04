@@ -1,9 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import "@/app/staff-calendar-closed-cells.css";
 import { CalendarJumpToToday } from "@/components/calendar-jump-to-today";
+import {
+  CalendarDoorDndProvider,
+  useCalendarDoorDnd,
+} from "@/components/calendar-door-dnd";
 import { CalendarStayBarLink } from "@/components/calendar-stay-bar-link";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import {
@@ -39,6 +50,8 @@ import {
   getKnownUnitIdSet,
   getPrimaryRoomIdForUnit,
   getTimelineDoorUnits,
+  occupancyFromBooking,
+  occupancyFromChannelBlock,
   stayNeedsRoomAssignment,
   type RoomUnit,
   type UnitOccupancy,
@@ -48,6 +61,7 @@ import {
   assignGuestBarColors,
   guestBarColorForName,
 } from "@/lib/booking-bar-colors";
+import { isStaffCalendarManageableStay } from "@/lib/staff-calendar-stay";
 
 type StaffTimelineCalendarProps = {
   rooms: Room[];
@@ -128,6 +142,17 @@ function overrideCueTitle(hasAllotment: boolean, hasRate: boolean) {
   return undefined;
 }
 
+function bookingDropStay(booking: StaffBooking) {
+  return {
+    id: booking.databaseId ?? getStaffBookingKey(booking),
+    roomId: booking.roomId,
+    roomUnitId: booking.roomUnitId,
+    arrivalDate: booking.arrivalDate,
+    departureDate: booking.departureDate,
+    label: booking.guest,
+  };
+}
+
 function DoorReservationRow({
   unit,
   unitBookings,
@@ -165,9 +190,12 @@ function DoorReservationRow({
   closedDayKeys: Set<string>;
   roomTypeLabel?: string;
 }) {
+  const dnd = useCalendarDoorDnd();
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
   const primaryRoomId = getPrimaryRoomIdForUnit(unit);
+  const unitDropKey = `unit:${unit.id}`;
+  const isUnitDropHover = dnd?.dropHoverKey === unitDropKey;
   const bars = useMemo(
     () =>
       buildUnitTimelineBars({
@@ -199,7 +227,37 @@ function DoorReservationRow({
         ) : null}
       </MetricRowLabel>
       <div
-        className="extranet-reservations extranet-reservations--unit"
+        className={[
+          "extranet-reservations",
+          "extranet-reservations--unit",
+          isUnitDropHover ? "extranet-reservations--drop-hover" : "",
+          dnd?.dragging ? "extranet-reservations--droppable" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onDragLeave={(event) => {
+          if (!dnd?.dragging) {
+            return;
+          }
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+            dnd.setDropHoverKey(null);
+          }
+        }}
+        onDragOver={(event) => {
+          if (!dnd?.dragging) {
+            return;
+          }
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          dnd.setDropHoverKey(unitDropKey);
+        }}
+        onDrop={(event) => {
+          if (!dnd?.dragging) {
+            return;
+          }
+          event.preventDefault();
+          dnd.dropOnUnit(unit.id);
+        }}
         style={{
           ["--lane-count" as string]: laneCount,
           gridColumn: `2 / span ${dayCount}`,
@@ -308,29 +366,92 @@ function DoorReservationRow({
               ? selectedBookingKey === bar.itemKey
               : selectedBlockKey === bar.itemKey;
           const ariaExtra = bar.sublabel ? `, ${bar.sublabel}` : "";
+          const sourceBooking =
+            bar.kind === "booking"
+              ? unitBookings.find(
+                  (booking) => getStaffBookingKey(booking) === bar.itemKey,
+                ) ?? null
+              : null;
+          const canDragBooking =
+            Boolean(dnd?.canManage) &&
+            sourceBooking?.databaseId &&
+            isStaffCalendarManageableStay(sourceBooking);
+          const dropStay = sourceBooking ? bookingDropStay(sourceBooking) : null;
+          const bookingDropKey = dropStay ? `booking:${dropStay.id}` : "";
+          const replaceable =
+            Boolean(dnd?.dragging && dropStay) &&
+            dnd!.canReplaceBooking(dropStay!);
+          const isBookingDropHover =
+            replaceable && dnd?.dropHoverKey === bookingDropKey;
 
           return (
-            <CalendarStayBarLink
-              ariaLabel={`#${unit.number}: ${bar.label}${ariaExtra}`}
-              className={[getBarClassName(bar, isSelected), "extranet-bar__open"].join(" ")}
-              href={getTimelineBarHref(bar, monthKey, rangeQuery)}
-              itemKey={bar.itemKey}
+            <div
+              className={[
+                "extranet-bar-shell",
+                canDragBooking ? "extranet-bar-shell--draggable" : "",
+                isBookingDropHover ? "extranet-bar-shell--drop-replace" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              draggable={Boolean(canDragBooking)}
               key={bar.key}
-              kind={bar.kind === "booking" ? "booking" : "block"}
+              onDragEnd={() => dnd?.endDrag()}
+              onDragLeave={(event) => {
+                if (!replaceable || !dnd) {
+                  return;
+                }
+                if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                  dnd.setDropHoverKey(null);
+                }
+              }}
+              onDragOver={(event) => {
+                if (!replaceable || !dnd || !dropStay) {
+                  return;
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                event.dataTransfer.dropEffect = "move";
+                dnd.setDropHoverKey(bookingDropKey);
+              }}
+              onDragStart={(event: DragEvent) => {
+                if (!canDragBooking || !dropStay || !dnd) {
+                  return;
+                }
+                event.stopPropagation();
+                dnd.beginDrag(dropStay, event);
+              }}
+              onDrop={(event) => {
+                if (!replaceable || !dnd || !dropStay) {
+                  return;
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                dnd.dropOnBooking(dropStay);
+              }}
               style={{
                 ...getTimelineBarPlacementStyle(bar),
                 ...getBarColorStyle(bar, guestColors),
               }}
             >
-              {bar.showLabel ? (
-                <>
-                  <strong>{bar.label}</strong>
-                  {bar.compact || !bar.sublabel ? null : <span>{bar.sublabel}</span>}
-                </>
-              ) : (
-                <span className="extranet-bar__continued" aria-hidden="true" />
-              )}
-            </CalendarStayBarLink>
+              <CalendarStayBarLink
+                ariaLabel={`#${unit.number}: ${bar.label}${ariaExtra}`}
+                className={[getBarClassName(bar, isSelected), "extranet-bar__open"].join(
+                  " ",
+                )}
+                href={getTimelineBarHref(bar, monthKey, rangeQuery)}
+                itemKey={bar.itemKey}
+                kind={bar.kind === "booking" ? "booking" : "block"}
+              >
+                {bar.showLabel ? (
+                  <>
+                    <strong>{bar.label}</strong>
+                    {bar.compact || !bar.sublabel ? null : <span>{bar.sublabel}</span>}
+                  </>
+                ) : (
+                  <span className="extranet-bar__continued" aria-hidden="true" />
+                )}
+              </CalendarStayBarLink>
+            </div>
           );
         })}
       </div>
@@ -395,14 +516,27 @@ function UnassignedReservationRow({
       stayNeedsRoomAssignment(reservation, knownUnitIds),
     ).length;
 
-  if (unassignedCount === 0) {
+  const dnd = useCalendarDoorDnd();
+  const unassignDropKey = "unassign";
+  const isUnassignDropHover = dnd?.dropHoverKey === unassignDropKey;
+
+  if (unassignedCount === 0 && !dnd?.dragging) {
     return null;
+  }
+
+  if (unassignedCount === 0) {
+    // Keep a drop target visible while dragging so staff can clear a door.
   }
 
   return (
     <div
       aria-label="Needs room #"
-      className="extranet-doors__unassigned"
+      className={[
+        "extranet-doors__unassigned",
+        isUnassignDropHover ? "extranet-doors__unassigned--drop-hover" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{ ["--timeline-days" as string]: dayCount }}
     >
       <MetricRowLabel className="extranet-row__label--needs-room">
@@ -413,9 +547,34 @@ function UnassignedReservationRow({
         className={[
           "extranet-reservations",
           canManage ? "extranet-reservations--assign" : "",
+          dnd?.dragging ? "extranet-reservations--droppable" : "",
+          isUnassignDropHover ? "extranet-reservations--drop-hover" : "",
         ]
           .filter(Boolean)
           .join(" ")}
+        onDragLeave={(event) => {
+          if (!dnd?.dragging) {
+            return;
+          }
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+            dnd.setDropHoverKey(null);
+          }
+        }}
+        onDragOver={(event) => {
+          if (!dnd?.dragging) {
+            return;
+          }
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          dnd.setDropHoverKey(unassignDropKey);
+        }}
+        onDrop={(event) => {
+          if (!dnd?.dragging) {
+            return;
+          }
+          event.preventDefault();
+          dnd.dropOnUnassign();
+        }}
         style={{
           ["--lane-count" as string]: laneCount,
           gridColumn: `2 / span ${dayCount}`,
@@ -461,16 +620,31 @@ function UnassignedReservationRow({
           const sublabel = typeLabel
             ? `${typeLabel} · No #`
             : bar.sublabel;
+          const canDragBooking =
+            Boolean(dnd?.canManage) &&
+            sourceBooking?.databaseId &&
+            isStaffCalendarManageableStay(sourceBooking);
+          const dropStay = sourceBooking ? bookingDropStay(sourceBooking) : null;
 
           return (
             <div
               className={[
                 "extranet-bar-shell",
                 showInlineAssign ? "extranet-bar-shell--assign" : "",
+                canDragBooking ? "extranet-bar-shell--draggable" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
+              draggable={Boolean(canDragBooking)}
               key={bar.key}
+              onDragEnd={() => dnd?.endDrag()}
+              onDragStart={(event: DragEvent) => {
+                if (!canDragBooking || !dropStay || !dnd) {
+                  return;
+                }
+                event.stopPropagation();
+                dnd.beginDrag(dropStay, event);
+              }}
               style={{
                 ...getTimelineBarPlacementStyle(bar),
                 ...getBarColorStyle(bar, guestColors),
@@ -660,6 +834,15 @@ export function StaffTimelineCalendar({
 
   const emptyUnitBookings = useMemo(() => [] as StaffBooking[], []);
   const emptyUnitChannels = useMemo(() => [] as StaffRoomBlock[], []);
+  const dropOccupancies = useMemo(() => {
+    if (occupancies.length > 0) {
+      return occupancies;
+    }
+    return [
+      ...bookings.map(occupancyFromBooking),
+      ...channelReservations.map(occupancyFromChannelBlock),
+    ];
+  }, [occupancies, bookings, channelReservations]);
 
   useEffect(() => {
     setVisibleMonthLabel(monthLabel);
@@ -712,110 +895,126 @@ export function StaffTimelineCalendar({
   }, [calendarDays, monthLabel]);
 
   return (
-    <div
-      className="staff-extranet staff-extranet--doors"
-      style={{
-        ...getCalendarColorStyleProps(calendarColors),
-        ["--extranet-fit-month-days" as string]: String(fitMonthDayCount),
-      }}
+    <CalendarDoorDndProvider
+      canManage={canManage}
+      fromIso={fromIso}
+      monthKey={monthKey}
+      occupancies={dropOccupancies}
+      toIso={toIso}
+      units={roomUnits}
     >
-      <CalendarJumpToToday />
-      <h2 className="sr-only">Doors by day</h2>
-      <div className="staff-extranet__scroll" id="calendar-today" ref={scrollRef}>
-        <div
-          className="staff-extranet__dates"
-          style={{ ["--timeline-days" as string]: dayCount }}
-        >
-          <div className="staff-extranet__month" aria-hidden="true">
-            {visibleMonthLabel}
-          </div>
-          {calendarDays.map((day, columnIndex) => {
-            const header = formatTimelineDayHeader(day.date, day.iso, todayIso);
-            const isMonthStart = header.dayNumber === 1;
+      <div
+        className="staff-extranet staff-extranet--doors"
+        style={{
+          ...getCalendarColorStyleProps(calendarColors),
+          ["--extranet-fit-month-days" as string]: String(fitMonthDayCount),
+        }}
+      >
+        <CalendarJumpToToday />
+        <h2 className="sr-only">Doors by day</h2>
+        <p className="sr-only">
+          Drag a booking onto another door to reassign it. Drop onto another
+          booking to swap or replace when allowed. Drop onto No # to clear the
+          door.
+        </p>
+        <div className="staff-extranet__scroll" id="calendar-today" ref={scrollRef}>
+          <div
+            className="staff-extranet__dates"
+            style={{ ["--timeline-days" as string]: dayCount }}
+          >
+            <div className="staff-extranet__month" aria-hidden="true">
+              {visibleMonthLabel}
+            </div>
+            {calendarDays.map((day, columnIndex) => {
+              const header = formatTimelineDayHeader(day.date, day.iso, todayIso);
+              const isMonthStart = header.dayNumber === 1;
 
-            return (
-              <div
-                aria-current={header.isToday ? "date" : undefined}
-                className={[
-                  "staff-extranet__dayhead",
-                  header.isWeekend ? "staff-extranet__dayhead--weekend" : "",
-                  header.isToday ? "staff-extranet__dayhead--today extranet-cell--today" : "",
-                  isMonthStart ? "staff-extranet__dayhead--month-start" : "",
-                  !day.inCurrentMonth ? "staff-extranet__dayhead--muted" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                data-calendar-day={day.iso}
-                key={day.iso}
-                style={{ gridColumn: columnIndex + 2 }}
-              >
-                <span className="staff-extranet__weekday">{header.weekday}</span>
-                <span className="staff-extranet__daynum">{header.dayNumber}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        <UnassignedReservationRow
-          bookingByKey={bookingByKey}
-          bookings={bookings}
-          calendarDays={calendarDays}
-          canManage={canManage}
-          channelByKey={channelByKey}
-          channelReservations={channelReservations}
-          fromIso={fromIso}
-          guestColors={guestColors}
-          monthKey={monthKey}
-          occupancies={occupancies}
-          roomShortNameById={roomShortNameById}
-          roomUnits={roomUnits}
-          selectedBlockKey={activeBlockKey}
-          selectedBookingKey={activeBookingKey}
-          toIso={toIso}
-          todayIso={todayIso}
-        />
-
-        <div
-          aria-label="Room numbers"
-          className="extranet-doors"
-          style={{ ["--timeline-days" as string]: dayCount }}
-        >
-          {doorUnits.length > 0 ? (
-            doorUnits.map((unit) => {
-              const primaryRoomId = getPrimaryRoomIdForUnit(unit);
-              const roomTypeLabel = primaryRoomId
-                ? roomShortNameById.get(primaryRoomId)
-                : undefined;
               return (
-                <DoorReservationRow
-                  allotmentOverrideKeys={allotmentOverrideKeySet}
-                  calendarDays={calendarDays}
-                  closedDayKeys={closedDayKeys}
-                  fromIso={fromIso}
-                  guestColors={guestColors}
-                  key={unit.id}
-                  monthKey={monthKey}
-                  rateOverrideKeys={rateOverrideKeySet}
-                  roomTypeLabel={roomTypeLabel}
-                  selectedBlockKey={activeBlockKey}
-                  selectedBookingKey={activeBookingKey}
-                  selectedDate={selectedDate}
-                  selectedRoomId={selectedRoomId}
-                  toIso={toIso}
-                  todayIso={todayIso}
-                  unit={unit}
-                  unitBookings={bookingsByUnitId.get(unit.id) ?? emptyUnitBookings}
-                  unitChannels={channelsByUnitId.get(unit.id) ?? emptyUnitChannels}
-                />
+                <div
+                  aria-current={header.isToday ? "date" : undefined}
+                  className={[
+                    "staff-extranet__dayhead",
+                    header.isWeekend ? "staff-extranet__dayhead--weekend" : "",
+                    header.isToday
+                      ? "staff-extranet__dayhead--today extranet-cell--today"
+                      : "",
+                    isMonthStart ? "staff-extranet__dayhead--month-start" : "",
+                    !day.inCurrentMonth ? "staff-extranet__dayhead--muted" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  data-calendar-day={day.iso}
+                  key={day.iso}
+                  style={{ gridColumn: columnIndex + 2 }}
+                >
+                  <span className="staff-extranet__weekday">{header.weekday}</span>
+                  <span className="staff-extranet__daynum">{header.dayNumber}</span>
+                </div>
               );
-            })
-          ) : (
-            <p className="extranet-doors__empty">
-              No doors yet. Add them in Settings → Rooms.
-            </p>
-          )}
+            })}
+          </div>
+
+          <UnassignedReservationRow
+            bookingByKey={bookingByKey}
+            bookings={bookings}
+            calendarDays={calendarDays}
+            canManage={canManage}
+            channelByKey={channelByKey}
+            channelReservations={channelReservations}
+            fromIso={fromIso}
+            guestColors={guestColors}
+            monthKey={monthKey}
+            occupancies={occupancies}
+            roomShortNameById={roomShortNameById}
+            roomUnits={roomUnits}
+            selectedBlockKey={activeBlockKey}
+            selectedBookingKey={activeBookingKey}
+            toIso={toIso}
+            todayIso={todayIso}
+          />
+
+          <div
+            aria-label="Room numbers"
+            className="extranet-doors"
+            style={{ ["--timeline-days" as string]: dayCount }}
+          >
+            {doorUnits.length > 0 ? (
+              doorUnits.map((unit) => {
+                const primaryRoomId = getPrimaryRoomIdForUnit(unit);
+                const roomTypeLabel = primaryRoomId
+                  ? roomShortNameById.get(primaryRoomId)
+                  : undefined;
+                return (
+                  <DoorReservationRow
+                    allotmentOverrideKeys={allotmentOverrideKeySet}
+                    calendarDays={calendarDays}
+                    closedDayKeys={closedDayKeys}
+                    fromIso={fromIso}
+                    guestColors={guestColors}
+                    key={unit.id}
+                    monthKey={monthKey}
+                    rateOverrideKeys={rateOverrideKeySet}
+                    roomTypeLabel={roomTypeLabel}
+                    selectedBlockKey={activeBlockKey}
+                    selectedBookingKey={activeBookingKey}
+                    selectedDate={selectedDate}
+                    selectedRoomId={selectedRoomId}
+                    toIso={toIso}
+                    todayIso={todayIso}
+                    unit={unit}
+                    unitBookings={bookingsByUnitId.get(unit.id) ?? emptyUnitBookings}
+                    unitChannels={channelsByUnitId.get(unit.id) ?? emptyUnitChannels}
+                  />
+                );
+              })
+            ) : (
+              <p className="extranet-doors__empty">
+                No doors yet. Add them in Settings → Rooms.
+              </p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </CalendarDoorDndProvider>
   );
 }

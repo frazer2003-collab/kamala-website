@@ -276,6 +276,7 @@ export function findUnitAssignmentConflict({
   arrivalDate,
   departureDate,
   excludeId,
+  excludeIds,
   occupancies,
 }: {
   units: RoomUnit[];
@@ -284,6 +285,8 @@ export function findUnitAssignmentConflict({
   departureDate: string;
   /** Booking or channel block database id to ignore (self). */
   excludeId?: string;
+  /** Extra ids to ignore (e.g. both stays in a door swap). */
+  excludeIds?: string[];
   occupancies: UnitOccupancy[];
 }) {
   const unit = getRoomUnitById(units, unitId);
@@ -291,12 +294,20 @@ export function findUnitAssignmentConflict({
     return { error: "That room number is not available." as const };
   }
 
+  const ignored = new Set<string>();
+  if (excludeId) {
+    ignored.add(excludeId);
+  }
+  for (const id of excludeIds ?? []) {
+    ignored.add(id);
+  }
+
   const conflict = occupancies.find((item) => {
     if (!item.roomUnitId || item.roomUnitId !== unitId) {
       return false;
     }
 
-    if (excludeId && item.databaseId === excludeId) {
+    if (item.databaseId && ignored.has(item.databaseId)) {
       return false;
     }
 
