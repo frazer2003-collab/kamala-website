@@ -111,6 +111,7 @@ function safeStaffPath(value: string) {
     return "/staff/home";
   }
 
+  // Old inbox links under /staff?... still resolve via the index redirect.
   return value;
 }
 
