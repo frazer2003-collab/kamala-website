@@ -247,9 +247,10 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         {NAV_ITEMS.map((item) => (
           <Link
             aria-current={current === item.id ? "page" : undefined}
+            aria-label={collapsed ? item.label : undefined}
             href={item.href}
             key={item.id}
-            title={item.label}
+            title={collapsed ? item.label : undefined}
           >
             {item.icon}
             <span className="staff-nav__label">{item.label}</span>
