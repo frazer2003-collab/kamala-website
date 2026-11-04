@@ -13,7 +13,7 @@ export default async function StaffLoginPage({
 }) {
   const { next } = await searchParams;
   const nextPath =
-    next?.startsWith("/staff") && !next.startsWith("/staff/login") ? next : "/staff";
+    next?.startsWith("/staff") && !next.startsWith("/staff/login") ? next : "/staff/home";
 
   return (
     <StaffBusyRoot>

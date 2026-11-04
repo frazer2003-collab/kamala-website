@@ -170,7 +170,7 @@ function IconSettings() {
 
 const NAV_ITEMS: NavItem[] = [
   { id: "home", href: "/staff/home", label: "Home", icon: <IconHome /> },
-  { id: "requests", href: "/staff", label: "Transfers", icon: <IconTransfers /> },
+  { id: "requests", href: "/staff/transfers", label: "Transfers", icon: <IconTransfers /> },
   { id: "calendar", href: "/staff/calendar", label: "Calendar", icon: <IconCalendar /> },
   {
     id: "reservations",

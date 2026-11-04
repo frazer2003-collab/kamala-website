@@ -267,18 +267,18 @@ export function summarizeOpenRequests(bookings: StaffBooking[]): OpenRequestsSum
 
 export function openRequestsHref(summary: OpenRequestsSummary) {
   if (summary.needsReply > 0) {
-    return "/staff?filter=needs-reply&view=inbox";
+    return "/staff/transfers?filter=needs-reply&view=inbox";
   }
 
   if (summary.refundsToSend > 0 || summary.stayChanges > 0) {
-    return "/staff?view=inbox";
+    return "/staff/transfers?view=inbox";
   }
 
   if (summary.awaitingPayment > 0) {
-    return "/staff?filter=awaiting&view=inbox";
+    return "/staff/transfers?filter=awaiting&view=inbox";
   }
 
-  return "/staff?view=inbox";
+  return "/staff/transfers?view=inbox";
 }
 
 export function openRequestsDetailParts(summary: OpenRequestsSummary) {

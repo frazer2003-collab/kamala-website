@@ -156,7 +156,7 @@ describe("staff booking requests", () => {
       openRequestsWarningCopy(summary),
       "3 open items in Transfers — 1 waiting for a reply, 1 checkout hold, 1 transfer to check. Check Thai bank payments there before assigning doors on the calendar.",
     );
-    assert.equal(openRequestsHref(summary), "/staff?filter=needs-reply&view=inbox");
+    assert.equal(openRequestsHref(summary), "/staff/transfers?filter=needs-reply&view=inbox");
     assert.equal(
       openRequestsWarningCopy({
         total: 0,
@@ -192,7 +192,7 @@ describe("staff booking requests", () => {
     assert.equal(summary.refundsToSend, 1);
     assert.equal(summary.stayChanges, 1);
     assert.equal(summary.total, 2);
-    assert.equal(openRequestsHref(summary), "/staff?view=inbox");
+    assert.equal(openRequestsHref(summary), "/staff/transfers?view=inbox");
   });
 
   it("flags holds staff can cancel from Requests", () => {

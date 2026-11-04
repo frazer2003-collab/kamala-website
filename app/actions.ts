@@ -558,7 +558,7 @@ export async function createBookingRequest(
           departureDate: booking.departure_date,
           nights: booking.nights,
           amountLabel: formatMoneySuffix(bankAmount, propertySettings.currency),
-          staffUrl: `${getSiteUrl()}/staff?booking=${encodeURIComponent(booking.id)}&view=inbox`,
+          staffUrl: `${getSiteUrl()}/staff/transfers?booking=${encodeURIComponent(booking.id)}&view=inbox`,
         }).catch(() => null),
       );
 
@@ -689,7 +689,7 @@ export async function cancelBookingHoldBooking(formData: FormData) {
 
   const bookingId = getValue(formData, "booking-id");
   if (!bookingId) {
-    redirect("/staff");
+    redirect("/staff/transfers");
   }
 
   const supabase = createStaffSupabaseClient();
@@ -712,7 +712,7 @@ export async function cancelBookingHoldBooking(formData: FormData) {
 
   if (!cancellable) {
     redirect(
-      `/staff?booking=${encodeURIComponent(bookingId)}&error=cancel-hold-failed`,
+      `/staff/transfers?booking=${encodeURIComponent(bookingId)}&error=cancel-hold-failed`,
     );
   }
 
@@ -729,7 +729,7 @@ export async function cancelBookingHoldBooking(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
-  redirect("/staff?hold-cancelled=1");
+  redirect("/staff/transfers?hold-cancelled=1");
 }
 
 /** @deprecated Use cancelBookingHoldBooking */
@@ -1366,11 +1366,11 @@ export async function updateInboxBookingRoomType(formData: FormData) {
   const requestedRoomId = getValue(formData, "room-id");
   const booking = await getBookingForStaff(bookingId);
   const inboxHref = bookingId
-    ? `/staff?booking=${encodeURIComponent(bookingId)}`
-    : "/staff";
+    ? `/staff/transfers?booking=${encodeURIComponent(bookingId)}`
+    : "/staff/transfers";
 
   if (!booking || booking.status === "declined") {
-    redirect("/staff");
+    redirect("/staff/transfers");
   }
 
   const staffRooms = await getStaffRooms();
@@ -1667,7 +1667,7 @@ export async function declineBookingRequest(formData: FormData) {
     const cardRefund = await refundCardPaymentKeepingCharge(booking);
     if (!cardRefund.ok) {
       redirect(
-        `/staff?booking=${encodeURIComponent(bookingId)}&error=refund-failed`,
+        `/staff/transfers?booking=${encodeURIComponent(bookingId)}&error=refund-failed`,
       );
     }
     const settings = await getPropertySettings();
@@ -1731,8 +1731,9 @@ export async function declineBookingRequest(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/staff");
+  revalidatePath("/staff/transfers");
   revalidatePath("/staff/calendar");
-  redirect("/staff");
+  redirect("/staff/transfers");
 }
 
 type StayRefundOutcome = "card" | "card-already" | "bank" | "failed" | "skipped";
@@ -1833,8 +1834,8 @@ export async function refundClosedBooking(formData: FormData) {
 
   const bookingId = getValue(formData, "booking-id");
   const back = bookingId
-    ? `/staff?booking=${encodeURIComponent(bookingId)}`
-    : "/staff";
+    ? `/staff/transfers?booking=${encodeURIComponent(bookingId)}`
+    : "/staff/transfers";
   const booking = bookingId ? await getBookingForStaff(bookingId) : null;
 
   if (!booking || booking.status !== "declined" || !booking.deposit_paid_at) {
@@ -1952,7 +1953,7 @@ export async function cancelConfirmedBooking(
   const chatUrl = booking.conversation_token
     ? getGuestChatUrl(booking.conversation_token)
     : null;
-  const transfersUrl = `${getSiteUrl()}/staff?booking=${encodeURIComponent(bookingId)}&refund=needed`;
+  const transfersUrl = `${getSiteUrl()}/staff/transfers?booking=${encodeURIComponent(bookingId)}&refund=needed`;
 
   // Paid Cancel & refund: Stripe refunds here; Thai bank queues on Transfers.
   let refundOutcome: StayRefundOutcome = "skipped";
@@ -2044,7 +2045,7 @@ export async function cancelConfirmedBooking(
   revalidatePath("/staff/reservations");
 
   if (handoffBankRefund) {
-    redirect(`/staff?booking=${encodeURIComponent(bookingId)}&refund=needed`);
+    redirect(`/staff/transfers?booking=${encodeURIComponent(bookingId)}&refund=needed`);
   }
 
   if (refundOutcome !== "skipped") {

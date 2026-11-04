@@ -74,8 +74,11 @@ function messageForStaffUrl(url: URL) {
   if (path.startsWith("/staff/gallery")) {
     return "Opening gallery…";
   }
-  if (path === "/staff" || path === "/staff/") {
-    return "Opening requests…";
+  if (path === "/staff" || path === "/staff/" || path.startsWith("/staff/home")) {
+    return "Opening home…";
+  }
+  if (path.startsWith("/staff/transfers")) {
+    return "Opening transfers…";
   }
   return "Opening page…";
 }

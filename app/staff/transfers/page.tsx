@@ -1,0 +1,987 @@
+import Link from "next/link";
+import nextDynamic from "next/dynamic";
+import { StaffInboxRoomTypeForm } from "@/components/staff-inbox-room-type-form";
+import { StaffCancelHoldPanel } from "@/components/staff-cancel-hold-panel";
+import { StaffClosedRefundPanel } from "@/components/staff-closed-refund-panel";
+import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
+import { StaffShell } from "@/components/staff-shell";
+import { StaffStayChangePanel } from "@/components/staff-stay-change-panel";
+import {
+  getInboxMessagePreviews,
+  guestHasConversationLink,
+  type InboxMessagePreview,
+} from "@/lib/booking-chat";
+import { purgeAbandonedCheckouts } from "@/lib/abandoned-checkout";
+import {
+  getStaffBookingKey,
+  getDeclinedBookings,
+  getStaffBookingById,
+  getStaffBookingRequests,
+  hasStaffStayChangeTask,
+  isAbandonedCheckoutHold,
+  isUnverifiedBankHold,
+  type StaffBooking,
+} from "@/lib/booking-requests";
+import { formatMoneySuffix } from "@/lib/currency";
+import { getPropertySettings } from "@/lib/property-settings";
+import { getStaffRooms } from "@/lib/rooms";
+import {
+  requireStaffSessionDetails,
+  staffCanWriteCalendar,
+} from "@/lib/staff-auth";
+import {
+  formatOverlapErrorMessage,
+  parseOverlapDays,
+} from "@/lib/stay-overlap";
+import { formatBedSetup } from "@/lib/bed-setup";
+import { formatStayDateRange } from "@/lib/stay-dates";
+import { formatStayEndReason } from "@/lib/stay-end-reason";
+import type { BookingStatus } from "@/lib/content";
+
+const BookingChat = nextDynamic(
+  () => import("@/components/booking-chat").then((module) => module.BookingChat),
+  {
+    loading: () => (
+      <p className="booking-summary__hint" aria-live="polite">
+        Loading messages…
+      </p>
+    ),
+  },
+);
+
+export const dynamic = "force-dynamic";
+
+type InboxFilter = "all" | "new" | "awaiting" | "needs-reply";
+
+const statusCopy: Record<BookingStatus, string> = {
+  new: "New request",
+  pending_payment: "Awaiting payment",
+  awaiting: "Payment received",
+  "needs-reply": "Needs staff reply",
+  confirmed: "Confirmed",
+  declined: "Closed",
+};
+
+function getBookingStatusCopy(booking: StaffBooking) {
+  if (booking.pendingStayChange) {
+    return "Transfer to confirm";
+  }
+
+  if ((booking.refundDue ?? 0) > 0) {
+    return "Refund to send";
+  }
+
+  if (
+    booking.status === "awaiting" &&
+    booking.bankTransferClaimed &&
+    !booking.depositPaid
+  ) {
+    return "Transfer to verify";
+  }
+
+  return statusCopy[booking.status];
+}
+
+const STATUS_SORT: Partial<Record<BookingStatus, number>> = {
+  "needs-reply": 0,
+  new: 1,
+  awaiting: 2,
+  pending_payment: 3,
+};
+
+function parseInboxFilter(value: string | undefined): InboxFilter {
+  if (value === "new" || value === "awaiting" || value === "needs-reply") {
+    return value;
+  }
+
+  return "all";
+}
+
+function buildStaffHref(options: {
+  booking?: string | null;
+  filter?: InboxFilter;
+  view?: "inbox" | null;
+}) {
+  const params = new URLSearchParams();
+
+  if (options.booking) {
+    params.set("booking", options.booking);
+  }
+
+  if (options.filter && options.filter !== "all") {
+    params.set("filter", options.filter);
+  }
+
+  if (options.view === "inbox") {
+    params.set("view", "inbox");
+  }
+
+  const query = params.toString();
+  return query ? `/staff/transfers?${query}` : "/staff/transfers";
+}
+
+function previewSortKey(
+  booking: StaffBooking,
+  previews: Map<string, InboxMessagePreview>,
+) {
+  const id = booking.databaseId;
+  if (!id) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const preview = previews.get(id);
+  if (!preview) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const time = Date.parse(preview.createdAt);
+  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+}
+
+function sortInboxBookings(
+  bookings: StaffBooking[],
+  previews: Map<string, InboxMessagePreview>,
+) {
+  const rank = (booking: StaffBooking) =>
+    hasStaffStayChangeTask(booking)
+      ? (STATUS_SORT.awaiting ?? 9)
+      : (STATUS_SORT[booking.status] ?? 9);
+
+  return [...bookings].sort((left, right) => {
+    const leftRank = rank(left);
+    const rightRank = rank(right);
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    // Oldest unanswered thread first — the phone that has been ringing longest.
+    return previewSortKey(left, previews) - previewSortKey(right, previews);
+  });
+}
+
+function getRowSecondaryLine(
+  booking: StaffBooking,
+  preview: InboxMessagePreview | undefined,
+) {
+  if (preview?.bodyPreview) {
+    const who = preview.sender === "guest" ? "Guest" : "You";
+    return `${who}: ${preview.bodyPreview}`;
+  }
+
+  if (booking.status === "needs-reply") {
+    return "Guest is waiting for a reply";
+  }
+
+  if (booking.note.trim()) {
+    return booking.note.replace(/\s+/g, " ").trim();
+  }
+
+  return `${booking.room} · ${booking.dates}`;
+}
+
+function getStatusTone(booking: StaffBooking): BookingStatus {
+  return hasStaffStayChangeTask(booking) ? "awaiting" : booking.status;
+}
+
+function matchesInboxFilter(booking: StaffBooking, filter: InboxFilter) {
+  if (filter === "all") {
+    return true;
+  }
+  if (filter === "awaiting" && hasStaffStayChangeTask(booking)) {
+    return true;
+  }
+  return booking.status === filter;
+}
+
+function getMoneyState(booking: StaffBooking) {
+  if (hasStaffStayChangeTask(booking)) {
+    return {
+      tone: "warning" as const,
+      title: booking.pendingStayChange ? "Guest change — transfer to check" : "Guest change — refund owed",
+      body: booking.pendingStayChange
+        ? "The guest asked to change their confirmed stay and reported a bank transfer for the difference."
+        : "The guest moved to a cheaper stay that they paid for by bank transfer.",
+    };
+  }
+
+  if (booking.bankTransferClaimed && !booking.depositPaid) {
+    return {
+      tone: "warning" as const,
+      title: "Bank transfer to verify",
+      body: "The guest reported a transfer. Check your bank app, then confirm or decline.",
+    };
+  }
+
+  if (booking.depositPaid) {
+    return {
+      tone: "ok" as const,
+      title: "Payment received",
+      body: "Full stay payment is on record.",
+    };
+  }
+
+  if (booking.status === "new" || booking.status === "awaiting") {
+    return {
+      tone: "muted" as const,
+      title: "Payment not received",
+      body: "No card payment or verified transfer yet.",
+    };
+  }
+
+  if (booking.status === "pending_payment") {
+    return {
+      tone: "muted" as const,
+      title: "Checkout not finished",
+      body: "The guest never tapped “I've paid”. Check your bank app — if the transfer arrived you can still confirm the stay. Dates stay available until you do.",
+    };
+  }
+
+  return null;
+}
+
+export default async function StaffBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    booking?: string;
+    filter?: string;
+    view?: string;
+    error?: string;
+    detail?: string;
+    overlap?: string;
+    "hold-cancelled"?: string;
+    "stay-change"?: string;
+    refund?: string;
+  }>;
+}) {
+  const staffSession = await requireStaffSessionDetails();
+  const canWrite = staffCanWriteCalendar(staffSession);
+
+  const {
+    booking: selectedBookingId,
+    filter: filterParam,
+    view: viewParam,
+    error,
+    detail: errorDetail,
+    overlap,
+    "hold-cancelled": holdCancelled,
+    "stay-change": stayChangeResult,
+    refund,
+  } = await searchParams;
+  const inboxFilter = parseInboxFilter(filterParam);
+  const preferInboxView = viewParam === "inbox";
+
+  // Drop abandoned Thai bank / QR carts (and leftover card checkouts) past 24h
+  // before listing Requests, so the inbox matches live inventory.
+  await purgeAbandonedCheckouts();
+
+  const [staffBookings, declinedBookings, settings, rooms] = await Promise.all([
+    getStaffBookingRequests(),
+    getDeclinedBookings(),
+    getPropertySettings(),
+    getStaffRooms(),
+  ]);
+
+  const previewIds = [
+    ...staffBookings.bookings,
+    ...declinedBookings.bookings,
+  ]
+    .map((booking) => booking.databaseId)
+    .filter((id): id is string => Boolean(id));
+  const messagePreviews = await getInboxMessagePreviews(previewIds);
+
+  const sortedOpen = sortInboxBookings(staffBookings.bookings, messagePreviews);
+  const visibleOpen = sortedOpen.filter((booking) =>
+    matchesInboxFilter(booking, inboxFilter),
+  );
+
+  let selected =
+    staffBookings.bookings.find(
+      (booking) => getStaffBookingKey(booking) === selectedBookingId,
+    ) ??
+    declinedBookings.bookings.find(
+      (booking) => getStaffBookingKey(booking) === selectedBookingId,
+    ) ??
+    null;
+
+  if (!selected && selectedBookingId) {
+    selected = await getStaffBookingById(selectedBookingId);
+  }
+
+  if (!preferInboxView) {
+    selected ??=
+      visibleOpen[0] ??
+      staffBookings.bookings[0] ??
+      declinedBookings.bookings[0] ??
+      null;
+  }
+
+  const isPracticeMode =
+    staffBookings.source === "sample" &&
+    Boolean(selected) &&
+    !selected?.databaseId;
+  const canManageSelected =
+    Boolean(selected?.databaseId) && selected?.status !== "declined";
+  const isClosedConversation = selected?.status === "declined";
+  const selectedNeedsReply = selected?.status === "needs-reply";
+  const selectedCheckoutHold = selected ? isAbandonedCheckoutHold(selected) : false;
+  const selectedBankHold = selected ? isUnverifiedBankHold(selected) : false;
+  const selectedMoney = selected ? getMoneyState(selected) : null;
+  const newRequestCount = staffBookings.bookings.filter(
+    (booking) => booking.status === "new",
+  ).length;
+  const needsReplyCount = staffBookings.bookings.filter(
+    (booking) => booking.status === "needs-reply",
+  ).length;
+  const awaitingCount = staffBookings.bookings.filter((booking) =>
+    matchesInboxFilter(booking, "awaiting"),
+  ).length;
+  const selectedStayChangeTask = selected ? hasStaffStayChangeTask(selected) : false;
+  const pendingChangeRoomName = selected?.pendingStayChange
+    ? (rooms.find((room) => room.id === selected.pendingStayChange?.roomId)?.name ??
+      selected.pendingStayChange.roomId)
+    : null;
+  const checkoutHoldCount = staffBookings.bookings.filter(isAbandonedCheckoutHold)
+    .length;
+  const focusDetailOnMobile = Boolean(selected) && !preferInboxView;
+  const selectedKey = selected ? getStaffBookingKey(selected) : null;
+  const inboxRoomTypeError =
+    error === "invalid-room-type"
+      ? "That room type is not available."
+      : error === "overlap"
+        ? formatOverlapErrorMessage(parseOverlapDays(overlap))
+        : error === "save-failed"
+          ? `Could not update the room type.${errorDetail ? ` ${errorDetail}` : ""}`
+          : null;
+
+  const filterTabs: { id: InboxFilter; label: string; count: number }[] = [
+    { id: "needs-reply", label: "Need reply", count: needsReplyCount },
+    { id: "new", label: "New", count: newRequestCount },
+    { id: "awaiting", label: "Bank check", count: awaitingCount },
+    { id: "all", label: "All open", count: staffBookings.bookings.length },
+  ];
+
+  return (
+    <StaffShell current="requests">
+      <section className="staff-main" aria-labelledby="staff-title">
+        <div className="staff-header staff-header--compact">
+          <div>
+            <h1 id="staff-title">Transfers</h1>
+            <p>
+              Card stays confirm on their own. Use this page to verify Thai bank
+              transfers, answer guests, and send bank refunds.
+              {staffBookings.bookings.length === 0 ? (
+                <> No open bank items. Confirmed stays live on the calendar.</>
+              ) : needsReplyCount > 0 ? (
+                <>
+                  {" "}
+                  <Link
+                    href={buildStaffHref({
+                      filter: "needs-reply",
+                      view: "inbox",
+                    })}
+                  >
+                    {needsReplyCount} waiting for a reply
+                  </Link>
+                  {newRequestCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "new",
+                          view: "inbox",
+                        })}
+                      >
+                        {newRequestCount} new
+                      </Link>
+                    </>
+                  ) : null}
+                  {awaitingCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "awaiting",
+                          view: "inbox",
+                        })}
+                      >
+                        {awaitingCount} transfer to check
+                      </Link>
+                    </>
+                  ) : null}
+                  {checkoutHoldCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
+                        {checkoutHoldCount} unfinished checkout
+                        {checkoutHoldCount === 1 ? "" : "s"}
+                      </Link>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  {" "}
+                  <Link
+                    href={buildStaffHref({ filter: "all", view: "inbox" })}
+                  >
+                    {staffBookings.bookings.length} open
+                  </Link>
+                  {newRequestCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "new",
+                          view: "inbox",
+                        })}
+                      >
+                        {newRequestCount} new
+                      </Link>
+                    </>
+                  ) : null}
+                  {awaitingCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={buildStaffHref({
+                          filter: "awaiting",
+                          view: "inbox",
+                        })}
+                      >
+                        {awaitingCount} transfer to check
+                      </Link>
+                    </>
+                  ) : null}
+                  {checkoutHoldCount > 0 ? (
+                    <>
+                      {" · "}
+                      <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
+                        {checkoutHoldCount} unfinished checkout
+                        {checkoutHoldCount === 1 ? "" : "s"}
+                      </Link>
+                    </>
+                  ) : null}
+                </>
+              )}
+              {" · "}
+              <Link href="/staff/calendar">Calendar</Link>
+            </p>
+          </div>
+          <Link className="button button--quiet" href="/">
+            Guest site
+          </Link>
+        </div>
+
+        {error === "cancel-hold-failed" || error === "release-failed" ? (
+          <p className="form-message form-message--error" role="alert">
+            That booking hold could not be cancelled. It may already be paid or
+            confirmed — refresh and try again.
+          </p>
+        ) : null}
+        {error === "stay-change-unavailable" ? (
+          <p className="form-message form-message--error" role="alert">
+            Those nights are no longer free, so the stay was not moved. Message
+            the guest about other dates or refund their transfer.
+          </p>
+        ) : null}
+        {error === "stay-change-missing" || error === "stay-change-stale" ? (
+          <p className="form-message form-message--error" role="alert">
+            That change was already handled or the stay changed since. Refresh
+            and check the calendar.
+          </p>
+        ) : null}
+        {stayChangeResult === "confirmed" ? (
+          <p className="form-message form-message--success" role="status">
+            Transfer confirmed — the stay is moved and the guest has been told.
+          </p>
+        ) : null}
+        {stayChangeResult === "declined" ? (
+          <p className="form-message form-message--success" role="status">
+            Old stay kept — the guest has been told.
+          </p>
+        ) : null}
+        {stayChangeResult === "refund-sent" ? (
+          <p className="form-message form-message--success" role="status">
+            Refund marked as sent. The guest has been told it usually arrives the same day, or the next business day if it went out after bank hours.
+          </p>
+        ) : null}
+        {holdCancelled === "1" ? (
+          <p className="form-message form-message--success" role="status">
+            Booking hold cancelled — dates are available again.
+          </p>
+        ) : null}
+        {error === "refund-failed" ? (
+          <p className="form-message form-message--error" role="alert">
+            The Stripe refund did not go through, so this request is still open
+            and the guest may still be charged. Check the payment in Stripe,
+            then try Decline again — or settle the refund with the guest first.
+          </p>
+        ) : null}
+        {error === "refund-closed-failed" ? (
+          <p className="form-message form-message--error" role="alert">
+            The card refund did not go through. The stay stays closed. Refund
+            it in Stripe, then tell the guest. It usually shows on the card in
+            5 to 10 business days.
+          </p>
+        ) : null}
+        {refund === "needed" ? (
+          <p className="form-message form-message--setup" role="status">
+            Stay cancelled and off the calendar. Staff were emailed — start the
+            Thai bank / QR refund below so the owner can send it from the
+            guesthouse account.
+          </p>
+        ) : null}
+        {refund === "card" ? (
+          <p className="form-message form-message--success" role="status">
+            Card refund started for the stay. The 6% bank charge stays with the
+            guesthouse. The guest usually sees the refund in 5 to 10 business
+            days. Staff have been emailed.
+          </p>
+        ) : null}
+        {refund === "card-already" ? (
+          <p className="form-message form-message--success" role="status">
+            This card payment was already refunded. The guest usually sees it
+            in 5 to 10 business days.
+          </p>
+        ) : null}
+        {refund === "bank" ? (
+          <p className="form-message form-message--success" role="status">
+            Staff have been emailed to send the bank transfer. Once it is sent,
+            it usually arrives the same day, or the next business day if it
+            goes out after bank hours.
+          </p>
+        ) : null}
+        {staffBookings.error ? (
+          <p className="form-message form-message--error" role="alert">
+            {staffBookings.error}
+          </p>
+        ) : null}
+        {staffBookings.source === "sample" && !staffBookings.error ? (
+          <p className="form-message form-message--setup" role="status">
+            Practice mode — bank confirm and decline work here without emailing
+            guests. Add Supabase environment variables for live transfers.
+          </p>
+        ) : null}
+
+        <div
+          className={`booking-board${
+            focusDetailOnMobile ? " booking-board--has-selection" : ""
+          }`}
+          id="bookings"
+        >
+          <section className="booking-list" aria-labelledby="requests-title">
+            <div className="booking-list__header">
+              <h2 id="requests-title">Open transfers</h2>
+              <span
+                className={`booking-list__source booking-list__source--${staffBookings.source}`}
+              >
+                {staffBookings.source === "supabase" ? "Live" : "Sample"}
+              </span>
+            </div>
+
+            {staffBookings.bookings.length > 0 ? (
+              <nav className="booking-list__filters" aria-label="Filter requests">
+                {filterTabs.map((tab) => {
+                  if (tab.id !== "all" && tab.count === 0) {
+                    return null;
+                  }
+
+                  const isActive = inboxFilter === tab.id;
+
+                  return (
+                    <Link
+                      aria-current={isActive ? "page" : undefined}
+                      className={`booking-list__filter${
+                        isActive ? " booking-list__filter--active" : ""
+                      }${
+                        tab.id === "needs-reply" && tab.count > 0
+                          ? " booking-list__filter--urgent"
+                          : ""
+                      }`}
+                      href={buildStaffHref({
+                        filter: tab.id,
+                        view: "inbox",
+                      })}
+                      key={tab.id}
+                    >
+                      {tab.label}
+                      <span>{tab.count}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            ) : null}
+
+            {visibleOpen.length > 0 ? (
+              <div className="booking-rows">
+                {visibleOpen.map((booking) => {
+                  const bookingKey = getStaffBookingKey(booking);
+                  const bookingHref = `${buildStaffHref({
+                    booking: bookingKey,
+                    filter: inboxFilter,
+                  })}#detail-title`;
+                  const isSelected = selectedKey === bookingKey;
+                  const preview = booking.databaseId
+                    ? messagePreviews.get(booking.databaseId)
+                    : undefined;
+                  const secondary = getRowSecondaryLine(booking, preview);
+                  const isUrgent = booking.status === "needs-reply";
+
+                  return (
+                    <article
+                      className={`booking-row${
+                        isSelected ? " booking-row--selected" : ""
+                      }${isUrgent ? " booking-row--urgent" : ""}`}
+                      key={bookingKey}
+                    >
+                      <Link className="booking-row__link" href={bookingHref}>
+                        <div className="booking-row__main">
+                          <strong>{booking.guest}</strong>
+                          <span className="booking-row__preview">{secondary}</span>
+                          <span className="booking-row__meta">
+                            {booking.room} · {booking.dates}
+                            {preview ? ` · ${preview.ageLabel}` : ` · ${booking.requestedAt}`}
+                          </span>
+                        </div>
+                        <div
+                          className={`staff-status staff-status--${getStatusTone(booking)}`}
+                        >
+                          <span aria-hidden="true" />
+                          {getBookingStatusCopy(booking)}
+                        </div>
+                      </Link>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : staffBookings.bookings.length > 0 ? (
+              <div className="staff-empty-state">
+                <h3>No requests in this filter.</h3>
+                <p>Try another filter, or show the full open inbox.</p>
+                <Link
+                  className="button button--secondary"
+                  href={buildStaffHref({ filter: "all", view: "inbox" })}
+                >
+                  Show all open
+                </Link>
+              </div>
+            ) : (
+              <div className="staff-empty-state">
+                <h3>No bank items to check.</h3>
+                <p>
+                  Thai bank transfers, guest messages, and bank refunds show
+                  here. Card bookings confirm themselves and go to the calendar.
+                </p>
+                <Link className="button button--secondary" href="/staff/calendar">
+                  Open calendar
+                </Link>
+              </div>
+            )}
+            {declinedBookings.bookings.length > 0 ? (
+              <details className="booking-closed">
+                <summary>
+                  Closed archive{" "}
+                  <span>({declinedBookings.bookings.length})</span>
+                </summary>
+                <p className="booking-closed__hint">
+                  Declined requests kept for reference — not part of the live
+                  inbox.
+                </p>
+                <div className="booking-rows booking-rows--archived">
+                  {declinedBookings.bookings.map((booking) => {
+                    const bookingKey = getStaffBookingKey(booking);
+                    const bookingHref = `${buildStaffHref({
+                      booking: bookingKey,
+                      filter: inboxFilter,
+                    })}#detail-title`;
+                    const isSelected = selectedKey === bookingKey;
+                    const preview = booking.databaseId
+                      ? messagePreviews.get(booking.databaseId)
+                      : undefined;
+
+                    return (
+                      <article
+                        className={`booking-row booking-row--archived${
+                          isSelected ? " booking-row--selected" : ""
+                        }`}
+                        key={bookingKey}
+                      >
+                        <Link className="booking-row__link" href={bookingHref}>
+                          <div className="booking-row__main">
+                            <strong>{booking.guest}</strong>
+                            <span className="booking-row__preview">
+                              {preview?.bodyPreview
+                                ? preview.bodyPreview
+                                : `${booking.room} · ${booking.dates}`}
+                            </span>
+                          </div>
+                          <div className="staff-status staff-status--declined">
+                            <span aria-hidden="true" />
+                            {formatStayEndReason(booking.stayEndReason) ??
+                              statusCopy.declined}
+                          </div>
+                        </Link>
+                      </article>
+                    );
+                  })}
+                </div>
+              </details>
+            ) : null}
+          </section>
+
+          {selected ? (
+            <aside
+              className="reservation-detail"
+              aria-labelledby="detail-title"
+              key={selectedKey}
+            >
+              <Link
+                className="reservation-detail__back"
+                href={buildStaffHref({
+                  filter: inboxFilter,
+                  view: "inbox",
+                })}
+              >
+                ← Inbox
+              </Link>
+              <div className="reservation-detail__top">
+                <span>{selected.id}</span>
+                <div className={`staff-status staff-status--${getStatusTone(selected)}`}>
+                  <span aria-hidden="true" />
+                  {getBookingStatusCopy(selected)}
+                </div>
+              </div>
+              <h2 id="detail-title">{selected.guest}</h2>
+              {selectedNeedsReply ? (
+                <p className="staff-request-urgency" role="status">
+                  Guest is waiting for a reply — answer in the conversation,
+                  then Close conversation when finished (clears history, no
+                  confirmation email).
+                </p>
+              ) : null}
+
+              {selected.databaseId ? (
+                <div
+                  className={`staff-request-chat${
+                    selectedNeedsReply ? " staff-request-chat--priority" : ""
+                  }`}
+                  id="booking-chat"
+                >
+                  <h3 className="staff-request-chat__title">
+                    {selectedNeedsReply ? "Conversation — reply needed" : "Conversation"}
+                  </h3>
+                  {!guestHasConversationLink(selected.contact) ? (
+                    <p className="detail-help staff-request-chat__hint">
+                      No guest email on this stay yet. You can still reply here —
+                      add an email on the{" "}
+                      <Link
+                        href={`/staff/calendar?booking=${encodeURIComponent(selected.databaseId)}`}
+                      >
+                        calendar stay
+                      </Link>{" "}
+                      if you want the guest notified.
+                    </p>
+                  ) : null}
+                  <BookingChat
+                    bookingId={selected.databaseId}
+                    disabled={!canManageSelected}
+                    guestLabel={selected.guest}
+                    readOnly={isClosedConversation}
+                    showHeading={false}
+                    variant="staff"
+                  />
+                </div>
+              ) : isPracticeMode ? (
+                <p className="detail-help">
+                  Conversation appears on live requests once Supabase is
+                  connected.
+                </p>
+              ) : null}
+
+              {selectedMoney ? (
+                <div
+                  className={`staff-request-money staff-request-money--${selectedMoney.tone}`}
+                  role="status"
+                >
+                  <span>{selectedMoney.title}</span>
+                  <p>{selectedMoney.body}</p>
+                </div>
+              ) : null}
+
+              {selected.note ? (
+                <div className="guest-note">
+                  <span>Original guest note</span>
+                  <p>{selected.note}</p>
+                </div>
+              ) : null}
+
+              <div className="reservation-detail__groups">
+                {selected.databaseId && !isClosedConversation ? (
+                  <StaffInboxRoomTypeForm
+                    bookingId={selected.databaseId}
+                    canManage={canManageSelected}
+                    formError={inboxRoomTypeError}
+                    roomId={selected.roomId}
+                    rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                  />
+                ) : null}
+                <dl className="detail-list detail-list--group" aria-label="Stay">
+                  {!selected.databaseId || isClosedConversation ? (
+                    <div>
+                      <dt>Room</dt>
+                      <dd>{selected.room}</dd>
+                    </div>
+                  ) : null}
+                  <div>
+                    <dt>Dates</dt>
+                    <dd>
+                      {selected.dates} · {selected.nights} nights
+                    </dd>
+                  </div>
+                  {selected.bedSetup ? (
+                    <div>
+                      <dt>Bed setup</dt>
+                      <dd>{formatBedSetup(selected.bedSetup)} requested</dd>
+                    </div>
+                  ) : null}
+                  <div>
+                    <dt>Total</dt>
+                    <dd>
+                      {formatMoneySuffix(
+                        selected.estimatedTotal,
+                        settings.currency,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Payment</dt>
+                    <dd>
+                      {selected.depositPaid
+                        ? `${formatMoneySuffix(selected.depositAmount, settings.currency)} paid`
+                        : selected.bankTransferClaimed
+                          ? "Bank transfer reported — verify in bank app"
+                        : "Not received yet"}
+                    </dd>
+                  </div>
+                </dl>
+
+                <dl className="detail-list detail-list--group" aria-label="Guest">
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{selected.contact}</dd>
+                  </div>
+                  <div>
+                    <dt>Phone</dt>
+                    <dd>{selected.phone || "Not provided"}</dd>
+                  </div>
+                  <div>
+                    <dt>Requested</dt>
+                    <dd>{selected.requestedAt}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              {selectedStayChangeTask && selected.databaseId ? (
+                <StaffStayChangePanel
+                  bookingId={selected.databaseId}
+                  canManage={canManageSelected}
+                  currency={settings.currency}
+                  guestName={selected.guest}
+                  pending={
+                    selected.pendingStayChange && pendingChangeRoomName
+                      ? {
+                          roomName: pendingChangeRoomName,
+                          dates: formatStayDateRange(
+                            selected.pendingStayChange.arrivalDate,
+                            selected.pendingStayChange.departureDate,
+                          ),
+                          balance: selected.pendingStayChange.balance,
+                        }
+                      : null
+                  }
+                  refundDue={selected.refundDue ?? 0}
+                />
+              ) : !isClosedConversation ? (
+                <>
+                  {selectedCheckoutHold || selectedBankHold ? (
+                    <StaffCancelHoldPanel
+                      bookingId={selected.databaseId ?? ""}
+                      canManage={canManageSelected}
+                      guestName={selected.guest}
+                      holdKind={
+                        selectedCheckoutHold
+                          ? "unfinished-checkout"
+                          : "bank-transfer-hold"
+                      }
+                    />
+                  ) : null}
+                  {/*
+                    An unfinished checkout can still be a real transfer the guest
+                    never reported, so staff get Confirm here too — gated on
+                    seeing the money.
+                  */}
+                  <StaffRequestDecisionPanel
+                    alreadyConfirmed={
+                      selected.status === "confirmed" ||
+                      (selected.status === "needs-reply" && selected.depositPaid)
+                    }
+                    bookingId={selected.databaseId ?? ""}
+                    canManage={canManageSelected}
+                    currency={settings.currency}
+                    depositAmount={selected.depositAmount}
+                    depositPaid={selected.depositPaid}
+                    paidByCard={Boolean(selected.stripePaymentIntentId)}
+                    bankTransferClaimed={selected.bankTransferClaimed}
+                    guestEmail={selected.contact}
+                    guestName={selected.guest}
+                    needsReply={selectedNeedsReply}
+                    practiceMode={isPracticeMode}
+                    unclaimedCheckout={selectedCheckoutHold}
+                  />
+                </>
+              ) : (
+                <>
+                  {selected.databaseId &&
+                  selected.depositPaid &&
+                  (selected.depositAmount > 0 || selected.estimatedTotal > 0) ? (
+                    <StaffClosedRefundPanel
+                      amount={
+                        (selected.refundDue ?? 0) > 0
+                          ? selected.refundDue!
+                          : selected.depositAmount > 0
+                            ? selected.depositAmount
+                            : selected.estimatedTotal
+                      }
+                      bookingId={selected.databaseId}
+                      canManage={canWrite}
+                      currency={settings.currency}
+                      paidByCard={Boolean(selected.stripePaymentIntentId)}
+                      queued={(selected.refundDue ?? 0) > 0}
+                    />
+                  ) : null}
+                  <p className="detail-help">
+                    This stay is closed. Conversation history is read-only.
+                  </p>
+                </>
+              )}
+            </aside>
+          ) : (
+            <aside className="reservation-detail" aria-labelledby="detail-title">
+              <h2 id="detail-title">
+                {preferInboxView
+                  ? "Select a request"
+                  : "Waiting for the first request."}
+              </h2>
+              <p>
+                {preferInboxView
+                  ? "Choose a guest from the inbox to reply and review the stay."
+                  : "Once a guest sends the form, their message and stay details appear here."}
+              </p>
+            </aside>
+          )}
+        </div>
+      </section>
+    </StaffShell>
+  );
+}

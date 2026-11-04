@@ -49,7 +49,7 @@ export default async function StaffPasscodePage({
           className="staff-login-panel"
           aria-labelledby="staff-passcode-title"
         >
-          <Link className="brand brand--compact" href="/staff">
+          <Link className="brand brand--compact" href="/staff/home">
             <span className="brand__mark" aria-hidden="true">
               K
             </span>

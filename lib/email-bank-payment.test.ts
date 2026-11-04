@@ -13,7 +13,7 @@ describe("staffBankPaymentToConfirmCopy", () => {
       departureDate: "2026-11-06",
       nights: 3,
       amountLabel: "2,280 THB",
-      staffUrl: "https://www.kamalaguesthouse.com/staff?view=inbox",
+      staffUrl: "https://www.kamalaguesthouse.com/staff/transfers?view=inbox",
     });
 
     assert.match(copy.subject, /Thai bank \/ QR booking/i);

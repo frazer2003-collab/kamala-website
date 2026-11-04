@@ -51,7 +51,7 @@ export default async function StaffSettingsPage({
               and manage room types and tours from the tabs below.
             </p>
           </div>
-          <Link className="button button--secondary" href="/staff">
+          <Link className="button button--secondary" href="/staff/home">
             Back to requests
           </Link>
         </div>

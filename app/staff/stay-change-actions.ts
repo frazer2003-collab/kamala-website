@@ -14,7 +14,7 @@ import { requireStaffCalendarWrite } from "@/lib/staff-auth";
 import { formatStayDateRange } from "@/lib/stay-dates";
 
 function bookingHref(bookingId: string, query: string) {
-  return `/staff?booking=${encodeURIComponent(bookingId)}&${query}`;
+  return `/staff/transfers?booking=${encodeURIComponent(bookingId)}&${query}`;
 }
 
 export async function confirmStayChangeTransfer(formData: FormData) {

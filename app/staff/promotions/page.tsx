@@ -121,7 +121,7 @@ export default async function StaffPromotionsPage({
               checkout.
             </p>
           </div>
-          <Link className="button button--secondary" href="/staff">
+          <Link className="button button--secondary" href="/staff/home">
             Back to requests
           </Link>
         </div>
