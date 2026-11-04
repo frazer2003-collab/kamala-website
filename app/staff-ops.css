@@ -733,6 +733,21 @@ a.staff-home-card:hover {
   line-height: 1.4;
 }
 
+.staff-patch-entry__figure {
+  margin: 0 0 var(--space-3);
+  max-width: 28rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-muted);
+}
+
+.staff-patch-entry__image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .staff-patch-entry ul {
   margin: 0;
   padding-left: 1.15rem;

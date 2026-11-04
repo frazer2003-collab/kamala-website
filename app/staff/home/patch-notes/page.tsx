@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { StaffShell } from "@/components/staff-shell";
 import { requireStaffSessionDetails } from "@/lib/staff-auth";
@@ -34,6 +35,16 @@ export default async function StaffPatchNotesPage() {
                 <h2>{note.title}</h2>
                 <p>{note.summary}</p>
               </header>
+              <figure className="staff-patch-entry__figure">
+                <Image
+                  alt={note.image.alt}
+                  className="staff-patch-entry__image"
+                  height={360}
+                  src={note.image.src}
+                  unoptimized
+                  width={560}
+                />
+              </figure>
               <ul>
                 {note.changes.map((change) => (
                   <li key={change}>{change}</li>

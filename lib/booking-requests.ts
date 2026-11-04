@@ -1,6 +1,7 @@
 import { type Booking, type BookingStatus } from "@/lib/content";
 import { parseBedSetup } from "@/lib/bed-setup";
 import { parseBookingSource } from "@/lib/booking-source";
+import { parsePaymentCollectedVia, type PaymentCollectedVia } from "@/lib/payment-collected";
 import { bookingReservesRoom } from "@/lib/booking-reservation";
 import { parseStayEndReason } from "@/lib/stay-end-reason";
 import { resolveStayStatusFromDates } from "@/lib/stay-status";
@@ -32,6 +33,8 @@ export type StaffBooking = Booking & {
   databaseId: string | null;
   bankTransferClaimed: boolean;
   stripePaymentIntentId: string | null;
+  /** How staff collected payment when they marked Paid (not Stripe). */
+  paymentCollectedVia?: PaymentCollectedVia | null;
   /** Guest move waiting on a bank top-up staff must confirm. */
   pendingStayChange?: StaffStayChange | null;
   /** Bank refund staff still owe after a cheaper guest change. */
@@ -130,6 +133,7 @@ export function mapBookingRequest(
     bookingSource: parseBookingSource(row.booking_source),
     bankTransferClaimed: Boolean(row.bank_transfer_claimed_at),
     stripePaymentIntentId: row.stripe_payment_intent_id ?? null,
+    paymentCollectedVia: parsePaymentCollectedVia(row.payment_collected_via),
     stayStatus: resolveStayStatusFromDates(row.arrival_date, row.departure_date),
     stayEndReason: parseStayEndReason(row.stay_end_reason),
     staffNote: row.staff_note ?? "",

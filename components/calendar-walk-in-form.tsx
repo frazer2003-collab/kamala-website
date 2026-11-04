@@ -54,6 +54,7 @@ type WalkInFields = {
   customTotal: string;
   bookingSource: BookingSource;
   depositPaid: boolean;
+  paymentCollectedVia: string;
   showEmail: boolean;
   showTotal: boolean;
 };
@@ -69,6 +70,7 @@ function fieldsFromValues(values: WalkInBookingState["values"]): WalkInFields {
     customTotal: values.customTotal,
     bookingSource: (values.bookingSource as BookingSource | "") || "walk-in",
     depositPaid: values.depositPaid,
+    paymentCollectedVia: values.paymentCollectedVia || "",
     // A returned email or total means the field was open when staff submitted.
     showEmail: values.showEmail || Boolean(values.guestEmail),
     showTotal: values.showTotal || Boolean(values.customTotal),
@@ -93,6 +95,8 @@ function walkInErrorCopy(code?: string) {
       return "Stay total must be 0 or more, or leave blank.";
     case "invalid-source":
       return "Choose a source.";
+    case "payment-method":
+      return "Choose Cash or Thai bank when marking Paid.";
     case "capacity-verify-failed":
     case "unavailable":
     case "no-assignable-door":
@@ -139,6 +143,7 @@ export function CalendarWalkInForm({
         customTotal: "",
         bookingSource: "walk-in",
         depositPaid: false,
+        paymentCollectedVia: "",
         showEmail: false,
         showTotal: false,
       },
@@ -172,6 +177,7 @@ export function CalendarWalkInForm({
     customTotal,
     bookingSource,
     depositPaid,
+    paymentCollectedVia,
     showEmail,
     showTotal,
   } = fields;
@@ -457,16 +463,54 @@ export function CalendarWalkInForm({
                 disabled={!canManage || pending}
                 id="walk-in-deposit-paid"
                 name="deposit-paid"
-                onChange={(event) => setField("depositPaid", event.target.checked)}
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    depositPaid: event.target.checked,
+                    paymentCollectedVia: event.target.checked
+                      ? current.paymentCollectedVia
+                      : "",
+                  }))
+                }
                 type="checkbox"
                 value="1"
               />
               Paid
             </label>
-            <span className="field-help">
-              Leave unchecked if collecting later — the stay still holds the
-              room.
-            </span>
+            {depositPaid ? (
+              <fieldset className="payment-collected-via">
+                <legend className="sr-only">How was payment collected?</legend>
+                <label>
+                  <input
+                    checked={paymentCollectedVia === "cash"}
+                    disabled={!canManage || pending}
+                    name="payment-collected-via"
+                    onChange={() => setField("paymentCollectedVia", "cash")}
+                    required
+                    type="radio"
+                    value="cash"
+                  />
+                  Cash
+                </label>
+                <label>
+                  <input
+                    checked={paymentCollectedVia === "thai_bank"}
+                    disabled={!canManage || pending}
+                    name="payment-collected-via"
+                    onChange={() => setField("paymentCollectedVia", "thai_bank")}
+                    required
+                    type="radio"
+                    value="thai_bank"
+                  />
+                  Thai bank
+                </label>
+              </fieldset>
+            ) : (
+              <span className="field-help">
+                Leave unchecked if collecting later — the stay still holds the
+                room. When marking Paid, choose Cash or Thai bank.
+              </span>
+            )}
           </div>
         </div>
 

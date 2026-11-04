@@ -1,0 +1,48 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  formatPaymentCollectedVia,
+  formatStaffPaidLabel,
+  parsePaymentCollectedVia,
+} from "./payment-collected";
+
+describe("payment collected via", () => {
+  it("parses cash and thai bank only", () => {
+    assert.equal(parsePaymentCollectedVia("cash"), "cash");
+    assert.equal(parsePaymentCollectedVia("thai_bank"), "thai_bank");
+    assert.equal(parsePaymentCollectedVia("card"), null);
+    assert.equal(parsePaymentCollectedVia(""), null);
+  });
+
+  it("labels paid stays for staff", () => {
+    assert.equal(formatPaymentCollectedVia("cash"), "Cash");
+    assert.equal(
+      formatStaffPaidLabel({
+        depositPaid: true,
+        paidByCard: true,
+        paymentCollectedVia: null,
+      }),
+      "Paid · Card",
+    );
+    assert.equal(
+      formatStaffPaidLabel({
+        depositPaid: true,
+        paidByCard: false,
+        paymentCollectedVia: "thai_bank",
+      }),
+      "Paid · Thai bank",
+    );
+    assert.equal(
+      formatStaffPaidLabel({
+        depositPaid: true,
+        paidByCard: false,
+        paymentCollectedVia: "cash",
+      }),
+      "Paid · Cash",
+    );
+    assert.equal(
+      formatStaffPaidLabel({ depositPaid: false, paidByCard: false }),
+      "Unpaid",
+    );
+  });
+});

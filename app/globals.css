@@ -3964,6 +3964,30 @@ textarea:focus {
   flex-shrink: 0;
 }
 
+.payment-collected-via {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.payment-collected-via label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.payment-collected-via input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-maroon);
+  flex-shrink: 0;
+}
+
 .detail-list--stay-meta {
   margin-bottom: var(--space-5);
   padding: var(--space-4);

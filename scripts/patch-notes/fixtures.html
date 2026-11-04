@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kamala patch note fixtures</title>
+    <style>
+      :root {
+        --color-canvas: #faf8f7;
+        --color-surface: #ffffff;
+        --color-surface-muted: #f5f1f0;
+        --color-ink: #2a1f1d;
+        --color-muted: #6e605c;
+        --color-border: #e3d9d6;
+        --color-maroon: #8b2e2a;
+        --color-maroon-deep: #6f2421;
+        --color-maroon-wash: #f7ecea;
+        --radius-md: 10px;
+        --space-3: 0.75rem;
+        --space-4: 1rem;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #d8d0cd;
+        color: var(--color-ink);
+        font: 15px/1.35 "Segoe UI", system-ui, sans-serif;
+      }
+      .shot {
+        width: 560px;
+        margin: 0 0 28px;
+        padding: 18px;
+        border-radius: 14px;
+        background: var(--color-canvas);
+        border: 1px solid #cfc5c1;
+      }
+      .shot h1 {
+        margin: 0 0 12px;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        font-weight: 700;
+      }
+      .panel {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+      }
+      .row-check {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-weight: 750;
+      }
+      .row-check input {
+        width: 1.05rem;
+        height: 1.05rem;
+        accent-color: var(--color-maroon);
+      }
+      .via {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.65rem;
+        padding-top: 0.55rem;
+        border-top: 1px solid var(--color-border);
+      }
+      .via label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-weight: 650;
+      }
+      .via input { accent-color: var(--color-maroon); }
+      .help {
+        margin: 0.55rem 0 0;
+        color: var(--color-muted);
+        font-size: 0.86rem;
+      }
+      .cancel-summary {
+        margin: 0 0 14px;
+        color: var(--color-ink);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+      .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+      .button {
+        border-radius: 8px;
+        border: 1px solid transparent;
+        padding: 0.55rem 0.9rem;
+        font: inherit;
+        font-weight: 700;
+        cursor: default;
+      }
+      .button--danger {
+        background: var(--color-maroon);
+        color: #fff;
+      }
+      .button--secondary {
+        background: var(--color-surface);
+        border-color: var(--color-border);
+        color: var(--color-ink);
+      }
+      .home-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.7rem;
+      }
+      .card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 0.85rem 0.9rem;
+        display: grid;
+        gap: 0.2rem;
+      }
+      .card--attention {
+        border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
+        background: linear-gradient(180deg, var(--color-maroon-wash), var(--color-surface));
+      }
+      .eyebrow {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+      }
+      .card strong { font-size: 0.98rem; }
+      .card p {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 0.8rem;
+        line-height: 1.35;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="shot" id="paid">
+      <h1>Paid method</h1>
+      <div class="panel">
+        <label class="row-check">
+          <input checked type="checkbox" />
+          Paid
+        </label>
+        <div class="via">
+          <label><input type="radio" name="via" /> Cash</label>
+          <label><input checked type="radio" name="via" /> Thai bank</label>
+        </div>
+        <p class="help">Choose how payment was collected before saving.</p>
+      </div>
+    </section>
+
+    <section class="shot" id="cancel">
+      <h1>Cancel &amp; refund</h1>
+      <div class="panel">
+        <p class="cancel-summary">
+          Cancel and refund <strong>Maya Chen</strong> for
+          <strong>12 – 15 Nov</strong>. The stay leaves the calendar and Stripe
+          refunds the stay now (the 6% bank charge stays with the guesthouse).
+        </p>
+        <div class="actions">
+          <button class="button button--danger" type="button">
+            Confirm cancel &amp; Stripe refund
+          </button>
+          <button class="button button--secondary" type="button">Keep stay</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="home">
+      <h1>Staff Home</h1>
+      <div class="home-grid">
+        <div class="card card--attention">
+          <span class="eyebrow">Thai bank</span>
+          <strong>Transfers</strong>
+          <p>3 open · 1 reply · 1 refund</p>
+        </div>
+        <div class="card">
+          <span class="eyebrow">Today</span>
+          <strong>At a glance</strong>
+          <p>2 arriving · 1 departing · 4 in-house</p>
+        </div>
+        <div class="card">
+          <span class="eyebrow">Calendar</span>
+          <strong>Door numbers</strong>
+          <p>2 upcoming stays still need a #</p>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -336,6 +336,8 @@ export default async function StaffCalendarPage({
             ? "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates."
           : error === "invalid-source"
             ? "Choose a booking source."
+          : error === "payment-method"
+            ? "Choose Cash or Thai bank when marking Paid."
           : error === "cancel-reason"
             ? "Choose whether this is a cancellation or a no-show before removing the stay."
           : error === "refund-failed"

@@ -13,6 +13,7 @@ import {
 import type { BookingSource } from "@/lib/booking-source";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
+import type { PaymentCollectedVia } from "@/lib/payment-collected";
 import type { StayEndReason } from "@/lib/stay-end-reason";
 import { staffCapacityErrorMessage } from "@/lib/booking-overbook";
 import {
@@ -52,6 +53,8 @@ type CalendarBookingPanelProps = {
   depositAmount?: number;
   /** Card payment that Stripe can refund. Bank transfers have no payment intent. */
   paidByCard?: boolean;
+  /** Cash or Thai bank when staff marked Paid (not Stripe). */
+  paymentCollectedVia?: PaymentCollectedVia | null;
   bookingSource: BookingSource | null;
   estimatedTotal: number;
   currency: PropertyCurrency;
@@ -93,6 +96,7 @@ export function CalendarBookingPanel({
   depositPaid,
   depositAmount = 0,
   paidByCard = false,
+  paymentCollectedVia = null,
   bookingSource,
   estimatedTotal,
   currency,
@@ -118,6 +122,7 @@ export function CalendarBookingPanel({
     estimatedTotal: String(estimatedTotal),
     bookingSource: bookingSource ?? "walk-in",
     depositPaid,
+    paymentCollectedVia: paymentCollectedVia ?? "",
   });
 
   useEffect(() => {
@@ -135,6 +140,7 @@ export function CalendarBookingPanel({
       estimatedTotal: String(estimatedTotal),
       bookingSource: bookingSource ?? "walk-in",
       depositPaid,
+      paymentCollectedVia: paymentCollectedVia ?? "",
     });
   }, [
     bookingKey,
@@ -149,6 +155,7 @@ export function CalendarBookingPanel({
     estimatedTotal,
     bookingSource,
     depositPaid,
+    paymentCollectedVia,
   ]);
 
   const saveAction = useMemo(
@@ -365,16 +372,22 @@ export function CalendarBookingPanel({
             value={fields.bookingSource}
           />
           <div className="field-pair field-pair--check">
+            {paidByCard ? (
+              <input name="deposit-paid" type="hidden" value="1" />
+            ) : null}
             <label htmlFor={`calendar-deposit-paid-${bookingKey}`}>
               <input
                 checked={fields.depositPaid}
-                disabled={!canManage}
+                disabled={!canManage || paidByCard}
                 id={`calendar-deposit-paid-${bookingKey}`}
-                name="deposit-paid"
+                name={paidByCard ? undefined : "deposit-paid"}
                 onChange={(event) =>
                   setFields((current) => ({
                     ...current,
                     depositPaid: event.target.checked,
+                    paymentCollectedVia: event.target.checked
+                      ? current.paymentCollectedVia
+                      : "",
                   }))
                 }
                 type="checkbox"
@@ -382,11 +395,53 @@ export function CalendarBookingPanel({
               />
               Paid
             </label>
-            <span className="field-help">
-              Unpaid still keeps the room booked — it only reminds staff to
-              collect at check-in. Mark Paid when money is received. Clearing
-              Paid removes the stamp without Stripe refunds.
-            </span>
+            {paidByCard ? (
+              <span className="field-help">Paid by card — Stripe keeps the record.</span>
+            ) : fields.depositPaid ? (
+              <fieldset className="payment-collected-via">
+                <legend className="sr-only">How was payment collected?</legend>
+                <label>
+                  <input
+                    checked={fields.paymentCollectedVia === "cash"}
+                    disabled={!canManage}
+                    name="payment-collected-via"
+                    onChange={() =>
+                      setFields((current) => ({
+                        ...current,
+                        paymentCollectedVia: "cash",
+                      }))
+                    }
+                    required
+                    type="radio"
+                    value="cash"
+                  />
+                  Cash
+                </label>
+                <label>
+                  <input
+                    checked={fields.paymentCollectedVia === "thai_bank"}
+                    disabled={!canManage}
+                    name="payment-collected-via"
+                    onChange={() =>
+                      setFields((current) => ({
+                        ...current,
+                        paymentCollectedVia: "thai_bank",
+                      }))
+                    }
+                    required
+                    type="radio"
+                    value="thai_bank"
+                  />
+                  Thai bank
+                </label>
+              </fieldset>
+            ) : (
+              <span className="field-help">
+                Unpaid still keeps the room booked — it only reminds staff to
+                collect at check-in. Mark Paid when money is received, then
+                choose Cash or Thai bank.
+              </span>
+            )}
           </div>
         </div>
         <div className="field-pair field-pair--wide">
@@ -484,6 +539,19 @@ export function CalendarBookingPanel({
                     {refundLabel || "the stay"} now (the 6% bank charge stays with
                     the guesthouse).
                   </>
+                ) : paymentCollectedVia === "cash" ? (
+                  <>
+                    Cancel{" "}
+                    <strong>{fields.guestName || guestName}</strong> for{" "}
+                    <strong>
+                      {formatStayDates(
+                        fields.arrivalDate || arrivalDate,
+                        fields.departureDate || departureDate,
+                      )}
+                    </strong>
+                    . Cash stays leave the calendar with no Transfers handoff —
+                    refund the guest in cash if needed.
+                  </>
                 ) : (
                   <>
                     Cancel and refund{" "}
@@ -554,7 +622,9 @@ export function CalendarBookingPanel({
                   {depositPaid
                     ? paidByCard
                       ? "Confirm cancel & Stripe refund"
-                      : "Cancel and go to Transfers"
+                      : paymentCollectedVia === "cash"
+                        ? "Confirm cancel"
+                        : "Cancel and go to Transfers"
                     : "Delete unpaid stay"}
                 </button>
                 <button
@@ -583,7 +653,9 @@ export function CalendarBookingPanel({
                 }}
                 type="button"
               >
-                Cancel &amp; refund
+                {paymentCollectedVia === "cash"
+                  ? "Cancel"
+                  : "Cancel & refund"}
               </button>
             ) : (
               <button

@@ -13,6 +13,10 @@ describe("staff patch notes", () => {
     assert.equal(latest, STAFF_PATCH_NOTES[0]);
     assert.ok(latest?.summary);
     assert.ok((latest?.changes.length ?? 0) > 0);
+    for (const note of STAFF_PATCH_NOTES) {
+      assert.ok(note.image.src.startsWith("/staff/patch-notes/"));
+      assert.ok(note.image.alt.length > 0);
+    }
   });
 
   it("formats patch dates for staff", () => {

@@ -13,6 +13,10 @@ import { getStaffBookingKey } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
+import {
+  formatPaymentCollectedVia,
+  formatStaffPaidLabel,
+} from "@/lib/payment-collected";
 import type { RoomPromotionRate } from "@/lib/pricing";
 import {
   getStaffRoomBlockKey,
@@ -112,7 +116,11 @@ export function CalendarStayDialogs({
               }`}
             >
               <span aria-hidden="true" />
-              {selectedBooking.depositPaid ? "Paid" : "Unpaid"}
+              {formatStaffPaidLabel({
+                depositPaid: selectedBooking.depositPaid,
+                paidByCard: Boolean(selectedBooking.stripePaymentIntentId),
+                paymentCollectedVia: selectedBooking.paymentCollectedVia,
+              })}
             </div>
           </div>
           <dl className="detail-list detail-list--stay-meta">
@@ -139,7 +147,13 @@ export function CalendarStayDialogs({
               <dt>Paid</dt>
               <dd>
                 {selectedBooking.depositPaid
-                  ? formatMoneySuffix(selectedBooking.depositAmount, currency)
+                  ? `${formatMoneySuffix(selectedBooking.depositAmount, currency)} · ${
+                      selectedBooking.stripePaymentIntentId
+                        ? "Card"
+                        : formatPaymentCollectedVia(
+                            selectedBooking.paymentCollectedVia,
+                          ) ?? "Collected"
+                    }`
                   : "Unpaid — collect at check-in"}
               </dd>
             </div>
@@ -196,6 +210,7 @@ export function CalendarStayDialogs({
             depositPaid={selectedBooking.depositPaid}
             depositAmount={selectedBooking.depositAmount}
             paidByCard={Boolean(selectedBooking.stripePaymentIntentId)}
+            paymentCollectedVia={selectedBooking.paymentCollectedVia}
             estimatedTotal={selectedBooking.estimatedTotal}
             formError={formError}
             guestEmail={selectedBooking.contact}

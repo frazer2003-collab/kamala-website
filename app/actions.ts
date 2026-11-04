@@ -18,6 +18,7 @@ import {
   seedGuestNoteMessage,
 } from "@/lib/booking-chat";
 import { parseBookingSource, isChannelBlockRow } from "@/lib/booking-source";
+import { parsePaymentCollectedVia } from "@/lib/payment-collected";
 import {
   formatMoneySuffix,
   getStripeCurrencyCode,
@@ -1255,40 +1256,78 @@ export async function updateConfirmedBooking(
   }
 
   const wantPaid = getValue(formData, "deposit-paid") === "1";
+  const paidByCard = Boolean(booking.stripe_payment_intent_id);
+  const collectedViaRaw = getValue(formData, "payment-collected-via");
+  const collectedVia = parsePaymentCollectedVia(collectedViaRaw);
+  const wasPaid = Boolean(booking.deposit_paid_at);
+
+  if (wantPaid && !paidByCard && !collectedVia) {
+    redirect(`${bookingHref}&error=payment-method`);
+  }
+
   const depositPaidAt = wantPaid
     ? booking.deposit_paid_at ?? new Date().toISOString()
     : null;
   const depositAmount = wantPaid
     ? booking.deposit_amount ?? estimatedTotal
     : booking.deposit_amount;
+  const paymentCollectedVia = wantPaid
+    ? paidByCard
+      ? null
+      : collectedVia
+    : null;
+  const bankTransferClaimedAt = !wantPaid
+    ? null
+    : collectedVia === "thai_bank"
+      ? booking.bank_transfer_claimed_at ?? depositPaidAt
+      : paidByCard
+        ? booking.bank_transfer_claimed_at
+        : null;
 
   const nextStaffNote = staffNote || null;
 
   const supabase = createStaffSupabaseClient();
 
   // Update core fields without room_unit_id first (avoids stale-column failures).
-  const { error } = await supabase
+  const baseUpdate = {
+    guest_name: guestName,
+    guest_email: guestEmail,
+    guest_phone: guestPhone,
+    arrival_date: arrival,
+    departure_date: departure,
+    nights,
+    estimated_total: estimatedTotal,
+    booking_source: bookingSource,
+    deposit_paid_at: depositPaidAt,
+    deposit_amount: depositAmount,
+    staff_note: nextStaffNote,
+    bank_transfer_claimed_at: bankTransferClaimedAt,
+    ...(typeChange.roomIdChanged
+      ? {
+          room_id: typeChange.roomId,
+          room_name: typeChange.roomName,
+        }
+      : {}),
+  };
+  const withPaymentVia =
+    !paidByCard || (!wantPaid && wasPaid)
+      ? { ...baseUpdate, payment_collected_via: paymentCollectedVia }
+      : baseUpdate;
+
+  let { error } = await supabase
     .from("booking_requests")
-    .update({
-      guest_name: guestName,
-      guest_email: guestEmail,
-      guest_phone: guestPhone,
-      arrival_date: arrival,
-      departure_date: departure,
-      nights,
-      estimated_total: estimatedTotal,
-      booking_source: bookingSource,
-      deposit_paid_at: depositPaidAt,
-      deposit_amount: depositAmount,
-      staff_note: nextStaffNote,
-      ...(typeChange.roomIdChanged
-        ? {
-            room_id: typeChange.roomId,
-            room_name: typeChange.roomName,
-          }
-        : {}),
-    })
+    .update(withPaymentVia)
     .eq("id", bookingId);
+
+  if (
+    error &&
+    /payment_collected_via|schema cache|Could not find/i.test(error.message)
+  ) {
+    ({ error } = await supabase
+      .from("booking_requests")
+      .update(baseUpdate)
+      .eq("id", bookingId));
+  }
 
   if (error) {
     if (error.message.includes("booking_requests_nights_check")) {
@@ -1942,6 +1981,7 @@ export async function cancelConfirmedBooking(
   }
 
   const paidByCard = Boolean(booking.stripe_payment_intent_id);
+  const collectedVia = parsePaymentCollectedVia(booking.payment_collected_via);
   const stayAmount = resolveBookingStayTotal({
     depositAmount: booking.deposit_amount,
     estimatedTotal: booking.estimated_total ?? 0,
@@ -1955,9 +1995,10 @@ export async function cancelConfirmedBooking(
     : null;
   const transfersUrl = `${getSiteUrl()}/staff/transfers?booking=${encodeURIComponent(bookingId)}&refund=needed`;
 
-  // Paid Cancel & refund: Stripe refunds here; Thai bank queues on Transfers.
+  // Paid Cancel & refund: Stripe here; Thai bank → Transfers; cash just closes.
   let refundOutcome: StayRefundOutcome = "skipped";
-  const handoffBankRefund = !paidByCard && stayAmount > 0;
+  const handoffBankRefund =
+    !paidByCard && collectedVia !== "cash" && stayAmount > 0;
 
   if (paidByCard) {
     refundOutcome = await refundPaidStay(booking, "cancelled", {
@@ -2090,6 +2131,7 @@ export type WalkInBookingState = {
     customTotal: string;
     bookingSource: string;
     depositPaid: boolean;
+    paymentCollectedVia: string;
     showEmail: boolean;
     showTotal: boolean;
   };
@@ -2108,6 +2150,7 @@ function walkInValuesFromForm(formData: FormData, fallbackArrival: string) {
     customTotal,
     bookingSource: getValue(formData, "booking-source") || "walk-in",
     depositPaid: getValue(formData, "deposit-paid") === "1",
+    paymentCollectedVia: getValue(formData, "payment-collected-via"),
     showEmail: Boolean(guestEmail) || getValue(formData, "show-email") === "1",
     showTotal: Boolean(customTotal) || getValue(formData, "show-total") === "1",
   };
@@ -2185,6 +2228,12 @@ export async function createWalkInBooking(
   }
 
   const depositPaid = getValue(formData, "deposit-paid") === "1";
+  const collectedVia = parsePaymentCollectedVia(
+    getValue(formData, "payment-collected-via"),
+  );
+  if (depositPaid && !collectedVia) {
+    return walkInError("payment-method", formData, arrival);
+  }
   const paidAt = depositPaid ? new Date().toISOString() : null;
   const requestedRoomUnitId = getValue(formData, "room-unit-id");
 
@@ -2250,31 +2299,49 @@ export async function createWalkInBooking(
     doorWasAutoPicked = true;
   }
 
+  const insertBase = {
+    guest_name: guestName,
+    guest_email: guestEmail,
+    guest_phone: guestPhone,
+    room_id: room.id,
+    room_name: room.name,
+    arrival_date: arrival,
+    departure_date: departure,
+    nights,
+    estimated_total: estimatedTotal,
+    booking_source: bookingSource,
+    note: "New booking",
+    staff_note: staffNote || null,
+    status: "confirmed" as const,
+    stay_status: resolveStayStatusFromDates(arrival, departure),
+    deposit_amount: depositPaid ? estimatedTotal : null,
+    deposit_paid_at: paidAt,
+    bank_transfer_claimed_at:
+      depositPaid && collectedVia === "thai_bank" ? paidAt : null,
+    conversation_token:
+      guestEmail !== walkInEmailFallback ? randomUUID() : null,
+  };
+
   const supabase = createStaffSupabaseClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("booking_requests")
     .insert({
-      guest_name: guestName,
-      guest_email: guestEmail,
-      guest_phone: guestPhone,
-      room_id: room.id,
-      room_name: room.name,
-      arrival_date: arrival,
-      departure_date: departure,
-      nights,
-      estimated_total: estimatedTotal,
-      booking_source: bookingSource,
-      note: "New booking",
-      staff_note: staffNote || null,
-      status: "confirmed",
-      stay_status: resolveStayStatusFromDates(arrival, departure),
-      deposit_amount: depositPaid ? estimatedTotal : null,
-      deposit_paid_at: paidAt,
-      conversation_token:
-        guestEmail !== walkInEmailFallback ? randomUUID() : null,
+      ...insertBase,
+      payment_collected_via: depositPaid ? collectedVia : null,
     })
     .select("id, conversation_token")
     .single();
+
+  if (
+    error &&
+    /payment_collected_via|schema cache|Could not find/i.test(error.message)
+  ) {
+    ({ data, error } = await supabase
+      .from("booking_requests")
+      .insert(insertBase)
+      .select("id, conversation_token")
+      .single());
+  }
 
   if (error || !data) {
     if (error?.message?.includes("booking_requests_nights_check")) {
