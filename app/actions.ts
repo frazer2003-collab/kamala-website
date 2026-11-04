@@ -1941,7 +1941,11 @@ export async function cancelConfirmedBooking(
   }
 
   const supabase = createStaffSupabaseClient();
-  const declinePayload: Record<string, unknown> = {
+  const declinePayload: {
+    status: "declined";
+    stay_end_reason: typeof stayEndReason;
+    refund_due?: number;
+  } = {
     status: "declined",
     stay_end_reason: stayEndReason,
   };
@@ -1956,7 +1960,9 @@ export async function cancelConfirmedBooking(
 
   if (error) {
     // Older DBs may lack stay_end_reason / refund_due — still remove the stay.
-    const fallbackPayload: Record<string, unknown> = { status: "declined" };
+    const fallbackPayload: { status: "declined"; refund_due?: number } = {
+      status: "declined",
+    };
     if (handoffToTransfers) {
       fallbackPayload.refund_due = stayAmount;
     }
