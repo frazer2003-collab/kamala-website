@@ -17,6 +17,10 @@ import {
   staffHomeUnassignedHref,
   summarizeStaffHomeToday,
 } from "@/lib/staff-home";
+import {
+  formatStaffPatchDate,
+  getLatestStaffPatchNote,
+} from "@/lib/staff-patch-notes";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +69,7 @@ export default async function StaffHomePage() {
 
   const todayBusy =
     today.arriving + today.departing + today.inHouse > 0;
+  const latestPatch = getLatestStaffPatchNote();
 
   return (
     <StaffShell current="home">
@@ -77,6 +82,19 @@ export default async function StaffHomePage() {
             </p>
           </div>
         </div>
+
+        {latestPatch ? (
+          <Link className="staff-home-patch" href="/staff/home/patch-notes">
+            <div className="staff-home-patch__copy">
+              <span className="staff-home-card__eyebrow">
+                Patch notes · {formatStaffPatchDate(latestPatch.date)}
+              </span>
+              <strong>{latestPatch.title}</strong>
+              <p>{latestPatch.summary}</p>
+            </div>
+            <span className="staff-home-patch__action">Full list</span>
+          </Link>
+        ) : null}
 
         <div className="staff-home-grid">
           <Link

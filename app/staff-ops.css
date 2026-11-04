@@ -633,6 +633,116 @@ a.staff-home-card:hover {
   background: color-mix(in srgb, var(--color-maroon-wash) 55%, var(--color-surface));
 }
 
+.staff-home-patch {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.staff-home-patch:hover {
+  border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-maroon-wash) 40%, var(--color-surface));
+}
+
+.staff-home-patch__copy {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.staff-home-patch__copy strong {
+  font-size: 1rem;
+}
+
+.staff-home-patch__copy p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  max-width: 62ch;
+}
+
+.staff-home-patch__action {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-maroon);
+}
+
+.staff-home__back {
+  margin: 0 0 var(--space-2);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.staff-home__back a {
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.staff-home__back a:hover {
+  color: var(--color-ink);
+}
+
+.staff-patch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.staff-patch-entry {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.staff-patch-entry__header {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: var(--space-3);
+}
+
+.staff-patch-entry__header time {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.staff-patch-entry__header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.staff-patch-entry__header p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.staff-patch-entry ul {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 0.4rem;
+  color: var(--color-ink);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .staff-login-shell {
   min-height: 100vh;
   display: grid;
