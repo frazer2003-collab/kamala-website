@@ -1115,6 +1115,17 @@ button.calendar-day-choice:active {
   cursor: grabbing;
 }
 
+/* Parent shell owns HTML5 drag — keep the stay link from starting a URL drag. */
+.extranet-bar-shell--draggable .extranet-bar__open {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* Sync with data-door-dragging set in beginDrag before React re-renders. */
+.calendar-door-dnd[data-door-dragging] .extranet-reservations__day {
+  pointer-events: none;
+}
+
 .extranet-bar-shell--drop-replace {
   outline: 2px solid var(--color-maroon);
   outline-offset: 1px;

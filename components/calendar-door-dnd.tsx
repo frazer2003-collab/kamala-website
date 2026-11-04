@@ -24,6 +24,8 @@ type CalendarDoorDndContextValue = {
   dragging: DragSource | null;
   dropHoverKey: string | null;
   pending: boolean;
+  /** Sync — true as soon as drag starts, before React re-renders. */
+  isDragging: () => boolean;
   beginDrag: (stay: DragSource, event: DragEvent) => void;
   endDrag: () => void;
   setDropHoverKey: (key: string | null) => void;
@@ -62,10 +64,13 @@ export function CalendarDoorDndProvider({
   const [dropHoverKey, setDropHoverKey] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const draggingRef = useRef<DragSource | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const unitsRef = useRef(units);
   const occupanciesRef = useRef(occupancies);
   unitsRef.current = units;
   occupanciesRef.current = occupancies;
+
+  const isDragging = useCallback(() => draggingRef.current !== null, []);
 
   const submitDrop = useCallback(
     (fields: Record<string, string>) => {
@@ -95,9 +100,12 @@ export function CalendarDoorDndProvider({
   const beginDrag = useCallback(
     (stay: DragSource, event: DragEvent) => {
       if (!canManage) {
+        event.preventDefault();
         return;
       }
       draggingRef.current = stay;
+      // Sync attribute so day cells stop capturing before React re-renders.
+      rootRef.current?.setAttribute("data-door-dragging", "1");
       setDragging(stay);
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", stay.id);
@@ -107,6 +115,7 @@ export function CalendarDoorDndProvider({
 
   const endDrag = useCallback(() => {
     draggingRef.current = null;
+    rootRef.current?.removeAttribute("data-door-dragging");
     setDragging(null);
     setDropHoverKey(null);
   }, []);
@@ -154,6 +163,7 @@ export function CalendarDoorDndProvider({
         dragging,
         dropHoverKey,
         pending,
+        isDragging,
         beginDrag,
         endDrag,
         setDropHoverKey,
@@ -163,7 +173,9 @@ export function CalendarDoorDndProvider({
         dropOnUnassign,
       }}
     >
-      {children}
+      <div className="calendar-door-dnd" ref={rootRef}>
+        {children}
+      </div>
     </CalendarDoorDndContext.Provider>
   );
 }

@@ -236,7 +236,7 @@ function DoorReservationRow({
           .filter(Boolean)
           .join(" ")}
         onDragLeave={(event) => {
-          if (!dnd?.dragging) {
+          if (!dnd?.isDragging()) {
             return;
           }
           if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -244,7 +244,8 @@ function DoorReservationRow({
           }
         }}
         onDragOver={(event) => {
-          if (!dnd?.dragging) {
+          // Ref, not state — state lags one frame and the browser cancels the drop.
+          if (!dnd?.isDragging()) {
             return;
           }
           event.preventDefault();
@@ -252,7 +253,7 @@ function DoorReservationRow({
           dnd.setDropHoverKey(unitDropKey);
         }}
         onDrop={(event) => {
-          if (!dnd?.dragging) {
+          if (!dnd?.isDragging()) {
             return;
           }
           event.preventDefault();
@@ -379,7 +380,7 @@ function DoorReservationRow({
           const dropStay = sourceBooking ? bookingDropStay(sourceBooking) : null;
           const bookingDropKey = dropStay ? `booking:${dropStay.id}` : "";
           const replaceable =
-            Boolean(dnd?.dragging && dropStay) &&
+            Boolean(dnd?.isDragging() && dropStay) &&
             dnd!.canReplaceBooking(dropStay!);
           const isBookingDropHover =
             replaceable && dnd?.dropHoverKey === bookingDropKey;
@@ -397,7 +398,7 @@ function DoorReservationRow({
               key={bar.key}
               onDragEnd={() => dnd?.endDrag()}
               onDragLeave={(event) => {
-                if (!replaceable || !dnd) {
+                if (!dnd?.isDragging() || !dropStay || !dnd.canReplaceBooking(dropStay)) {
                   return;
                 }
                 if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -405,7 +406,7 @@ function DoorReservationRow({
                 }
               }}
               onDragOver={(event) => {
-                if (!replaceable || !dnd || !dropStay) {
+                if (!dnd?.isDragging() || !dropStay || !dnd.canReplaceBooking(dropStay)) {
                   return;
                 }
                 event.preventDefault();
@@ -421,7 +422,7 @@ function DoorReservationRow({
                 dnd.beginDrag(dropStay, event);
               }}
               onDrop={(event) => {
-                if (!replaceable || !dnd || !dropStay) {
+                if (!dnd?.isDragging() || !dropStay || !dnd.canReplaceBooking(dropStay)) {
                   return;
                 }
                 event.preventDefault();
@@ -441,6 +442,7 @@ function DoorReservationRow({
                 href={getTimelineBarHref(bar, monthKey, rangeQuery)}
                 itemKey={bar.itemKey}
                 kind={bar.kind === "booking" ? "booking" : "block"}
+                suppressNativeDrag={Boolean(canDragBooking)}
               >
                 {bar.showLabel ? (
                   <>
@@ -520,12 +522,9 @@ function UnassignedReservationRow({
   const unassignDropKey = "unassign";
   const isUnassignDropHover = dnd?.dropHoverKey === unassignDropKey;
 
+  // While a door drag is active, keep No # mounted so staff can clear a door.
   if (unassignedCount === 0 && !dnd?.dragging) {
     return null;
-  }
-
-  if (unassignedCount === 0) {
-    // Keep a drop target visible while dragging so staff can clear a door.
   }
 
   return (
@@ -553,7 +552,7 @@ function UnassignedReservationRow({
           .filter(Boolean)
           .join(" ")}
         onDragLeave={(event) => {
-          if (!dnd?.dragging) {
+          if (!dnd?.isDragging()) {
             return;
           }
           if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -561,7 +560,8 @@ function UnassignedReservationRow({
           }
         }}
         onDragOver={(event) => {
-          if (!dnd?.dragging) {
+          // Ref check — state lags one frame after drag starts.
+          if (!dnd?.isDragging()) {
             return;
           }
           event.preventDefault();
@@ -569,7 +569,7 @@ function UnassignedReservationRow({
           dnd.setDropHoverKey(unassignDropKey);
         }}
         onDrop={(event) => {
-          if (!dnd?.dragging) {
+          if (!dnd?.isDragging()) {
             return;
           }
           event.preventDefault();
@@ -658,6 +658,7 @@ function UnassignedReservationRow({
                 href={detailHref}
                 itemKey={bar.itemKey}
                 kind={bar.kind === "booking" ? "booking" : "block"}
+                suppressNativeDrag={Boolean(canDragBooking)}
               >
                 {bar.showLabel ? (
                   <>

@@ -11,6 +11,8 @@ type CalendarStayBarLinkProps = {
   className: string;
   ariaLabel: string;
   style?: React.CSSProperties;
+  /** Parent shell owns HTML5 drag — stop the link stealing the gesture. */
+  suppressNativeDrag?: boolean;
   children: ReactNode;
 };
 
@@ -32,6 +34,7 @@ export function CalendarStayBarLink({
   className,
   ariaLabel,
   style,
+  suppressNativeDrag = false,
   children,
 }: CalendarStayBarLinkProps) {
   const staySelection = useCalendarStaySelection();
@@ -42,6 +45,7 @@ export function CalendarStayBarLink({
         aria-label={ariaLabel}
         className={className}
         data-calendar-focus={itemKey}
+        draggable={suppressNativeDrag ? false : undefined}
         href={href}
         style={style}
       >
@@ -55,6 +59,7 @@ export function CalendarStayBarLink({
       aria-label={ariaLabel}
       className={className}
       data-calendar-focus={itemKey}
+      draggable={suppressNativeDrag ? false : undefined}
       href={href}
       onClick={(event) => {
         if (isModifiedClick(event)) {
