@@ -7,7 +7,7 @@
   }}
 
 .staff-nav a,
-.staff-nav span {
+.staff-nav > span {
   min-height: 2.5rem;
   display: inline-flex;
   align-items: center;
@@ -18,13 +18,18 @@
   font-size: 0.92rem;
 }
 
+.staff-nav a {
+  cursor: pointer;
+}
+
 .staff-nav a:hover,
 .staff-nav a[aria-current="page"] {
   background: var(--color-surface-muted);
   color: var(--color-ink);
 }
 
-.staff-nav span {
+/* Disabled nav placeholders only — not labels inside links. */
+.staff-nav > span {
   color: var(--color-soft);
   cursor: not-allowed;
   opacity: 0.72;
@@ -513,9 +518,16 @@
 
 .staff-nav__label {
   min-width: 0;
+  min-height: 0;
+  padding: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: inherit;
+  opacity: 1;
+  cursor: inherit;
+  font: inherit;
+  border-radius: 0;
 }
 
 .staff-sidebar--collapsed .staff-sidebar__brand-text,
@@ -1161,7 +1173,7 @@ a.staff-home-card:hover {
 }
 
 .staff-nav a,
-.staff-nav span {
+.staff-nav > span {
   justify-content: flex-start;
 }
 
