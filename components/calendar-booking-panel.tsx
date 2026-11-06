@@ -10,7 +10,11 @@ import {
   updateConfirmedBooking,
   type UpdateConfirmedBookingState,
 } from "@/app/actions";
-import type { BookingSource } from "@/lib/booking-source";
+import {
+  formatBookingSource,
+  isOtaBookingSource,
+  type BookingSource,
+} from "@/lib/booking-source";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
 import type { PaymentCollectedVia } from "@/lib/payment-collected";
@@ -112,8 +116,13 @@ export function CalendarBookingPanel({
   const refundAmount = depositAmount > 0 ? depositAmount : estimatedTotal;
   const refundLabel =
     refundAmount > 0 ? formatMoneySuffix(refundAmount, currency) : "";
+  const savedOta = isOtaBookingSource(bookingSource);
+  const otaLabel = savedOta ? formatBookingSource(bookingSource) : "";
   const canOfferRefund =
-    depositPaid && refundAmount > 0 && paymentCollectedVia !== "cash";
+    depositPaid &&
+    refundAmount > 0 &&
+    paymentCollectedVia !== "cash" &&
+    !savedOta;
   const [fields, setFields] = useState({
     guestName,
     guestEmail: initialEmail,
@@ -284,7 +293,7 @@ export function CalendarBookingPanel({
             }
             value={fields.roomUnitId}
           >
-            <option value="">Unassigned</option>
+            <option value="">Unassigned, hold for a swap</option>
             {assignableUnits.map((unit) => (
               <option key={unit.id} value={unit.id}>
                 {unit.number}
@@ -292,6 +301,10 @@ export function CalendarBookingPanel({
               </option>
             ))}
           </select>
+          <span className="field-help">
+            Clearing the number parks the stay on No # so you can swap doors.
+            The night stays sold. Guests cannot book it while it is unassigned.
+          </span>
         </div>
         <div className="field-pair">
           <label htmlFor={`calendar-arrival-${bookingKey}`}>Arrival</label>
@@ -560,7 +573,20 @@ export function CalendarBookingPanel({
                   </>
                 )
               ) : depositPaid ? (
-                paymentCollectedVia === "cash" ? (
+                savedOta ? (
+                  <>
+                    Cancel{" "}
+                    <strong>{fields.guestName || guestName}</strong> for{" "}
+                    <strong>
+                      {formatStayDates(
+                        fields.arrivalDate || arrivalDate,
+                        fields.departureDate || departureDate,
+                      )}
+                    </strong>
+                    . The stay leaves the calendar. {otaLabel} refunds the guest,
+                    so nothing is sent to Transfers.
+                  </>
+                ) : paymentCollectedVia === "cash" ? (
                   <>
                     Cancel{" "}
                     <strong>{fields.guestName || guestName}</strong> for{" "}
@@ -648,7 +674,7 @@ export function CalendarBookingPanel({
                       ? "Confirm cancel & Stripe refund"
                       : "Cancel and go to Transfers"
                     : depositPaid
-                      ? paymentCollectedVia === "cash"
+                      ? paymentCollectedVia === "cash" || savedOta
                         ? "Confirm cancel"
                         : "Cancel and go to Transfers"
                       : "Delete unpaid stay"}

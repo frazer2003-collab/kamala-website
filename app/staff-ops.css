@@ -575,33 +575,80 @@
   margin-top: var(--space-4);
 }
 
+.staff-main--home {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+  padding-block: var(--space-6);
+}
+
+.staff-home__header h1 {
+  margin: 0 0 var(--space-1);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.staff-home__header p,
 .staff-home__lede {
   max-width: 42ch;
+  margin: 0;
   color: var(--color-muted);
 }
 
 .staff-home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
+}
+
+@media (max-width: 960px) {
+  .staff-home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.staff-home-card,
+.staff-home-link,
+.staff-home-patch {
+  transition:
+    transform 160ms var(--ease-out-quint),
+    border-color 160ms var(--ease-out-quint),
+    background-color 160ms var(--ease-out-quint);
 }
 
 .staff-home-card {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-1);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: inherit;
   text-decoration: none;
-  min-height: 8.5rem;
   align-content: start;
 }
 
-a.staff-home-card:hover {
-  border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
-  background: color-mix(in srgb, var(--color-maroon-wash) 40%, var(--color-surface));
+.staff-home-card:focus-visible,
+.staff-home-link:focus-visible,
+.staff-home-patch:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+.staff-home-card:active,
+.staff-home-link:active,
+.staff-home-patch:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a.staff-home-card:hover,
+  a.staff-home-link:hover,
+  a.staff-home-patch:hover {
+    border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
+    background: color-mix(in srgb, var(--color-maroon-wash) 40%, var(--color-surface));
+  }
 }
 
 .staff-home-card__eyebrow {
@@ -621,6 +668,34 @@ a.staff-home-card:hover {
   color: var(--color-muted);
   font-size: 0.88rem;
   line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-home-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.staff-home-link {
+  display: grid;
+  gap: 0.15rem;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.staff-home-link strong {
+  font-size: 0.95rem;
+}
+
+.staff-home-link span {
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  line-height: 1.35;
 }
 
 .staff-home-card--muted {
@@ -635,21 +710,16 @@ a.staff-home-card:hover {
 
 .staff-home-patch {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  margin-bottom: var(--space-4);
-  padding: var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: inherit;
   text-decoration: none;
-}
-
-.staff-home-patch:hover {
-  border-color: color-mix(in srgb, var(--color-maroon) 35%, var(--color-border));
-  background: color-mix(in srgb, var(--color-maroon-wash) 40%, var(--color-surface));
 }
 
 .staff-home-patch__copy {
@@ -2129,6 +2199,22 @@ a.staff-home-card:hover {
 
   .staff-main {
     padding: var(--space-5) var(--space-4);
+  }
+
+  .staff-main--home {
+    gap: var(--space-4);
+    padding-block: var(--space-5);
+  }
+
+  .staff-home-grid,
+  .staff-home-links {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-home-patch {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
   }
 
   .staff-nav {

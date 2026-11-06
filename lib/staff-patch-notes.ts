@@ -18,6 +18,54 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-home-desk-spacing",
+    date: "2026-11-07",
+    title: "Home desk spacing",
+    summary:
+      "Today's work sits in one row. Reservations and Finance are quieter links underneath, and patch notes follow.",
+    image: {
+      src: "/staff/patch-notes/home-spacing.jpg",
+      alt: "Staff Home with Transfers, today, and Calendar in one row, then shorter Reservations and Finance links",
+    },
+    changes: [
+      "Transfers, today, and Calendar stay in one row and hug their text instead of stretching into tall empty cards.",
+      "Reservations and Finance sit on a shorter second row so they do not compete with live work.",
+      "The latest patch note sits under the desk, not above it.",
+    ],
+  },
+  {
+    id: "2026-11-07-park-door-for-swap",
+    date: "2026-11-07",
+    title: "Park a stay to swap doors",
+    summary:
+      "Clear a door number to move stays around. The night stays sold, so guests cannot book the gap.",
+    image: {
+      src: "/staff/patch-notes/park-door.jpg",
+      alt: "Room number set to Unassigned, hold for a swap",
+    },
+    changes: [
+      "Room number includes Unassigned, hold for a swap. Saving it, or dropping the bar on No #, clears the door.",
+      "The empty door can take another stay so you can finish a swap.",
+      "A parked stay still holds one sellable door. The website, a new booking, and a guest date change will not take that night.",
+    ],
+  },
+  {
+    id: "2026-11-07-ota-cancel-skips-transfers",
+    date: "2026-11-07",
+    title: "OTA cancels skip Transfers",
+    summary:
+      "Airbnb, Booking.com, and Expedia cancels close the stay. The channel refunds the guest, so nothing is queued.",
+    image: {
+      src: "/staff/patch-notes/ota-cancel.jpg",
+      alt: "Airbnb cancel confirmation saying nothing is sent to Transfers",
+    },
+    changes: [
+      "A saved Airbnb, Booking.com, or Expedia source cancels like cash: the stay closes and Transfers is not opened.",
+      "Cancel & refund is hidden for those sources, including when a card is on the booking. The channel refunds the guest.",
+      "Website, walk-in, card, and Thai bank cancels are unchanged.",
+    ],
+  },
+  {
     id: "2026-11-04-finance-capacity-comps",
     date: "2026-11-04",
     title: "Finance: true capacity and stay totals",

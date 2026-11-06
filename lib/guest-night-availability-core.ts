@@ -1,6 +1,10 @@
 import type { Room } from "@/lib/content";
 import { bookingOccupiesDay } from "@/lib/calendar";
-import { countNetBookedForRoomDay } from "@/lib/calendar-timeline";
+import {
+  countNetBookedForRoomDay,
+  countUnassignedDoorHolds,
+  guestSellableDoorCount,
+} from "@/lib/calendar-timeline";
 import {
   addIsoDays,
   eachIsoDayInclusive,
@@ -108,15 +112,23 @@ function isRoomNightOpen({
   }
 
   const departure = addIsoDays(iso, 1);
-  const doorCap = getAssignableUnitsForStay({
+  const freeDoors = getAssignableUnitsForStay({
     units,
     roomId: room.id,
     arrivalDate: iso,
     departureDate: departure,
     occupancies,
   }).length;
+  const parked = countUnassignedDoorHolds({
+    roomId: room.id,
+    arrival: iso,
+    departure,
+    bookings,
+    channelBlocks,
+    typeUnitIds,
+  });
 
-  return doorCap > 0;
+  return guestSellableDoorCount(freeDoors, parked) > 0;
 }
 
 /**

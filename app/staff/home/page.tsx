@@ -73,28 +73,11 @@ export default async function StaffHomePage() {
 
   return (
     <StaffShell current="home">
-      <section className="staff-main" aria-labelledby="staff-home-title">
-        <div className="staff-header staff-header--compact">
-          <div>
-            <h1 id="staff-home-title">Home</h1>
-            <p className="staff-home__lede">
-              Today at the desk — transfers first, then rooms.
-            </p>
-          </div>
-        </div>
-
-        {latestPatch ? (
-          <Link className="staff-home-patch" href="/staff/home/patch-notes">
-            <div className="staff-home-patch__copy">
-              <span className="staff-home-card__eyebrow">
-                Patch notes · {formatStaffPatchDate(latestPatch.date)}
-              </span>
-              <strong>{latestPatch.title}</strong>
-              <p>{latestPatch.summary}</p>
-            </div>
-            <span className="staff-home-patch__action">Full list</span>
-          </Link>
-        ) : null}
+      <section className="staff-main staff-main--home" aria-labelledby="staff-home-title">
+        <header className="staff-home__header">
+          <h1 id="staff-home-title">Home</h1>
+          <p>Transfers first, then rooms.</p>
+        </header>
 
         <div className="staff-home-grid">
           <Link
@@ -136,22 +119,31 @@ export default async function StaffHomePage() {
                 : "All upcoming stays have a door number"}
             </p>
           </Link>
+        </div>
 
-          <Link className="staff-home-card" href="/staff/reservations">
-            <span className="staff-home-card__eyebrow">History</span>
+        <div className="staff-home-links">
+          <Link className="staff-home-link" href="/staff/reservations">
             <strong>Reservations</strong>
-            <p>Past and upcoming booking list.</p>
+            <span>Past and upcoming booking list</span>
           </Link>
-
-          <Link className="staff-home-card" href="/staff/sold">
-            <span className="staff-home-card__eyebrow">Money</span>
+          <Link className="staff-home-link" href="/staff/sold">
             <strong>Finance</strong>
-            <p>
-              Month accounts and collected totals. Refunds to send live under
-              Transfers.
-            </p>
+            <span>Month accounts. Refunds to send are on Transfers.</span>
           </Link>
         </div>
+
+        {latestPatch ? (
+          <Link className="staff-home-patch" href="/staff/home/patch-notes">
+            <div className="staff-home-patch__copy">
+              <span className="staff-home-card__eyebrow">
+                Patch notes · {formatStaffPatchDate(latestPatch.date)}
+              </span>
+              <strong>{latestPatch.title}</strong>
+              <p>{latestPatch.summary}</p>
+            </div>
+            <span className="staff-home-patch__action">Full list</span>
+          </Link>
+        ) : null}
       </section>
     </StaffShell>
   );

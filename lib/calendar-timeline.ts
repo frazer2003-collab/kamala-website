@@ -467,6 +467,79 @@ export function countNetBookedForRoomDay({
   return count;
 }
 
+/**
+ * Confirmed stays parked on No # still occupy one sellable door.
+ * Staff can clear a number to swap doors without opening the night to guests.
+ */
+export function countUnassignedDoorHolds({
+  roomId,
+  arrival,
+  departure,
+  bookings,
+  channelBlocks,
+  typeUnitIds,
+  excludeId,
+}: {
+  roomId: string;
+  arrival: string;
+  departure: string;
+  bookings: Array<{
+    databaseId?: string | null;
+    roomId: string;
+    roomUnitId?: string | null;
+    arrivalDate: string;
+    departureDate: string;
+  }>;
+  channelBlocks: Array<{
+    databaseId?: string | null;
+    roomId: string;
+    roomUnitId?: string | null;
+    startDate: string;
+    endDate: string;
+  }>;
+  typeUnitIds: ReadonlySet<string>;
+  excludeId?: string;
+}) {
+  let count = 0;
+
+  for (const booking of bookings) {
+    if (excludeId && booking.databaseId === excludeId) {
+      continue;
+    }
+    if (booking.roomUnitId) {
+      continue;
+    }
+    if (!stayAffectsRoomInventory(booking, roomId, typeUnitIds)) {
+      continue;
+    }
+    if (booking.arrivalDate < departure && booking.departureDate > arrival) {
+      count += 1;
+    }
+  }
+
+  for (const block of channelBlocks) {
+    if (excludeId && block.databaseId === excludeId) {
+      continue;
+    }
+    if (block.roomUnitId) {
+      continue;
+    }
+    if (!stayAffectsRoomInventory(block, roomId, typeUnitIds)) {
+      continue;
+    }
+    if (block.startDate < departure && block.endDate > arrival) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+/** Doors a guest can still buy: empty physical doors minus parked No # stays. */
+export function guestSellableDoorCount(freeDoorCount: number, unassignedHolds: number) {
+  return Math.max(0, freeDoorCount - Math.max(0, unassignedHolds));
+}
+
 export type CalendarMonthStats = {
   currentGuests: number;
   arriving: number;

@@ -130,6 +130,44 @@ describe("computeGuestRoomStayAvailableCount", () => {
     assert.equal(available, 1);
   });
 
+  it("keeps a parked No # stay from opening a door to guests", () => {
+    const gardenUnits = SAMPLE_ROOM_UNITS.filter((unit) =>
+      unit.roomIds.includes("garden"),
+    );
+    const [held, ...stillAssigned] = gardenUnits;
+    assert.ok(held);
+
+    const available = computeGuestRoomStayAvailableCount({
+      room: { ...gardenRoom, availableCount: 4 },
+      arrival,
+      departure,
+      bookings: [
+        ...stillAssigned.map((unit, index) => ({
+          roomId: "garden",
+          roomUnitId: unit.id,
+          arrivalDate: arrival,
+          departureDate: departure,
+          databaseId: `assigned-${index}`,
+          guest: `Guest ${index}`,
+        })),
+        {
+          roomId: "garden",
+          roomUnitId: null,
+          arrivalDate: arrival,
+          departureDate: departure,
+          databaseId: "parked",
+          guest: "Parked for swap",
+        },
+      ],
+      channelBlocks: [],
+      staffClosures: [],
+      inventoryLookup: new Map(),
+      units: SAMPLE_ROOM_UNITS,
+    });
+
+    assert.equal(available, 0);
+  });
+
   it("returns zero on a staff-closed night", () => {
     const available = computeGuestRoomStayAvailableCount({
       room: gardenRoom,

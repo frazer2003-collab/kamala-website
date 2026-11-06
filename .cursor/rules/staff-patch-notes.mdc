@@ -1,0 +1,11 @@
+---
+description: Add a staff patch note whenever a staff-facing feature is added or changed
+alwaysApply: true
+---
+
+When you add or change a staff-facing feature, add a newest-first entry to `lib/staff-patch-notes.ts` before finishing.
+
+- One-line summary for Home, plus the concrete changes.
+- A screenshot under `public/staff/patch-notes/`, referenced by the note. The image `src` must start with `/staff/patch-notes/`.
+- Do not skip the note because the change feels small.
+- Guest-only copy that staff never see does not need a note.

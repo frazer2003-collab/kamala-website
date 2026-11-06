@@ -1,6 +1,10 @@
 import type { Room } from "@/lib/content";
 import { bookingOccupiesDay } from "@/lib/calendar";
-import { countNetBookedForRoomDay } from "@/lib/calendar-timeline";
+import {
+  countNetBookedForRoomDay,
+  countUnassignedDoorHolds,
+  guestSellableDoorCount,
+} from "@/lib/calendar-timeline";
 import { bookingReservesRoom } from "@/lib/booking-reservation";
 import { isChannelBlockRow } from "@/lib/booking-source";
 import {
@@ -131,13 +135,22 @@ export function computeGuestRoomStayAvailableCount({
     ...bookings.map(occupancyFromBooking),
     ...channelBlocks.map(occupancyFromChannelBlock),
   ];
-  const doorCap = getAssignableUnitsForStay({
+  const freeDoors = getAssignableUnitsForStay({
     units,
     roomId: room.id,
     arrivalDate: arrival,
     departureDate: departure,
     occupancies,
   }).length;
+  const parked = countUnassignedDoorHolds({
+    roomId: room.id,
+    arrival,
+    departure,
+    bookings,
+    channelBlocks,
+    typeUnitIds,
+  });
+  const doorCap = guestSellableDoorCount(freeDoors, parked);
 
   return Math.min(minAvailable, doorCap);
 }

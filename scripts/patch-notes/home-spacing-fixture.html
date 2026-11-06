@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Staff patch fixtures</title>
+    <style>
+      :root {
+        --color-canvas: #faf8f7;
+        --color-surface: #ffffff;
+        --color-ink: #2a1f1d;
+        --color-muted: #6e605c;
+        --color-border: #e4d9d6;
+        --color-maroon: #8f2f32;
+        --color-maroon-wash: #f8efee;
+        --radius-md: 12px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 28px;
+        background: #cfc6c2;
+        color: var(--color-ink);
+        font: 15px/1.4 "Segoe UI", system-ui, sans-serif;
+      }
+      .shot {
+        width: 720px;
+        margin: 0 0 28px;
+        padding: 22px;
+        background: var(--color-canvas);
+        border-radius: 16px;
+      }
+      .shot--narrow { width: 420px; }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.5rem;
+        letter-spacing: -0.02em;
+      }
+      .lede { margin: 0 0 18px; color: var(--color-muted); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .card, .link, .patch, .field {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+      }
+      .card { padding: 16px; }
+      .card--attention {
+        border-color: #d7b4b4;
+        background: color-mix(in srgb, var(--color-maroon-wash) 70%, white);
+      }
+      .eyebrow {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+      }
+      .card strong, .link strong { display: block; font-size: 1.02rem; }
+      .card p, .link span, .patch p {
+        margin: 6px 0 0;
+        color: var(--color-muted);
+        font-size: 0.88rem;
+      }
+      .links {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .link { padding: 12px 16px; }
+      .link span { display: block; margin-top: 2px; }
+      .patch {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-top: 18px;
+        padding: 12px 16px;
+      }
+      .patch strong { display: block; }
+      .patch p { margin: 2px 0 0; max-width: 46ch; }
+      .action { color: var(--color-maroon); font-weight: 700; font-size: 0.82rem; }
+      @media (max-width: 960px) {
+        .shot { width: auto; }
+        .grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 640px) {
+        .links { grid-template-columns: 1fr; }
+        .patch { align-items: flex-start; flex-direction: column; }
+      }
+      .field { padding: 16px; display: grid; gap: 8px; }
+      label { font-weight: 700; font-size: 0.92rem; }
+      select, button {
+        font: inherit;
+        border-radius: 8px;
+      }
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--color-border);
+        background: white;
+      }
+      .help { margin: 0; color: var(--color-muted); font-size: 0.84rem; }
+      .confirm p { margin: 0 0 12px; }
+      .actions { display: flex; gap: 8px; }
+      button {
+        border: 0;
+        padding: 8px 14px;
+        border-radius: 999px;
+        cursor: default;
+      }
+      .danger { background: #8f2f32; color: white; }
+      .secondary { background: white; color: var(--color-ink); border: 1px solid var(--color-border); }
+    </style>
+  </head>
+  <body>
+    <section class="shot" id="home">
+      <h1>Home</h1>
+      <p class="lede">Transfers first, then rooms.</p>
+      <div class="grid">
+        <article class="card card--attention">
+          <span class="eyebrow">Thai bank</span>
+          <strong>Transfers</strong>
+          <p>3 open · 1 reply · 1 refund</p>
+        </article>
+        <article class="card">
+          <span class="eyebrow">Today</span>
+          <strong>At a glance</strong>
+          <p>2 in · 1 out · 4 in-house</p>
+        </article>
+        <article class="card card--attention">
+          <span class="eyebrow">Rooms</span>
+          <strong>Calendar</strong>
+          <p>2 stays still need a door #</p>
+        </article>
+      </div>
+      <div class="links">
+        <article class="link">
+          <strong>Reservations</strong>
+          <span>Past and upcoming booking list</span>
+        </article>
+        <article class="link">
+          <strong>Finance</strong>
+          <span>Month accounts. Refunds to send are on Transfers.</span>
+        </article>
+      </div>
+      <article class="patch">
+        <div>
+          <span class="eyebrow">Patch notes · 7 Nov 2026</span>
+          <strong>Home desk spacing</strong>
+          <p>Today's work sits in one row. Reservations and Finance are quieter links underneath.</p>
+        </div>
+        <span class="action">Full list</span>
+      </article>
+    </section>
+
+    <section class="shot shot--narrow" id="park">
+      <div class="field">
+        <label for="room-number">Room number</label>
+        <select id="room-number">
+          <option selected>Unassigned, hold for a swap</option>
+          <option>112</option>
+          <option>117</option>
+          <option>119</option>
+        </select>
+        <p class="help">Clearing the number parks the stay on No # so you can swap doors. The night stays sold.</p>
+      </div>
+    </section>
+
+    <section class="shot shot--narrow" id="ota">
+      <div class="field confirm">
+        <p>Cancel <strong>A.115</strong> for <strong>12-20 Nov</strong>. The stay leaves the calendar. Airbnb refunds the guest, so nothing is sent to Transfers.</p>
+        <div class="actions">
+          <button class="danger" type="button">Confirm cancel</button>
+          <button class="secondary" type="button">Keep stay</button>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -19,10 +19,15 @@ import {
 } from "@/lib/guest-stay-change";
 import { resolveBookingStayTotal } from "@/lib/payment-pricing";
 import { getPropertySettings } from "@/lib/property-settings";
+import {
+  countUnassignedDoorHolds,
+  guestSellableDoorCount,
+} from "@/lib/calendar-timeline";
 import { getChannelReservations } from "@/lib/room-blocks";
 import {
   findUnitAssignmentConflict,
   getStaffRoomUnits,
+  getTypeUnitIdSet,
   getUnitsForRoomType,
   occupancyFromBooking,
   occupancyFromChannelBlock,
@@ -149,11 +154,21 @@ async function findFreeDoor(
     )
     .map((unit) => unit.id);
 
+  const parked = countUnassignedDoorHolds({
+    roomId,
+    arrival: arrivalDate,
+    departure: departureDate,
+    bookings: confirmed.bookings,
+    channelBlocks: channels.blocks,
+    typeUnitIds: getTypeUnitIdSet(units, roomId),
+    excludeId: booking.id,
+  });
   const keepUnitId =
     booking.room_unit_id && freeUnitIds.includes(booking.room_unit_id)
       ? booking.room_unit_id
       : null;
-  return { ok: freeUnitIds.length > 0, keepUnitId };
+  const sellable = guestSellableDoorCount(freeUnitIds.length, parked);
+  return { ok: Boolean(keepUnitId) || sellable > 0, keepUnitId };
 }
 
 export type StayChangeQuote =

@@ -17,7 +17,7 @@ import {
   recordStaffChatMessage,
   seedGuestNoteMessage,
 } from "@/lib/booking-chat";
-import { parseBookingSource, isChannelBlockRow } from "@/lib/booking-source";
+import { isOtaBookingSource, parseBookingSource, isChannelBlockRow } from "@/lib/booking-source";
 import { parsePaymentCollectedVia } from "@/lib/payment-collected";
 import {
   formatMoneySuffix,
@@ -27,6 +27,10 @@ import {
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffCalendarWrite, requireStaffSession } from "@/lib/staff-auth";
 import { checkStayCapacity, hasCapacityForStay } from "@/lib/booking-capacity";
+import {
+  countUnassignedDoorHolds,
+  guestSellableDoorCount,
+} from "@/lib/calendar-timeline";
 import {
   fulfillBookingDeposit,
   releaseBookingReservation,
@@ -94,7 +98,7 @@ import {
   getAssignableUnitsForStay,
   getRoomUnitById,
   getStaffRoomUnits,
-  hasAssignableUnitForStay,
+  getTypeUnitIdSet,
   isUnitEligibleForRoom,
   occupancyFromBooking,
   occupancyFromChannelBlock,
@@ -431,15 +435,22 @@ export async function createBookingRequest(
     ...confirmed.bookings.map(occupancyFromBooking),
     ...channels.blocks.map(occupancyFromChannelBlock),
   ];
-  if (
-    !hasAssignableUnitForStay({
-      units,
-      roomId: selectedRoom.id,
-      arrivalDate: arrival,
-      departureDate: departure,
-      occupancies,
-    })
-  ) {
+  const freeDoors = getAssignableUnitsForStay({
+    units,
+    roomId: selectedRoom.id,
+    arrivalDate: arrival,
+    departureDate: departure,
+    occupancies,
+  }).length;
+  const parkedHolds = countUnassignedDoorHolds({
+    roomId: selectedRoom.id,
+    arrival,
+    departure,
+    bookings: confirmed.bookings,
+    channelBlocks: channels.blocks,
+    typeUnitIds: getTypeUnitIdSet(units, selectedRoom.id),
+  });
+  if (guestSellableDoorCount(freeDoors, parkedHolds) <= 0) {
     return bookingErrorState(
       "This room is full for those dates. Choose another room or different dates.",
       formData,
@@ -2171,13 +2182,15 @@ export async function cancelConfirmedBooking(
 
   // Cancel & refund: Stripe now; Thai bank → Transfers + waiting email.
   // Plain Cancel: close stay and queue Transfers for a later refund (no auto Stripe).
-  // Cash: close only — never queue Transfers.
+  // Cash, and any OTA source: close only. The channel refunds the guest.
   let refundOutcome: StayRefundOutcome = "skipped";
   const isCash = collectedVia === "cash";
+  const isOta = isOtaBookingSource(parseBookingSource(booking.booking_source));
+  const skipTransfers = isCash || isOta;
   const handoffRefundDue =
-    !isCash && stayAmount > 0 && (cancelAndRefund ? !paidByCard : true);
+    !skipTransfers && stayAmount > 0 && (cancelAndRefund ? !paidByCard : true);
 
-  if (cancelAndRefund && paidByCard) {
+  if (cancelAndRefund && paidByCard && !isOta) {
     refundOutcome = await refundPaidStay(booking, "cancelled", {
       notifyGuest: true,
     });
