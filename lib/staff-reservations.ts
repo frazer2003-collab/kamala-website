@@ -1,11 +1,12 @@
 import {
   buildStaffCalendarHref,
-  checkInDateWithinRange,
+  dateRangeOverlapsBooking,
   formatCalendarMonth,
   getCalendarMonthBounds,
   getTodayIso,
   parseCalendarMonth,
 } from "@/lib/calendar";
+import { countStayNights } from "@/lib/stay-dates";
 import {
   getStaffBookingKey,
   isInventoryHoldBooking,
@@ -51,14 +52,29 @@ export type ReservationRow = {
   bookedLabel: string | null;
   doorLabel: string | null;
   needsRoom: boolean;
+  nights: number;
+  phone: string | null;
   sourceLabel: string;
   moneyLabel: string | null;
+  /** Paid, Unpaid, No charge, No price, or Transfer to verify. */
+  payLabel: string;
   href: string;
 };
 
 export type LedgerStatusCounts = Record<LedgerStatus, number> & { all: number };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+const ROOM_SHORT_NAMES: Record<string, string> = {
+  courtyard: "Superior",
+  garden: "Deluxe",
+  loft: "Family",
+  ground: "Family GF",
+};
+
+function roomShortName(roomId: string) {
+  return ROOM_SHORT_NAMES[roomId] ?? roomId;
+}
 
 function formatIsoDate(iso: string) {
   const date = new Date(`${iso}T00:00:00`);
@@ -86,6 +102,29 @@ function calendarHrefForRange(options: {
     booking: options.booking,
     block: options.block,
   });
+}
+
+function stayNightCount(arrival: string, departure: string) {
+  return countStayNights(arrival, departure) ?? 1;
+}
+
+function websitePay(booking: StaffBooking, currency?: PropertyCurrency) {
+  if (!(booking.estimatedTotal > 0)) {
+    return { moneyLabel: null as string | null, payLabel: "No charge" };
+  }
+
+  const moneyLabel = currency
+    ? formatMoneySuffix(booking.estimatedTotal, currency)
+    : null;
+
+  if (booking.bankTransferClaimed && !booking.depositPaid) {
+    return { moneyLabel, payLabel: "Transfer to verify" };
+  }
+
+  return {
+    moneyLabel,
+    payLabel: booking.depositPaid ? "Paid" : "Unpaid",
+  };
 }
 
 function websiteSourceLabel(booking: StaffBooking) {
@@ -213,13 +252,15 @@ export function buildReservationRows({
   const rows: ReservationRow[] = [];
 
   for (const booking of bookings) {
-    if (!checkInDateWithinRange(booking.arrivalDate, fromIso, toIso)) {
+    if (!dateRangeOverlapsBooking(booking, fromIso, toIso)) {
       continue;
     }
 
     const needsRoom = stayNeedsRoomAssignment(booking, knownUnitIds);
     const ledgerStatus = classifyWebsiteLedgerStatus(booking, todayIso);
     const key = getStaffBookingKey(booking);
+    const pay = websitePay(booking, currency);
+    const phone = booking.phone.trim();
 
     rows.push({
       id: key,
@@ -239,11 +280,11 @@ export function buildReservationRows({
           ? `#${booking.roomNumber}`
           : null,
       needsRoom,
+      nights: stayNightCount(booking.arrivalDate, booking.departureDate),
+      phone: phone || null,
       sourceLabel: websiteSourceLabel(booking),
-      moneyLabel:
-        currency && booking.estimatedTotal > 0
-          ? formatMoneySuffix(booking.estimatedTotal, currency)
-          : null,
+      moneyLabel: pay.moneyLabel,
+      payLabel: pay.payLabel,
       href: calendarHrefForRange({
         fromIso,
         toIso,
@@ -261,7 +302,7 @@ export function buildReservationRows({
       arrivalDate: block.startDate,
       departureDate: block.endDate,
     };
-    if (!checkInDateWithinRange(stay.arrivalDate, fromIso, toIso)) {
+    if (!dateRangeOverlapsBooking(stay, fromIso, toIso)) {
       continue;
     }
 
@@ -278,7 +319,7 @@ export function buildReservationRows({
       id: key,
       kind: "channel",
       label,
-      sublabel: block.channelLabel || "Channel",
+      sublabel: roomShortName(block.roomId),
       statusLabel: needsRoom ? "Needs room #" : "Confirmed",
       ledgerStatus,
       arrivalDate: block.startDate,
@@ -292,8 +333,11 @@ export function buildReservationRows({
           ? `#${block.roomNumber}`
           : null,
       needsRoom,
+      nights: stayNightCount(block.startDate, block.endDate),
+      phone: block.guestPhone.trim() || null,
       sourceLabel,
       moneyLabel: null,
+      payLabel: "No price",
       href: calendarHrefForRange({
         fromIso,
         toIso,
@@ -353,17 +397,37 @@ export function rowMatchesLedgerFilter(
   return false;
 }
 
+export function rowMatchesReservationQuery(row: ReservationRow, query: string) {
+  const needle = query.trim().toLowerCase();
+  if (!needle) {
+    return true;
+  }
+
+  const haystack = [row.label, row.sublabel, row.doorLabel, row.phone, row.sourceLabel]
+    .filter((part): part is string => Boolean(part))
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(needle);
+}
+
 export function filterReservationRows(
   rows: ReservationRow[],
   filters: {
     ledger: ReservationsLedgerFilter;
     source?: BookingSource | "website" | "all";
+    query?: string;
     todayIso?: string;
   },
 ) {
   const todayIso = filters.todayIso ?? getTodayIso();
+  const query = filters.query ?? "";
 
   return rows.filter((row) => {
+    if (!rowMatchesReservationQuery(row, query)) {
+      return false;
+    }
+
     if (!rowMatchesLedgerFilter(row, filters.ledger, todayIso)) {
       return false;
     }
@@ -437,11 +501,16 @@ export function parseReservationsDateRange(params: { from?: string; to?: string 
   return { fromIso, toIso };
 }
 
+export function parseReservationsQuery(value?: string) {
+  return (value ?? "").trim().slice(0, 80);
+}
+
 export function reservationsListHref(options: {
   from: string;
   to: string;
   ledger?: ReservationsLedgerFilter;
   source?: BookingSource | "website" | "all";
+  query?: string;
 }) {
   const params = new URLSearchParams();
   params.set("from", options.from);
@@ -451,6 +520,10 @@ export function reservationsListHref(options: {
   }
   if (options.source && options.source !== "all") {
     params.set("source", options.source);
+  }
+  const query = parseReservationsQuery(options.query);
+  if (query) {
+    params.set("q", query);
   }
   return `/staff/reservations?${params.toString()}`;
 }

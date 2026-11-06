@@ -124,7 +124,7 @@ export default async function StaffHomePage() {
         <div className="staff-home-links">
           <Link className="staff-home-link" href="/staff/reservations">
             <strong>Reservations</strong>
-            <span>Past and upcoming booking list</span>
+            <span>Find a stay by name, door, or dates</span>
           </Link>
           <Link className="staff-home-link" href="/staff/sold">
             <strong>Finance</strong>

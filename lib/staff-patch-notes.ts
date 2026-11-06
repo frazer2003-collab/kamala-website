@@ -18,6 +18,23 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-reservations-in-house",
+    date: "2026-11-07",
+    title: "Reservations shows who is actually here",
+    summary:
+      "The list includes stays that overlap the dates, and you can find a guest by name, door, or phone. Payment says paid, unpaid, no charge, or no price.",
+    image: {
+      src: "/staff/patch-notes/reservations-ledger.jpg",
+      alt: "Reservations table with guest, stay, room number, source, and payment",
+    },
+    changes: [
+      "A date range now lists every stay that occupies a night in it, including guests who checked in earlier.",
+      "Find searches name, door number, and phone. In house today jumps to whoever is staying tonight.",
+      "Each row shows nights, room and door, and whether the stay is paid, unpaid, a no-charge stay, or an OTA stay with no price.",
+      "The guest name opens that stay on the calendar. Channel rows show the room type instead of repeating the channel name.",
+    ],
+  },
+  {
     id: "2026-11-07-home-desk-spacing",
     date: "2026-11-07",
     title: "Home desk spacing",

@@ -15,6 +15,7 @@ import {
   ledgerStatusLabel,
   parseReservationsDateRange,
   parseReservationsLedgerFilter,
+  parseReservationsQuery,
   parseReservationsSource,
   reservationsListHref,
   sortReservationRows,
@@ -59,6 +60,7 @@ export default async function StaffReservationsPage({
     to?: string;
     ledger?: string;
     source?: string;
+    q?: string;
   }>;
 }) {
   await requireStaffSession();
@@ -67,6 +69,7 @@ export default async function StaffReservationsPage({
   const { fromIso, toIso } = parseReservationsDateRange(params);
   const ledger = parseReservationsLedgerFilter(params.ledger);
   const source = parseReservationsSource(params.source);
+  const query = parseReservationsQuery(params.q);
   const todayIso = getTodayIso();
   const rangeLabel = formatRangeLabel(fromIso, toIso);
 
@@ -95,16 +98,22 @@ export default async function StaffReservationsPage({
     currency: settings.currency,
     todayIso,
   });
-  const counts = countLedgerStatuses(allRows);
+  const matchedRows = filterReservationRows(allRows, {
+    ledger: "all",
+    query,
+    todayIso,
+  });
+  const counts = countLedgerStatuses(matchedRows);
   const visibleRows = sortReservationRows(
-    filterReservationRows(allRows, { ledger, source, todayIso }),
+    filterReservationRows(matchedRows, { ledger, source, todayIso }),
   );
 
   const warnings = [bookingsResult.error, channelsResult.error].filter(
     (message): message is string => Boolean(message),
   );
 
-  const filterBase = { from: fromIso, to: toIso, ledger, source };
+  const filterBase = { from: fromIso, to: toIso, ledger, source, query };
+  const showingToday = fromIso === todayIso && toIso === todayIso;
 
   return (
     <StaffShell current="reservations">
@@ -116,9 +125,9 @@ export default async function StaffReservationsPage({
           <div className="staff-reservations__intro">
             <h1 id="staff-reservations-title">Reservations</h1>
             <p>
-              Cross-check bookings against Airbnb and other OTAs. Search a date
-              range to list stays with check-in in that period, then filter by
-              status or channel.
+              Stays that occupy a night in these dates, including guests who
+              arrived earlier. Find a name, door, or phone, then open the stay
+              on the calendar.
             </p>
           </div>
         </div>
@@ -136,6 +145,17 @@ export default async function StaffReservationsPage({
               method="get"
             >
               <div className="staff-reservations__search-fields">
+                <div className="field-pair staff-reservations__query">
+                  <label htmlFor="reservations-q">Find</label>
+                  <input
+                    autoComplete="off"
+                    defaultValue={query}
+                    id="reservations-q"
+                    name="q"
+                    placeholder="Name, door, or phone"
+                    type="search"
+                  />
+                </div>
                 <div className="field-pair">
                   <label htmlFor="reservations-from">From</label>
                   <input
@@ -169,8 +189,22 @@ export default async function StaffReservationsPage({
             </form>
 
             <p className="staff-reservations__range-label" aria-live="polite">
-              Showing <strong>{visibleRows.length}</strong> of {allRows.length}{" "}
-              check-ins · {rangeLabel}
+              <span>
+                Showing <strong>{visibleRows.length}</strong> of {matchedRows.length}{" "}
+                stays, {rangeLabel}
+                {query ? ` matching "${query}"` : ""}
+              </span>
+              {showingToday ? null : (
+                <Link
+                  href={reservationsListHref({
+                    from: todayIso,
+                    to: todayIso,
+                    query,
+                  })}
+                >
+                  In house today
+                </Link>
+              )}
             </p>
 
             {warnings.map((message) => (
@@ -179,7 +213,7 @@ export default async function StaffReservationsPage({
                 key={message}
                 role="status"
               >
-                {message} Some stays may be missing — try again in a moment.
+                {message} Some stays may be missing. Try again in a moment.
               </p>
             ))}
 
@@ -222,21 +256,6 @@ export default async function StaffReservationsPage({
                 >
                   All sources
                 </Link>
-                <Link
-                  aria-current={source === "website" ? "true" : undefined}
-                  className={[
-                    "booking-list__filter",
-                    source === "website" ? "booking-list__filter--active" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  href={reservationsListHref({
-                    ...filterBase,
-                    source: "website",
-                  })}
-                >
-                  Website
-                </Link>
                 {BOOKING_SOURCES.map((value) => (
                   <Link
                     aria-current={source === value ? "true" : undefined}
@@ -257,7 +276,8 @@ export default async function StaffReservationsPage({
 
             {visibleRows.length === 0 ? (
               <p className="staff-empty-state" role="status">
-                No reservations in this range and filter.{" "}
+                No stays in this range
+                {query ? ` matching "${query}"` : ""}.{" "}
                 <Link href={reservationsListHref({ from: fromIso, to: toIso })}>
                   Show all
                 </Link>
@@ -271,16 +291,12 @@ export default async function StaffReservationsPage({
                   </caption>
                   <thead>
                     <tr>
-                      <th scope="col">Status</th>
                       <th scope="col">Guest</th>
-                      <th scope="col">Check-in</th>
-                      <th scope="col">Checkout</th>
+                      <th scope="col">Stay</th>
                       <th scope="col">Room</th>
                       <th scope="col">Source</th>
-                      <th scope="col">Total</th>
-                      <th scope="col">
-                        <span className="sr-only">Open</span>
-                      </th>
+                      <th scope="col">Payment</th>
+                      <th scope="col">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -291,7 +307,40 @@ export default async function StaffReservationsPage({
                         }
                         key={`${row.kind}-${row.id}`}
                       >
-                        <td>
+                        <td data-label="Guest">
+                          <Link className="staff-reservations__guest" href={row.href}>
+                            {row.label}
+                          </Link>
+                          {row.phone ? (
+                            <span className="staff-reservations__meta">{row.phone}</span>
+                          ) : null}
+                        </td>
+                        <td data-label="Stay">
+                          <span className="staff-reservations__stay">
+                            {row.checkInLabel} to {row.checkOutLabel}
+                          </span>
+                          <span className="staff-reservations__meta">
+                            {row.nights} {row.nights === 1 ? "night" : "nights"}
+                          </span>
+                        </td>
+                        <td data-label="Room">
+                          <span>{row.sublabel}</span>
+                          {row.doorLabel ? (
+                            <span className="staff-reservations__door">{row.doorLabel}</span>
+                          ) : row.needsRoom ? (
+                            <span className="staff-reservations__door staff-reservations__door--missing">
+                              Needs room #
+                            </span>
+                          ) : null}
+                        </td>
+                        <td data-label="Source">{row.sourceLabel}</td>
+                        <td data-label="Payment">
+                          {row.moneyLabel ? (
+                            <span className="staff-reservations__money">{row.moneyLabel}</span>
+                          ) : null}
+                          <span className="staff-reservations__meta">{row.payLabel}</span>
+                        </td>
+                        <td data-label="Status">
                           <span
                             className={[
                               "staff-reservations__status-pill",
@@ -307,28 +356,6 @@ export default async function StaffReservationsPage({
                               {row.statusLabel}
                             </span>
                           ) : null}
-                        </td>
-                        <td>
-                          <strong>{row.label}</strong>
-                          {row.doorLabel ? (
-                            <span className="staff-reservations__door">
-                              {row.doorLabel}
-                            </span>
-                          ) : row.needsRoom ? (
-                            <span className="staff-reservations__door staff-reservations__door--missing">
-                              Needs room #
-                            </span>
-                          ) : null}
-                        </td>
-                        <td>{row.checkInLabel}</td>
-                        <td>{row.checkOutLabel}</td>
-                        <td>{row.sublabel}</td>
-                        <td>{row.sourceLabel}</td>
-                        <td>{row.moneyLabel ?? "—"}</td>
-                        <td>
-                          <Link className="staff-reservations__open" href={row.href}>
-                            Details
-                          </Link>
                         </td>
                       </tr>
                     ))}

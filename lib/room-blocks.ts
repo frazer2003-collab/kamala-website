@@ -177,7 +177,7 @@ export async function getRoomBlockById(blockId: string) {
   }
 }
 
-/** OTA/channel reservations with check-in inside a date range (for reservations ledger). */
+/** OTA/channel reservations that occupy a night inside a date range. */
 export async function getChannelReservationsForRange(fromIso: string, toIso: string) {
   if (!hasStaffSupabaseConfig()) {
     return {
@@ -193,8 +193,8 @@ export async function getChannelReservationsForRange(fromIso: string, toIso: str
       supabase
         .from("room_blocks")
         .select("*")
-        .gte("start_date", fromIso)
         .lte("start_date", toIso)
+        .gt("end_date", fromIso)
         .order("start_date", { ascending: true })
         .limit(ROOM_BLOCK_RANGE_LIMIT),
       getBlockRoomUnitMap(supabase),

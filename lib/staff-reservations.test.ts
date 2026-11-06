@@ -27,7 +27,7 @@ function websiteBooking(
     requestedAt: "Recently",
     note: "",
     contact: "g@example.com",
-    phone: "",
+    phone: partial.phone ?? "",
     arrivalDate: partial.arrivalDate,
     departureDate: partial.departureDate,
     roomId: partial.roomId ?? "ground",
@@ -140,7 +140,7 @@ describe("buildReservationRows", () => {
     assert.equal(rows[0]?.statusLabel, "Checked in");
   });
 
-  it("includes only stays whose check-in falls inside the range", () => {
+  it("includes stays that occupy a night in the range, including earlier arrivals", () => {
     const rows = buildReservationRows({
       bookings: [
         websiteBooking({
@@ -176,11 +176,70 @@ describe("buildReservationRows", () => {
       todayIso: "2026-08-01",
     });
 
-    assert.equal(rows.length, 2);
+    assert.equal(rows.length, 4);
     assert.deepEqual(
       rows.map((row) => row.label).sort(),
-      ["August arrival", "August channel"],
+      ["August arrival", "August channel", "Early channel", "July check-in"],
     );
+  });
+
+  it("marks a zero total as no charge and a channel stay as no price", () => {
+    const rows = buildReservationRows({
+      bookings: [
+        websiteBooking({
+          id: "free",
+          guest: "Owner",
+          arrivalDate: "2026-08-10",
+          departureDate: "2026-08-12",
+          estimatedTotal: 0,
+          depositPaid: false,
+        }),
+      ],
+      blocks: [
+        channelBlock({
+          id: "ota",
+          startDate: "2026-08-04",
+          endDate: "2026-08-06",
+          guestName: "Ota",
+        }),
+      ],
+      knownUnitIds: new Set(["unit-1"]),
+      fromIso: "2026-08-01",
+      toIso: "2026-08-31",
+      todayIso: "2026-08-01",
+    });
+
+    const owner = rows.find((row) => row.id === "free");
+    const ota = rows.find((row) => row.label === "Ota");
+    assert.equal(owner?.payLabel, "No charge");
+    assert.equal(owner?.nights, 2);
+    assert.equal(ota?.payLabel, "No price");
+    assert.equal(ota?.sublabel, "Family GF");
+  });
+
+  it("finds a stay by door number or guest name", () => {
+    const rows = buildReservationRows({
+      bookings: [
+        websiteBooking({
+          id: "door",
+          guest: "Niran",
+          phone: "0812345678",
+          arrivalDate: "2026-08-10",
+          departureDate: "2026-08-12",
+          roomNumber: "115",
+        }),
+      ],
+      blocks: [],
+      knownUnitIds: new Set(["unit-1"]),
+      fromIso: "2026-08-01",
+      toIso: "2026-08-31",
+      todayIso: "2026-08-01",
+    });
+
+    assert.equal(filterReservationRows(rows, { ledger: "all", query: "115" }).length, 1);
+    assert.equal(filterReservationRows(rows, { ledger: "all", query: "niran" }).length, 1);
+    assert.equal(filterReservationRows(rows, { ledger: "all", query: "0812" }).length, 1);
+    assert.equal(filterReservationRows(rows, { ledger: "all", query: "nobody" }).length, 0);
   });
 
   it("classifies declined stays as cancelled or no-show", () => {

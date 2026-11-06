@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reservations patch fixture</title>
+    <style>
+      :root {
+        --ink: #2a1f1d;
+        --muted: #6e605c;
+        --border: #e4d9d6;
+        --surface: #fff;
+        --canvas: #faf8f7;
+        --maroon: #8f2f32;
+        --wash: #f8efee;
+        --warn: #f6efe2;
+        --warn-ink: #6a4b12;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 24px; background: #cfc6c2; color: var(--ink); font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+      .shot { width: 860px; padding: 18px; background: var(--canvas); border-radius: 16px; }
+      .find { display: flex; gap: 12px; align-items: end; margin-bottom: 12px; }
+      label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+      input { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: inherit; background: white; }
+      .range { display: flex; justify-content: space-between; color: var(--muted); font-weight: 650; margin: 0 0 12px; }
+      .range a { color: var(--maroon); text-decoration: none; font-weight: 750; }
+      table { width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+      th { text-align: left; font-size: 12px; color: var(--muted); background: #f6f1ef; padding: 8px 12px; }
+      td { padding: 10px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+      .name { font-weight: 800; }
+      .meta { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 650; }
+      .missing { display: block; margin-top: 2px; color: var(--warn-ink); font-weight: 700; font-size: 12px; }
+      tr.urgent { background: var(--warn); }
+      .pill { display: inline-flex; padding: 4px 8px; border-radius: 8px; background: #e7f6ee; font-size: 12px; font-weight: 750; }
+    </style>
+  </head>
+  <body>
+    <section class="shot" id="ledger">
+      <div class="find">
+        <div>
+          <label for="q">Find</label>
+          <input id="q" value="115" />
+        </div>
+        <div>
+          <label for="from">From</label>
+          <input id="from" type="date" value="2026-11-01" />
+        </div>
+        <div>
+          <label for="to">To</label>
+          <input id="to" type="date" value="2026-11-30" />
+        </div>
+      </div>
+      <p class="range"><span>Showing <strong>3</strong> of 3 stays, 1 Nov 2026 - 30 Nov 2026</span><a href="#today">In house today</a></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Guest</th><th>Stay</th><th>Room</th><th>Source</th><th>Payment</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="name">Niran</span><span class="meta">081 234 5678</span></td>
+            <td>28 Oct 2026 to 8 Nov 2026<span class="meta">11 nights</span></td>
+            <td>Superior<span class="meta">#115</span></td>
+            <td>Website</td>
+            <td>THB 15,400<span class="meta">Paid</span></td>
+            <td><span class="pill">Confirmed</span><span class="meta">Checked in</span></td>
+          </tr>
+          <tr class="urgent">
+            <td><span class="name">Mali</span></td>
+            <td>12 Nov 2026 to 15 Nov 2026<span class="meta">3 nights</span></td>
+            <td>Deluxe<span class="missing">Needs room #</span></td>
+            <td>Walk-in</td>
+            <td>THB 5,700<span class="meta">Unpaid</span></td>
+            <td><span class="pill">Upcoming</span></td>
+          </tr>
+          <tr>
+            <td><span class="name">Anu</span></td>
+            <td>12 Nov 2026 to 20 Nov 2026<span class="meta">8 nights</span></td>
+            <td>Superior<span class="meta">#113</span></td>
+            <td>Airbnb</td>
+            <td><span class="meta">No price</span></td>
+            <td><span class="pill">Upcoming</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </body>
+</html>
