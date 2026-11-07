@@ -65,9 +65,10 @@ export default async function StaffExpensesPage({
   }
 
   const returnTo = `/staff/expenses?month=${encodeURIComponent(monthKey)}&from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`;
-  const { expenses, truncated, totalSatang } = hasStaffSupabaseConfig()
+  const expenseRange = hasStaffSupabaseConfig()
     ? await listDeskExpensesInRange(fromIso, toIso)
     : { expenses: [], truncated: false, totalSatang: 0, count: 0 };
+  const { expenses, truncated, totalSatang } = expenseRange;
 
   const week = isoWeekRangeContaining(todayIso);
   const month = isoMonthRangeContaining(todayIso);
