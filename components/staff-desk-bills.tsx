@@ -39,8 +39,6 @@ function formatDate(iso: string, locale: string) {
   }).format(new Date(`${iso.slice(0, 10)}T12:00:00`));
 }
 
-const LIVE_REFRESH_MS = 4000;
-
 export function StaffDeskBills({
   bills,
   sellables,
@@ -141,14 +139,6 @@ export function StaffDeskBills({
   useEffect(() => {
     if ((selected?.lines.length ?? 0) === 0) setConfirmClear(false);
   }, [selected?.lines.length]);
-
-  useEffect(() => {
-    if (selectedId) return;
-    const timer = window.setInterval(() => {
-      router.refresh();
-    }, LIVE_REFRESH_MS);
-    return () => window.clearInterval(timer);
-  }, [router, selectedId]);
 
   function softUrl(next: string) {
     window.history.replaceState(null, "", next);

@@ -1080,10 +1080,21 @@ button.calendar-day-choice:active {
   min-height: var(--extranet-reservations-height);
   height: 100%;
   margin: 0.12rem 0;
+  padding: 0;
   border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--color-surface-muted) 55%, var(--color-surface));
   box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+button.extranet-reservations__day {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .extranet-reservations__day.extranet-cell--weekend {

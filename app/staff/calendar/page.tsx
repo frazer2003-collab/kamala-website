@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarBulkAvailabilityPanel } from "@/components/calendar-bulk-availability-panel";
-import { CalendarDayPanel } from "@/components/calendar-day-panel";
+import { CalendarDayDialogs } from "@/components/calendar-day-dialogs";
 import { CalendarBookingDialog, StaffTimelineCalendar } from "@/components/staff-lazy";
 import { CalendarDateStrip } from "@/components/calendar-date-strip";
 import { CalendarStayDialogs } from "@/components/calendar-stay-dialogs";
@@ -13,7 +13,6 @@ import {
   formatCalendarMonthLabel,
   parseStaffTimelineRange,
   dateRangeOverlapsBooking,
-  bookingOccupiesDay,
 } from "@/lib/calendar";
 import { getCalendarMonthStats } from "@/lib/calendar-timeline";
 import {
@@ -41,7 +40,6 @@ import {
   buildRateLookup,
   getRoomDayRatesForMonth,
 } from "@/lib/room-day-rates";
-import { getNightlyRateDetails } from "@/lib/pricing";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getStaffRoomPromotions } from "@/lib/room-promotions";
 import { getStaffRooms } from "@/lib/rooms";
@@ -54,10 +52,6 @@ import {
   occupancyFromChannelBlock,
   stayNeedsRoomAssignment,
 } from "@/lib/room-units";
-import {
-  explainRoomNightSale,
-  formatRoomNightSaleReason,
-} from "@/lib/room-night-sale";
 import {
   requireStaffSessionDetails,
   staffCanWriteCalendar,
@@ -384,96 +378,6 @@ export default async function StaffCalendarPage({
       !selectedBlock &&
       mode !== "bulk-status",
   );
-  const selectedNightSaleReason =
-    selectedRoom && selectedDate
-      ? explainRoomNightSale({
-          room: selectedRoom,
-          iso: selectedDate,
-          bookings: calendarBookings,
-          channelBlocks: allAssignmentChannels.filter(isChannelReservation),
-          staffClosures: calendarBlocks
-            .filter((block) => !isChannelReservation(block))
-            .map((block) => ({
-              roomId: block.roomId,
-              startDate: block.startDate,
-              endDate: block.endDate,
-            })),
-          inventoryLookup,
-          units: roomUnits,
-        })
-      : null;
-  const soldOutForSelectedNight = Boolean(
-    selectedNightSaleReason && selectedNightSaleReason.kind !== "open",
-  );
-  const soldOutReason = selectedNightSaleReason
-    ? formatRoomNightSaleReason(selectedNightSaleReason)
-    : null;
-  const dayStays =
-    selectedRoom && selectedDate
-      ? [
-          ...calendarBookings
-            .filter(
-              (booking) =>
-                booking.roomId === selectedRoom.id &&
-                bookingOccupiesDay(booking, selectedDate),
-            )
-            .map((booking) => {
-              const hold =
-                booking.status === "pending_payment"
-                  ? "Awaiting payment"
-                  : booking.bankTransferClaimed && !booking.depositPaid
-                    ? "Bank transfer hold"
-                    : null;
-              const roomBit = stayNeedsRoomAssignment(booking, knownUnitIds)
-                ? "Needs room #"
-                : booking.roomNumber
-                  ? `Room ${booking.roomNumber}`
-                  : "Direct";
-              return {
-                key: getStaffBookingKey(booking),
-                href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
-                label: booking.guest,
-                sublabel: hold ? `${roomBit} · ${hold}` : `${roomBit} · direct`,
-              };
-            }),
-          ...calendarBlocks
-            .filter(
-              (block) =>
-                block.roomId === selectedRoom.id &&
-                isChannelReservation(block) &&
-                bookingOccupiesDay(
-                  { arrivalDate: block.startDate, departureDate: block.endDate },
-                  selectedDate,
-                ),
-            )
-            .map((block) => ({
-              key: block.databaseId ?? block.id,
-              href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
-              label: block.guestName || block.channelLabel || "Channel stay",
-              sublabel: stayNeedsRoomAssignment(block, knownUnitIds)
-                ? `Needs room # · ${block.channelLabel ?? "channel"}`
-                : block.roomNumber
-                  ? `Room ${block.roomNumber} · ${block.channelLabel ?? "channel"}`
-                  : (block.channelLabel ?? "channel"),
-            })),
-          ...calendarBlocks
-            .filter(
-              (block) =>
-                block.roomId === selectedRoom.id &&
-                !isChannelReservation(block) &&
-                bookingOccupiesDay(
-                  { arrivalDate: block.startDate, departureDate: block.endDate },
-                  selectedDate,
-                ),
-            )
-            .map((block) => ({
-              key: `close-${block.databaseId ?? block.id}`,
-              href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&block=${encodeURIComponent(block.databaseId ?? block.id)}`,
-              label: "Closed",
-              sublabel: block.reason || "Not for sale",
-            })),
-        ]
-      : [];
   const bulkStatusDialogOpen = Boolean(
     selectedRoom && mode === "bulk-status" && !selected && !selectedBlock,
   );
@@ -720,6 +624,12 @@ export default async function StaffCalendarPage({
           key={`${monthKey}:${fromIso}:${toIso}`}
           initialBlockKey={selectedBlockKey}
           initialBookingKey={selectedKey}
+          initialDayDate={dayDialogOpen ? (selectedDate ?? "") : ""}
+          initialDayMode={dayDialogOpen ? (mode ?? "") : ""}
+          initialDayRoomId={dayDialogOpen ? (selectedRoom?.id ?? "") : ""}
+          initialDayUnitId={
+            dayDialogOpen ? (selectedDoorUnit?.id ?? selectedUnitId ?? "") : ""
+          }
           monthKey={monthKey}
           fromIso={fromIso}
           toIso={toIso}
@@ -783,6 +693,25 @@ export default async function StaffCalendarPage({
             seedBlock={selectedBlock}
             seedBooking={selected}
           />
+
+          <CalendarDayDialogs
+            blocks={calendarBlocks}
+            bookings={calendarBookings}
+            canManage={canManage}
+            canManageRates={canManageRates}
+            currency={settings.currency}
+            formError={panelFormError}
+            fromIso={fromIso}
+            inventoryByKey={Object.fromEntries(inventoryLookup)}
+            knownUnitIds={Array.from(knownUnitIds)}
+            monthKey={monthKey}
+            overlap={overlap}
+            promotions={promotions}
+            rateOverrides={Object.fromEntries(rateLookup)}
+            roomUnits={roomUnits}
+            rooms={rooms}
+            toIso={toIso}
+          />
         </CalendarStaySelectionProvider>
 
         {bulkStatusDialogOpen && selectedRoom ? (
@@ -798,68 +727,6 @@ export default async function StaffCalendarPage({
               monthKey={monthKey}
               room={selectedRoom}
               toIso={toIso}
-            />
-          </CalendarBookingDialog>
-        ) : null}
-
-        {dayDialogOpen && selectedRoom && selectedDate ? (
-          <CalendarBookingDialog
-            closeHref={closeHref}
-            open
-            title={
-              selectedDoorUnit
-                ? `${selectedRoom.shortName} · #${selectedDoorUnit.number} · ${selectedDate}`
-                : `${selectedRoom.shortName} · ${selectedDate}`
-            }
-          >
-            <CalendarDayPanel
-              // Steps run as local state inside the panel; remount only when the
-              // server actually points it at a different day, door, or step.
-              key={`${selectedRoom.id}|${selectedDate}|${selectedDoorUnit?.id ?? ""}|${mode ?? ""}|${error ?? ""}`}
-              canManage={mode === "rate" ? canManageRates : canManage}
-              currentAllotment={
-                selectedRoom && selectedDate
-                  ? (inventoryLookup.get(`${selectedRoom.id}:${selectedDate}`) ??
-                    selectedRoom.availableCount)
-                  : 0
-              }
-              currentRate={
-                selectedRoom && selectedDate
-                  ? getNightlyRateDetails(
-                      selectedRoom.id,
-                      selectedDate,
-                      selectedRoom.rate,
-                      promotions,
-                      rateLookup,
-                    ).rate
-                  : 0
-              }
-              currency={settings.currency}
-              date={selectedDate}
-              dayStays={dayStays}
-              error={error}
-              fromIso={fromIso}
-              hasAllotmentOverride={Boolean(
-                selectedRoom &&
-                  selectedDate &&
-                  inventoryLookup.has(`${selectedRoom.id}:${selectedDate}`),
-              )}
-              hasRateOverride={Boolean(
-                selectedRoom &&
-                  selectedDate &&
-                  rateLookup.has(`${selectedRoom.id}:${selectedDate}`),
-              )}
-              mode={mode}
-              monthKey={monthKey}
-              toIso={toIso}
-              overlap={overlap}
-              promotions={promotions}
-              rateOverrides={Object.fromEntries(rateLookup)}
-              room={selectedRoom}
-              roomUnitId={selectedDoorUnit?.id ?? null}
-              roomUnitNumber={selectedDoorUnit?.number ?? null}
-              soldOutForNight={soldOutForSelectedNight}
-              soldOutReason={soldOutReason}
             />
           </CalendarBookingDialog>
         ) : null}

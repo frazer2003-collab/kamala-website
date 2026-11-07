@@ -8,7 +8,6 @@ import {
   type DragEvent,
   type ReactNode,
 } from "react";
-import Link from "next/link";
 import "@/app/staff-calendar-closed-cells.css";
 import { CalendarJumpToToday } from "@/components/calendar-jump-to-today";
 import {
@@ -24,7 +23,6 @@ import {
   formatTimelineDayHeader,
   getTimelineBarHref,
   getTimelineBarPlacementStyle,
-  getTimelineDayHref,
   getTimelineLaneCount,
   isUnitDayStaffClosed,
   timelineBarNightColumns,
@@ -191,11 +189,14 @@ function DoorReservationRow({
   roomTypeLabel?: string;
 }) {
   const dnd = useCalendarDoorDnd();
+  const staySelection = useCalendarStaySelection();
   const dayCount = calendarDays.length;
   const rangeQuery = { fromIso, toIso };
   const primaryRoomId = getPrimaryRoomIdForUnit(unit);
   const unitDropKey = `unit:${unit.id}`;
   const isUnitDropHover = dnd?.dropHoverKey === unitDropKey;
+  const activeDayRoomId = staySelection?.dayRoomId || selectedRoomId;
+  const activeDayDate = staySelection?.dayDate || selectedDate;
   const bars = useMemo(
     () =>
       buildUnitTimelineBars({
@@ -270,16 +271,11 @@ function DoorReservationRow({
           const isWeekend = weekday === 0 || weekday === 6;
           const isSelectedDay =
             Boolean(primaryRoomId) &&
-            selectedRoomId === primaryRoomId &&
-            selectedDate === day.iso;
+            activeDayRoomId === primaryRoomId &&
+            activeDayDate === day.iso;
           const column = columnIndex + 1;
           const isOccupied = occupiedColumns.has(column);
-          const dayHref =
-            !isOccupied && primaryRoomId
-              ? getTimelineDayHref(primaryRoomId, day.iso, monthKey, rangeQuery, {
-                  unitId: unit.id,
-                })
-              : undefined;
+          const canOpenDay = !isOccupied && Boolean(primaryRoomId);
           const overrideKey = primaryRoomId ? `${primaryRoomId}:${day.iso}` : "";
           const hasAllotmentOverride =
             Boolean(overrideKey) && allotmentOverrideKeys.has(overrideKey);
@@ -298,7 +294,7 @@ function DoorReservationRow({
             isWeekend ? "extranet-cell--weekend" : "",
             isSelectedDay ? "extranet-cell--selected" : "",
             isClosed ? "extranet-cell--closed" : "",
-            dayHref ? "extranet-reservations__day--action" : "",
+            canOpenDay ? "extranet-reservations__day--action" : "",
             hasAllotmentOverride ? "extranet-cell--allotment-override" : "",
             hasRateOverride ? "extranet-cell--rate-override" : "",
           ]
@@ -326,7 +322,7 @@ function DoorReservationRow({
             </>
           );
 
-          if (dayHref) {
+          if (canOpenDay && primaryRoomId) {
             const ariaParts = [
               "day actions",
               isClosed ? "closed" : null,
@@ -334,18 +330,24 @@ function DoorReservationRow({
             ].filter(Boolean);
             const ariaCue = ariaParts.length > 0 ? `, ${ariaParts.join(", ")}` : "";
             return (
-              <Link
+              <button
                 aria-label={`#${unit.number}, ${day.iso}${ariaCue}`}
                 className={dayClass}
-                href={dayHref}
                 key={`door-${unit.id}-bg-${day.iso}`}
-                prefetch={false}
+                onClick={() =>
+                  staySelection?.selectDay({
+                    roomId: primaryRoomId,
+                    date: day.iso,
+                    unitId: unit.id,
+                  })
+                }
                 style={{ gridColumn: column }}
                 title={dayTitle || undefined}
+                type="button"
               >
                 {cues}
                 <span className="sr-only">Day actions</span>
-              </Link>
+              </button>
             );
           }
 
