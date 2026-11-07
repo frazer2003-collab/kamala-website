@@ -11,10 +11,8 @@ import {
   guestHasConversationLink,
   type InboxMessagePreview,
 } from "@/lib/booking-chat";
-import { purgeAbandonedCheckouts } from "@/lib/abandoned-checkout";
 import {
   getStaffBookingKey,
-  getDeclinedBookings,
   getStaffBookingById,
   getStaffBookingRequests,
   hasStaffStayChangeTask,
@@ -35,7 +33,6 @@ import {
 } from "@/lib/stay-overlap";
 import { formatBedSetup } from "@/lib/bed-setup";
 import { formatStayDateRange } from "@/lib/stay-dates";
-import { formatStayEndReason } from "@/lib/stay-end-reason";
 import type { BookingStatus } from "@/lib/content";
 
 const BookingChat = nextDynamic(
@@ -142,10 +139,16 @@ function sortInboxBookings(
   bookings: StaffBooking[],
   previews: Map<string, InboxMessagePreview>,
 ) {
-  const rank = (booking: StaffBooking) =>
-    hasStaffStayChangeTask(booking)
-      ? (STATUS_SORT.awaiting ?? 9)
-      : (STATUS_SORT[booking.status] ?? 9);
+  const rank = (booking: StaffBooking) => {
+    // Money waiting on staff outranks idle new requests.
+    if ((booking.refundDue ?? 0) > 0) return 0;
+    if (isUnverifiedBankHold(booking) || isAbandonedCheckoutHold(booking)) {
+      return 1;
+    }
+    if (hasStaffStayChangeTask(booking)) return STATUS_SORT.awaiting ?? 3;
+    if (booking.status === "needs-reply") return 2;
+    return STATUS_SORT[booking.status] ?? 9;
+  };
 
   return [...bookings].sort((left, right) => {
     const leftRank = rank(left);
@@ -187,8 +190,13 @@ function matchesInboxFilter(booking: StaffBooking, filter: InboxFilter) {
   if (filter === "all") {
     return true;
   }
-  if (filter === "awaiting" && hasStaffStayChangeTask(booking)) {
-    return true;
+  if (filter === "awaiting") {
+    return (
+      booking.status === "awaiting" ||
+      hasStaffStayChangeTask(booking) ||
+      (booking.refundDue ?? 0) > 0 ||
+      isUnverifiedBankHold(booking)
+    );
   }
   return booking.status === filter;
 }
@@ -271,21 +279,15 @@ export default async function StaffBookingsPage({
   const inboxFilter = parseInboxFilter(filterParam);
   const preferInboxView = viewParam === "inbox";
 
-  // Drop abandoned Thai bank / QR carts (and leftover card checkouts) past 24h
-  // before listing Requests, so the inbox matches live inventory.
-  await purgeAbandonedCheckouts();
-
-  const [staffBookings, declinedBookings, settings, rooms] = await Promise.all([
+  // Abandoned carts are purged by /api/cron/abandoned-checkouts (not on every
+  // Transfers view) to keep Fluid Active CPU off the hot staff path.
+  const [staffBookings, settings, rooms] = await Promise.all([
     getStaffBookingRequests(),
-    getDeclinedBookings(),
     getPropertySettings(),
     getStaffRooms(),
   ]);
 
-  const previewIds = [
-    ...staffBookings.bookings,
-    ...declinedBookings.bookings,
-  ]
+  const previewIds = staffBookings.bookings
     .map((booking) => booking.databaseId)
     .filter((id): id is string => Boolean(id));
   const messagePreviews = await getInboxMessagePreviews(previewIds);
@@ -298,22 +300,17 @@ export default async function StaffBookingsPage({
   let selected =
     staffBookings.bookings.find(
       (booking) => getStaffBookingKey(booking) === selectedBookingId,
-    ) ??
-    declinedBookings.bookings.find(
-      (booking) => getStaffBookingKey(booking) === selectedBookingId,
-    ) ??
-    null;
+    ) ?? null;
 
+  // Deep-link to a specific stay (including closed refunds already in open inbox).
   if (!selected && selectedBookingId) {
     selected = await getStaffBookingById(selectedBookingId);
   }
 
-  if (!preferInboxView) {
-    selected ??=
-      visibleOpen[0] ??
-      staffBookings.bookings[0] ??
-      declinedBookings.bookings[0] ??
-      null;
+  // Auto-open the top filtered row only — never invent a selection from outside
+  // the visible list (avoids closed / wrong-filter placeholders beside an empty inbox).
+  if (!preferInboxView && !selectedBookingId) {
+    selected ??= visibleOpen[0] ?? null;
   }
 
   const isPracticeMode =
@@ -678,56 +675,6 @@ export default async function StaffBookingsPage({
                 </Link>
               </div>
             )}
-            {declinedBookings.bookings.length > 0 ? (
-              <details className="booking-closed">
-                <summary>
-                  Closed archive{" "}
-                  <span>({declinedBookings.bookings.length})</span>
-                </summary>
-                <p className="booking-closed__hint">
-                  Declined requests kept for reference — not part of the live
-                  inbox.
-                </p>
-                <div className="booking-rows booking-rows--archived">
-                  {declinedBookings.bookings.map((booking) => {
-                    const bookingKey = getStaffBookingKey(booking);
-                    const bookingHref = `${buildStaffHref({
-                      booking: bookingKey,
-                      filter: inboxFilter,
-                    })}#detail-title`;
-                    const isSelected = selectedKey === bookingKey;
-                    const preview = booking.databaseId
-                      ? messagePreviews.get(booking.databaseId)
-                      : undefined;
-
-                    return (
-                      <article
-                        className={`booking-row booking-row--archived${
-                          isSelected ? " booking-row--selected" : ""
-                        }`}
-                        key={bookingKey}
-                      >
-                        <Link className="booking-row__link" href={bookingHref}>
-                          <div className="booking-row__main">
-                            <strong>{booking.guest}</strong>
-                            <span className="booking-row__preview">
-                              {preview?.bodyPreview
-                                ? preview.bodyPreview
-                                : `${booking.room} · ${booking.dates}`}
-                            </span>
-                          </div>
-                          <div className="staff-status staff-status--declined">
-                            <span aria-hidden="true" />
-                            {formatStayEndReason(booking.stayEndReason) ??
-                              statusCopy.declined}
-                          </div>
-                        </Link>
-                      </article>
-                    );
-                  })}
-                </div>
-              </details>
-            ) : null}
           </section>
 
           {selected ? (

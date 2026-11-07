@@ -492,6 +492,29 @@
   gap: var(--space-3);
 }
 
+.staff-desk__sheet-lines {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.staff-desk__sheet-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.staff-desk__sheet-line label {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.staff-desk__sheet-line input {
+  width: 100%;
+  min-height: 2.5rem;
+}
+
 .staff-desk__list-toolbar {
   display: flex;
   flex-wrap: wrap;

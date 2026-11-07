@@ -31,18 +31,21 @@ export function StaffDeskRangeBand({
         <Link
           className="button button--quiet"
           href={`${pathname}?view=day&from=${todayIso}&to=${todayIso}&month=${todayIso.slice(0, 7)}`}
+          prefetch={false}
         >
           {staffT(locale, "desk.viewDay")}
         </Link>
         <Link
           className="button button--quiet"
           href={`${pathname}?view=week&from=${week.fromIso}&to=${week.toIso}&month=${week.fromIso.slice(0, 7)}`}
+          prefetch={false}
         >
           {staffT(locale, "desk.viewWeek")}
         </Link>
         <Link
           className="button button--quiet"
           href={`${pathname}?view=month&month=${month.fromIso.slice(0, 7)}&from=${month.fromIso}&to=${month.toIso}`}
+          prefetch={false}
         >
           {staffT(locale, "desk.viewMonth")}
         </Link>

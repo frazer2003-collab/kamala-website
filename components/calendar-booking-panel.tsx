@@ -137,6 +137,7 @@ export function CalendarBookingPanel({
     depositPaid,
     paymentCollectedVia: paymentCollectedVia ?? "",
   });
+  const fieldIsOta = isOtaBookingSource(fields.bookingSource);
 
   useEffect(() => {
     setConfirmCancel(false);
@@ -385,7 +386,13 @@ export function CalendarBookingPanel({
             disabled={!canManage}
             id={`calendar-booking-source-${bookingKey}`}
             onChange={(value) =>
-              setFields((current) => ({ ...current, bookingSource: value }))
+              setFields((current) => ({
+                ...current,
+                bookingSource: value,
+                paymentCollectedVia: isOtaBookingSource(value)
+                  ? ""
+                  : current.paymentCollectedVia,
+              }))
             }
             value={fields.bookingSource}
           />
@@ -415,6 +422,11 @@ export function CalendarBookingPanel({
             </label>
             {paidByCard ? (
               <span className="field-help">Paid by card — Stripe keeps the record.</span>
+            ) : fieldIsOta && fields.depositPaid ? (
+              <span className="field-help">
+                {formatBookingSource(fields.bookingSource)} stays are always
+                card — no Cash / Thai bank needed.
+              </span>
             ) : fields.depositPaid ? (
               <fieldset className="payment-collected-via">
                 <legend className="sr-only">How was payment collected?</legend>

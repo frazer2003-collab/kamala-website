@@ -8,7 +8,11 @@ import {
 import { BookingSourceField } from "@/components/booking-source-field";
 import { StaffFormBusyBridge } from "@/components/staff-busy";
 import { staffCapacityErrorMessage } from "@/lib/booking-overbook";
-import type { BookingSource } from "@/lib/booking-source";
+import {
+  formatBookingSource,
+  isOtaBookingSource,
+  type BookingSource,
+} from "@/lib/booking-source";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
 import {
@@ -96,7 +100,7 @@ function walkInErrorCopy(code?: string) {
     case "invalid-source":
       return "Choose a source.";
     case "payment-method":
-      return "Choose Cash or Thai bank when marking Paid.";
+      return "Choose Cash or Thai bank when marking Paid (not needed for OTAs).";
     case "capacity-verify-failed":
     case "unavailable":
     case "no-assignable-door":
@@ -181,6 +185,7 @@ export function CalendarWalkInForm({
     showEmail,
     showTotal,
   } = fields;
+  const sourceIsOta = isOtaBookingSource(bookingSource);
 
   function setField<Key extends keyof WalkInFields>(
     key: Key,
@@ -453,7 +458,15 @@ export function CalendarWalkInForm({
           <BookingSourceField
             disabled={!canManage || pending}
             id="walk-in-booking-source"
-            onChange={(value) => setField("bookingSource", value)}
+            onChange={(value) =>
+              setFields((current) => ({
+                ...current,
+                bookingSource: value,
+                paymentCollectedVia: isOtaBookingSource(value)
+                  ? ""
+                  : current.paymentCollectedVia,
+              }))
+            }
             value={bookingSource}
           />
           <div className="field-pair field-pair--check">
@@ -477,7 +490,12 @@ export function CalendarWalkInForm({
               />
               Paid
             </label>
-            {depositPaid ? (
+            {depositPaid && sourceIsOta ? (
+              <span className="field-help">
+                {formatBookingSource(bookingSource)} stays are always card —
+                no Cash / Thai bank needed.
+              </span>
+            ) : depositPaid ? (
               <fieldset className="payment-collected-via">
                 <legend className="sr-only">How was payment collected?</legend>
                 <label>

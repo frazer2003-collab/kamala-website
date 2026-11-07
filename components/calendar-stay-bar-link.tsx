@@ -47,6 +47,7 @@ export function CalendarStayBarLink({
         data-calendar-focus={itemKey}
         draggable={suppressNativeDrag ? false : undefined}
         href={href}
+        prefetch={false}
         style={style}
       >
         {children}

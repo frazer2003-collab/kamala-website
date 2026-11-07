@@ -6,7 +6,10 @@ import { CalendarBookingPanel } from "@/components/calendar-booking-panel";
 import { StayOpenConversation } from "@/components/stay-open-conversation";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
 import { formatBedSetup } from "@/lib/bed-setup";
-import { formatBookingSource } from "@/lib/booking-source";
+import {
+  formatBookingSource,
+  isOtaBookingSource,
+} from "@/lib/booking-source";
 import { guestHasConversationLink } from "@/lib/booking-chat";
 import type { StaffBooking } from "@/lib/booking-requests";
 import { getStaffBookingKey } from "@/lib/booking-requests";
@@ -119,6 +122,9 @@ export function CalendarStayDialogs({
               {formatStaffPaidLabel({
                 depositPaid: selectedBooking.depositPaid,
                 paidByCard: Boolean(selectedBooking.stripePaymentIntentId),
+                paidViaOta: isOtaBookingSource(
+                  selectedBooking.bookingSource ?? null,
+                ),
                 paymentCollectedVia: selectedBooking.paymentCollectedVia,
               })}
             </div>

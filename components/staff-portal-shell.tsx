@@ -32,7 +32,11 @@ export function StaffPortalShell({
       />
       <aside className="staff-sidebar staff-sidebar--portal" aria-label={t("portal.navLabel")}>
         <div className="staff-sidebar__top">
-          <Link className="brand brand--compact" href={`/staff/portal/${kind}`}>
+          <Link
+            className="brand brand--compact"
+            href={`/staff/portal/${kind}`}
+            prefetch={false}
+          >
             <span className="brand__mark" aria-hidden="true">
               K
             </span>

@@ -34,8 +34,12 @@ import {
 import {
   DESK_LAUNDRY_CATEGORIES,
   DESK_LAUNDRY_STATUSES,
+  DESK_SHEET_ITEMS,
+  isDeskSheetItemKey,
+  sumLaundryLineQuantity,
   validateLaundryRecord,
   type DeskLaundryCategory,
+  type DeskLaundryLine,
   type DeskLaundryStatus,
 } from "@/lib/desk-laundry";
 import { parseBahtToSatang } from "@/lib/desk-money";
@@ -139,6 +143,25 @@ async function resolveDeskActorLabel() {
   return "staff";
 }
 
+function readLaundrySheetLines(formData: FormData): DeskLaundryLine[] {
+  const lines: DeskLaundryLine[] = [];
+  for (const item of DESK_SHEET_ITEMS) {
+    const quantity = positiveInteger(formData, `sheet-${item.key}`);
+    if (quantity > 0) lines.push({ key: item.key, quantity });
+  }
+  // Also accept free-form sheet-key / sheet-qty pairs if added later.
+  for (const [key, raw] of formData.entries()) {
+    if (!key.startsWith("sheet-") || key === "sheet-") continue;
+    const itemKey = key.slice("sheet-".length);
+    if (!isDeskSheetItemKey(itemKey)) continue;
+    if (lines.some((line) => line.key === itemKey)) continue;
+    const quantity = Number(String(raw).trim());
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) continue;
+    lines.push({ key: itemKey, quantity });
+  }
+  return lines;
+}
+
 export async function createLaundryRecord(formData: FormData) {
   await requireDeskWriteAccess("laundry");
   const portal = await getDeskPortalSession();
@@ -152,24 +175,34 @@ export async function createLaundryRecord(formData: FormData) {
   if (!DESK_LAUNDRY_STATUSES.includes(status)) {
     throw new Error("Choose a laundry status.");
   }
-  const measureType = value(formData, "type") || value(formData, "measure-type");
-  const measureRaw = value(formData, "measure");
+
   let grams: number | null = null;
   let count: number | null = null;
-  if (measureType === "count") {
-    count =
-      positiveInteger(formData, "measure") ||
-      positiveInteger(formData, "count") ||
-      null;
+  let lines: DeskLaundryLine[] = [];
+
+  if (category === "sheets") {
+    lines = readLaundrySheetLines(formData);
+    count = sumLaundryLineQuantity(lines) || null;
   } else {
-    const kg = Number(measureRaw || value(formData, "kg"));
-    grams = Number.isFinite(kg) && kg > 0 ? Math.round(kg * 1000) : null;
+    const measureType = value(formData, "type") || value(formData, "measure-type");
+    const measureRaw = value(formData, "measure");
+    if (measureType === "count") {
+      count =
+        positiveInteger(formData, "measure") ||
+        positiveInteger(formData, "count") ||
+        null;
+    } else {
+      const kg = Number(measureRaw || value(formData, "kg"));
+      grams = Number.isFinite(kg) && kg > 0 ? Math.round(kg * 1000) : null;
+    }
   }
+
   const input = {
     name: value(formData, "name"),
     category,
     grams,
     count,
+    lines,
     email: null,
   };
   const errors = validateLaundryRecord(input);
@@ -200,11 +233,14 @@ export async function updateLaundryRecord(formData: FormData) {
   }
   const grams = nonNegativeInteger(formData, "grams") || null;
   const count = nonNegativeInteger(formData, "count") || null;
+  const lines =
+    category === "sheets" ? readLaundrySheetLines(formData) : [];
   const input = {
     name: value(formData, "name"),
     category,
-    grams,
-    count,
+    grams: lines.length ? null : grams,
+    count: lines.length ? sumLaundryLineQuantity(lines) || null : count,
+    lines,
     email: null,
   };
   const errors = validateLaundryRecord(input);

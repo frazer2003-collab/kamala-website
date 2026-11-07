@@ -73,6 +73,7 @@ export function StaffCalendarTodayLink({
       className="staff-calendar-toolbar__today"
       href={href}
       onClick={onClick}
+      prefetch={false}
     >
       Today
     </Link>

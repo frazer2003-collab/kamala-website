@@ -18,6 +18,24 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-sheets-ota-transfers",
+    date: "2026-11-07",
+    title: "Sheet item counts, OTA Paid, quieter Transfers",
+    summary:
+      "Sheets laundry uses duvet / pillowcase quantities. OTA Paid skips Cash/Thai bank. Transfers no longer shows a closed archive placeholder.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Laundry sheets item quantities and Transfers open inbox",
+    },
+    changes: [
+      "Choosing Sheets on Laundry opens a qty list for duvet covers, sheets, pillow cases, and towels.",
+      "Airbnb / Booking.com / Expedia stays marked Paid no longer ask for Cash or Thai bank — they count as card.",
+      "Transfers dropped the closed archive list; refunds stay in the open inbox when money is due.",
+      "Transfers auto-opens only a row from the visible filter, and Bank check includes refunds and unverified transfers.",
+      "Staff nav no longer prefetches every page in the background (cuts Vercel Fluid CPU from sidebar hover loads).",
+    ],
+  },
+  {
     id: "2026-11-07-bills-date-range",
     date: "2026-11-07",
     title: "Bills use the same date range as Expenses",

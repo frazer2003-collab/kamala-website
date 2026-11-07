@@ -339,6 +339,7 @@ function DoorReservationRow({
                 className={dayClass}
                 href={dayHref}
                 key={`door-${unit.id}-bg-${day.iso}`}
+                prefetch={false}
                 style={{ gridColumn: column }}
                 title={dayTitle || undefined}
               >

@@ -5,9 +5,11 @@ import type {
   DeskItemCategory,
   DeskSellableCategory,
 } from "@/lib/desk-items";
-import type {
-  DeskLaundryCategory,
-  DeskLaundryStatus,
+import {
+  parseLaundryLines,
+  type DeskLaundryCategory,
+  type DeskLaundryLine,
+  type DeskLaundryStatus,
 } from "@/lib/desk-laundry";
 import { DESK_PROPERTY_ID } from "@/lib/desk-property";
 import type { DeskStockMovementReason } from "@/lib/desk-stock";
@@ -117,6 +119,7 @@ type LaundryRow = {
   category: DeskLaundryCategory;
   grams: number | null;
   count: number | null;
+  lines?: unknown;
   staff_note: string | null;
   email: string | null;
   recorded_at: string;
@@ -244,6 +247,7 @@ export type DeskLaundryRecord = {
   category: DeskLaundryCategory;
   grams: number | null;
   count: number | null;
+  lines: DeskLaundryLine[];
   staffNote: string | null;
   email: string | null;
   recordedAt: string;
@@ -387,6 +391,7 @@ export function mapLaundryRow(row: LaundryRow): DeskLaundryRecord {
     category: row.category,
     grams: row.grams,
     count: row.count,
+    lines: parseLaundryLines(row.lines),
     staffNote: row.staff_note,
     email: row.email,
     recordedAt: row.recorded_at,
@@ -918,6 +923,7 @@ export async function saveDeskLaundry(input: {
   category: DeskLaundryCategory;
   grams: number | null;
   count: number | null;
+  lines?: DeskLaundryLine[];
   staffNote?: string | null;
   email?: string | null;
   status: DeskLaundryStatus;
@@ -928,6 +934,7 @@ export async function saveDeskLaundry(input: {
     category: input.category,
     grams: input.grams,
     count: input.count,
+    lines: input.lines ?? [],
     staff_note: input.staffNote || null,
     email: input.email || null,
     status: input.status,

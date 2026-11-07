@@ -338,7 +338,7 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
       data-collapsed={collapsed ? "true" : "false"}
     >
       <div className="staff-sidebar__top">
-        <Link className="brand brand--compact" href="/staff/home">
+        <Link className="brand brand--compact" href="/staff/home" prefetch={false}>
           <span className="brand__mark" aria-hidden="true">
             K
           </span>
@@ -373,6 +373,7 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
             aria-current={current === homeItem.id ? "page" : undefined}
             aria-label={collapsed ? homeItem.label : undefined}
             href={homeItem.href}
+            prefetch={false}
             title={collapsed ? homeItem.label : undefined}
           >
             {homeItem.icon}
@@ -388,6 +389,7 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
                 aria-label={collapsed ? item.label : undefined}
                 href={item.href}
                 key={item.id}
+                prefetch={false}
                 title={collapsed ? item.label : undefined}
               >
                 {item.icon}

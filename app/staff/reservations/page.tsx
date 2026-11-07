@@ -5,7 +5,6 @@ import { BOOKING_SOURCE_LABELS, BOOKING_SOURCES } from "@/lib/booking-source";
 import { getTodayIso } from "@/lib/calendar";
 import { getPropertySettings } from "@/lib/property-settings";
 import { getChannelReservationsForRange } from "@/lib/room-blocks";
-import { purgeUnassignedJuly2026Stays } from "@/lib/purge-unassigned-july";
 import { requireStaffSession } from "@/lib/staff-auth";
 import {
   buildReservationRows,
@@ -107,8 +106,6 @@ export default async function StaffReservationsPage({
   const todayIso = getTodayIso();
   const rangeLabel = formatRangeLabel(fromIso, toIso);
 
-  const purgeJulyPromise = purgeUnassignedJuly2026Stays();
-
   const [bookingsResult, channelsResult, roomUnitsResult, settings, supabaseReady] =
     await Promise.all([
       getBookingsForDateRange(fromIso, toIso),
@@ -117,7 +114,6 @@ export default async function StaffReservationsPage({
       getPropertySettings(),
       Promise.resolve(hasStaffSupabaseConfig()),
     ]);
-  await purgeJulyPromise;
 
   const knownUnitIds = getKnownUnitIdSet(roomUnitsResult.units);
   const bookings = attachRoomNumbers(bookingsResult.bookings, roomUnitsResult.units);

@@ -16,7 +16,9 @@ import { useStaffLocale } from "@/components/staff-locale";
 import {
   DESK_LAUNDRY_CATEGORIES,
   DESK_LAUNDRY_STATUSES,
+  DESK_SHEET_ITEMS,
   formatLaundryMeasure,
+  sheetItemLabel,
   type DeskLaundryCategory,
   type DeskLaundryStatus,
 } from "@/lib/desk-laundry";
@@ -50,18 +52,26 @@ function laundryStatusLabel(
 function LaundryCreateFields({
   sheetsOnly,
   categories,
+  category,
+  setCategory,
   measureType,
   setMeasureType,
   pending,
+  locale,
   t,
 }: {
   sheetsOnly: boolean;
   categories: readonly DeskLaundryCategory[];
+  category: DeskLaundryCategory;
+  setCategory: (value: DeskLaundryCategory) => void;
   measureType: "kg" | "count";
   setMeasureType: (value: "kg" | "count") => void;
   pending: boolean;
+  locale: "th" | "en";
   t: (key: string) => string;
 }) {
+  const sheetsMode = sheetsOnly || category === "sheets";
+
   return (
     <>
       <div className="field-pair">
@@ -89,14 +99,19 @@ function LaundryCreateFields({
             <>
               <label htmlFor="laundry-category">{t("laundry.category")}</label>
               <select
-                defaultValue={DESK_LAUNDRY_CATEGORIES[0]}
                 id="laundry-category"
                 name="category"
+                onChange={(event) => {
+                  const next = event.target.value as DeskLaundryCategory;
+                  setCategory(next);
+                  if (next === "sheets") setMeasureType("count");
+                }}
                 required
+                value={category}
               >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {laundryCategoryLabel(category, t)}
+                {categories.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {laundryCategoryLabel(entry, t)}
                   </option>
                 ))}
               </select>
@@ -119,48 +134,75 @@ function LaundryCreateFields({
           </select>
         </div>
       </div>
-      <div className="staff-desk__field-grid">
-        <div className="field-pair">
-          <label htmlFor="laundry-type">{t("common.type")}</label>
-          <select
-            defaultValue={sheetsOnly ? "count" : "kg"}
-            id="laundry-type"
-            name="type"
-            onChange={(event) =>
-              setMeasureType(event.target.value === "count" ? "count" : "kg")
-            }
-          >
-            <option value="kg">{t("laundry.kilograms")}</option>
-            <option value="count">{t("laundry.pieces")}</option>
-          </select>
+
+      {sheetsMode ? (
+        <fieldset className="staff-desk__fieldset">
+          <legend>{t("laundry.sheetItems")}</legend>
+          <p className="staff-desk__hint">{t("laundry.sheetItemsHint")}</p>
+          <div className="staff-desk__sheet-lines">
+            {DESK_SHEET_ITEMS.map((item) => (
+              <div className="staff-desk__sheet-line" key={item.key}>
+                <label htmlFor={`sheet-${item.key}`}>
+                  {sheetItemLabel(item.key, locale)}
+                </label>
+                <input
+                  id={`sheet-${item.key}`}
+                  inputMode="numeric"
+                  min="0"
+                  name={`sheet-${item.key}`}
+                  placeholder="0"
+                  step="1"
+                  type="number"
+                />
+              </div>
+            ))}
+          </div>
+        </fieldset>
+      ) : (
+        <div className="staff-desk__field-grid">
+          <div className="field-pair">
+            <label htmlFor="laundry-type">{t("common.type")}</label>
+            <select
+              id="laundry-type"
+              name="type"
+              onChange={(event) =>
+                setMeasureType(event.target.value === "count" ? "count" : "kg")
+              }
+              value={measureType}
+            >
+              <option value="kg">{t("laundry.kilograms")}</option>
+              <option value="count">{t("laundry.pieces")}</option>
+            </select>
+          </div>
+          <div className="field-pair">
+            <label htmlFor="laundry-measure">
+              {measureType === "kg" ? t("laundry.kilograms") : t("laundry.pieces")}
+            </label>
+            {measureType === "kg" ? (
+              <input
+                id="laundry-measure"
+                key="kg"
+                min="0.01"
+                name="measure"
+                required
+                step="0.01"
+                type="number"
+              />
+            ) : (
+              <input
+                id="laundry-measure"
+                key="count"
+                min="1"
+                name="measure"
+                required
+                step="1"
+                type="number"
+              />
+            )}
+          </div>
         </div>
-        <div className="field-pair">
-          <label htmlFor="laundry-measure">
-            {measureType === "kg" ? t("laundry.kilograms") : t("laundry.pieces")}
-          </label>
-          {measureType === "kg" ? (
-            <input
-              id="laundry-measure"
-              key="kg"
-              min="0.01"
-              name="measure"
-              required
-              step="0.01"
-              type="number"
-            />
-          ) : (
-            <input
-              id="laundry-measure"
-              key="count"
-              min="1"
-              name="measure"
-              required
-              step="1"
-              type="number"
-            />
-          )}
-        </div>
-      </div>
+      )}
+
       <div className="field-pair">
         <label htmlFor="laundry-note">{t("common.note")}</label>
         <textarea id="laundry-note" name="staff-note" rows={3} />
@@ -189,6 +231,9 @@ export function StaffDeskLaundry({
   initialOpenId?: string | null;
 }) {
   const { t, locale } = useStaffLocale();
+  const [category, setCategory] = useState<DeskLaundryCategory>(
+    sheetsOnly ? "sheets" : "laundry",
+  );
   const [measureType, setMeasureType] = useState<"kg" | "count">(
     sheetsOnly ? "count" : "kg",
   );
@@ -214,6 +259,7 @@ export function StaffDeskLaundry({
   function openCreate() {
     setSelectedId(null);
     setCreating(true);
+    setCategory(sheetsOnly ? "sheets" : "laundry");
     setMeasureType(sheetsOnly ? "count" : "kg");
   }
 
@@ -284,7 +330,7 @@ export function StaffDeskLaundry({
                       <strong>{record.name}</strong>
                     </td>
                     <td>{laundryCategoryLabel(record.category, t)}</td>
-                    <td>{formatLaundryMeasure(record)}</td>
+                    <td>{formatLaundryMeasure(record, locale)}</td>
                     <td>
                       <span className={`desk-status desk-status--${record.status}`}>
                         {laundryStatusLabel(record.status, t)}
@@ -344,6 +390,7 @@ export function StaffDeskLaundry({
             className="staff-desk__form staff-desk__form--dialog"
             resetOnSuccess
             onSuccess={() => {
+              setCategory(sheetsOnly ? "sheets" : "laundry");
               setMeasureType(sheetsOnly ? "count" : "kg");
               closeDialog();
             }}
@@ -353,8 +400,11 @@ export function StaffDeskLaundry({
                 <input name="return-to" type="hidden" value={returnTo} />
                 <LaundryCreateFields
                   categories={categories}
+                  category={category}
+                  locale={locale}
                   measureType={measureType}
                   pending={pending}
+                  setCategory={setCategory}
                   setMeasureType={setMeasureType}
                   sheetsOnly={sheetsOnly}
                   t={t}
@@ -376,6 +426,14 @@ export function StaffDeskLaundry({
                 <input name="category" type="hidden" value={selected.category} />
                 <input name="grams" type="hidden" value={selected.grams ?? ""} />
                 <input name="count" type="hidden" value={selected.count ?? ""} />
+                {selected.lines.map((line) => (
+                  <input
+                    key={line.key}
+                    name={`sheet-${line.key}`}
+                    type="hidden"
+                    value={line.quantity}
+                  />
+                ))}
                 <dl className="staff-desk__details">
                   <div>
                     <dt>{t("laundry.category")}</dt>
@@ -383,7 +441,7 @@ export function StaffDeskLaundry({
                   </div>
                   <div>
                     <dt>{t("laundry.measure")}</dt>
-                    <dd>{formatLaundryMeasure(selected)}</dd>
+                    <dd>{formatLaundryMeasure(selected, locale)}</dd>
                   </div>
                   <div>
                     <dt>{t("laundry.recorded")}</dt>

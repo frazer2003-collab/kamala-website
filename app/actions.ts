@@ -1269,11 +1269,12 @@ export async function updateConfirmedBooking(
 
   const wantPaid = getValue(formData, "deposit-paid") === "1";
   const paidByCard = Boolean(booking.stripe_payment_intent_id);
+  const isOtaPaid = isOtaBookingSource(bookingSource);
   const collectedViaRaw = getValue(formData, "payment-collected-via");
   const collectedVia = parsePaymentCollectedVia(collectedViaRaw);
   const wasPaid = Boolean(booking.deposit_paid_at);
 
-  if (wantPaid && !paidByCard && !collectedVia) {
+  if (wantPaid && !paidByCard && !isOtaPaid && !collectedVia) {
     redirect(`${bookingHref}&error=payment-method`);
   }
 
@@ -1284,15 +1285,15 @@ export async function updateConfirmedBooking(
     ? booking.deposit_amount ?? estimatedTotal
     : booking.deposit_amount;
   const paymentCollectedVia = wantPaid
-    ? paidByCard
+    ? paidByCard || isOtaPaid
       ? null
       : collectedVia
     : null;
   const bankTransferClaimedAt = !wantPaid
     ? null
-    : collectedVia === "thai_bank"
+    : collectedVia === "thai_bank" && !isOtaPaid
       ? booking.bank_transfer_claimed_at ?? depositPaidAt
-      : paidByCard
+      : paidByCard || isOtaPaid
         ? booking.bank_transfer_claimed_at
         : null;
 
@@ -2418,10 +2419,11 @@ export async function createWalkInBooking(
   }
 
   const depositPaid = getValue(formData, "deposit-paid") === "1";
+  const isOtaPaid = isOtaBookingSource(bookingSource);
   const collectedVia = parsePaymentCollectedVia(
     getValue(formData, "payment-collected-via"),
   );
-  if (depositPaid && !collectedVia) {
+  if (depositPaid && !isOtaPaid && !collectedVia) {
     return walkInError("payment-method", formData, arrival);
   }
   const paidAt = depositPaid ? new Date().toISOString() : null;
@@ -2507,7 +2509,7 @@ export async function createWalkInBooking(
     deposit_amount: depositPaid ? estimatedTotal : null,
     deposit_paid_at: paidAt,
     bank_transfer_claimed_at:
-      depositPaid && collectedVia === "thai_bank" ? paidAt : null,
+      depositPaid && !isOtaPaid && collectedVia === "thai_bank" ? paidAt : null,
     conversation_token:
       guestEmail !== walkInEmailFallback ? randomUUID() : null,
   };
@@ -2517,7 +2519,8 @@ export async function createWalkInBooking(
     .from("booking_requests")
     .insert({
       ...insertBase,
-      payment_collected_via: depositPaid ? collectedVia : null,
+      payment_collected_via:
+        depositPaid && !isOtaPaid ? collectedVia : null,
     })
     .select("id, conversation_token")
     .single();

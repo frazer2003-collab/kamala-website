@@ -7,13 +7,25 @@ type StaffSettingsNavProps = {
 export function StaffSettingsNav({ current }: StaffSettingsNavProps) {
   return (
     <nav aria-label="Settings sections" className="staff-settings-nav">
-      <Link aria-current={current === "general" ? "page" : undefined} href="/staff/settings">
+      <Link
+        aria-current={current === "general" ? "page" : undefined}
+        href="/staff/settings"
+        prefetch={false}
+      >
         General
       </Link>
-      <Link aria-current={current === "rooms" ? "page" : undefined} href="/staff/settings/rooms">
+      <Link
+        aria-current={current === "rooms" ? "page" : undefined}
+        href="/staff/settings/rooms"
+        prefetch={false}
+      >
         Rooms
       </Link>
-      <Link aria-current={current === "tours" ? "page" : undefined} href="/staff/settings/tours">
+      <Link
+        aria-current={current === "tours" ? "page" : undefined}
+        href="/staff/settings/tours"
+        prefetch={false}
+      >
         Tours
       </Link>
     </nav>

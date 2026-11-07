@@ -27,12 +27,14 @@ export function formatPaymentCollectedVia(
 export function formatStaffPaidLabel(options: {
   depositPaid: boolean;
   paidByCard: boolean;
+  /** OTA channel stays are always card — same badge as Stripe. */
+  paidViaOta?: boolean;
   paymentCollectedVia?: PaymentCollectedVia | null;
 }) {
   if (!options.depositPaid) {
     return "Unpaid";
   }
-  if (options.paidByCard) {
+  if (options.paidByCard || options.paidViaOta) {
     return "Paid · Card";
   }
   const via = formatPaymentCollectedVia(options.paymentCollectedVia);

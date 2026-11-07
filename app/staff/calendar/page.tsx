@@ -33,7 +33,6 @@ import {
   getStaffRoomBlockKey,
   isChannelReservation,
 } from "@/lib/room-blocks";
-import { purgeUnassignedJuly2026Stays } from "@/lib/purge-unassigned-july";
 import {
   buildInventoryLookup,
   getRoomDayInventoryForMonth,
@@ -136,7 +135,6 @@ export default async function StaffCalendarPage({
   const boardToIso = timelineRange.boardToIso;
   const statsCalendarDays = buildCalendarDays(year, month);
   const calendarDays = buildStaffTimelineDays(boardFromIso, boardToIso);
-  const purgeJulyPromise = purgeUnassignedJuly2026Stays();
   const [
     confirmedBookingsParts,
     calendarBlockParts,
@@ -174,7 +172,6 @@ export default async function StaffCalendarPage({
     getStaffRoomUnits(),
     getStaffBookingRequests(),
   ]);
-  await purgeJulyPromise;
 
   const allPartsSupabase = <T extends { source: string }>(parts: T[]) =>
     parts.length > 0 && parts.every((part) => part.source === "supabase");
@@ -337,7 +334,7 @@ export default async function StaffCalendarPage({
           : error === "invalid-source"
             ? "Choose a booking source."
           : error === "payment-method"
-            ? "Choose Cash or Thai bank when marking Paid."
+            ? "Choose Cash or Thai bank when marking Paid (not needed for Airbnb, Booking.com, or Expedia)."
           : error === "cancel-reason"
             ? "Choose whether this is a cancellation or a no-show before removing the stay."
           : error === "refund-failed"

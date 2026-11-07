@@ -44,5 +44,14 @@ describe("payment collected via", () => {
       formatStaffPaidLabel({ depositPaid: false, paidByCard: false }),
       "Unpaid",
     );
+    assert.equal(
+      formatStaffPaidLabel({
+        depositPaid: true,
+        paidByCard: false,
+        paidViaOta: true,
+        paymentCollectedVia: null,
+      }),
+      "Paid · Card",
+    );
   });
 });

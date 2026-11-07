@@ -12,6 +12,20 @@ describe("desk laundry", () => {
     assert.equal(formatLaundryMeasure({ grams: null, count: 1 }), "1 piece");
   });
 
+  it("formats sheet line items", () => {
+    assert.equal(
+      formatLaundryMeasure({
+        grams: null,
+        count: 3,
+        lines: [
+          { key: "duvet_cover", quantity: 1 },
+          { key: "pillow_case", quantity: 2 },
+        ],
+      }),
+      "Duvet cover ×1, Pillow case ×2",
+    );
+  });
+
   it("requires exactly one positive measure", () => {
     assert.deepEqual(
       validateLaundryRecord({
@@ -33,6 +47,20 @@ describe("desk laundry", () => {
         email: null,
       }),
       ["Enter grams or count."],
+    );
+  });
+
+  it("accepts sheets with line quantities", () => {
+    assert.deepEqual(
+      validateLaundryRecord({
+        name: "Room 4",
+        category: "sheets",
+        grams: null,
+        count: null,
+        lines: [{ key: "pillow_case", quantity: 2 }],
+        email: null,
+      }),
+      [],
     );
   });
 

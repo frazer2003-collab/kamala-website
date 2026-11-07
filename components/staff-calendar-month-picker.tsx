@@ -73,6 +73,7 @@ export function StaffCalendarMonthPicker({
         aria-label={`Previous month, ${prevLabel}`}
         className="staff-calendar-toolbar__month-step"
         href={hrefFor(prevKey)}
+        prefetch={false}
       >
         <span aria-hidden="true">‹</span>
       </Link>
@@ -98,6 +99,7 @@ export function StaffCalendarMonthPicker({
         aria-label={`Next month, ${nextLabel}`}
         className="staff-calendar-toolbar__month-step"
         href={hrefFor(nextKey)}
+        prefetch={false}
       >
         <span aria-hidden="true">›</span>
       </Link>
