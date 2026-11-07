@@ -51,9 +51,7 @@ export function recordAiVisit(request: NextRequest): Promise<void> | null {
     path: clip(request.nextUrl.pathname, 300) ?? "/",
     query: clip(request.nextUrl.search || null, 300),
     referrer_host: classification.referrerHost,
-    country:
-      request.headers.get("cf-ipcountry") ||
-      request.headers.get("x-vercel-ip-country"),
+    country: request.headers.get("x-vercel-ip-country"),
     user_agent: clip(userAgent, 300),
   };
 
