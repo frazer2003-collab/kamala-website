@@ -18,6 +18,21 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-fluid-invocations",
+    date: "2026-11-07",
+    title: "Quieter Bills and Calendar server load",
+    summary:
+      "Bills no longer auto-refreshes every few seconds. Calendar empty-day taps open without reloading the whole board.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff calendar and bills desk",
+    },
+    changes: [
+      "Bills stopped polling the server every 4 seconds while the list is open.",
+      "Tapping an empty calendar day opens the day dialog on the client — no full calendar reload.",
+    ],
+  },
+  {
     id: "2026-11-07-sheets-ota-transfers",
     date: "2026-11-07",
     title: "Sheet item counts, OTA Paid, quieter Transfers",
