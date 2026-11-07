@@ -648,8 +648,116 @@
   gap: var(--space-3);
 }
 
+.staff-home-attention {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.staff-home-attention__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.staff-home-attention__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.staff-home-attention-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-maroon) 28%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-maroon-wash) 35%, var(--color-surface));
+}
+
+.staff-home-attention-card__head {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.staff-home-attention-card__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.staff-home-attention-card__title-row h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.staff-home-attention-card__all {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-maroon);
+  text-decoration: none;
+}
+
+.staff-home-attention-card__all:hover {
+  text-decoration: underline;
+}
+
+.staff-home-attention-card__head p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-home-attention-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-home-attention-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.55rem;
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.staff-home-attention-list__item:hover,
+.staff-home-attention-list__item:focus-visible {
+  border-color: color-mix(in srgb, var(--color-maroon) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-maroon-wash) 45%, var(--color-surface));
+}
+
+.staff-home-attention-list__item:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+.staff-home-attention-list__label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.staff-home-attention-list__meta {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 960px) {
-  .staff-home-grid {
+  .staff-home-grid,
+  .staff-home-attention__grid {
     grid-template-columns: 1fr;
   }
 }

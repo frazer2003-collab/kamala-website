@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   deactivateCountedItem,
   recordStockMovement,
@@ -29,14 +29,21 @@ export function StaffDeskStock({
   items,
   sellables,
   movements,
+  initialOpenId = null,
 }: {
   items: DeskCountedItem[];
   sellables: DeskSellableItem[];
   movements: DeskStockMovement[];
+  initialOpenId?: string | null;
 }) {
   const { t, locale } = useStaffLocale();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
   const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    setSelectedId(initialOpenId);
+    if (initialOpenId) setCreating(false);
+  }, [initialOpenId]);
 
   const activeItems = useMemo(
     () => sortByShortestHeadroom(items.filter((item) => item.active)),

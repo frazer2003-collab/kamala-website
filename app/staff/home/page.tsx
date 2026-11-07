@@ -21,6 +21,14 @@ import { getChannelBlocksOverlappingRange } from "@/lib/room-blocks";
 import { getKnownUnitIdSet, getStaffRoomUnits } from "@/lib/room-units";
 import { requireStaffSessionDetails } from "@/lib/staff-auth";
 import {
+  homeLowStockItems,
+  homeOpenBillItems,
+  homeOpenLaundryItems,
+  homeTransferAttentionItems,
+  homeUnassignedDoorItems,
+  type StaffHomeAttentionItem,
+} from "@/lib/staff-home-attention";
+import {
   countUnassignedDoors,
   staffHomeTodayHref,
   staffHomeUnassignedHref,
@@ -63,6 +71,7 @@ type PriorityCard = {
   href: string;
   attention: boolean;
   rank: number;
+  items?: StaffHomeAttentionItem[];
 };
 
 export default async function StaffHomePage() {
@@ -126,15 +135,28 @@ export default async function StaffHomePage() {
     openBills > 0 && oldestOpenServiceDate
       ? `${openBills} open · ${formatSatang(openBillsTotalSatang)} · ${oldestOpenBillAge(oldestOpenServiceDate, todayIso)}`
       : "No open desk bills";
-  const openLaundry = laundry.filter(
+  const openLaundryList = laundry.filter(
     (record) => record.status === "sent" || record.status === "incomplete",
-  ).length;
-  const lowStock = counted.filter(
+  );
+  const openLaundry = openLaundryList.length;
+  const lowStockList = counted.filter(
     (item) => item.active && headroom(item.onHand, item.minimum) <= 0,
-  ).length;
+  );
+  const lowStock = lowStockList.length;
 
   const todayBusy = today.arriving + today.departing + today.inHouse > 0;
   const latestPatch = getLatestStaffPatchNote();
+
+  const transferItems = homeTransferAttentionItems(staffBookings.bookings);
+  const doorItems = homeUnassignedDoorItems({
+    bookings: staysResult.bookings,
+    channelStays: channelsResult.blocks,
+    knownUnitIds,
+    todayIso,
+  });
+  const stockItems = homeLowStockItems(counted);
+  const laundryItems = homeOpenLaundryItems(laundry);
+  const billItems = homeOpenBillItems(bills, sellables);
 
   const priority: PriorityCard[] = [
     {
@@ -148,11 +170,12 @@ export default async function StaffHomePage() {
       href: transfersHref,
       attention: inbox.total > 0,
       rank: inbox.total > 0 ? 0 : 50,
+      items: transferItems,
     },
     {
       key: "doors",
       eyebrow: "Rooms",
-      title: "Calendar",
+      title: "Doors",
       body:
         unassignedCount > 0
           ? `${unassignedCount} stay${unassignedCount === 1 ? "" : "s"} still need a door #`
@@ -160,6 +183,7 @@ export default async function StaffHomePage() {
       href: calendarHref,
       attention: unassignedCount > 0,
       rank: unassignedCount > 0 ? 1 : 51,
+      items: doorItems,
     },
     {
       key: "stock",
@@ -172,6 +196,7 @@ export default async function StaffHomePage() {
       href: "/staff/stock",
       attention: lowStock > 0,
       rank: lowStock > 0 ? 2 : 52,
+      items: stockItems,
     },
     {
       key: "laundry",
@@ -184,6 +209,7 @@ export default async function StaffHomePage() {
       href: "/staff/laundry",
       attention: openLaundry > 0,
       rank: openLaundry > 0 ? 3 : 53,
+      items: laundryItems,
     },
     {
       key: "bills",
@@ -193,6 +219,7 @@ export default async function StaffHomePage() {
       href: "/staff/bills",
       attention: openBills > 0,
       rank: openBills > 0 ? 4 : 54,
+      items: billItems,
     },
     {
       key: "today",
@@ -207,10 +234,8 @@ export default async function StaffHomePage() {
     },
   ].sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title));
 
-  const attentionCards = priority.filter((card) => card.attention).slice(0, 3);
-  const remainingCards = priority.filter(
-    (card) => !attentionCards.some((attention) => attention.key === card.key),
-  );
+  const attentionCards = priority.filter((card) => card.attention);
+  const remainingCards = priority.filter((card) => !card.attention);
 
   return (
     <StaffShell current="home">
@@ -220,21 +245,60 @@ export default async function StaffHomePage() {
           <p>Priority work first, then the quieter desk and stay tools.</p>
         </header>
 
-        <div className="staff-home-grid">
-          {(attentionCards.length ? attentionCards : priority.slice(0, 3)).map((card) => (
-            <Link
-              className={`staff-home-card${
-                card.attention ? " staff-home-card--attention" : ""
-              }`}
-              href={card.href}
-              key={card.key}
-            >
-              <span className="staff-home-card__eyebrow">{card.eyebrow}</span>
-              <strong>{card.title}</strong>
-              <p>{card.body}</p>
-            </Link>
-          ))}
-        </div>
+        {attentionCards.length ? (
+          <div className="staff-home-attention">
+            <h2 className="staff-home-attention__title">Needs attention</h2>
+            <div className="staff-home-attention__grid">
+              {attentionCards.map((card) => (
+                <section
+                  aria-labelledby={`home-attention-${card.key}`}
+                  className="staff-home-attention-card"
+                  key={card.key}
+                >
+                  <header className="staff-home-attention-card__head">
+                    <span className="staff-home-card__eyebrow">{card.eyebrow}</span>
+                    <div className="staff-home-attention-card__title-row">
+                      <h3 id={`home-attention-${card.key}`}>{card.title}</h3>
+                      <Link className="staff-home-attention-card__all" href={card.href}>
+                        Open list
+                      </Link>
+                    </div>
+                    <p>{card.body}</p>
+                  </header>
+                  {card.items?.length ? (
+                    <ul className="staff-home-attention-list">
+                      {card.items.map((item) => (
+                        <li key={item.key}>
+                          <Link
+                            className="staff-home-attention-list__item"
+                            href={item.href}
+                          >
+                            <span className="staff-home-attention-list__label">
+                              {item.label}
+                            </span>
+                            <span className="staff-home-attention-list__meta">
+                              {item.meta}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </section>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="staff-home-grid">
+            {priority.slice(0, 3).map((card) => (
+              <Link className="staff-home-card" href={card.href} key={card.key}>
+                <span className="staff-home-card__eyebrow">{card.eyebrow}</span>
+                <strong>{card.title}</strong>
+                <p>{card.body}</p>
+              </Link>
+            ))}
+          </div>
+        )}
 
         <div className="staff-home-links">
           {remainingCards.map((card) => (

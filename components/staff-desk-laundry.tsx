@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createLaundryRecord,
   deleteLaundryRecord,
@@ -31,19 +31,25 @@ export function StaffDeskLaundry({
   records,
   sheetsOnly = false,
   returnTo = "/staff/laundry",
+  initialOpenId = null,
 }: {
   records: DeskLaundryRecord[];
   /** Portal mode: only sheets category can be submitted. */
   sheetsOnly?: boolean;
   returnTo?: string;
+  initialOpenId?: string | null;
 }) {
   const { t, locale } = useStaffLocale();
   const [measureType, setMeasureType] = useState<"kg" | "count">("count");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
   const selected = useMemo(
     () => records.find((record) => record.id === selectedId) ?? null,
     [records, selectedId],
   );
+
+  useEffect(() => {
+    setSelectedId(initialOpenId);
+  }, [initialOpenId]);
 
   const categories = sheetsOnly
     ? (["sheets"] as const satisfies readonly DeskLaundryCategory[])

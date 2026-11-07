@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-home-attention-lists",
+    date: "2026-11-07",
+    title: "Home lists what needs attention",
+    summary:
+      "Open bills, laundry slips, low stock, missing doors, and Transfers each show as clickable rows on Home.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff Home with Needs attention lists for bills and other desk work",
+    },
+    changes: [
+      "Needs attention shows every hot area, not only the top three cards.",
+      "Each open bill is a row that opens that tab on Bills.",
+      "Laundry, stock, doors, and Transfers rows open the matching record or inbox item.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-money-integrity",
     date: "2026-11-07",
     title: "Stock prices on bills and safer portals",

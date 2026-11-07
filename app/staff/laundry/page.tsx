@@ -8,9 +8,14 @@ import "@/app/staff-desk.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffLaundryPage() {
+export default async function StaffLaundryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ open?: string }>;
+}) {
   await requireStaffSession();
   const locale = await getStaffLocale();
+  const { open } = await searchParams;
   const records = await listDeskLaundry();
 
   return (
@@ -22,7 +27,7 @@ export default async function StaffLaundryPage() {
             <p>{staffT(locale, "laundry.intro")}</p>
           </div>
         </header>
-        <StaffDeskLaundry records={records} />
+        <StaffDeskLaundry initialOpenId={open ?? null} records={records} />
       </section>
     </StaffShell>
   );

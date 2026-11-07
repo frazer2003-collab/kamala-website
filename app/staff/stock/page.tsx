@@ -12,9 +12,14 @@ import "@/app/staff-desk.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffStockPage() {
+export default async function StaffStockPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ open?: string }>;
+}) {
   await requireStaffSession();
   const locale = await getStaffLocale();
+  const { open } = await searchParams;
   const [items, sellables, movements] = await Promise.all([
     listDeskCountedItems(),
     listDeskSellables(),
@@ -30,7 +35,12 @@ export default async function StaffStockPage() {
             <p>{staffT(locale, "stock.intro")}</p>
           </div>
         </header>
-        <StaffDeskStock items={items} movements={movements} sellables={sellables} />
+        <StaffDeskStock
+          initialOpenId={open ?? null}
+          items={items}
+          movements={movements}
+          sellables={sellables}
+        />
       </section>
     </StaffShell>
   );
