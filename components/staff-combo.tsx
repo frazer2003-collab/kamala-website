@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type StaffComboOption = {
   value: string;
@@ -26,10 +27,48 @@ type StaffComboProps = {
   onSelect?: (option: StaffComboOption | null) => void;
 };
 
+type ListPlacement = {
+  left: number;
+  width: number;
+  maxHeight: number;
+  top?: number;
+  bottom?: number;
+};
+
 function matches(option: StaffComboOption, needle: string) {
   if (!needle) return true;
   const haystack = `${option.label} ${option.keywords ?? ""}`.toLowerCase();
   return haystack.includes(needle);
+}
+
+function measurePlacement(input: HTMLElement): ListPlacement {
+  const rect = input.getBoundingClientRect();
+  const gap = 4;
+  const preferred = 16 * 16;
+  const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - gap - 8);
+  const spaceAbove = Math.max(0, rect.top - gap - 8);
+  const openUp =
+    spaceBelow < Math.min(preferred, 12 * 16) && spaceAbove > spaceBelow;
+  const maxHeight = Math.max(
+    8 * 16,
+    Math.min(preferred, openUp ? spaceAbove : spaceBelow),
+  );
+
+  if (openUp) {
+    return {
+      left: rect.left,
+      width: rect.width,
+      maxHeight,
+      bottom: window.innerHeight - rect.top + gap,
+    };
+  }
+
+  return {
+    left: rect.left,
+    width: rect.width,
+    maxHeight,
+    top: rect.bottom + gap,
+  };
 }
 
 export function StaffCombo({
@@ -50,12 +89,15 @@ export function StaffCombo({
   const listId = useId();
   const inputId = id ?? listId;
   const rootRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initial = options.find((option) => option.value === defaultValue) ?? null;
   const [query, setQuery] = useState(initial?.label ?? "");
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [placement, setPlacement] = useState<ListPlacement | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -63,14 +105,40 @@ export function StaffCombo({
   }, [options, query, maxOptions]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     setActive(0);
   }, [query, open]);
 
+  useLayoutEffect(() => {
+    if (!open || !inputRef.current) {
+      setPlacement(null);
+      return;
+    }
+
+    function sync() {
+      if (!inputRef.current) return;
+      setPlacement(measurePlacement(inputRef.current));
+    }
+
+    sync();
+    window.addEventListener("resize", sync);
+    document.addEventListener("scroll", sync, true);
+    return () => {
+      window.removeEventListener("resize", sync);
+      document.removeEventListener("scroll", sync, true);
+    };
+  }, [open, filtered.length, query]);
+
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || listRef.current?.contains(target)) {
+        return;
       }
+      setOpen(false);
     }
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
@@ -125,6 +193,58 @@ export function StaffCombo({
     }
   }
 
+  const list =
+    open && mounted && placement ? (
+      <ul
+        className="staff-combo__list staff-combo__list--portal"
+        id={listId}
+        ref={listRef}
+        role="listbox"
+        style={{
+          left: placement.left,
+          width: placement.width,
+          maxHeight: placement.maxHeight,
+          top: placement.top,
+          bottom: placement.bottom,
+        }}
+      >
+        {emptyLabel && !query.trim() ? (
+          <li>
+            <button
+              className="staff-combo__option"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => choose(null)}
+              type="button"
+            >
+              {emptyLabel}
+            </button>
+          </li>
+        ) : null}
+        {filtered.length ? (
+          filtered.map((option, index) => (
+            <li key={option.value}>
+              <button
+                aria-selected={index === active}
+                className={[
+                  "staff-combo__option",
+                  index === active ? "staff-combo__option--active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => choose(option)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            </li>
+          ))
+        ) : (
+          <li className="staff-combo__empty">No matches</li>
+        )}
+      </ul>
+    ) : null;
+
   return (
     <div className="staff-combo" ref={rootRef}>
       {label ? <label htmlFor={inputId}>{label}</label> : null}
@@ -153,44 +273,7 @@ export function StaffCombo({
         type="search"
         value={query}
       />
-      {open ? (
-        <ul className="staff-combo__list" id={listId} role="listbox">
-          {emptyLabel && !query.trim() ? (
-            <li>
-              <button
-                className="staff-combo__option"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => choose(null)}
-                type="button"
-              >
-                {emptyLabel}
-              </button>
-            </li>
-          ) : null}
-          {filtered.length ? (
-            filtered.map((option, index) => (
-              <li key={option.value}>
-                <button
-                  aria-selected={index === active}
-                  className={[
-                    "staff-combo__option",
-                    index === active ? "staff-combo__option--active" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => choose(option)}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              </li>
-            ))
-          ) : (
-            <li className="staff-combo__empty">No matches</li>
-          )}
-        </ul>
-      ) : null}
+      {list ? createPortal(list, document.body) : null}
     </div>
   );
 }

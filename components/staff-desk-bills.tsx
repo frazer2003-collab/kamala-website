@@ -47,6 +47,7 @@ export function StaffDeskBills({
   const { t, locale } = useStaffLocale();
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
+  const [confirmClear, setConfirmClear] = useState(false);
   const selected = useMemo(
     () => bills.find((bill) => bill.id === selectedId) ?? null,
     [bills, selectedId],
@@ -78,18 +79,29 @@ export function StaffDeskBills({
   }, [initialOpenId]);
 
   useEffect(() => {
+    setConfirmClear(false);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if ((selected?.lines.length ?? 0) === 0) setConfirmClear(false);
+  }, [selected?.lines.length]);
+
+  useEffect(() => {
+    if (selectedId) return;
     const timer = window.setInterval(() => {
       router.refresh();
     }, LIVE_REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [router]);
+  }, [router, selectedId]);
 
   function closeBill() {
+    setConfirmClear(false);
     setSelectedId(null);
     router.replace(returnTo);
   }
 
   function openBill(id: string) {
+    setConfirmClear(false);
     setSelectedId(id);
     router.replace(`${returnTo}?open=${encodeURIComponent(id)}`);
   }
@@ -164,13 +176,42 @@ export function StaffDeskBills({
         title={selected?.name ?? t("nav.bills")}
         footer={
           selected?.status === "open" ? (
-            <form action={clearBill}>
-              <input name="bill-id" type="hidden" value={selected.id} />
-              <input name="return-to" type="hidden" value={returnTo} />
-              <button className="button button--primary" type="submit">
+            selected.lines.length === 0 ? (
+              <p className="staff-desk__clear-empty">{t("bills.clearEmpty")}</p>
+            ) : confirmClear ? (
+              <form action={clearBill} className="staff-desk__clear-confirm">
+                <input name="bill-id" type="hidden" value={selected.id} />
+                <input name="return-to" type="hidden" value={returnTo} />
+                <p>
+                  <strong>{selected.name}</strong>
+                  {" · "}
+                  {formatSatang(billTotalSatang(selected.lines, sellables))}
+                </p>
+                <p className="staff-desk__clear-confirm-note">
+                  {t("bills.clearConfirmNote")}
+                </p>
+                <div className="staff-desk__clear-confirm-actions">
+                  <button className="button button--primary" type="submit">
+                    {t("bills.clearConfirm")}
+                  </button>
+                  <button
+                    className="button button--secondary"
+                    onClick={() => setConfirmClear(false)}
+                    type="button"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                className="button button--primary"
+                onClick={() => setConfirmClear(true)}
+                type="button"
+              >
                 {t("bills.clear")}
               </button>
-            </form>
+            )
           ) : null
         }
       >

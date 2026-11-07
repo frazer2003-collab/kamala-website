@@ -257,6 +257,9 @@ export async function clearBill(formData: FormData) {
     revalidateDesk();
     redirect(safeDeskReturnTo(formData, "/staff/bills"));
   }
+  if (bill.lines.length === 0) {
+    throw new Error("Cannot clear a bill with no lines.");
+  }
   // Reload sellables with recipes so stock movements match current catalog.
   const sellables = await listDeskSellables();
   const movements = planBillClear(

@@ -8,10 +8,13 @@ import {
   openRequestsHref,
   summarizeOpenRequests,
 } from "@/lib/booking-requests";
+import { billTotalSatang } from "@/lib/desk-bills";
+import { formatSatang } from "@/lib/desk-money";
 import {
   listDeskBills,
   listDeskCountedItems,
   listDeskLaundry,
+  listDeskSellables,
 } from "@/lib/desk-ops-data";
 import { headroom } from "@/lib/desk-stock";
 import { getChannelBlocksOverlappingRange } from "@/lib/room-blocks";
@@ -39,6 +42,19 @@ function addDaysIso(iso: string, days: number) {
   return `${year}-${month}-${day}`;
 }
 
+/** Short age label for the oldest open tab’s service date. */
+function oldestOpenBillAge(oldestServiceDate: string, todayIso: string): string {
+  if (oldestServiceDate >= todayIso) return "oldest today";
+  const yesterdayIso = addDaysIso(todayIso, -1);
+  if (oldestServiceDate === yesterdayIso) return "oldest yesterday";
+  const today = new Date(`${todayIso}T12:00:00`);
+  const oldest = new Date(`${oldestServiceDate}T12:00:00`);
+  const days = Math.round(
+    (today.getTime() - oldest.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  return days > 1 ? `oldest ${days}d` : "oldest today";
+}
+
 type PriorityCard = {
   key: string;
   eyebrow: string;
@@ -61,6 +77,7 @@ export default async function StaffHomePage() {
     channelsResult,
     unitsResult,
     bills,
+    sellables,
     laundry,
     counted,
   ] = await Promise.all([
@@ -69,6 +86,7 @@ export default async function StaffHomePage() {
     getChannelBlocksOverlappingRange(todayIso, horizonIso),
     getStaffRoomUnits(),
     listDeskBills(),
+    listDeskSellables(),
     listDeskLaundry(),
     listDeskCountedItems(),
   ]);
@@ -93,7 +111,21 @@ export default async function StaffHomePage() {
   });
   const calendarHref = staffHomeUnassignedHref(todayIso);
 
-  const openBills = bills.filter((bill) => bill.status === "open").length;
+  const openBillList = bills.filter((bill) => bill.status === "open");
+  const openBills = openBillList.length;
+  const openBillsTotalSatang = openBillList.reduce(
+    (sum, bill) => sum + billTotalSatang(bill.lines, sellables),
+    0,
+  );
+  const oldestOpenServiceDate = openBillList.reduce<string | null>(
+    (oldest, bill) =>
+      oldest == null || bill.serviceDate < oldest ? bill.serviceDate : oldest,
+    null,
+  );
+  const openBillsBody =
+    openBills > 0 && oldestOpenServiceDate
+      ? `${openBills} open · ${formatSatang(openBillsTotalSatang)} · ${oldestOpenBillAge(oldestOpenServiceDate, todayIso)}`
+      : "No open desk bills";
   const openLaundry = laundry.filter(
     (record) => record.status === "sent" || record.status === "incomplete",
   ).length;
@@ -157,10 +189,7 @@ export default async function StaffHomePage() {
       key: "bills",
       eyebrow: "Desk",
       title: "Bills",
-      body:
-        openBills > 0
-          ? `${openBills} open tab${openBills === 1 ? "" : "s"} to clear`
-          : "No open desk bills",
+      body: openBillsBody,
       href: "/staff/bills",
       attention: openBills > 0,
       rank: openBills > 0 ? 4 : 54,

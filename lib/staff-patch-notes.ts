@@ -18,6 +18,37 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-trust-slice",
+    date: "2026-11-07",
+    title: "Safer clear bill and clearer open tabs",
+    summary:
+      "Clearing a bill asks for confirm and won’t run on an empty tab. Home shows open-tab baht at risk.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff bill clear confirm with total and stock note",
+    },
+    changes: [
+      "Clear bill is two steps: review guest, total, and stock note, then confirm.",
+      "Empty open tabs cannot be cleared — add items first.",
+      "The bills list pauses live refresh while a bill popup is open so typing is not interrupted.",
+      "Home Bills card shows open count, baht total, and oldest age — not “to clear.”",
+    ],
+  },
+  {
+    id: "2026-11-07-combo-above-fold",
+    date: "2026-11-07",
+    title: "Bill item search stays on screen",
+    summary:
+      "The Add item dropdown no longer drops under the dialog edge; it opens where there is room.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff bill popup with item search list visible on screen",
+    },
+    changes: [
+      "Desk search lists float above the page and flip upward when space below is tight.",
+    ],
+  },
+  {
     id: "2026-11-07-live-bills",
     date: "2026-11-07",
     title: "New bill opens a live tab",
