@@ -45,7 +45,7 @@ export function StaffDeskExpenses({
       <div className="staff-desk__list-toolbar staff-desk__list-toolbar--slim">
         <span className="staff-desk__toolbar-meta">
           {expenses.length
-            ? `${expenses.length}`
+            ? `${expenses.length} ${t("expenses.countLabel")}`
             : t("expenses.empty")}
         </span>
         <StaffDeskActionsMenu label={t("common.actions")}>
@@ -142,10 +142,12 @@ export function StaffDeskExpenses({
 
         <footer className="staff-desk__sum-bar" aria-live="polite">
           <span>
-            {t("expenses.rangeTotal")}
+            {`${expenses.length} ${t("expenses.countLabel")}`}
+            {" · "}
+            {t("desk.rangeTotal")}
             {fromIso !== toIso
               ? ` · ${formatDay(fromIso, locale)} → ${formatDay(toIso, locale)}`
-              : ""}
+              : ` · ${formatDay(fromIso, locale)}`}
           </span>
           <strong>{formatSatang(totalSatang)}</strong>
         </footer>

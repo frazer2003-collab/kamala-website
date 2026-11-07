@@ -98,11 +98,14 @@ function finishDeskMutation(
 
 function safeDeskReturnTo(formData: FormData, fallback: string) {
   const next = value(formData, "return-to");
+  const allowed = [
+    "/staff/bills",
+    "/staff/laundry",
+    "/staff/portal/bills",
+    "/staff/portal/laundry",
+  ];
   if (
-    next === "/staff/bills" ||
-    next === "/staff/laundry" ||
-    next === "/staff/portal/bills" ||
-    next === "/staff/portal/laundry"
+    allowed.some((path) => next === path || next.startsWith(`${path}?`))
   ) {
     return next;
   }
@@ -110,7 +113,11 @@ function safeDeskReturnTo(formData: FormData, fallback: string) {
 }
 
 function billsReturnWithOpen(formData: FormData, billId: string) {
-  return `${safeDeskReturnTo(formData, "/staff/bills")}?open=${encodeURIComponent(billId)}`;
+  const base = safeDeskReturnTo(formData, "/staff/bills");
+  const url = new URL(base, "https://kamala.local");
+  url.searchParams.set("open", billId);
+  const query = url.searchParams.toString();
+  return query ? `${url.pathname}?${query}` : url.pathname;
 }
 
 async function requireDeskWriteAccess(kind: "bills" | "laundry" | "stock" | "items") {

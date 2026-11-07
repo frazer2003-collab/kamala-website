@@ -1,12 +1,14 @@
 import { StaffDeskBills } from "@/components/staff-desk-bills";
+import { StaffDeskRangeBand } from "@/components/staff-desk-range-band";
 import { StaffLocaleProvider } from "@/components/staff-locale";
 import { StaffPortalShell } from "@/components/staff-portal-shell";
 import {
-  listDeskBills,
+  listDeskBillsInRange,
   listDeskCountedItems,
   listDeskSellables,
 } from "@/lib/desk-ops-data";
 import { getDeskPortalSession } from "@/lib/desk-portal";
+import { deskListReturnTo, parseDeskListRange } from "@/lib/desk-range";
 import { getStaffLocale } from "@/lib/staff-locale-server";
 import { staffT } from "@/lib/staff-i18n";
 import { redirect } from "next/navigation";
@@ -18,16 +20,29 @@ export const dynamic = "force-dynamic";
 export default async function PortalBillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ open?: string }>;
+  searchParams: Promise<{
+    open?: string;
+    month?: string;
+    from?: string;
+    to?: string;
+    view?: string;
+  }>;
 }) {
   const portal = await getDeskPortalSession();
   if (!portal || portal.kind !== "bills") {
     redirect("/staff/portal/login?portal=bills");
   }
   const locale = await getStaffLocale();
-  const { open } = await searchParams;
+  const params = await searchParams;
+  const { fromIso, toIso, monthKey, todayIso } = parseDeskListRange(params);
+  const returnTo = deskListReturnTo(
+    "/staff/portal/bills",
+    fromIso,
+    toIso,
+    monthKey,
+  );
   const [bills, sellables, countedItems] = await Promise.all([
-    listDeskBills(),
+    listDeskBillsInRange(fromIso, toIso),
     listDeskSellables(),
     listDeskCountedItems(),
   ]);
@@ -41,12 +56,22 @@ export default async function PortalBillsPage({
               <h1 id="portal-bills-title">{staffT(locale, "bills.title")}</h1>
             </div>
           </header>
+          <StaffDeskRangeBand
+            fromIso={fromIso}
+            locale={locale}
+            monthKey={monthKey}
+            pathname="/staff/portal/bills"
+            toIso={toIso}
+            todayIso={todayIso}
+          />
           <StaffDeskBills
             bills={bills}
             countedItems={countedItems}
-            initialOpenId={open ?? null}
-            returnTo="/staff/portal/bills"
+            fromIso={fromIso}
+            initialOpenId={params.open ?? null}
+            returnTo={returnTo}
             sellables={sellables}
+            toIso={toIso}
           />
         </section>
       </StaffPortalShell>

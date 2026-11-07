@@ -759,6 +759,34 @@ export async function listDeskBills(): Promise<DeskBill[]> {
   );
 }
 
+export async function listDeskBillsInRange(
+  fromIso: string,
+  toIso: string,
+): Promise<DeskBill[]> {
+  if (!hasStaffSupabaseConfig()) return [];
+  const billsResult = await client()
+    .from("desk_bills")
+    .select("*")
+    .eq("property_id", DESK_PROPERTY_ID)
+    .gte("service_date", fromIso)
+    .lte("service_date", toIso)
+    .order("service_date", { ascending: false })
+    .order("created_at", { ascending: false });
+  throwIfError(billsResult.error);
+  const billRows = billsResult.data ?? [];
+  if (!billRows.length) return [];
+
+  const billIds = billRows.map((row) => row.id);
+  const linesResult = await client()
+    .from("desk_bill_lines")
+    .select("*")
+    .eq("property_id", DESK_PROPERTY_ID)
+    .in("bill_id", billIds)
+    .order("created_at");
+  throwIfError(linesResult.error);
+  return billRows.map((row) => mapBill(row, linesResult.data ?? []));
+}
+
 export async function loadDeskBill(id: string): Promise<DeskBill | null> {
   if (!hasStaffSupabaseConfig()) return null;
   const [billResult, linesResult] = await Promise.all([

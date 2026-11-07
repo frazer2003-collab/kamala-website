@@ -477,7 +477,7 @@
 .staff-desk__range-band {
   display: grid;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  flex-shrink: 0;
 }
 
 .staff-desk__view-pills {

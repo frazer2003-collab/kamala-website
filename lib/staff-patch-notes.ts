@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-bills-date-range",
+    date: "2026-11-07",
+    title: "Bills use the same date range as Expenses",
+    summary:
+      "Today / This week / This month and the date strip filter bills. The footer shows bill count and range total.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Bills list with date range controls and range total footer",
+    },
+    changes: [
+      "Bills defaults to Today and shares the Expenses range chrome.",
+      "Footer shows how many bills are in range and the money total.",
+      "Expenses footer now shows count the same way for a consistent desk pattern.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-list-fill",
     date: "2026-11-07",
     title: "Desk lists fill the screen; Actions holds the rest",

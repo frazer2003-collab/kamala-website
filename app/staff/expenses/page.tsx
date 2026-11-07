@@ -1,17 +1,8 @@
-import Link from "next/link";
-import { CalendarDateStrip } from "@/components/calendar-date-strip";
-import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffDeskExpenses } from "@/components/staff-desk-expenses";
+import { StaffDeskRangeBand } from "@/components/staff-desk-range-band";
 import { StaffShell } from "@/components/staff-shell";
-import {
-  getPropertyTodayIso,
-  parseStaffTimelineRange,
-} from "@/lib/calendar";
-import {
-  isoMonthRangeContaining,
-  isoWeekRangeContaining,
-} from "@/lib/desk-expenses";
 import { listDeskExpensesInRange } from "@/lib/desk-ops-data";
+import { deskListReturnTo, parseDeskListRange } from "@/lib/desk-range";
 import { requireStaffSession } from "@/lib/staff-auth";
 import { getStaffLocale } from "@/lib/staff-locale-server";
 import { staffT } from "@/lib/staff-i18n";
@@ -33,47 +24,12 @@ export default async function StaffExpensesPage({
   await requireStaffSession();
   const locale = await getStaffLocale();
   const params = await searchParams;
-  const todayIso = getPropertyTodayIso();
-
-  let fromIso: string;
-  let toIso: string;
-  let monthKey: string;
-
-  if (params.view === "week") {
-    ({ fromIso, toIso } = isoWeekRangeContaining(todayIso));
-    monthKey = fromIso.slice(0, 7);
-  } else if (params.view === "month") {
-    ({ fromIso, toIso } = isoMonthRangeContaining(
-      params.month ? `${params.month}-01` : todayIso,
-    ));
-    monthKey = fromIso.slice(0, 7);
-  } else if (params.view === "day" || (!params.from && !params.to && !params.month)) {
-    // Default landing: Today — shift job is “log a charge now”.
-    fromIso =
-      params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from)
-        ? params.from
-        : todayIso;
-    toIso = fromIso;
-    monthKey = fromIso.slice(0, 7);
-  } else {
-    const range = parseStaffTimelineRange({
-      month: params.month,
-      from: params.from,
-      to: params.to,
-    });
-    fromIso = range.fromIso;
-    toIso = range.toIso;
-    monthKey = range.monthKey;
-  }
-
-  const returnTo = `/staff/expenses?month=${encodeURIComponent(monthKey)}&from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`;
+  const { fromIso, toIso, monthKey, todayIso } = parseDeskListRange(params);
+  const returnTo = deskListReturnTo("/staff/expenses", fromIso, toIso, monthKey);
   const expenseRange = hasStaffSupabaseConfig()
     ? await listDeskExpensesInRange(fromIso, toIso)
     : { expenses: [], truncated: false, totalSatang: 0, count: 0 };
   const { expenses, truncated, totalSatang } = expenseRange;
-
-  const week = isoWeekRangeContaining(todayIso);
-  const month = isoMonthRangeContaining(todayIso);
 
   return (
     <StaffShell current="expenses">
@@ -84,39 +40,14 @@ export default async function StaffExpensesPage({
           </div>
         </header>
 
-        <div className="staff-desk__range-band">
-          <div className="staff-desk__view-pills" role="navigation" aria-label="Range">
-            <Link
-              className="button button--quiet"
-              href={`/staff/expenses?view=day&from=${todayIso}&to=${todayIso}&month=${todayIso.slice(0, 7)}`}
-            >
-              {staffT(locale, "expenses.viewDay")}
-            </Link>
-            <Link
-              className="button button--quiet"
-              href={`/staff/expenses?view=week&from=${week.fromIso}&to=${week.toIso}&month=${week.fromIso.slice(0, 7)}`}
-            >
-              {staffT(locale, "expenses.viewWeek")}
-            </Link>
-            <Link
-              className="button button--quiet"
-              href={`/staff/expenses?view=month&month=${month.fromIso.slice(0, 7)}&from=${month.fromIso}&to=${month.toIso}`}
-            >
-              {staffT(locale, "expenses.viewMonth")}
-            </Link>
-          </div>
-          <StaffCalendarMonthPicker
-            fromIso={fromIso}
-            monthKey={monthKey}
-            pathname="/staff/expenses"
-            toIso={toIso}
-          />
-          <CalendarDateStrip
-            fromIso={fromIso}
-            pathname="/staff/expenses"
-            toIso={toIso}
-          />
-        </div>
+        <StaffDeskRangeBand
+          fromIso={fromIso}
+          locale={locale}
+          monthKey={monthKey}
+          pathname="/staff/expenses"
+          toIso={toIso}
+          todayIso={todayIso}
+        />
 
         {!hasStaffSupabaseConfig() ? (
           <p className="form-message form-message--setup" role="status">

@@ -47,12 +47,16 @@ export function StaffDeskBills({
   countedItems = [],
   initialOpenId = null,
   returnTo = "/staff/bills",
+  fromIso = null,
+  toIso = null,
 }: {
   bills: DeskBill[];
   sellables: DeskSellableItem[];
   countedItems?: DeskCountedItem[];
   initialOpenId?: string | null;
   returnTo?: string;
+  fromIso?: string | null;
+  toIso?: string | null;
 }) {
   const { t, locale } = useStaffLocale();
   const router = useRouter();
@@ -159,8 +163,23 @@ export function StaffDeskBills({
   function openBill(id: string) {
     setConfirmClear(false);
     setSelectedId(id);
-    softUrl(`${returnTo}?open=${encodeURIComponent(id)}`);
+    softUrl(withOpenParam(id));
   }
+
+  function withOpenParam(id: string) {
+    const url = new URL(returnTo, "https://kamala.local");
+    url.searchParams.set("open", id);
+    return `${url.pathname}?${url.searchParams.toString()}`;
+  }
+
+  const rangeTotalSatang = useMemo(
+    () =>
+      bills.reduce(
+        (total, bill) => total + billTotalSatang(bill.lines, sellables),
+        0,
+      ),
+    [bills, sellables],
+  );
 
   const newBillForm = (
     <DeskQuietForm
@@ -168,7 +187,7 @@ export function StaffDeskBills({
       onSuccess={(result) => {
         if (!result?.id) return;
         // Same path as header New bill — App Router must see ?open=.
-        router.push(`${returnTo}?open=${encodeURIComponent(result.id)}`);
+        router.push(withOpenParam(result.id));
       }}
     >
       {(pending) => (
@@ -190,7 +209,9 @@ export function StaffDeskBills({
     <div className="staff-desk__list-shell">
       <div className="staff-desk__list-toolbar staff-desk__list-toolbar--slim">
         <span className="staff-desk__toolbar-meta">
-          {bills.length ? `${bills.length}` : t("bills.noOpen")}
+          {bills.length
+            ? `${bills.length} ${t("bills.countLabel")}`
+            : t("bills.noOpen")}
         </span>
         <StaffDeskActionsMenu label={t("common.actions")}>
           <div className="staff-desk__actions-item staff-desk__actions-item--form">
@@ -252,6 +273,20 @@ export function StaffDeskBills({
             {newBillForm}
           </div>
         )}
+
+        {fromIso && toIso ? (
+          <footer className="staff-desk__sum-bar" aria-live="polite">
+            <span>
+              {`${bills.length} ${t("bills.countLabel")}`}
+              {" · "}
+              {t("desk.rangeTotal")}
+              {fromIso !== toIso
+                ? ` · ${formatDate(fromIso, locale)} → ${formatDate(toIso, locale)}`
+                : ` · ${formatDate(fromIso, locale)}`}
+            </span>
+            <strong>{formatSatang(rangeTotalSatang)}</strong>
+          </footer>
+        ) : null}
       </div>
 
       <StaffDialog
@@ -676,7 +711,9 @@ export function StaffNewBillButton({
       onSuccess={(result) => {
         if (!result?.id) return;
         // Must use App Router navigation so ?open= reaches the page searchParams.
-        router.push(`${returnTo}?open=${encodeURIComponent(result.id)}`);
+        const url = new URL(returnTo, "https://kamala.local");
+        url.searchParams.set("open", result.id);
+        router.push(`${url.pathname}?${url.searchParams.toString()}`);
       }}
     >
       {(pending) => (

@@ -1,10 +1,12 @@
 import { StaffDeskBills } from "@/components/staff-desk-bills";
+import { StaffDeskRangeBand } from "@/components/staff-desk-range-band";
 import { StaffShell } from "@/components/staff-shell";
 import {
-  listDeskBills,
+  listDeskBillsInRange,
   listDeskCountedItems,
   listDeskSellables,
 } from "@/lib/desk-ops-data";
+import { deskListReturnTo, parseDeskListRange } from "@/lib/desk-range";
 import { requireStaffSession } from "@/lib/staff-auth";
 import { getStaffLocale } from "@/lib/staff-locale-server";
 import { staffT } from "@/lib/staff-i18n";
@@ -16,16 +18,27 @@ export const dynamic = "force-dynamic";
 export default async function StaffBillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ open?: string }>;
+  searchParams: Promise<{
+    open?: string;
+    month?: string;
+    from?: string;
+    to?: string;
+    view?: string;
+  }>;
 }) {
   await requireStaffSession();
   const locale = await getStaffLocale();
-  const { open } = await searchParams;
-  const [bills, sellables, countedItems] = await Promise.all([
-    listDeskBills(),
-    listDeskSellables(),
-    listDeskCountedItems(),
-  ]);
+  const params = await searchParams;
+  const { fromIso, toIso, monthKey, todayIso } = parseDeskListRange(params);
+  const returnTo = deskListReturnTo("/staff/bills", fromIso, toIso, monthKey);
+
+  const [bills, sellables, countedItems] = hasStaffSupabaseConfig()
+    ? await Promise.all([
+        listDeskBillsInRange(fromIso, toIso),
+        listDeskSellables(),
+        listDeskCountedItems(),
+      ])
+    : [[], [], []];
 
   return (
     <StaffShell current="bills">
@@ -36,6 +49,15 @@ export default async function StaffBillsPage({
           </div>
         </header>
 
+        <StaffDeskRangeBand
+          fromIso={fromIso}
+          locale={locale}
+          monthKey={monthKey}
+          pathname="/staff/bills"
+          toIso={toIso}
+          todayIso={todayIso}
+        />
+
         {!hasStaffSupabaseConfig() ? (
           <p className="form-message form-message--setup" role="status">
             Desk data is not connected yet. Finish Supabase setup, then reload.
@@ -44,8 +66,11 @@ export default async function StaffBillsPage({
           <StaffDeskBills
             bills={bills}
             countedItems={countedItems}
-            initialOpenId={open ?? null}
+            fromIso={fromIso}
+            initialOpenId={params.open ?? null}
+            returnTo={returnTo}
             sellables={sellables}
+            toIso={toIso}
           />
         )}
       </section>
