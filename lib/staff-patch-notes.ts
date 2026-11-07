@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-usability-rev1",
+    date: "2026-11-07",
+    title: "New bill opens right away; Expenses starts on Today",
+    summary:
+      "Header New bill opens the tab again. New laundry slips open to edit. Expenses under Desk lands on Today.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "New bill dialog open after pressing New bill",
+    },
+    changes: [
+      "New bill from the header opens the live tab immediately.",
+      "Adding a laundry slip opens it so you can set status without hunting the list.",
+      "Expenses opens on Today; dialogs focus the first field so you can type straight away.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-quiet-saves",
     date: "2026-11-07",
     title: "Faster desk saves — no full-screen wait",
@@ -44,7 +60,7 @@ export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
       alt: "Expenses list with range total and Finance gross profit panel",
     },
     changes: [
-      "New Expenses page under Money — charge name, cost, optional note.",
+      "New Expenses page under Desk — charge name, cost, optional note.",
       "Browse Today / This week / This month or any date range; sticky total at the bottom.",
       "Finance adds Gross profit: room revenue + cleared bills − expenses − item cost on cleared bills.",
       "Demo expense records are seeded so you can try the views immediately.",

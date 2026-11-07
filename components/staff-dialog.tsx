@@ -40,9 +40,13 @@ export function StaffDialog({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const panel = panelRef.current;
-    const closeButton = closeRef.current;
+    const body = panel?.querySelector(".staff-dialog__body");
+    const bodyFocusable = body instanceof HTMLElement
+      ? getFocusableElements(body)
+      : [];
     const focusable = panel ? getFocusableElements(panel) : [];
-    (closeButton ?? focusable[0] ?? panel)?.focus();
+    // Prefer first field in the body so staff can type immediately (not Close).
+    (bodyFocusable[0] ?? focusable[0] ?? panel)?.focus();
 
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {

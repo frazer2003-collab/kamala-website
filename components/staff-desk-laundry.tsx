@@ -151,7 +151,10 @@ export function StaffDeskLaundry({
           action={createLaundryRecord}
           className="staff-desk__form"
           resetOnSuccess
-          onSuccess={() => setMeasureType(sheetsOnly ? "count" : "kg")}
+          onSuccess={(result) => {
+            setMeasureType(sheetsOnly ? "count" : "kg");
+            if (result?.id) setSelectedId(result.id);
+          }}
         >
           {(pending) => (
             <>

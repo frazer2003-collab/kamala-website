@@ -276,7 +276,7 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
           },
           {
             id: "expenses" as const,
-            href: "/staff/expenses",
+            href: "/staff/expenses?view=day",
             label: t("nav.expenses"),
             icon: <IconExpenses />,
           },

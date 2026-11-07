@@ -42,16 +42,18 @@ export default async function StaffExpensesPage({
   if (params.view === "week") {
     ({ fromIso, toIso } = isoWeekRangeContaining(todayIso));
     monthKey = fromIso.slice(0, 7);
-  } else if (params.view === "day") {
-    fromIso = params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from)
-      ? params.from
-      : todayIso;
-    toIso = fromIso;
-    monthKey = fromIso.slice(0, 7);
-  } else if (params.view === "month" && !params.from && !params.to) {
+  } else if (params.view === "month") {
     ({ fromIso, toIso } = isoMonthRangeContaining(
       params.month ? `${params.month}-01` : todayIso,
     ));
+    monthKey = fromIso.slice(0, 7);
+  } else if (params.view === "day" || (!params.from && !params.to && !params.month)) {
+    // Default landing: Today — shift job is “log a charge now”.
+    fromIso =
+      params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from)
+        ? params.from
+        : todayIso;
+    toIso = fromIso;
     monthKey = fromIso.slice(0, 7);
   } else {
     const range = parseStaffTimelineRange({

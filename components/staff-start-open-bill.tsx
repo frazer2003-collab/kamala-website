@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBill } from "@/app/desk-actions";
 
 export function StaffStartOpenBill({
@@ -8,26 +9,35 @@ export function StaffStartOpenBill({
 }: {
   returnTo?: string;
 }) {
-  const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const started = useRef(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (started.current || !formRef.current) return;
+    if (started.current) return;
     started.current = true;
-    formRef.current.requestSubmit();
-  }, []);
+
+    const formData = new FormData();
+    formData.set("return-to", returnTo);
+    formData.set("quiet", "1");
+
+    void (async () => {
+      try {
+        const result = await createBill(formData);
+        if (result?.ok && result.id) {
+          router.push(`${returnTo}?open=${encodeURIComponent(result.id)}`);
+          return;
+        }
+        setError("Could not open a bill.");
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Could not open a bill.");
+      }
+    })();
+  }, [returnTo, router]);
 
   return (
-    <form
-      action={async (formData) => {
-        await createBill(formData);
-      }}
-      ref={formRef}
-    >
-      <input name="return-to" type="hidden" value={returnTo} />
-      <button className="button button--primary" type="submit">
-        Opening bill…
-      </button>
-    </form>
+    <p className={error ? "form-message form-message--error" : undefined} role="status">
+      {error ?? "Opening bill…"}
+    </p>
   );
 }

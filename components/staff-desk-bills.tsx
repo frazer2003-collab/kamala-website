@@ -634,14 +634,9 @@ export function StaffNewBillButton({
     <DeskQuietForm
       action={createBill}
       onSuccess={(result) => {
-        if (result?.id) {
-          window.history.replaceState(
-            null,
-            "",
-            `${returnTo}?open=${encodeURIComponent(result.id)}`,
-          );
-          router.refresh();
-        }
+        if (!result?.id) return;
+        // Must use App Router navigation so ?open= reaches the page searchParams.
+        router.push(`${returnTo}?open=${encodeURIComponent(result.id)}`);
       }}
     >
       {(pending) => (
