@@ -497,8 +497,24 @@
 }
 
 .staff-sidebar .staff-nav {
-  gap: 0.2rem;
+  min-height: 0;
+  overflow-y: auto;
+  gap: var(--space-3);
   align-content: start;
+}
+
+.staff-nav__group {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.staff-nav__section {
+  margin: 0;
+  padding: 0.25rem 0.65rem;
+  color: var(--color-soft);
+  font-size: 0.66rem;
+  font-weight: 750;
+  line-height: 1.2;
 }
 
 .staff-sidebar .staff-nav a {
@@ -531,6 +547,7 @@
 }
 
 .staff-sidebar--collapsed .staff-sidebar__brand-text,
+.staff-sidebar--collapsed .staff-nav__section,
 .staff-sidebar--collapsed .staff-nav__label {
   display: none;
 }
@@ -2121,6 +2138,7 @@
   }
 
   .staff-sidebar--collapsed .staff-sidebar__brand-text,
+  .staff-sidebar--collapsed .staff-nav__section,
   .staff-sidebar--collapsed .staff-nav__label {
     display: inline;
   }

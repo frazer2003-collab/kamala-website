@@ -130,6 +130,22 @@ export default async function StaffHomePage() {
             <strong>Finance</strong>
             <span>Month accounts. Refunds to send are on Transfers.</span>
           </Link>
+          <Link className="staff-home-link" href="/staff/bills">
+            <strong>Bills</strong>
+            <span>Open desk tabs and clear paid bills</span>
+          </Link>
+          <Link className="staff-home-link" href="/staff/laundry">
+            <strong>Laundry</strong>
+            <span>Record bags, sheets, and return status</span>
+          </Link>
+          <Link className="staff-home-link" href="/staff/stock">
+            <strong>Stock</strong>
+            <span>Receive supplies and check what is running low</span>
+          </Link>
+          <Link className="staff-home-link" href="/staff/items">
+            <strong>Items</strong>
+            <span>Desk prices, recipes, and room extras</span>
+          </Link>
         </div>
 
         {latestPatch ? (

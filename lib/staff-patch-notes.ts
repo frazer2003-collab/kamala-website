@@ -18,6 +18,24 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-operations",
+    date: "2026-11-07",
+    title: "Bills, stock, laundry, and desk items",
+    summary:
+      "The Desk section now keeps guest tabs, stock counts, laundry slips, prices, and recipes together.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Kamala staff Desk pages for bills, stock, laundry, and sellable items",
+    },
+    changes: [
+      "Bills keeps open guest tabs, adds catalog items, totals in baht, and deducts recipe stock when a bill is cleared.",
+      "Stock puts the shortest headroom first, estimates meals left, and records purchases, waste, and count corrections.",
+      "Laundry records bags or piece counts and opens a simple slip for return status.",
+      "Items manages Thai and English names, baht prices, categories, recipes, and laundry attached to room items.",
+      "The sidebar groups Stay, Desk, and Money & site so the new tools stay easy to find.",
+    ],
+  },
+  {
     id: "2026-11-07-reservations-in-house",
     date: "2026-11-07",
     title: "Reservations shows who is actually here",

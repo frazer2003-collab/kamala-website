@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Desk operations patch note fixture</title>
+  <style>
+    :root { color-scheme: light; font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f9f7f7; color: #282225; }
+    main { width: 1200px; min-height: 675px; padding: 56px; }
+    header { display: flex; align-items: end; justify-content: space-between; margin-bottom: 28px; }
+    h1 { margin: 0; font-size: 34px; letter-spacing: -.03em; }
+    header p { margin: 8px 0 0; color: #695e62; }
+    nav { color: #7a2f36; font-weight: 750; }
+    .layout { display: grid; grid-template-columns: 250px 1fr; gap: 20px; }
+    aside, section { border: 1px solid #e3dcde; border-radius: 12px; background: white; }
+    aside { padding: 12px; }
+    aside div { padding: 14px; border-radius: 8px; font-weight: 700; }
+    aside div:first-child { background: #faeef0; color: #6a2830; }
+    section { overflow: hidden; }
+    .head { display: flex; justify-content: space-between; padding: 20px; border-bottom: 1px solid #e3dcde; }
+    .head strong:last-child { color: #6a2830; font-size: 22px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 14px 20px; border-bottom: 1px solid #e3dcde; text-align: left; }
+    th { background: #f6f2f3; color: #695e62; font-size: 12px; }
+    .status { padding: 5px 8px; border-radius: 7px; background: #edf7f1; color: #2f7651; font-size: 12px; font-weight: 750; }
+    footer { display: flex; justify-content: flex-end; padding: 18px 20px; }
+    button { border: 0; border-radius: 999px; padding: 12px 18px; background: #7a2f36; color: white; font: inherit; font-weight: 750; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>Bills</h1><p>Open tabs, desk items, and stock-aware clearing.</p></div>
+      <nav>Stay &nbsp;&nbsp; Desk &nbsp;&nbsp; Money &amp; site</nav>
+    </header>
+    <div class="layout">
+      <aside>
+        <div>Room 204<br><small>Today</small></div>
+        <div>Garden table<br><small>Today</small></div>
+        <div>Walk-in<br><small>Yesterday</small></div>
+      </aside>
+      <section>
+        <div class="head"><strong>Room 204</strong><strong>฿580.00</strong></div>
+        <table>
+          <thead><tr><th>Item</th><th>Qty</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Breakfast set</td><td>2</td><td>฿500.00</td><td><span class="status">Open</span></td></tr>
+            <tr><td>Coffee</td><td>1</td><td>฿80.00</td><td><span class="status">Open</span></td></tr>
+          </tbody>
+        </table>
+        <footer><button>Clear bill</button></footer>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
