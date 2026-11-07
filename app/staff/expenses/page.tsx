@@ -77,11 +77,10 @@ export default async function StaffExpensesPage({
 
   return (
     <StaffShell current="expenses">
-      <section className="staff-main staff-desk" aria-labelledby="desk-expenses-title">
+      <section className="staff-main staff-desk staff-desk--fill" aria-labelledby="desk-expenses-title">
         <header className="staff-header staff-header--compact staff-desk__header">
           <div>
             <h1 id="desk-expenses-title">{staffT(locale, "expenses.title")}</h1>
-            <p>{staffT(locale, "expenses.intro")}</p>
           </div>
         </header>
 

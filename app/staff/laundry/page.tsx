@@ -21,11 +21,10 @@ export default async function StaffLaundryPage({
 
   return (
     <StaffShell current="laundry">
-      <section className="staff-main staff-desk" aria-labelledby="desk-laundry-title">
+      <section className="staff-main staff-desk staff-desk--fill" aria-labelledby="desk-laundry-title">
         <header className="staff-header staff-header--compact staff-desk__header">
           <div>
             <h1 id="desk-laundry-title">{staffT(locale, "laundry.title")}</h1>
-            <p>{staffT(locale, "laundry.intro")}</p>
           </div>
           <Link className="button button--quiet" href="/staff/expenses?view=day">
             {staffT(locale, "laundry.expenseHint")}

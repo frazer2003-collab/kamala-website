@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-list-fill",
+    date: "2026-11-07",
+    title: "Desk lists fill the screen; Actions holds the rest",
+    summary:
+      "Bills, Laundry, Menu, and Expenses give the table the viewport. New / receive / categories live under Actions. Menu and Stock share tabs on one page.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Full-height desk table with Actions menu",
+    },
+    changes: [
+      "Each desk list grows to fill the view with a sticky header row while you scroll.",
+      "Create and secondary tools sit behind Actions — Add expense, receive stock, meals left, projections.",
+      "Menu uses Menu / Stock tabs so one catalog list owns the screen at a time.",
+    ],
+  },
+  {
     id: "2026-11-07-menu-stock-merged",
     date: "2026-11-07",
     title: "Menu holds sellables and stock; laundry left the catalog",

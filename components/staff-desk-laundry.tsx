@@ -6,6 +6,7 @@ import {
   deleteLaundryRecord,
   updateLaundryRecord,
 } from "@/app/desk-actions";
+import { StaffDeskActionsMenu } from "@/components/staff-desk-actions-menu";
 import {
   DeskQuietForm,
   deskPendingLabel,
@@ -228,16 +229,28 @@ export function StaffDeskLaundry({
   );
 
   return (
-    <>
-      {visibleRecords.length ? (
-        <div className="staff-desk__list-toolbar">
-          {addButton}
-        </div>
-      ) : null}
+    <div className="staff-desk__list-shell">
+      <div className="staff-desk__list-toolbar staff-desk__list-toolbar--slim">
+        <span className="staff-desk__toolbar-meta">
+          {visibleRecords.length
+            ? `${visibleRecords.length}`
+            : t("laundry.empty")}
+        </span>
+        <StaffDeskActionsMenu label={t("common.actions")}>
+          <button
+            className="staff-desk__actions-item"
+            onClick={openCreate}
+            role="menuitem"
+            type="button"
+          >
+            {t("laundry.addSlip")}
+          </button>
+        </StaffDeskActionsMenu>
+      </div>
 
-      <div className="staff-desk__panel">
+      <div className="staff-desk__panel staff-desk__panel--fill">
         {visibleRecords.length ? (
-          <div className="staff-desk__table-wrap">
+          <div className="staff-desk__table-wrap staff-desk__table-wrap--fill">
             <table className="staff-desk__table">
               <thead>
                 <tr>
@@ -412,6 +425,6 @@ export function StaffDeskLaundry({
           </DeskQuietForm>
         ) : null}
       </StaffDialog>
-    </>
+    </div>
   );
 }

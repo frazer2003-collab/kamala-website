@@ -10,6 +10,7 @@ import {
   updateBill,
   updateBillLinePrice,
 } from "@/app/desk-actions";
+import { StaffDeskActionsMenu } from "@/components/staff-desk-actions-menu";
 import {
   DeskQuietForm,
   deskPendingLabel,
@@ -186,10 +187,21 @@ export function StaffDeskBills({
   );
 
   return (
-    <>
-      <div className="staff-desk__panel">
+    <div className="staff-desk__list-shell">
+      <div className="staff-desk__list-toolbar staff-desk__list-toolbar--slim">
+        <span className="staff-desk__toolbar-meta">
+          {bills.length ? `${bills.length}` : t("bills.noOpen")}
+        </span>
+        <StaffDeskActionsMenu label={t("common.actions")}>
+          <div className="staff-desk__actions-item staff-desk__actions-item--form">
+            {newBillForm}
+          </div>
+        </StaffDeskActionsMenu>
+      </div>
+
+      <div className="staff-desk__panel staff-desk__panel--fill">
         {bills.length ? (
-          <div className="staff-desk__table-wrap">
+          <div className="staff-desk__table-wrap staff-desk__table-wrap--fill">
             <table className="staff-desk__table">
               <thead>
                 <tr>
@@ -645,7 +657,7 @@ export function StaffDeskBills({
           </>
         ) : null}
       </StaffDialog>
-    </>
+    </div>
   );
 }
 

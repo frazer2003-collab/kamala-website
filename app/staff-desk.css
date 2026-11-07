@@ -4,7 +4,7 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 /* Desk pages fill the content column with equal inset on every tool. */
@@ -13,30 +13,192 @@
   max-width: none;
   min-height: 100vh;
   box-sizing: border-box;
-  padding: var(--space-6);
+  padding: var(--space-5) var(--space-6);
 }
 
 .staff-main.staff-desk > .staff-header {
   margin-bottom: 0;
+  flex-shrink: 0;
 }
 
-.staff-desk__section {
+.staff-desk--fill {
+  min-height: 100vh;
+}
+
+.staff-desk--fill > .staff-desk__list-shell,
+.staff-desk--fill > .staff-desk__catalog,
+.staff-desk--fill > .staff-desk__expenses {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.staff-desk--fill > .staff-desk__range-band {
+  flex-shrink: 0;
+}
+
+.staff-desk__list-shell {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
-.staff-desk__section-title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+.staff-desk__catalog {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.staff-desk__catalog-pane {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.staff-desk__catalog-pane[hidden] {
+  display: none;
+}
+
+.staff-desk__tabs {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  width: fit-content;
+}
+
+.staff-desk__tab {
+  min-height: 2.35rem;
+  padding: 0.35rem 0.95rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--ease-out-quint),
+    color 160ms var(--ease-out-quint);
+}
+
+.staff-desk__tab.is-active {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-soft);
+}
+
+.staff-desk__tab:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+.staff-desk__list-toolbar--slim {
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.staff-desk__toolbar-meta {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.staff-desk__actions-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.staff-desk__actions-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 12.5rem;
+  padding: 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.staff-desk__actions-item,
+.staff-desk__actions-item--form .button {
+  display: flex;
+  width: 100%;
+  min-height: 2.6rem;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.45rem 0.75rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms var(--ease-out-quint);
+}
+
+.staff-desk__actions-item:hover,
+.staff-desk__actions-item--form .button:hover {
+  background: var(--color-maroon-wash);
+}
+
+.staff-desk__actions-item--form .button {
+  height: auto;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+.staff-desk__actions-item:focus-visible,
+.staff-desk__actions-item--form .button:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 1px;
+}
+
+.staff-desk__panel--fill {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.staff-desk__table-wrap--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.staff-desk__table-wrap--fill .staff-desk__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .staff-desk__header {
-  align-items: flex-end;
+  align-items: center;
+}
+
+.staff-desk__header h1 {
+  margin-bottom: 0;
 }
 
 .staff-desk__header p,
@@ -168,7 +330,7 @@
 }
 
 .staff-desk__table td {
-  padding: var(--space-3);
+  padding: 0.7rem var(--space-3);
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
   font-variant-numeric: tabular-nums;
@@ -325,8 +487,9 @@
 }
 
 .staff-desk__expenses {
-  display: grid;
-  gap: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .staff-desk__list-toolbar {

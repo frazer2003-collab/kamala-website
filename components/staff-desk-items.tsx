@@ -6,6 +6,7 @@ import {
   saveItemCategory,
   saveSellableItem,
 } from "@/app/desk-actions";
+import { StaffDeskActionsMenu } from "@/components/staff-desk-actions-menu";
 import {
   DeskQuietForm,
   deskPendingLabel,
@@ -74,12 +75,20 @@ export function StaffDeskItems({
 
   const selected = sellables.find((item) => item.id === selectedId) ?? null;
   const editing = creating ? null : selected;
+
+  function openCreate() {
+    setCreating(true);
+    setSelectedId(null);
+  }
+
   return (
-    <>
-      <div className="staff-desk__list-toolbar staff-desk__list-toolbar--wrap">
+    <div className="staff-desk__list-shell">
+      <div className="staff-desk__list-toolbar staff-desk__list-toolbar--slim">
         <div className="staff-desk__filter staff-desk__filter--client">
           <div className="field-pair staff-desk__grow">
-            <label htmlFor="items-q">{t("common.find")}</label>
+            <label className="sr-only" htmlFor="items-q">
+              {t("common.find")}
+            </label>
             <input
               id="items-q"
               onChange={(event) => setQuery(event.target.value)}
@@ -89,7 +98,9 @@ export function StaffDeskItems({
             />
           </div>
           <div className="field-pair">
-            <label htmlFor="items-category">{t("items.category")}</label>
+            <label className="sr-only" htmlFor="items-category">
+              {t("items.category")}
+            </label>
             <select
               id="items-category"
               onChange={(event) => setCategory(event.target.value)}
@@ -104,30 +115,29 @@ export function StaffDeskItems({
             </select>
           </div>
         </div>
-        <div className="staff-desk__list-toolbar-actions">
+        <StaffDeskActionsMenu label={t("common.actions")}>
           <button
-            className="button button--quiet"
-            onClick={() => setManagingCategories(true)}
-            type="button"
-          >
-            {t("items.manageCategories")}
-          </button>
-          <button
-            className="button button--primary"
-            onClick={() => {
-              setCreating(true);
-              setSelectedId(null);
-            }}
+            className="staff-desk__actions-item"
+            onClick={openCreate}
+            role="menuitem"
             type="button"
           >
             {t("items.new")}
           </button>
-        </div>
+          <button
+            className="staff-desk__actions-item"
+            onClick={() => setManagingCategories(true)}
+            role="menuitem"
+            type="button"
+          >
+            {t("items.manageCategories")}
+          </button>
+        </StaffDeskActionsMenu>
       </div>
 
-      <div className="staff-desk__panel">
+      <div className="staff-desk__panel staff-desk__panel--fill">
         {visible.length ? (
-          <div className="staff-desk__table-wrap">
+          <div className="staff-desk__table-wrap staff-desk__table-wrap--fill">
             <table className="staff-desk__table">
               <thead>
                 <tr>
@@ -189,10 +199,7 @@ export function StaffDeskItems({
             <p>{t("items.emptyHint")}</p>
             <button
               className="button button--primary"
-              onClick={() => {
-                setCreating(true);
-                setSelectedId(null);
-              }}
+              onClick={openCreate}
               type="button"
             >
               {t("items.new")}
@@ -439,6 +446,6 @@ export function StaffDeskItems({
           </DeskQuietForm>
         </div>
       </StaffDialog>
-    </>
+    </div>
   );
 }

@@ -22,11 +22,10 @@ export default async function PortalLaundryPage() {
   return (
     <StaffLocaleProvider locale={locale}>
       <StaffPortalShell kind="laundry">
-        <section className="staff-main staff-desk" aria-labelledby="portal-laundry-title">
+        <section className="staff-main staff-desk staff-desk--fill" aria-labelledby="portal-laundry-title">
           <header className="staff-header staff-header--compact staff-desk__header">
             <div>
               <h1 id="portal-laundry-title">{staffT(locale, "laundry.title")}</h1>
-              <p>{staffT(locale, "laundry.portalIntro")}</p>
             </div>
           </header>
           <StaffDeskLaundry

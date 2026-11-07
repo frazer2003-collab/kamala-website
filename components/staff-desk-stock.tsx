@@ -6,6 +6,7 @@ import {
   recordStockMovement,
   saveCountedItem,
 } from "@/app/desk-actions";
+import { StaffDeskActionsMenu } from "@/components/staff-desk-actions-menu";
 import {
   DeskQuietForm,
   deskPendingLabel,
@@ -52,6 +53,9 @@ export function StaffDeskStock({
   const { t } = useStaffLocale();
   const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
   const [creating, setCreating] = useState(false);
+  const [receiving, setReceiving] = useState(false);
+  const [showMeals, setShowMeals] = useState(false);
+  const [showProjections, setShowProjections] = useState(false);
 
   useEffect(() => {
     setSelectedId(initialOpenId);
@@ -93,58 +97,91 @@ export function StaffDeskStock({
     return Array.from(new Set([...DESK_UNIT_SUGGESTIONS, ...custom]));
   }, [items]);
 
-  return (
-    <>
-      <section className="staff-desk__strip" aria-labelledby="meals-left-title">
-        <h2 id="meals-left-title">{t("stock.mealsLeft")}</h2>
-        <div className="staff-desk__meal-grid">
-          {foods.length ? (
-            foods.map((food) => {
-              const ingredients = food.ingredients.flatMap((ingredient) => {
-                const item = itemById.get(ingredient.countedItemId);
-                return item
-                  ? [
-                      {
-                        onHand: item.onHand,
-                        minimum: item.minimum,
-                        quantityPerMeal: ingredient.quantity,
-                      },
-                    ]
-                  : [];
-              });
-              return (
-                <div className="staff-desk__meal" key={food.id}>
-                  <strong>{mealsLeft(ingredients)}</strong>
-                  <span>{bilingualItemLabel(food)}</span>
-                </div>
-              );
-            })
-          ) : (
-            <p className="staff-desk__empty">
-              Add ingredients to a food item to calculate meals.
-            </p>
-          )}
-        </div>
-      </section>
+  function openCreate() {
+    setCreating(true);
+    setSelectedId(null);
+  }
 
-      {activeItems.length ? (
-        <div className="staff-desk__list-toolbar">
+  const mealsBody = (
+    <div className="staff-desk__meal-grid">
+      {foods.length ? (
+        foods.map((food) => {
+          const ingredients = food.ingredients.flatMap((ingredient) => {
+            const item = itemById.get(ingredient.countedItemId);
+            return item
+              ? [
+                  {
+                    onHand: item.onHand,
+                    minimum: item.minimum,
+                    quantityPerMeal: ingredient.quantity,
+                  },
+                ]
+              : [];
+          });
+          return (
+            <div className="staff-desk__meal" key={food.id}>
+              <strong>{mealsLeft(ingredients)}</strong>
+              <span>{bilingualItemLabel(food)}</span>
+            </div>
+          );
+        })
+      ) : (
+        <p className="staff-desk__empty">
+          Add ingredients to a food item to calculate meals.
+        </p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="staff-desk__list-shell">
+      <div className="staff-desk__list-toolbar staff-desk__list-toolbar--slim">
+        <span className="staff-desk__toolbar-meta">
+          {activeItems.length
+            ? `${activeItems.length}`
+            : t("stock.empty")}
+        </span>
+        <StaffDeskActionsMenu label={t("common.actions")}>
           <button
-            className="button button--primary"
-            onClick={() => {
-              setCreating(true);
-              setSelectedId(null);
-            }}
+            className="staff-desk__actions-item"
+            onClick={openCreate}
+            role="menuitem"
             type="button"
           >
             {t("stock.addCounted")}
           </button>
-        </div>
-      ) : null}
+          {activeItems.length ? (
+            <button
+              className="staff-desk__actions-item"
+              onClick={() => setReceiving(true)}
+              role="menuitem"
+              type="button"
+            >
+              {t("stock.receive")}
+            </button>
+          ) : null}
+          <button
+            className="staff-desk__actions-item"
+            onClick={() => setShowMeals(true)}
+            role="menuitem"
+            type="button"
+          >
+            {t("stock.mealsLeft")}
+          </button>
+          <button
+            className="staff-desk__actions-item"
+            onClick={() => setShowProjections(true)}
+            role="menuitem"
+            type="button"
+          >
+            {t("stock.projections")}
+          </button>
+        </StaffDeskActionsMenu>
+      </div>
 
-      <div className="staff-desk__panel">
+      <div className="staff-desk__panel staff-desk__panel--fill">
         {activeItems.length ? (
-          <div className="staff-desk__table-wrap">
+          <div className="staff-desk__table-wrap staff-desk__table-wrap--fill">
             <table className="staff-desk__table">
               <thead>
                 <tr>
@@ -202,10 +239,7 @@ export function StaffDeskStock({
             <p>{t("stock.emptyHint")}</p>
             <button
               className="button button--primary"
-              onClick={() => {
-                setCreating(true);
-                setSelectedId(null);
-              }}
+              onClick={openCreate}
               type="button"
             >
               {t("stock.addCounted")}
@@ -214,15 +248,19 @@ export function StaffDeskStock({
         )}
       </div>
 
-      {activeItems.length ? (
+      <StaffDialog
+        onClose={() => setReceiving(false)}
+        open={receiving}
+        title={t("stock.receive")}
+      >
         <DeskQuietForm
           action={recordStockMovement}
-          className="staff-desk__form staff-desk__form--strip"
+          className="staff-desk__form staff-desk__form--dialog"
+          onSuccess={() => setReceiving(false)}
           resetOnSuccess
         >
           {(pending) => (
             <>
-              <h2>{t("stock.receive")}</h2>
               <div className="staff-desk__field-grid">
                 <div className="field-pair staff-desk__grow">
                   <StaffCombo
@@ -276,9 +314,21 @@ export function StaffDeskStock({
             </>
           )}
         </DeskQuietForm>
-      ) : null}
+      </StaffDialog>
 
-      <div className="staff-desk__panel">
+      <StaffDialog
+        onClose={() => setShowMeals(false)}
+        open={showMeals}
+        title={t("stock.mealsLeft")}
+      >
+        {mealsBody}
+      </StaffDialog>
+
+      <StaffDialog
+        onClose={() => setShowProjections(false)}
+        open={showProjections}
+        title={t("stock.projections")}
+      >
         {projections.length ? (
           <div className="staff-desk__table-wrap">
             <table className="staff-desk__table">
@@ -329,12 +379,9 @@ export function StaffDeskStock({
             </table>
           </div>
         ) : (
-          <div className="staff-desk__empty-state">
-            <h2>{t("stock.projections")}</h2>
-            <p>{t("stock.projectionsEmpty")}</p>
-          </div>
+          <p className="staff-desk__empty">{t("stock.projectionsEmpty")}</p>
         )}
-      </div>
+      </StaffDialog>
 
       <StaffDialog
         onClose={() => {
@@ -517,6 +564,6 @@ export function StaffDeskStock({
           )}
         </DeskQuietForm>
       </StaffDialog>
-    </>
+    </div>
   );
 }

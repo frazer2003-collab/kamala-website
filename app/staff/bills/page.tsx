@@ -1,4 +1,4 @@
-import { StaffDeskBills, StaffNewBillButton } from "@/components/staff-desk-bills";
+import { StaffDeskBills } from "@/components/staff-desk-bills";
 import { StaffShell } from "@/components/staff-shell";
 import {
   listDeskBills,
@@ -29,13 +29,11 @@ export default async function StaffBillsPage({
 
   return (
     <StaffShell current="bills">
-      <section className="staff-main staff-desk" aria-labelledby="desk-bills-title">
+      <section className="staff-main staff-desk staff-desk--fill" aria-labelledby="desk-bills-title">
         <header className="staff-header staff-header--compact staff-desk__header">
           <div>
             <h1 id="desk-bills-title">{staffT(locale, "bills.title")}</h1>
-            <p>{staffT(locale, "bills.intro")}</p>
           </div>
-          <StaffNewBillButton label={staffT(locale, "bills.new")} />
         </header>
 
         {!hasStaffSupabaseConfig() ? (

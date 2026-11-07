@@ -1,4 +1,4 @@
-import { StaffDeskBills, StaffNewBillButton } from "@/components/staff-desk-bills";
+import { StaffDeskBills } from "@/components/staff-desk-bills";
 import { StaffLocaleProvider } from "@/components/staff-locale";
 import { StaffPortalShell } from "@/components/staff-portal-shell";
 import {
@@ -35,16 +35,11 @@ export default async function PortalBillsPage({
   return (
     <StaffLocaleProvider locale={locale}>
       <StaffPortalShell kind="bills">
-        <section className="staff-main staff-desk" aria-labelledby="portal-bills-title">
+        <section className="staff-main staff-desk staff-desk--fill" aria-labelledby="portal-bills-title">
           <header className="staff-header staff-header--compact staff-desk__header">
             <div>
               <h1 id="portal-bills-title">{staffT(locale, "bills.title")}</h1>
-              <p>{staffT(locale, "bills.intro")}</p>
             </div>
-            <StaffNewBillButton
-              label={staffT(locale, "bills.new")}
-              returnTo="/staff/portal/bills"
-            />
           </header>
           <StaffDeskBills
             bills={bills}

@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { createExpense, deleteExpense } from "@/app/desk-actions";
+import { StaffDeskActionsMenu } from "@/components/staff-desk-actions-menu";
 import {
   DeskQuietForm,
   deskPendingLabel,
 } from "@/components/desk-quiet-form";
+import { StaffDialog } from "@/components/staff-dialog";
 import { useStaffLocale } from "@/components/staff-locale";
 import { formatSatang } from "@/lib/desk-money";
 import type { DeskExpense } from "@/lib/desk-ops-data";
@@ -35,72 +38,27 @@ export function StaffDeskExpenses({
   returnTo: string;
 }) {
   const { t, locale } = useStaffLocale();
+  const [adding, setAdding] = useState(false);
 
   return (
-    <div className="staff-desk__expenses">
-      <DeskQuietForm
-        action={createExpense}
-        className="staff-desk__form staff-desk__form--strip"
-        resetOnSuccess
-      >
-        {(pending) => (
-          <>
-            <input name="return-to" type="hidden" value={returnTo} />
-            <h2>{t("expenses.add")}</h2>
-            <div className="staff-desk__field-grid">
-              <div className="field-pair staff-desk__grow">
-                <label htmlFor="expense-name">{t("expenses.chargeName")}</label>
-                <input
-                  autoFocus
-                  id="expense-name"
-                  name="name"
-                  placeholder={t("expenses.chargePlaceholder")}
-                  required
-                />
-              </div>
-              <div className="field-pair">
-                <label htmlFor="expense-amount">{t("expenses.cost")}</label>
-                <input
-                  id="expense-amount"
-                  inputMode="decimal"
-                  min="0"
-                  name="amount-baht"
-                  placeholder="0"
-                  required
-                  step="0.01"
-                  type="number"
-                />
-              </div>
-              <div className="field-pair">
-                <label htmlFor="expense-date">{t("common.date")}</label>
-                <input
-                  defaultValue={todayIso}
-                  id="expense-date"
-                  max={todayIso}
-                  name="expense-date"
-                  required
-                  type="date"
-                />
-              </div>
-            </div>
-            <div className="field-pair">
-              <label htmlFor="expense-note">{t("expenses.note")}</label>
-              <input
-                id="expense-note"
-                name="staff-note"
-                placeholder={t("expenses.notePlaceholder")}
-              />
-            </div>
-            <button
-              className="button button--primary"
-              disabled={pending}
-              type="submit"
-            >
-              {deskPendingLabel(pending, t("expenses.save"), t("common.saving"))}
-            </button>
-          </>
-        )}
-      </DeskQuietForm>
+    <div className="staff-desk__list-shell staff-desk__expenses">
+      <div className="staff-desk__list-toolbar staff-desk__list-toolbar--slim">
+        <span className="staff-desk__toolbar-meta">
+          {expenses.length
+            ? `${expenses.length}`
+            : t("expenses.empty")}
+        </span>
+        <StaffDeskActionsMenu label={t("common.actions")}>
+          <button
+            className="staff-desk__actions-item"
+            onClick={() => setAdding(true)}
+            role="menuitem"
+            type="button"
+          >
+            {t("expenses.add")}
+          </button>
+        </StaffDeskActionsMenu>
+      </div>
 
       {truncated ? (
         <p className="form-message" role="status">
@@ -108,9 +66,9 @@ export function StaffDeskExpenses({
         </p>
       ) : null}
 
-      <div className="staff-desk__panel">
+      <div className="staff-desk__panel staff-desk__panel--fill">
         {expenses.length ? (
-          <div className="staff-desk__table-wrap">
+          <div className="staff-desk__table-wrap staff-desk__table-wrap--fill">
             <table className="staff-desk__table">
               <thead>
                 <tr>
@@ -172,6 +130,13 @@ export function StaffDeskExpenses({
           <div className="staff-desk__empty-state">
             <h2>{t("expenses.empty")}</h2>
             <p>{t("expenses.emptyHint")}</p>
+            <button
+              className="button button--primary"
+              onClick={() => setAdding(true)}
+              type="button"
+            >
+              {t("expenses.add")}
+            </button>
           </div>
         )}
 
@@ -185,6 +150,76 @@ export function StaffDeskExpenses({
           <strong>{formatSatang(totalSatang)}</strong>
         </footer>
       </div>
+
+      <StaffDialog
+        onClose={() => setAdding(false)}
+        open={adding}
+        title={t("expenses.add")}
+      >
+        <DeskQuietForm
+          action={createExpense}
+          className="staff-desk__form staff-desk__form--dialog"
+          onSuccess={() => setAdding(false)}
+          resetOnSuccess
+        >
+          {(pending) => (
+            <>
+              <input name="return-to" type="hidden" value={returnTo} />
+              <div className="staff-desk__field-grid">
+                <div className="field-pair staff-desk__grow">
+                  <label htmlFor="expense-name">{t("expenses.chargeName")}</label>
+                  <input
+                    autoFocus
+                    id="expense-name"
+                    name="name"
+                    placeholder={t("expenses.chargePlaceholder")}
+                    required
+                  />
+                </div>
+                <div className="field-pair">
+                  <label htmlFor="expense-amount">{t("expenses.cost")}</label>
+                  <input
+                    id="expense-amount"
+                    inputMode="decimal"
+                    min="0"
+                    name="amount-baht"
+                    placeholder="0"
+                    required
+                    step="0.01"
+                    type="number"
+                  />
+                </div>
+                <div className="field-pair">
+                  <label htmlFor="expense-date">{t("common.date")}</label>
+                  <input
+                    defaultValue={todayIso}
+                    id="expense-date"
+                    max={todayIso}
+                    name="expense-date"
+                    required
+                    type="date"
+                  />
+                </div>
+              </div>
+              <div className="field-pair">
+                <label htmlFor="expense-note">{t("expenses.note")}</label>
+                <input
+                  id="expense-note"
+                  name="staff-note"
+                  placeholder={t("expenses.notePlaceholder")}
+                />
+              </div>
+              <button
+                className="button button--primary"
+                disabled={pending}
+                type="submit"
+              >
+                {deskPendingLabel(pending, t("expenses.save"), t("common.saving"))}
+              </button>
+            </>
+          )}
+        </DeskQuietForm>
+      </StaffDialog>
     </div>
   );
 }
