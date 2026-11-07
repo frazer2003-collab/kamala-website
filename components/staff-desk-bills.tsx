@@ -356,7 +356,7 @@ export function StaffDeskBills({
                 <input name="return-to" type="hidden" value={returnTo} />
                 <div className="field-pair staff-desk__grow">
                   <StaffCombo
-                    clearOnSelect
+                    clearOnSelect={false}
                     id="bill-item"
                     label={t("bills.addItem")}
                     name="sellable-item-id"

@@ -18,6 +18,21 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-bill-item-pick",
+    date: "2026-11-07",
+    title: "Bill item pick shows the chosen name",
+    summary:
+      "Choosing an item on a bill keeps the name in the field so you can see what you picked before Add.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Bill popup with selected item name in the add field",
+    },
+    changes: [
+      "Add item keeps the selected name visible until you press Add.",
+      "The item list no longer sits under the dialog or collapses when you pick.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-trust-slice",
     date: "2026-11-07",
     title: "Safer clear bill and clearer open tabs",

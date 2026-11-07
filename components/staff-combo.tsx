@@ -160,7 +160,11 @@ export function StaffCombo({
       onSelect?.(null);
     }
     setOpen(false);
-    inputRef.current?.focus();
+    // Don't refocus immediately when clearing — focus would reopen an empty list
+    // and make the pick look like it failed. Keep focus when the label stays.
+    if (!clearOnSelect) {
+      inputRef.current?.focus();
+    }
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {

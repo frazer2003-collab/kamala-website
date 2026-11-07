@@ -591,8 +591,12 @@
 }
 
 .staff-combo__list--portal {
+  /* Reset absolute-list anchors; placement is set via inline fixed coords. */
   position: fixed;
+  top: auto;
   right: auto;
+  bottom: auto;
+  left: auto;
   z-index: 120;
 }
 
