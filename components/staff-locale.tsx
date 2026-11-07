@@ -9,7 +9,6 @@ import {
   useTransition,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
 import { toggleStaffLocale } from "@/app/staff/locale-actions";
 import {
   STAFF_PHRASE_TH,
@@ -33,24 +32,42 @@ export function useStaffLocale() {
   return useContext(StaffLocaleContext);
 }
 
-function translateTextNode(node: Text, locale: StaffLocale) {
-  if (locale !== "th") return;
-  const original = node.nodeValue;
-  if (!original || !original.trim()) return;
-  let next = original;
+/** Keep English originals so switching back from TH can restore them. */
+const originalText = new WeakMap<Text, string>();
+
+function translateTextNode(node: Text) {
+  const current = node.nodeValue;
+  if (!current || !current.trim()) return;
+
+  if (!originalText.has(node)) {
+    originalText.set(node, current);
+  }
+  const source = originalText.get(node) ?? current;
+  let next = source;
   for (const [en, th] of STAFF_PHRASE_TH) {
     if (next.includes(en)) {
       next = next.split(en).join(th);
     }
   }
-  if (next !== original) {
+  if (next !== current) {
     node.nodeValue = next;
+  }
+}
+
+function restoreTextNode(node: Text) {
+  const source = originalText.get(node);
+  if (source != null && node.nodeValue !== source) {
+    node.nodeValue = source;
   }
 }
 
 function walk(node: Node, locale: StaffLocale) {
   if (node.nodeType === Node.TEXT_NODE) {
-    translateTextNode(node as Text, locale);
+    if (locale === "th") {
+      translateTextNode(node as Text);
+    } else {
+      restoreTextNode(node as Text);
+    }
     return;
   }
   if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -74,15 +91,15 @@ export function StaffLocaleProvider({
   locale: StaffLocale;
   children: ReactNode;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   const toggle = useCallback(() => {
     startTransition(async () => {
       await toggleStaffLocale();
-      router.refresh();
+      // Hard reload: soft refresh keeps phrase-mutated Thai DOM around.
+      window.location.reload();
     });
-  }, [router]);
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -98,13 +115,10 @@ export function StaffLocaleProvider({
     document.documentElement.lang = locale === "th" ? "th" : "en";
     const root = document.querySelector(".staff-shell");
     if (!root) return;
-    if (locale === "th") {
-      walk(root, locale);
-    }
+    walk(root, locale);
   }, [locale]);
 
   useEffect(() => {
-    if (locale !== "th") return;
     const root = document.querySelector(".staff-shell");
     if (!root) return;
     let frame = 0;
@@ -139,6 +153,7 @@ export function StaffLocaleToggle() {
     <button
       aria-label={locale === "en" ? t("lang.switchToTh") : t("lang.switchToEn")}
       className="staff-locale-toggle"
+      data-staff-no-translate=""
       disabled={pending}
       onClick={toggle}
       type="button"
