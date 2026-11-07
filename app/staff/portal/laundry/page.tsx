@@ -4,6 +4,7 @@ import { StaffPortalShell } from "@/components/staff-portal-shell";
 import { listDeskLaundry } from "@/lib/desk-ops-data";
 import { getDeskPortalSession } from "@/lib/desk-portal";
 import { getStaffLocale } from "@/lib/staff-locale-server";
+import { staffT } from "@/lib/staff-i18n";
 import { redirect } from "next/navigation";
 import "@/app/staff-desk.css";
 import "@/app/staff-ops.css";
@@ -24,8 +25,8 @@ export default async function PortalLaundryPage() {
         <section className="staff-main staff-desk" aria-labelledby="portal-laundry-title">
           <header className="staff-header staff-header--compact staff-desk__header">
             <div>
-              <h1 id="portal-laundry-title">Laundry</h1>
-              <p>This portal records sheet laundry only.</p>
+              <h1 id="portal-laundry-title">{staffT(locale, "laundry.title")}</h1>
+              <p>{staffT(locale, "laundry.portalIntro")}</p>
             </div>
           </header>
           <StaffDeskLaundry

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addBillLine,
   clearBill,
@@ -57,6 +57,8 @@ export function StaffDeskBills({
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [dialogBusy, setDialogBusy] = useState(false);
+  const dialogBusyGate = useRef(false);
   const [stockPick, setStockPick] = useState<{
     countedId: string;
     priceBaht: string;
@@ -100,7 +102,7 @@ export function StaffDeskBills({
           value: `stock:${item.id}`,
           label: linked
             ? `${bilingualItemLabel(item)} · stock · ${formatSatang(linked.priceSatang)}`
-            : `${bilingualItemLabel(item)} · stock · set price`,
+            : `${bilingualItemLabel(item)} · ${t("bills.stockSetPrice")}`,
           keywords: `${item.nameEn} ${item.nameTh} stock counted`,
         };
       });
@@ -121,7 +123,15 @@ export function StaffDeskBills({
   useEffect(() => {
     setConfirmClear(false);
     setStockPick(null);
+    setDialogBusy(false);
+    dialogBusyGate.current = false;
   }, [selectedId]);
+
+  const dialogFormLock = {
+    locked: dialogBusy,
+    busyGate: dialogBusyGate,
+    onPendingChange: setDialogBusy,
+  };
 
   useEffect(() => {
     if ((selected?.lines.length ?? 0) === 0) setConfirmClear(false);
@@ -155,7 +165,9 @@ export function StaffDeskBills({
     <DeskQuietForm
       action={createBill}
       onSuccess={(result) => {
-        if (result?.id) openBill(result.id);
+        if (!result?.id) return;
+        // Same path as header New bill — App Router must see ?open=.
+        router.push(`${returnTo}?open=${encodeURIComponent(result.id)}`);
       }}
     >
       {(pending) => (
@@ -166,7 +178,7 @@ export function StaffDeskBills({
             disabled={pending}
             type="submit"
           >
-            {deskPendingLabel(pending, t("bills.new"), "Opening…")}
+            {deskPendingLabel(pending, t("bills.new"), t("common.opening"))}
           </button>
         </>
       )}
@@ -183,7 +195,7 @@ export function StaffDeskBills({
                 <tr>
                   <th>{t("common.name")}</th>
                   <th>{t("common.room")}</th>
-                  <th>Date</th>
+                  <th>{t("common.date")}</th>
                   <th>{t("common.status")}</th>
                   <th>{t("bills.amount")}</th>
                 </tr>
@@ -243,8 +255,9 @@ export function StaffDeskBills({
                 action={clearBill}
                 className="staff-desk__clear-confirm"
                 onSuccess={() => closeBill()}
+                {...dialogFormLock}
               >
-                {(pending) => (
+                {(pending, locked) => (
                   <>
                     <input name="bill-id" type="hidden" value={selected.id} />
                     <input name="return-to" type="hidden" value={returnTo} />
@@ -267,14 +280,18 @@ export function StaffDeskBills({
                     <div className="staff-desk__clear-confirm-actions">
                       <button
                         className="button button--primary"
-                        disabled={pending}
+                        disabled={pending || locked}
                         type="submit"
                       >
-                        {deskPendingLabel(pending, t("bills.clearConfirm"))}
+                        {deskPendingLabel(
+                          pending,
+                          t("bills.clearConfirm"),
+                          t("common.saving"),
+                        )}
                       </button>
                       <button
                         className="button button--secondary"
-                        disabled={pending}
+                        disabled={pending || locked}
                         onClick={() => setConfirmClear(false)}
                         type="button"
                       >
@@ -287,6 +304,7 @@ export function StaffDeskBills({
             ) : (
               <button
                 className="button button--primary"
+                disabled={dialogBusy}
                 onClick={() => setConfirmClear(true)}
                 type="button"
               >
@@ -299,8 +317,12 @@ export function StaffDeskBills({
         {selected ? (
           <>
             {selected.status === "open" ? (
-              <DeskQuietForm action={updateBill} className="staff-desk__inline-form">
-                {(pending) => (
+              <DeskQuietForm
+                action={updateBill}
+                className="staff-desk__inline-form"
+                {...dialogFormLock}
+              >
+                {(pending, locked) => (
                   <>
                 <input name="bill-id" type="hidden" value={selected.id} />
                 <input name="return-to" type="hidden" value={returnTo} />
@@ -309,7 +331,7 @@ export function StaffDeskBills({
                   <input
                     defaultValue={selected.name}
                     id="bill-name"
-                    key={`name-${selected.id}-${selected.name}`}
+                    key={`name-${selected.id}`}
                     name="name"
                     required
                   />
@@ -319,17 +341,17 @@ export function StaffDeskBills({
                   <input
                     defaultValue={selected.room ?? ""}
                     id="bill-room"
-                    key={`room-${selected.id}-${selected.room ?? ""}`}
+                    key={`room-${selected.id}`}
                     name="room"
                     placeholder="204"
                   />
                 </div>
                 <button
                   className="button button--secondary"
-                  disabled={pending}
+                  disabled={pending || locked}
                   type="submit"
                 >
-                  {deskPendingLabel(pending, t("common.save"))}
+                  {deskPendingLabel(pending, t("common.save"), t("common.saving"))}
                 </button>
                   </>
                 )}
@@ -341,7 +363,7 @@ export function StaffDeskBills({
                   <dd>{selected.room || "—"}</dd>
                 </div>
                 <div>
-                  <dt>Date</dt>
+                  <dt>{t("common.date")}</dt>
                   <dd>{formatDate(selected.serviceDate, locale)}</dd>
                 </div>
                 <div>
@@ -360,7 +382,7 @@ export function StaffDeskBills({
             {selected.status === "open" ? (
               <dl className="staff-desk__details">
                 <div>
-                  <dt>Date</dt>
+                  <dt>{t("common.date")}</dt>
                   <dd>{formatDate(selected.serviceDate, locale)}</dd>
                 </div>
                 <div>
@@ -392,7 +414,7 @@ export function StaffDeskBills({
                       return (
                         <tr key={line.id}>
                           <td>
-                            {item ? bilingualItemLabel(item) : "Removed item"}
+                            {item ? bilingualItemLabel(item) : t("bills.removedItem")}
                           </td>
                           <td>{line.quantity}</td>
                           <td>
@@ -401,8 +423,9 @@ export function StaffDeskBills({
                                 <DeskQuietForm
                                   action={updateBillLinePrice}
                                   className="staff-desk__line-price"
+                                  {...dialogFormLock}
                                 >
-                                  {(pending) => (
+                                  {(pending, locked) => (
                                     <>
                                       <input
                                         name="bill-id"
@@ -432,7 +455,7 @@ export function StaffDeskBills({
                                       />
                                       <button
                                         className="button button--quiet"
-                                        disabled={pending}
+                                        disabled={pending || locked}
                                         type="submit"
                                       >
                                         {deskPendingLabel(
@@ -457,8 +480,11 @@ export function StaffDeskBills({
                           <td>
                             {selected.status === "open" ? (
                               <div onClick={(event) => event.stopPropagation()}>
-                                <DeskQuietForm action={removeBillLine}>
-                                  {(pending) => (
+                                <DeskQuietForm
+                                  action={removeBillLine}
+                                  {...dialogFormLock}
+                                >
+                                  {(pending, locked) => (
                                     <>
                                       <input
                                         name="bill-id"
@@ -477,7 +503,7 @@ export function StaffDeskBills({
                                       />
                                       <button
                                         className="button button--quiet"
-                                        disabled={pending}
+                                        disabled={pending || locked}
                                         type="submit"
                                       >
                                         {deskPendingLabel(
@@ -510,8 +536,9 @@ export function StaffDeskBills({
                   className="staff-desk__inline-form"
                   onSuccess={() => setStockPick(null)}
                   resetOnSuccess
+                  {...dialogFormLock}
                 >
-                  {(pending) => (
+                  {(pending, locked) => (
                     <>
                 <input name="bill-id" type="hidden" value={selected.id} />
                 <input name="return-to" type="hidden" value={returnTo} />
@@ -597,10 +624,10 @@ export function StaffDeskBills({
                 </div>
                 <button
                   className="button button--secondary"
-                  disabled={pending}
+                  disabled={pending || locked}
                   type="submit"
                 >
-                  {deskPendingLabel(pending, t("common.add"), "Adding…")}
+                  {deskPendingLabel(pending, t("common.add"), t("common.adding"))}
                 </button>
                     </>
                   )}
@@ -630,6 +657,7 @@ export function StaffNewBillButton({
   label: string;
 }) {
   const router = useRouter();
+  const { t } = useStaffLocale();
   return (
     <DeskQuietForm
       action={createBill}
@@ -647,7 +675,7 @@ export function StaffNewBillButton({
             disabled={pending}
             type="submit"
           >
-            {deskPendingLabel(pending, label, "Opening…")}
+            {deskPendingLabel(pending, label, t("common.opening"))}
           </button>
         </>
       )}

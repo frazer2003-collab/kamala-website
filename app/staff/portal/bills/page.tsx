@@ -8,6 +8,7 @@ import {
 } from "@/lib/desk-ops-data";
 import { getDeskPortalSession } from "@/lib/desk-portal";
 import { getStaffLocale } from "@/lib/staff-locale-server";
+import { staffT } from "@/lib/staff-i18n";
 import { redirect } from "next/navigation";
 import "@/app/staff-desk.css";
 import "@/app/staff-ops.css";
@@ -37,11 +38,11 @@ export default async function PortalBillsPage({
         <section className="staff-main staff-desk" aria-labelledby="portal-bills-title">
           <header className="staff-header staff-header--compact staff-desk__header">
             <div>
-              <h1 id="portal-bills-title">Bills</h1>
-              <p>Open tabs, add menu or stock items, then clear when paid.</p>
+              <h1 id="portal-bills-title">{staffT(locale, "bills.title")}</h1>
+              <p>{staffT(locale, "bills.intro")}</p>
             </div>
             <StaffNewBillButton
-              label="New bill"
+              label={staffT(locale, "bills.new")}
               returnTo="/staff/portal/bills"
             />
           </header>

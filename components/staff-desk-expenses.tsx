@@ -105,7 +105,7 @@ export function StaffDeskExpenses({
               disabled={pending}
               type="submit"
             >
-              {deskPendingLabel(pending, t("expenses.save"))}
+              {deskPendingLabel(pending, t("expenses.save"), t("common.saving"))}
             </button>
           </>
         )}

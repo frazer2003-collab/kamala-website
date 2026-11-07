@@ -74,7 +74,7 @@ export function StaffDeskItems({
           <input
             id="items-q"
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Thai or English name"
+            placeholder={t("desk.typeToSearch")}
             type="search"
             value={query}
           />
@@ -336,7 +336,7 @@ export function StaffDeskItems({
                 disabled={pending}
                 type="submit"
               >
-                {deskPendingLabel(pending, t("items.save"))}
+                {deskPendingLabel(pending, t("items.save"), t("common.saving"))}
               </button>
             </>
           )}
@@ -396,7 +396,7 @@ export function StaffDeskItems({
                           disabled={pending}
                           type="submit"
                         >
-                          {deskPendingLabel(pending, t("common.save"))}
+                          {deskPendingLabel(pending, t("common.save"), t("common.saving"))}
                         </button>
                       </>
                     )}
@@ -432,7 +432,7 @@ export function StaffDeskItems({
                   disabled={pending}
                   type="submit"
                 >
-                  {deskPendingLabel(pending, t("items.addCategory"))}
+                  {deskPendingLabel(pending, t("items.addCategory"), t("common.saving"))}
                 </button>
               </fieldset>
             )}

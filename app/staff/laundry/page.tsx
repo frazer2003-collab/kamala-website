@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { StaffDeskLaundry } from "@/components/staff-desk-laundry";
 import { StaffShell } from "@/components/staff-shell";
 import { listDeskLaundry } from "@/lib/desk-ops-data";
@@ -26,6 +27,9 @@ export default async function StaffLaundryPage({
             <h1 id="desk-laundry-title">{staffT(locale, "laundry.title")}</h1>
             <p>{staffT(locale, "laundry.intro")}</p>
           </div>
+          <Link className="button button--quiet" href="/staff/expenses?view=day">
+            {staffT(locale, "laundry.expenseHint")}
+          </Link>
         </header>
         <StaffDeskLaundry initialOpenId={open ?? null} records={records} />
       </section>

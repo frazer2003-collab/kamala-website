@@ -151,9 +151,8 @@ export function StaffDeskLaundry({
           action={createLaundryRecord}
           className="staff-desk__form"
           resetOnSuccess
-          onSuccess={(result) => {
+          onSuccess={() => {
             setMeasureType(sheetsOnly ? "count" : "kg");
-            if (result?.id) setSelectedId(result.id);
           }}
         >
           {(pending) => (
@@ -266,7 +265,7 @@ export function StaffDeskLaundry({
                 disabled={pending}
                 type="submit"
               >
-                {deskPendingLabel(pending, t("laundry.addSlip"))}
+                {deskPendingLabel(pending, t("laundry.addSlip"), t("common.saving"))}
               </button>
             </>
           )}
@@ -352,7 +351,7 @@ export function StaffDeskLaundry({
                   disabled={pending}
                   type="submit"
                 >
-                  {deskPendingLabel(pending, t("common.save"))}
+                  {deskPendingLabel(pending, t("common.save"), t("common.saving"))}
                 </button>
               </>
             )}

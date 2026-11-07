@@ -41,6 +41,8 @@ import {
 import { parseBahtToSatang } from "@/lib/desk-money";
 import { getDeskPortalSession } from "@/lib/desk-portal";
 import { getStaffSession, requireStaffSession } from "@/lib/staff-auth";
+import { staffT } from "@/lib/staff-i18n";
+import { getStaffLocale } from "@/lib/staff-locale-server";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -237,8 +239,9 @@ export async function deactivateCountedItem(formData: FormData) {
 
 export async function createBill(formData: FormData) {
   await requireDeskWriteAccess("bills");
+  const locale = await getStaffLocale();
   const id = await createDeskBill({
-    name: value(formData, "name") || "New bill",
+    name: value(formData, "name") || staffT(locale, "bills.new"),
     room: value(formData, "room") || null,
   });
   revalidateDesk();

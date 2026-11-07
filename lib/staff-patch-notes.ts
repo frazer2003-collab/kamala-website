@@ -18,18 +18,81 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-usability-rev4",
+    date: "2026-11-07",
+    title: "Portal laundry and sidebar speak TH",
+    summary:
+      "Sheets portal title, intro, and Sign out follow staff language — same idea as the bills portal.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Laundry portal header in Thai with Sheets sidebar",
+    },
+    changes: [
+      "Laundry portal header uses Thai when the staff language is TH.",
+      "Portal sidebar Sheets / Bills and Log out follow EN/TH.",
+      "Quiet save errors show a bilingual Could not save message.",
+    ],
+  },
+  {
+    id: "2026-11-07-desk-usability-rev3",
+    date: "2026-11-07",
+    title: "New bills name themselves in Thai; busy controls stay honest",
+    summary:
+      "A new bill defaults to บิลใหม่ in TH. While one save runs, sibling buttons wait without fake Adding… labels.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Bill dialog with Save waiting while Add finishes",
+    },
+    changes: [
+      "New bill default name follows staff language (New bill / บิลใหม่).",
+      "On an open tab, only the control that is saving shows a pending label; others just wait.",
+      "Portal bills header and expense/laundry Saving… copy follow EN/TH.",
+    ],
+  },
+  {
+    id: "2026-11-07-desk-usability-rev2",
+    date: "2026-11-07",
+    title: "Bill tab won’t double-save; Date speaks TH",
+    summary:
+      "Rename and Add on a bill wait for each other. Empty-state New bill matches the header. Date and Opening/Adding follow EN/TH.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Open bill dialog with Save and Add that take turns",
+    },
+    changes: [
+      "While one bill action is saving, the other Save / Add / Clear controls wait — no overlapping refreshes.",
+      "Empty-list New bill opens the same way as the header button.",
+      "Bills Date column and Opening… / Adding… labels follow the staff language.",
+    ],
+  },
+  {
+    id: "2026-11-07-laundry-expense-split",
+    date: "2026-11-07",
+    title: "Laundry tracks bags; laundromat invoices go to Expenses",
+    summary:
+      "New laundry slips stay on the list. When the laundromat bill arrives, key it under Expenses.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Laundry page with link to Expenses for the laundromat bill",
+    },
+    changes: [
+      "Adding a laundry slip no longer pops a dialog — the list updates and you keep working.",
+      "Laundry intro points vendor invoices to Expenses; a quiet link opens Today’s expenses.",
+      "Expense charge examples now include laundry alongside electricity and water.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-usability-rev1",
     date: "2026-11-07",
     title: "New bill opens right away; Expenses starts on Today",
     summary:
-      "Header New bill opens the tab again. New laundry slips open to edit. Expenses under Desk lands on Today.",
+      "Header New bill opens the tab again. Expenses under Desk lands on Today.",
     image: {
       src: "/staff/patch-notes/desk-ops.jpg",
       alt: "New bill dialog open after pressing New bill",
     },
     changes: [
       "New bill from the header opens the live tab immediately.",
-      "Adding a laundry slip opens it so you can set status without hunting the list.",
       "Expenses opens on Today; dialogs focus the first field so you can type straight away.",
     ],
   },

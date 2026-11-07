@@ -258,14 +258,14 @@ export function StaffDeskStock({
               </div>
               <div className="field-pair">
                 <label htmlFor="movement-note">{t("common.note")}</label>
-                <input id="movement-note" name="note" placeholder="Supplier or reason" />
+                <input id="movement-note" name="note" placeholder={t("stock.reason")} />
               </div>
               <button
                 className="button button--primary"
                 disabled={pending}
                 type="submit"
               >
-                {deskPendingLabel(pending, t("stock.record"))}
+                {deskPendingLabel(pending, t("stock.record"), t("common.saving"))}
               </button>
             </>
           )}
@@ -508,7 +508,7 @@ export function StaffDeskStock({
                 disabled={pending}
                 type="submit"
               >
-                {deskPendingLabel(pending, t("stock.saveCounted"))}
+                {deskPendingLabel(pending, t("stock.saveCounted"), t("common.saving"))}
               </button>
             </>
           )}

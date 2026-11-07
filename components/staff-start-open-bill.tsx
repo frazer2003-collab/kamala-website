@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBill } from "@/app/desk-actions";
+import { useStaffLocale } from "@/components/staff-locale";
 
 export function StaffStartOpenBill({
   returnTo = "/staff/bills",
@@ -10,6 +11,7 @@ export function StaffStartOpenBill({
   returnTo?: string;
 }) {
   const router = useRouter();
+  const { t } = useStaffLocale();
   const started = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,16 +30,16 @@ export function StaffStartOpenBill({
           router.push(`${returnTo}?open=${encodeURIComponent(result.id)}`);
           return;
         }
-        setError("Could not open a bill.");
+        setError(t("bills.openFailed"));
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Could not open a bill.");
+        setError(cause instanceof Error ? cause.message : t("bills.openFailed"));
       }
     })();
-  }, [returnTo, router]);
+  }, [returnTo, router, t]);
 
   return (
     <p className={error ? "form-message form-message--error" : undefined} role="status">
-      {error ?? "Opening bill…"}
+      {error ?? t("bills.openingBill")}
     </p>
   );
 }
