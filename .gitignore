@@ -23,6 +23,12 @@ pnpm-debug.log*
 tsconfig.tsbuildinfo
 .vercel/
 
+# Cloudflare / OpenNext
+.open-next/
+.wrangler/
+.dev.vars
+cloudflare-env.d.ts
+
 # browser session scratch (screenshots, previews)
 .playwright-mcp/
 

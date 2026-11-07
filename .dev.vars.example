@@ -1,0 +1,3 @@
+# Copied to `.dev.vars` for `wrangler` / OpenNext local preview.
+# Secrets for production: `wrangler secret put NAME` (or Cloudflare dashboard).
+NEXTJS_ENV=development

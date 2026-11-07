@@ -2,13 +2,12 @@
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  // vercel.live = Preview Comments / Live Feedback toolbar on Vercel deployments
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://js.stripe.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://q.stripe.com https://*.stripe.com https://*.tile.openstreetmap.org https://vercel.live https://vercel.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://q.stripe.com https://*.stripe.com https://*.tile.openstreetmap.org",
   "font-src 'self' data:",
-  "frame-src https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org https://vercel.live",
-  "connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vitals.vercel-insights.com https://vercel.live wss://*.pusher.com https://*.pusher.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org",
+  "connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co https://cloudflareinsights.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -67,3 +66,11 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+
+// Bindings + Workers runtime helpers during `next dev` (OpenNext / Cloudflare).
+try {
+  const { initOpenNextCloudflareForDev } = require("@opennextjs/cloudflare");
+  initOpenNextCloudflareForDev();
+} catch {
+  // Package missing in some CI/local slices — ignore.
+}

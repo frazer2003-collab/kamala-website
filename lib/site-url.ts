@@ -51,5 +51,11 @@ export function getSiteUrl() {
     return normalizeSiteUrl(`https://${vercel.replace(/\/$/, "")}`);
   }
 
+  // Cloudflare Pages / Workers preview hostnames.
+  const cfPages = process.env.CF_PAGES_URL?.trim();
+  if (cfPages) {
+    return normalizeSiteUrl(cfPages);
+  }
+
   return "http://localhost:3000";
 }

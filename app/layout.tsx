@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Analytics } from "@vercel/analytics/next";
 import { Libre_Baskerville, Plus_Jakarta_Sans } from "next/font/google";
 import { getPropertySettings } from "@/lib/property-settings";
 import {
@@ -61,7 +60,6 @@ export default function RootLayout({
     <html className={libreBaskerville.variable} lang="en">
       <body className={plusJakarta.className}>
         {children}
-        <Analytics />
       </body>
     </html>
   );
