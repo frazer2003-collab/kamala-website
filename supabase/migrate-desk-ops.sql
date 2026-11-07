@@ -256,3 +256,26 @@ join public.desk_counted_items counted
 where sellable.property_id = 'kamala'
   and sellable.name_en = 'Breakfast set'
 on conflict (property_id, sellable_item_id, counted_item_id) do nothing;
+
+-- Extra demo catalog (safe to re-run).
+insert into public.desk_counted_items (
+  property_id, name_th, name_en, unit, opening_quantity, minimum
+)
+values
+  ('kamala', 'น้ำดื่ม', 'Bottled water', 'count', 48, 12),
+  ('kamala', 'กาแฟผง', 'Coffee powder', 'grams', 2000, 400),
+  ('kamala', 'นม', 'Milk', 'count', 20, 6),
+  ('kamala', 'น้ำตาล', 'Sugar sachets', 'count', 100, 20),
+  ('kamala', 'ข้าวสาร', 'Rice', 'grams', 10000, 2000)
+on conflict (property_id, name_en) do nothing;
+
+insert into public.desk_sellable_items (
+  property_id, name_th, name_en, category, price_satang, minimum
+)
+values
+  ('kamala', 'กาแฟร้อน', 'Hot coffee', 'drink', 6000, 0),
+  ('kamala', 'น้ำดื่ม', 'Bottled water', 'drink', 2000, 0),
+  ('kamala', 'ข้าวผัด', 'Fried rice', 'food', 12000, 0),
+  ('kamala', 'ซักผ้า', 'Guest laundry bag', 'laundry', 15000, 0),
+  ('kamala', 'ผ้าเช็ดตัวเพิ่ม', 'Extra towel', 'extra', 5000, 0)
+on conflict (property_id, name_en) do nothing;

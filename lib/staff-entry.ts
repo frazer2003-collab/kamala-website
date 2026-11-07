@@ -5,7 +5,43 @@ export function isStaffProtectedPath(pathname: string) {
     return false;
   }
 
-  return path !== "/staff/login" && !path.startsWith("/staff/login/");
+  if (path === "/staff/login" || path.startsWith("/staff/login/")) {
+    return false;
+  }
+
+  if (path === "/staff/portal/login" || path.startsWith("/staff/portal/login/")) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isDeskPortalLoginPath(pathname: string) {
+  const path = pathname.split("?")[0] ?? pathname;
+  return path === "/staff/portal/login" || path.startsWith("/staff/portal/login/");
+}
+
+export function isDeskPortalProtectedPath(pathname: string) {
+  const path = pathname.split("?")[0] ?? pathname;
+  return (
+    path === "/staff/portal/bills" ||
+    path.startsWith("/staff/portal/bills/") ||
+    path === "/staff/portal/laundry" ||
+    path.startsWith("/staff/portal/laundry/")
+  );
+}
+
+export function deskPortalKindForPath(
+  pathname: string,
+): "bills" | "laundry" | null {
+  const path = pathname.split("?")[0] ?? pathname;
+  if (path === "/staff/portal/bills" || path.startsWith("/staff/portal/bills/")) {
+    return "bills";
+  }
+  if (path === "/staff/portal/laundry" || path.startsWith("/staff/portal/laundry/")) {
+    return "laundry";
+  }
+  return null;
 }
 
 /**

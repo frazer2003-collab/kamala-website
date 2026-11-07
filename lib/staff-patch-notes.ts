@@ -18,6 +18,26 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-portals-home",
+    date: "2026-11-07",
+    title: "Menu items, desk portals, and priority Home",
+    summary:
+      "Home leads with what needs attention. Bills and laundry have portal logins, and stock can be sold on bills.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff home priority cards and desk tools",
+    },
+    changes: [
+      "Items is renamed to Menu items in the sidebar and desk tools.",
+      "Home puts Transfers, doors, low stock, open laundry, and open bills first when they need attention.",
+      "Whole record rows open the popup, not only the name link.",
+      "Laundry notes can be edited in the slip popup.",
+      "Bills can add stock items as well as menu items; clearing a bill posts stock movements again.",
+      "Desk portals at /staff/portal/login for bills and sheets-only laundry.",
+      "Search dropdowns keep showing matching options while you type.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-speed-th",
     date: "2026-11-07",
     title: "Faster desk tools and Thai staff language",

@@ -575,7 +575,7 @@
 
 .staff-combo__list {
   position: absolute;
-  z-index: 20;
+  z-index: 40;
   top: calc(100% + 0.25rem);
   right: 0;
   left: 0;
@@ -586,8 +586,25 @@
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: 0 10px 30px color-mix(in srgb, var(--color-ink) 12%, transparent);
-  max-height: 14rem;
+  max-height: 16rem;
   overflow: auto;
+}
+
+.staff-dialog .staff-combo__list {
+  z-index: 90;
+}
+
+.staff-desk__click-row {
+  cursor: pointer;
+}
+
+.staff-desk__click-row:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: -2px;
+}
+
+.staff-desk__click-row:hover {
+  background: color-mix(in srgb, var(--color-maroon-wash) 45%, var(--color-surface));
 }
 
 .staff-combo__option {

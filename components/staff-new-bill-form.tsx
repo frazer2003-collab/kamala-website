@@ -9,9 +9,11 @@ import type { DeskSellableItem } from "@/lib/desk-ops-data";
 export function StaffNewBillForm({
   action,
   sellables,
+  returnTo = "/staff/bills",
 }: {
   action: (formData: FormData) => Promise<void>;
   sellables: DeskSellableItem[];
+  returnTo?: string;
 }) {
   const { t } = useStaffLocale();
   const options = sellables.map((item) => ({
@@ -22,6 +24,7 @@ export function StaffNewBillForm({
 
   return (
     <form action={action} className="staff-desk__form staff-desk__form--narrow">
+      <input name="return-to" type="hidden" value={returnTo} />
       <div className="field-pair">
         <label htmlFor="new-bill-name">{t("common.name")}</label>
         <input

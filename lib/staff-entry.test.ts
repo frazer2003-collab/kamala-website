@@ -12,6 +12,8 @@ describe("staff entry guards", () => {
     assert.equal(isStaffProtectedPath("/staff/calendar"), true);
     assert.equal(isStaffProtectedPath("/staff/login"), false);
     assert.equal(isStaffProtectedPath("/staff/login?next=/staff"), false);
+    assert.equal(isStaffProtectedPath("/staff/portal/login"), false);
+    assert.equal(isStaffProtectedPath("/staff/portal/bills"), true);
     assert.equal(isStaffProtectedPath("/"), false);
   });
 

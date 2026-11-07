@@ -447,6 +447,40 @@ export async function listDeskSellables(): Promise<DeskSellableItem[]> {
   );
 }
 
+/** Create or reuse a 1:1 sellable so counted stock can be sold on bills. */
+export async function ensureSellableForCountedItem(
+  countedItemId: string,
+  priceSatang = 5000,
+): Promise<string> {
+  const [countedItems, sellables] = await Promise.all([
+    listDeskCountedItems(),
+    listDeskSellables(),
+  ]);
+  const counted = countedItems.find((item) => item.id === countedItemId);
+  if (!counted || !counted.active) {
+    throw new Error("Unknown stock item.");
+  }
+  const existing = sellables.find(
+    (item) =>
+      item.active &&
+      item.nameEn === counted.nameEn &&
+      item.ingredients.length === 1 &&
+      item.ingredients[0]?.countedItemId === counted.id &&
+      item.ingredients[0]?.quantity === 1,
+  );
+  if (existing) return existing.id;
+  return saveDeskSellable({
+    nameTh: counted.nameTh,
+    nameEn: counted.nameEn,
+    category: "extra",
+    priceSatang,
+    minimum: 0,
+    active: true,
+    ingredients: [{ countedItemId: counted.id, quantity: 1 }],
+    attachedLaundryIds: [],
+  });
+}
+
 export async function saveDeskSellable(input: {
   id?: string;
   nameTh: string;

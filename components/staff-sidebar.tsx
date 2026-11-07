@@ -250,7 +250,12 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
             label: t("nav.laundry"),
             icon: <IconLaundry />,
           },
-          { id: "items" as const, href: "/staff/items", label: t("nav.items"), icon: <IconItems /> },
+          {
+            id: "items" as const,
+            href: "/staff/items",
+            label: t("nav.menuItems"),
+            icon: <IconItems />,
+          },
         ],
       },
       {

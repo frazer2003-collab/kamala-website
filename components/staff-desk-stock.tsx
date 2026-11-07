@@ -128,35 +128,42 @@ export function StaffDeskStock({
                 </tr>
               </thead>
               <tbody>
-                {activeItems.map((item) => {
-                  const room = headroom(item.onHand, item.minimum);
-                  return (
-                    <tr key={item.id}>
-                      <td>
-                        <button
-                          className="staff-desk__row-link"
-                          onClick={() => {
+                  {activeItems.map((item) => {
+                    const room = headroom(item.onHand, item.minimum);
+                    return (
+                      <tr
+                        className="staff-desk__click-row"
+                        key={item.id}
+                        onClick={() => {
+                          setCreating(false);
+                          setSelectedId(item.id);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
                             setCreating(false);
                             setSelectedId(item.id);
-                          }}
-                          type="button"
-                        >
-                          {bilingualItemLabel(item)}
-                        </button>
-                      </td>
-                      <td>{quantityLabel(item.onHand, item.unit)}</td>
-                      <td>{quantityLabel(item.minimum, item.unit)}</td>
-                      <td>
-                        <span
-                          className={`desk-status ${room <= 0 ? "desk-status--warning" : "desk-status--open"}`}
-                        >
-                          {room > 0 ? "+" : ""}
-                          {quantityLabel(room, item.unit)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                      >
+                        <td>
+                          <strong>{bilingualItemLabel(item)}</strong>
+                        </td>
+                        <td>{quantityLabel(item.onHand, item.unit)}</td>
+                        <td>{quantityLabel(item.minimum, item.unit)}</td>
+                        <td>
+                          <span
+                            className={`desk-status ${room <= 0 ? "desk-status--warning" : "desk-status--open"}`}
+                          >
+                            {room > 0 ? "+" : ""}
+                            {quantityLabel(room, item.unit)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

@@ -3,6 +3,7 @@ import { StaffDeskBills } from "@/components/staff-desk-bills";
 import { StaffShell } from "@/components/staff-shell";
 import {
   listDeskBills,
+  listDeskCountedItems,
   listDeskSellables,
 } from "@/lib/desk-ops-data";
 import { requireStaffSession } from "@/lib/staff-auth";
@@ -16,9 +17,10 @@ export const dynamic = "force-dynamic";
 export default async function StaffBillsPage() {
   await requireStaffSession();
   const locale = await getStaffLocale();
-  const [bills, sellables] = await Promise.all([
+  const [bills, sellables, countedItems] = await Promise.all([
     listDeskBills(),
     listDeskSellables(),
+    listDeskCountedItems(),
   ]);
 
   return (
@@ -39,7 +41,11 @@ export default async function StaffBillsPage() {
             Desk data is not connected yet. Finish Supabase setup, then reload.
           </p>
         ) : (
-          <StaffDeskBills bills={bills} sellables={sellables} />
+          <StaffDeskBills
+            bills={bills}
+            countedItems={countedItems}
+            sellables={sellables}
+          />
         )}
       </section>
     </StaffShell>

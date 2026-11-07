@@ -22,6 +22,7 @@ type StaffComboProps = {
   clearOnSelect?: boolean;
   defaultValue?: string;
   emptyLabel?: string;
+  maxOptions?: number;
   onSelect?: (option: StaffComboOption | null) => void;
 };
 
@@ -43,10 +44,12 @@ export function StaffCombo({
   clearOnSelect = true,
   defaultValue = "",
   emptyLabel,
+  maxOptions = 12,
   onSelect,
 }: StaffComboProps) {
   const listId = useId();
   const inputId = id ?? listId;
+  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initial = options.find((option) => option.value === defaultValue) ?? null;
   const [query, setQuery] = useState(initial?.label ?? "");
@@ -56,13 +59,22 @@ export function StaffCombo({
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const next = options.filter((option) => matches(option, needle));
-    return next.slice(0, 8);
-  }, [options, query]);
+    return options.filter((option) => matches(option, needle)).slice(0, maxOptions);
+  }, [options, query, maxOptions]);
 
   useEffect(() => {
     setActive(0);
   }, [query, open]);
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, []);
 
   function choose(option: StaffComboOption | null) {
     if (option) {
@@ -96,14 +108,15 @@ export function StaffCombo({
       return;
     }
     if (event.key === "Enter") {
-      if (!open && filtered.length === 1) {
+      const pick =
+        open && filtered[active]
+          ? filtered[active]
+          : filtered.length === 1
+            ? filtered[0]
+            : null;
+      if (pick) {
         event.preventDefault();
-        choose(filtered[0]!);
-        return;
-      }
-      if (open && filtered[active]) {
-        event.preventDefault();
-        choose(filtered[active]!);
+        choose(pick);
       }
       return;
     }
@@ -113,7 +126,7 @@ export function StaffCombo({
   }
 
   return (
-    <div className="staff-combo">
+    <div className="staff-combo" ref={rootRef}>
       {label ? <label htmlFor={inputId}>{label}</label> : null}
       {persistValue && name ? (
         <input name={name} required={required} type="hidden" value={value} />
@@ -125,9 +138,6 @@ export function StaffCombo({
         autoComplete="off"
         disabled={disabled}
         id={inputId}
-        onBlur={() => {
-          window.setTimeout(() => setOpen(false), 120);
-        }}
         onChange={(event) => {
           setQuery(event.target.value);
           setOpen(true);
@@ -140,7 +150,7 @@ export function StaffCombo({
         placeholder={placeholder}
         ref={inputRef}
         role="combobox"
-        type="text"
+        type="search"
         value={query}
       />
       {open ? (

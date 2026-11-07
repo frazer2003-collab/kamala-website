@@ -13,7 +13,11 @@ import { useStaffLocale } from "@/components/staff-locale";
 import { billTotalSatang } from "@/lib/desk-bills";
 import { bilingualItemLabel } from "@/lib/desk-items";
 import { formatSatang } from "@/lib/desk-money";
-import type { DeskBill, DeskSellableItem } from "@/lib/desk-ops-data";
+import type {
+  DeskBill,
+  DeskCountedItem,
+  DeskSellableItem,
+} from "@/lib/desk-ops-data";
 
 function formatDate(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale === "th" ? "th" : "en", {
@@ -26,9 +30,15 @@ function formatDate(iso: string, locale: string) {
 export function StaffDeskBills({
   bills,
   sellables,
+  countedItems = [],
+  newBillHref = "/staff/bills/new",
+  returnTo = "/staff/bills",
 }: {
   bills: DeskBill[];
   sellables: DeskSellableItem[];
+  countedItems?: DeskCountedItem[];
+  newBillHref?: string;
+  returnTo?: string;
 }) {
   const { t, locale } = useStaffLocale();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -40,13 +50,23 @@ export function StaffDeskBills({
     () => new Map(sellables.map((item) => [item.id, item])),
     [sellables],
   );
-  const itemOptions = sellables
-    .filter((item) => item.active)
-    .map((item) => ({
-      value: item.id,
-      label: `${bilingualItemLabel(item)} - ${formatSatang(item.priceSatang)}`,
-      keywords: `${item.nameEn} ${item.nameTh}`,
-    }));
+  const itemOptions = useMemo(() => {
+    const menu = sellables
+      .filter((item) => item.active)
+      .map((item) => ({
+        value: item.id,
+        label: `${bilingualItemLabel(item)} · ${formatSatang(item.priceSatang)}`,
+        keywords: `${item.nameEn} ${item.nameTh} ${item.category} menu`,
+      }));
+    const stock = countedItems
+      .filter((item) => item.active)
+      .map((item) => ({
+        value: `stock:${item.id}`,
+        label: `${bilingualItemLabel(item)} · stock`,
+        keywords: `${item.nameEn} ${item.nameTh} stock counted`,
+      }));
+    return [...menu, ...stock];
+  }, [sellables, countedItems]);
 
   return (
     <>
@@ -65,15 +85,21 @@ export function StaffDeskBills({
               </thead>
               <tbody>
                 {bills.map((bill) => (
-                  <tr key={bill.id}>
+                  <tr
+                    className="staff-desk__click-row"
+                    key={bill.id}
+                    onClick={() => setSelectedId(bill.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedId(bill.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
                     <td>
-                      <button
-                        className="staff-desk__row-link"
-                        onClick={() => setSelectedId(bill.id)}
-                        type="button"
-                      >
-                        {bill.name}
-                      </button>
+                      <strong>{bill.name}</strong>
                     </td>
                     <td>{bill.room || "—"}</td>
                     <td>{formatDate(bill.serviceDate, locale)}</td>
@@ -92,7 +118,7 @@ export function StaffDeskBills({
           <div className="staff-desk__empty-state">
             <h2>{t("bills.noOpen")}</h2>
             <p>{t("bills.createHint")}</p>
-            <Link className="button button--primary" href="/staff/bills/new">
+            <Link className="button button--primary" href={newBillHref}>
               {t("bills.new")}
             </Link>
           </div>
@@ -107,6 +133,7 @@ export function StaffDeskBills({
           selected?.status === "open" ? (
             <form action={clearBill}>
               <input name="bill-id" type="hidden" value={selected.id} />
+              <input name="return-to" type="hidden" value={returnTo} />
               <button className="button button--primary" type="submit">
                 {t("bills.clear")}
               </button>
@@ -162,9 +189,13 @@ export function StaffDeskBills({
                           </td>
                           <td>
                             {selected.status === "open" ? (
-                              <form action={removeBillLine}>
+                              <form
+                                action={removeBillLine}
+                                onClick={(event) => event.stopPropagation()}
+                              >
                                 <input name="bill-id" type="hidden" value={selected.id} />
                                 <input name="line-id" type="hidden" value={line.id} />
+                                <input name="return-to" type="hidden" value={returnTo} />
                                 <button className="button button--quiet" type="submit">
                                   {t("common.remove")}
                                 </button>
@@ -184,6 +215,7 @@ export function StaffDeskBills({
             {selected.status === "open" ? (
               <form action={addBillLine} className="staff-desk__inline-form">
                 <input name="bill-id" type="hidden" value={selected.id} />
+                <input name="return-to" type="hidden" value={returnTo} />
                 <div className="field-pair staff-desk__grow">
                   <StaffCombo
                     clearOnSelect

@@ -9,6 +9,7 @@ import {
   deleteDeskCountedItem,
   deleteDeskLaundry,
   deleteDeskSellable,
+  ensureSellableForCountedItem,
   listDeskCountedItems,
   listDeskSellables,
   loadDeskBill,
@@ -33,7 +34,8 @@ import {
   type DeskLaundryStatus,
 } from "@/lib/desk-laundry";
 import { parseBahtToSatang } from "@/lib/desk-money";
-import { requireStaffSession } from "@/lib/staff-auth";
+import { getDeskPortalSession } from "@/lib/desk-portal";
+import { getStaffSession, requireStaffSession } from "@/lib/staff-auth";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -61,11 +63,38 @@ function revalidateDesk() {
   revalidatePath("/staff/stock");
   revalidatePath("/staff/laundry");
   revalidatePath("/staff/items");
+  revalidatePath("/staff/portal/bills");
+  revalidatePath("/staff/portal/laundry");
+}
+
+function safeDeskReturnTo(formData: FormData, fallback: string) {
+  const next = value(formData, "return-to");
+  if (
+    next === "/staff/bills" ||
+    next === "/staff/laundry" ||
+    next === "/staff/portal/bills" ||
+    next === "/staff/portal/laundry"
+  ) {
+    return next;
+  }
+  return fallback;
+}
+
+async function requireDeskWriteAccess(kind: "bills" | "laundry" | "stock" | "items") {
+  if (await getStaffSession()) return;
+  if (kind === "bills" || kind === "laundry") {
+    const portal = await getDeskPortalSession();
+    if (portal?.kind === kind) return;
+  }
+  await requireStaffSession();
 }
 
 export async function createLaundryRecord(formData: FormData) {
-  await requireStaffSession();
-  const category = value(formData, "category") as DeskLaundryCategory;
+  await requireDeskWriteAccess("laundry");
+  const portal = await getDeskPortalSession();
+  const categoryRaw = value(formData, "category") as DeskLaundryCategory;
+  const category =
+    portal?.kind === "laundry" ? ("sheets" as const) : categoryRaw;
   const status = value(formData, "status") as DeskLaundryStatus;
   if (!DESK_LAUNDRY_CATEGORIES.includes(category)) {
     throw new Error("Choose a laundry category.");
@@ -101,11 +130,11 @@ export async function createLaundryRecord(formData: FormData) {
     status,
   });
   revalidateDesk();
-  redirect("/staff/laundry");
+  redirect(safeDeskReturnTo(formData, "/staff/laundry"));
 }
 
 export async function updateLaundryRecord(formData: FormData) {
-  await requireStaffSession();
+  await requireDeskWriteAccess("laundry");
   const id = required(formData, "id", "Laundry record");
   const category = value(formData, "category") as DeskLaundryCategory;
   const status = value(formData, "status") as DeskLaundryStatus;
@@ -133,14 +162,14 @@ export async function updateLaundryRecord(formData: FormData) {
     status,
   });
   revalidateDesk();
-  redirect("/staff/laundry");
+  redirect(safeDeskReturnTo(formData, "/staff/laundry"));
 }
 
 export async function deleteLaundryRecord(formData: FormData) {
-  await requireStaffSession();
+  await requireDeskWriteAccess("laundry");
   await deleteDeskLaundry(required(formData, "id", "Laundry record"));
   revalidateDesk();
-  redirect("/staff/laundry");
+  redirect(safeDeskReturnTo(formData, "/staff/laundry"));
 }
 
 export async function deactivateSellableItem(formData: FormData) {
@@ -158,55 +187,66 @@ export async function deactivateCountedItem(formData: FormData) {
 }
 
 export async function createBill(formData: FormData) {
-  await requireStaffSession();
+  await requireDeskWriteAccess("bills");
   const id = await createDeskBill({
     name: required(formData, "name", "Bill name"),
     room: value(formData, "room") || null,
   });
-  const sellableItemId = value(formData, "sellable-item-id");
-  if (sellableItemId) {
+  const rawSellable = value(formData, "sellable-item-id");
+  if (rawSellable) {
     await addDeskBillLine({
       billId: id,
-      sellableItemId,
+      sellableItemId: await resolveBillSellableId(rawSellable),
       quantity: positiveInteger(formData, "quantity", 1),
     });
   }
   revalidateDesk();
-  redirect(`/staff/bills?id=${encodeURIComponent(id)}`);
+  redirect(safeDeskReturnTo(formData, "/staff/bills"));
+}
+
+async function resolveBillSellableId(raw: string) {
+  if (raw.startsWith("stock:")) {
+    return ensureSellableForCountedItem(raw.slice("stock:".length));
+  }
+  return raw;
 }
 
 export async function addBillLine(formData: FormData) {
-  await requireStaffSession();
+  await requireDeskWriteAccess("bills");
   const billId = required(formData, "bill-id", "Bill");
   const bill = await loadDeskBill(billId);
   if (!bill || bill.status !== "open") throw new Error("This bill is not open.");
+  const sellableItemId = await resolveBillSellableId(
+    required(formData, "sellable-item-id", "Item"),
+  );
   await addDeskBillLine({
     billId,
-    sellableItemId: required(formData, "sellable-item-id", "Item"),
+    sellableItemId,
     quantity: positiveInteger(formData, "quantity", 1),
   });
   revalidateDesk();
-  redirect(`/staff/bills?id=${encodeURIComponent(billId)}`);
+  redirect(safeDeskReturnTo(formData, "/staff/bills"));
 }
 
 export async function removeBillLine(formData: FormData) {
-  await requireStaffSession();
+  await requireDeskWriteAccess("bills");
   const billId = required(formData, "bill-id", "Bill");
   const bill = await loadDeskBill(billId);
   if (!bill || bill.status !== "open") throw new Error("This bill is not open.");
   await removeDeskBillLine(required(formData, "line-id", "Bill line"));
   revalidateDesk();
-  redirect(`/staff/bills?id=${encodeURIComponent(billId)}`);
+  redirect(safeDeskReturnTo(formData, "/staff/bills"));
 }
 
 export async function clearBill(formData: FormData) {
-  await requireStaffSession();
+  await requireDeskWriteAccess("bills");
   const billId = required(formData, "bill-id", "Bill");
   const bill = await loadDeskBill(billId);
   if (!bill || bill.status === "cleared") {
     revalidateDesk();
-    redirect(`/staff/bills?id=${encodeURIComponent(billId)}`);
+    redirect(safeDeskReturnTo(formData, "/staff/bills"));
   }
+  // Reload sellables with recipes so stock movements match current catalog.
   const sellables = await listDeskSellables();
   const movements = planBillClear(
     {
@@ -227,7 +267,7 @@ export async function clearBill(formData: FormData) {
   }
   await markDeskBillCleared(bill.id);
   revalidateDesk();
-  redirect(`/staff/bills?id=${encodeURIComponent(bill.id)}`);
+  redirect(safeDeskReturnTo(formData, "/staff/bills"));
 }
 
 export async function saveSellableItem(formData: FormData) {

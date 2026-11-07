@@ -112,18 +112,25 @@ export function StaffDeskItems({
             </thead>
             <tbody>
               {visible.map((item) => (
-                <tr key={item.id}>
+                <tr
+                  className="staff-desk__click-row"
+                  key={item.id}
+                  onClick={() => {
+                    setCreating(false);
+                    setSelectedId(item.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setCreating(false);
+                      setSelectedId(item.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
                   <td>
-                    <button
-                      className="staff-desk__row-link"
-                      onClick={() => {
-                        setCreating(false);
-                        setSelectedId(item.id);
-                      }}
-                      type="button"
-                    >
-                      {bilingualItemLabel(item)}
-                    </button>
+                    <strong>{bilingualItemLabel(item)}</strong>
                   </td>
                   <td>{item.category}</td>
                   <td>{formatSatang(item.priceSatang)}</td>

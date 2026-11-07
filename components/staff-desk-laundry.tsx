@@ -13,6 +13,7 @@ import {
   DESK_LAUNDRY_CATEGORIES,
   DESK_LAUNDRY_STATUSES,
   formatLaundryMeasure,
+  type DeskLaundryCategory,
   type DeskLaundryStatus,
 } from "@/lib/desk-laundry";
 import type { DeskLaundryRecord } from "@/lib/desk-ops-data";
@@ -26,16 +27,28 @@ function dateTime(iso: string, locale: string) {
   }).format(new Date(iso));
 }
 
-export function StaffDeskLaundry({ records }: { records: DeskLaundryRecord[] }) {
+export function StaffDeskLaundry({
+  records,
+  sheetsOnly = false,
+  returnTo = "/staff/laundry",
+}: {
+  records: DeskLaundryRecord[];
+  /** Portal mode: only sheets category can be submitted. */
+  sheetsOnly?: boolean;
+  returnTo?: string;
+}) {
   const { t, locale } = useStaffLocale();
-  const [measureType, setMeasureType] = useState<"kg" | "count">("kg");
+  const [measureType, setMeasureType] = useState<"kg" | "count">("count");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(
     () => records.find((record) => record.id === selectedId) ?? null,
     [records, selectedId],
   );
 
-  const categoryOptions = DESK_LAUNDRY_CATEGORIES.map((category) => ({
+  const categories = sheetsOnly
+    ? (["sheets"] as const satisfies readonly DeskLaundryCategory[])
+    : DESK_LAUNDRY_CATEGORIES;
+  const categoryOptions = categories.map((category) => ({
     value: category,
     label: category,
   }));
@@ -43,6 +56,9 @@ export function StaffDeskLaundry({ records }: { records: DeskLaundryRecord[] }) 
     value: status,
     label: status,
   }));
+  const visibleRecords = sheetsOnly
+    ? records.filter((record) => record.category === "sheets")
+    : records;
 
   return (
     <>
@@ -54,7 +70,7 @@ export function StaffDeskLaundry({ records }: { records: DeskLaundryRecord[] }) 
               <p>{t("laundry.newest")}</p>
             </div>
           </header>
-          {records.length ? (
+          {visibleRecords.length ? (
             <div className="staff-desk__table-wrap">
               <table className="staff-desk__table">
                 <thead>
@@ -67,16 +83,22 @@ export function StaffDeskLaundry({ records }: { records: DeskLaundryRecord[] }) 
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((record) => (
-                    <tr key={record.id}>
+                  {visibleRecords.map((record) => (
+                    <tr
+                      className="staff-desk__click-row"
+                      key={record.id}
+                      onClick={() => setSelectedId(record.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelectedId(record.id);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
                       <td>
-                        <button
-                          className="staff-desk__row-link"
-                          onClick={() => setSelectedId(record.id)}
-                          type="button"
-                        >
-                          {record.name}
-                        </button>
+                        <strong>{record.name}</strong>
                       </td>
                       <td>{record.category}</td>
                       <td>{formatLaundryMeasure(record)}</td>
@@ -97,6 +119,7 @@ export function StaffDeskLaundry({ records }: { records: DeskLaundryRecord[] }) 
         </section>
 
         <form action={createLaundryRecord} className="staff-desk__form">
+          <input name="return-to" type="hidden" value={returnTo} />
           <h2>{t("laundry.add")}</h2>
           <div className="field-pair">
             <label htmlFor="laundry-name">{t("common.name")}</label>
@@ -109,16 +132,23 @@ export function StaffDeskLaundry({ records }: { records: DeskLaundryRecord[] }) 
           </div>
           <div className="staff-desk__field-grid">
             <div className="field-pair">
-              <StaffCombo
-                clearOnSelect={false}
-                defaultValue={DESK_LAUNDRY_CATEGORIES[0]}
-                id="laundry-category"
-                label={t("laundry.category")}
-                name="category"
-                options={categoryOptions}
-                placeholder={t("desk.typeToSearch")}
-                required
-              />
+              {sheetsOnly ? (
+                <>
+                  <label htmlFor="laundry-category">{t("laundry.category")}</label>
+                  <input id="laundry-category" name="category" readOnly value="sheets" />
+                </>
+              ) : (
+                <StaffCombo
+                  clearOnSelect={false}
+                  defaultValue={DESK_LAUNDRY_CATEGORIES[0]}
+                  id="laundry-category"
+                  label={t("laundry.category")}
+                  name="category"
+                  options={categoryOptions}
+                  placeholder={t("desk.typeToSearch")}
+                  required
+                />
+              )}
             </div>
             <div className="field-pair">
               <StaffCombo
@@ -137,7 +167,7 @@ export function StaffDeskLaundry({ records }: { records: DeskLaundryRecord[] }) 
             <div className="field-pair">
               <label htmlFor="laundry-type">{t("common.type")}</label>
               <select
-                defaultValue="kg"
+                defaultValue={sheetsOnly ? "count" : "kg"}
                 id="laundry-type"
                 name="type"
                 onChange={(event) =>
@@ -191,59 +221,59 @@ export function StaffDeskLaundry({ records }: { records: DeskLaundryRecord[] }) 
         title={selected ? selected.name : t("laundry.slip")}
         footer={
           selected ? (
-            <>
-              <form action={updateLaundryRecord} className="staff-desk__inline-form">
-                <input name="id" type="hidden" value={selected.id} />
-                <input name="name" type="hidden" value={selected.name} />
-                <input name="category" type="hidden" value={selected.category} />
-                <input name="grams" type="hidden" value={selected.grams ?? ""} />
-                <input name="count" type="hidden" value={selected.count ?? ""} />
-                <input name="staff-note" type="hidden" value={selected.staffNote ?? ""} />
-                <div className="field-pair">
-                  <label htmlFor="slip-status">{t("laundry.updateStatus")}</label>
-                  <select defaultValue={selected.status} id="slip-status" name="status">
-                    {DESK_LAUNDRY_STATUSES.map((status) => (
-                      <option key={status}>{status}</option>
-                    ))}
-                  </select>
-                </div>
-                <button className="button button--secondary" type="submit">
-                  {t("laundry.saveStatus")}
-                </button>
-              </form>
-              <form action={deleteLaundryRecord}>
-                <input name="id" type="hidden" value={selected.id} />
-                <button className="button button--quiet" type="submit">
-                  {t("common.delete")}
-                </button>
-              </form>
-            </>
+            <form action={deleteLaundryRecord}>
+              <input name="id" type="hidden" value={selected.id} />
+              <input name="return-to" type="hidden" value={returnTo} />
+              <button className="button button--quiet" type="submit">
+                {t("common.delete")}
+              </button>
+            </form>
           ) : null
         }
       >
         {selected ? (
-          <dl className="staff-desk__details">
-            <div>
-              <dt>{t("laundry.category")}</dt>
-              <dd>{selected.category}</dd>
+          <form action={updateLaundryRecord} className="staff-desk__form staff-desk__form--dialog">
+            <input name="id" type="hidden" value={selected.id} />
+            <input name="return-to" type="hidden" value={returnTo} />
+            <input name="name" type="hidden" value={selected.name} />
+            <input name="category" type="hidden" value={selected.category} />
+            <input name="grams" type="hidden" value={selected.grams ?? ""} />
+            <input name="count" type="hidden" value={selected.count ?? ""} />
+            <dl className="staff-desk__details">
+              <div>
+                <dt>{t("laundry.category")}</dt>
+                <dd>{selected.category}</dd>
+              </div>
+              <div>
+                <dt>{t("laundry.measure")}</dt>
+                <dd>{formatLaundryMeasure(selected)}</dd>
+              </div>
+              <div>
+                <dt>{t("laundry.recorded")}</dt>
+                <dd>{dateTime(selected.recordedAt, locale)}</dd>
+              </div>
+            </dl>
+            <div className="field-pair">
+              <label htmlFor="slip-note">{t("common.note")}</label>
+              <textarea
+                defaultValue={selected.staffNote ?? ""}
+                id="slip-note"
+                name="staff-note"
+                rows={3}
+              />
             </div>
-            <div>
-              <dt>{t("laundry.measure")}</dt>
-              <dd>{formatLaundryMeasure(selected)}</dd>
+            <div className="field-pair">
+              <label htmlFor="slip-status">{t("laundry.updateStatus")}</label>
+              <select defaultValue={selected.status} id="slip-status" name="status">
+                {DESK_LAUNDRY_STATUSES.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </select>
             </div>
-            <div>
-              <dt>{t("laundry.recorded")}</dt>
-              <dd>{dateTime(selected.recordedAt, locale)}</dd>
-            </div>
-            <div>
-              <dt>{t("common.note")}</dt>
-              <dd>{selected.staffNote || "—"}</dd>
-            </div>
-            <div>
-              <dt>{t("common.status")}</dt>
-              <dd>{selected.status}</dd>
-            </div>
-          </dl>
+            <button className="button button--secondary" type="submit">
+              {t("common.save")}
+            </button>
+          </form>
         ) : null}
       </StaffDialog>
     </>
