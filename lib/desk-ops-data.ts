@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DeskBillStatus } from "@/lib/desk-bills";
 import type {
   DeskCountedUnit,
+  DeskItemCategory,
   DeskSellableCategory,
 } from "@/lib/desk-items";
 import type {
@@ -23,6 +24,20 @@ type CountedItemRow = {
   unit: DeskCountedUnit;
   opening_quantity: number;
   minimum: number;
+  cost_satang: number;
+  sell_price_satang: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type ItemCategoryRow = {
+  id: string;
+  property_id: string;
+  key: string;
+  name_en: string;
+  name_th: string;
+  sort_order: number;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -48,6 +63,7 @@ type SellableItemRow = {
   name_en: string;
   category: DeskSellableCategory;
   price_satang: number;
+  cost_satang: number;
   minimum: number;
   active: boolean;
   created_at: string;
@@ -90,6 +106,7 @@ type BillLineRow = {
   bill_id: string;
   sellable_item_id: string;
   quantity: number;
+  unit_price_satang: number;
   created_at: string;
 };
 
@@ -119,6 +136,7 @@ type DeskDatabase = {
   public: {
     Tables: {
       desk_counted_items: Table<CountedItemRow>;
+      desk_item_categories: Table<ItemCategoryRow>;
       desk_stock_movements: Table<StockMovementRow>;
       desk_sellable_items: Table<SellableItemRow>;
       desk_sellable_ingredients: Table<SellableIngredientRow>;
@@ -151,6 +169,8 @@ export type DeskCountedItem = {
   unit: DeskCountedUnit;
   openingQuantity: number;
   minimum: number;
+  costSatang: number;
+  sellPriceSatang: number;
   active: boolean;
   onHand: number;
   createdAt: string;
@@ -175,6 +195,7 @@ export type DeskSellableItem = {
   nameEn: string;
   category: DeskSellableCategory;
   priceSatang: number;
+  costSatang: number;
   minimum: number;
   active: boolean;
   ingredients: { countedItemId: string; quantity: number }[];
@@ -188,6 +209,7 @@ export type DeskBillLineData = {
   billId: string;
   sellableItemId: string;
   quantity: number;
+  unitPriceSatang: number;
   createdAt: string;
 };
 
@@ -235,6 +257,8 @@ export function mapCountedItemRows(
     unit: row.unit,
     openingQuantity: row.opening_quantity,
     minimum: row.minimum,
+    costSatang: row.cost_satang ?? 0,
+    sellPriceSatang: row.sell_price_satang ?? 0,
     active: row.active,
     onHand: row.opening_quantity + (movementTotals.get(row.id) ?? 0),
     createdAt: row.created_at,
@@ -259,6 +283,7 @@ export function mapSellableRows(
     nameEn: row.name_en,
     category: row.category,
     priceSatang: row.price_satang,
+    costSatang: row.cost_satang ?? 0,
     minimum: row.minimum,
     active: row.active,
     ingredients: ingredients
@@ -281,7 +306,19 @@ function mapBillLine(row: BillLineRow): DeskBillLineData {
     billId: row.bill_id,
     sellableItemId: row.sellable_item_id,
     quantity: row.quantity,
+    unitPriceSatang: row.unit_price_satang ?? 0,
     createdAt: row.created_at,
+  };
+}
+
+function mapItemCategory(row: ItemCategoryRow): DeskItemCategory {
+  return {
+    id: row.id,
+    key: row.key,
+    nameEn: row.name_en,
+    nameTh: row.name_th,
+    sortOrder: row.sort_order,
+    active: row.active,
   };
 }
 
@@ -361,6 +398,68 @@ export async function listDeskStockMovements(
   }));
 }
 
+export async function listDeskItemCategories(): Promise<DeskItemCategory[]> {
+  if (!hasStaffSupabaseConfig()) {
+    return [
+      { id: "room", key: "room", nameEn: "Room", nameTh: "ห้อง", sortOrder: 10, active: true },
+      { id: "drink", key: "drink", nameEn: "Drink", nameTh: "เครื่องดื่ม", sortOrder: 20, active: true },
+      { id: "food", key: "food", nameEn: "Food", nameTh: "อาหาร", sortOrder: 30, active: true },
+      { id: "laundry", key: "laundry", nameEn: "Laundry", nameTh: "ซักรีด", sortOrder: 40, active: true },
+      { id: "extra", key: "extra", nameEn: "Extra", nameTh: "อื่นๆ", sortOrder: 50, active: true },
+    ];
+  }
+  const { data, error } = await client()
+    .from("desk_item_categories")
+    .select("*")
+    .eq("property_id", DESK_PROPERTY_ID)
+    .order("sort_order")
+    .order("name_en");
+  throwIfError(error);
+  return (data ?? []).map(mapItemCategory);
+}
+
+export async function saveDeskItemCategory(input: {
+  id?: string;
+  key: string;
+  nameEn: string;
+  nameTh: string;
+  sortOrder?: number;
+  active: boolean;
+}): Promise<string> {
+  const payload = {
+    property_id: DESK_PROPERTY_ID,
+    key: input.key,
+    name_en: input.nameEn,
+    name_th: input.nameTh,
+    sort_order: input.sortOrder ?? 100,
+    active: input.active,
+    updated_at: new Date().toISOString(),
+  };
+  if (input.id) {
+    const { error } = await client()
+      .from("desk_item_categories")
+      .update({
+        name_en: payload.name_en,
+        name_th: payload.name_th,
+        sort_order: payload.sort_order,
+        active: payload.active,
+        updated_at: payload.updated_at,
+      })
+      .eq("property_id", DESK_PROPERTY_ID)
+      .eq("id", input.id);
+    throwIfError(error);
+    return input.id;
+  }
+  const { data, error } = await client()
+    .from("desk_item_categories")
+    .insert(payload)
+    .select("id")
+    .single();
+  throwIfError(error);
+  if (!data) throw new Error("Category was not created.");
+  return data.id;
+}
+
 export async function saveDeskCountedItem(input: {
   id?: string;
   nameTh: string;
@@ -368,6 +467,8 @@ export async function saveDeskCountedItem(input: {
   unit: DeskCountedUnit;
   openingQuantity: number;
   minimum: number;
+  costSatang: number;
+  sellPriceSatang: number;
   active: boolean;
 }): Promise<string> {
   const payload = {
@@ -377,6 +478,8 @@ export async function saveDeskCountedItem(input: {
     unit: input.unit,
     opening_quantity: input.openingQuantity,
     minimum: input.minimum,
+    cost_satang: input.costSatang,
+    sell_price_satang: input.sellPriceSatang,
     active: input.active,
     updated_at: new Date().toISOString(),
   };
@@ -474,19 +577,34 @@ export async function ensureSellableForCountedItem(
       item.ingredients[0]?.countedItemId === counted.id &&
       item.ingredients[0]?.quantity === 1,
   );
-  if (existing) return existing.id;
-  if (
-    priceSatang == null ||
-    !Number.isSafeInteger(priceSatang) ||
-    priceSatang < 0
-  ) {
+  if (existing) {
+    if (
+      priceSatang != null &&
+      Number.isSafeInteger(priceSatang) &&
+      priceSatang >= 0 &&
+      priceSatang !== existing.priceSatang
+    ) {
+      await saveDeskSellable({
+        ...existing,
+        priceSatang,
+        costSatang: counted.costSatang,
+      });
+    }
+    return existing.id;
+  }
+  const resolvedPrice =
+    priceSatang != null && Number.isSafeInteger(priceSatang) && priceSatang >= 0
+      ? priceSatang
+      : counted.sellPriceSatang;
+  if (!Number.isSafeInteger(resolvedPrice) || resolvedPrice < 0) {
     throw new Error("Enter a baht price for this stock item.");
   }
   return saveDeskSellable({
     nameTh: counted.nameTh,
     nameEn: counted.nameEn,
     category: "extra",
-    priceSatang,
+    priceSatang: resolvedPrice,
+    costSatang: counted.costSatang,
     minimum: 0,
     active: true,
     ingredients: [{ countedItemId: counted.id, quantity: 1 }],
@@ -500,6 +618,7 @@ export async function saveDeskSellable(input: {
   nameEn: string;
   category: DeskSellableCategory;
   priceSatang: number;
+  costSatang: number;
   minimum: number;
   active: boolean;
   ingredients: { countedItemId: string; quantity: number }[];
@@ -512,6 +631,7 @@ export async function saveDeskSellable(input: {
     name_en: input.nameEn,
     category: input.category,
     price_satang: input.priceSatang,
+    cost_satang: input.costSatang,
     minimum: input.minimum,
     active: input.active,
     updated_at: new Date().toISOString(),
@@ -658,13 +778,27 @@ export async function addDeskBillLine(input: {
   billId: string;
   sellableItemId: string;
   quantity: number;
+  unitPriceSatang: number;
 }) {
   const { error } = await client().from("desk_bill_lines").insert({
     property_id: DESK_PROPERTY_ID,
     bill_id: input.billId,
     sellable_item_id: input.sellableItemId,
     quantity: input.quantity,
+    unit_price_satang: input.unitPriceSatang,
   });
+  throwIfError(error);
+}
+
+export async function updateDeskBillLinePrice(input: {
+  id: string;
+  unitPriceSatang: number;
+}) {
+  const { error } = await client()
+    .from("desk_bill_lines")
+    .update({ unit_price_satang: input.unitPriceSatang })
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", input.id);
   throwIfError(error);
 }
 

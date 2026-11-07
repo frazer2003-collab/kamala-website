@@ -41,6 +41,27 @@ describe("desk bills", () => {
     );
   });
 
+  it("uses per-line unit price override for comps and custom prices", () => {
+    assert.equal(
+      billTotalSatang(
+        [
+          {
+            sellableItemId: "breakfast",
+            quantity: 2,
+            unitPriceSatang: 0,
+          },
+          {
+            sellableItemId: "coffee",
+            quantity: 1,
+            unitPriceSatang: 5000,
+          },
+        ],
+        sellables,
+      ),
+      5000,
+    );
+  });
+
   it("plans aggregated negative stock movements for an open bill", () => {
     assert.deepEqual(
       planBillClear(

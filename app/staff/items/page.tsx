@@ -2,6 +2,7 @@ import { StaffDeskItems } from "@/components/staff-desk-items";
 import { StaffShell } from "@/components/staff-shell";
 import {
   listDeskCountedItems,
+  listDeskItemCategories,
   listDeskSellables,
 } from "@/lib/desk-ops-data";
 import { requireStaffSession } from "@/lib/staff-auth";
@@ -19,9 +20,10 @@ export default async function StaffItemsPage({
   await requireStaffSession();
   const locale = await getStaffLocale();
   const params = await searchParams;
-  const [sellables, countedItems] = await Promise.all([
+  const [sellables, countedItems, categories] = await Promise.all([
     listDeskSellables(),
     listDeskCountedItems(),
+    listDeskItemCategories(),
   ]);
 
   return (
@@ -34,6 +36,7 @@ export default async function StaffItemsPage({
           </div>
         </header>
         <StaffDeskItems
+          categories={categories}
           countedItems={countedItems}
           initialCategory={params.category ?? ""}
           initialQuery={params.q ?? ""}

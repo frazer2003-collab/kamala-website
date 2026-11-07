@@ -8,6 +8,7 @@ import {
   createBill,
   removeBillLine,
   updateBill,
+  updateBillLinePrice,
 } from "@/app/desk-actions";
 import { StaffCombo } from "@/components/staff-combo";
 import { StaffDialog } from "@/components/staff-dialog";
@@ -15,6 +16,7 @@ import { useStaffLocale } from "@/components/staff-locale";
 import {
   billLineSellableIdsWithoutStockCut,
   billTotalSatang,
+  lineAmountSatang,
 } from "@/lib/desk-bills";
 import { bilingualItemLabel } from "@/lib/desk-items";
 import { formatSatang, satangToBaht } from "@/lib/desk-money";
@@ -335,6 +337,7 @@ export function StaffDeskBills({
                     <tr>
                       <th>{t("bills.item")}</th>
                       <th>{t("bills.qty")}</th>
+                      <th>{t("bills.unitPrice")}</th>
                       <th>{t("bills.amount")}</th>
                       <th>
                         <span className="sr-only">{t("common.edit")}</span>
@@ -351,8 +354,52 @@ export function StaffDeskBills({
                           </td>
                           <td>{line.quantity}</td>
                           <td>
+                            {selected.status === "open" ? (
+                              <form
+                                action={updateBillLinePrice}
+                                className="staff-desk__line-price"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <input
+                                  name="bill-id"
+                                  type="hidden"
+                                  value={selected.id}
+                                />
+                                <input
+                                  name="line-id"
+                                  type="hidden"
+                                  value={line.id}
+                                />
+                                <input
+                                  name="return-to"
+                                  type="hidden"
+                                  value={returnTo}
+                                />
+                                <input
+                                  aria-label={t("bills.unitPrice")}
+                                  defaultValue={satangToBaht(
+                                    line.unitPriceSatang,
+                                  ).toFixed(2)}
+                                  inputMode="decimal"
+                                  min="0"
+                                  name="unit-price-baht"
+                                  step="0.01"
+                                  type="number"
+                                />
+                                <button
+                                  className="button button--quiet"
+                                  type="submit"
+                                >
+                                  {t("common.save")}
+                                </button>
+                              </form>
+                            ) : (
+                              formatSatang(line.unitPriceSatang)
+                            )}
+                          </td>
+                          <td>
                             {item
-                              ? formatSatang(item.priceSatang * line.quantity)
+                              ? formatSatang(lineAmountSatang(line, item))
                               : "-"}
                           </td>
                           <td>
@@ -396,7 +443,9 @@ export function StaffDeskBills({
             )}
 
             {selected.status === "open" ? (
-              <form action={addBillLine} className="staff-desk__inline-form">
+              <>
+                <p className="staff-desk__hint">{t("bills.priceOverrideHint")}</p>
+                <form action={addBillLine} className="staff-desk__inline-form">
                 <input name="bill-id" type="hidden" value={selected.id} />
                 <input name="return-to" type="hidden" value={returnTo} />
                 <div className="field-pair staff-desk__grow">
@@ -411,12 +460,18 @@ export function StaffDeskBills({
                         return;
                       }
                       const countedId = option.value.slice("stock:".length);
+                      const counted = countedItems.find((entry) => entry.id === countedId);
                       const linked = stockSellableByCountedId.get(countedId);
+                      const defaultSatang =
+                        linked?.priceSatang ??
+                        counted?.sellPriceSatang ??
+                        0;
                       setStockPick({
                         countedId,
-                        priceBaht: linked
-                          ? String(satangToBaht(linked.priceSatang))
-                          : "",
+                        priceBaht:
+                          defaultSatang > 0
+                            ? String(satangToBaht(defaultSatang))
+                            : "",
                       });
                     }}
                     options={itemOptions}
@@ -436,13 +491,32 @@ export function StaffDeskBills({
                       min="0"
                       name="stock-price-baht"
                       placeholder="0"
-                      required={!stockSellableByCountedId.has(stockPick.countedId)}
+                      required={
+                        !stockSellableByCountedId.has(stockPick.countedId) &&
+                        !(
+                          countedItems.find((entry) => entry.id === stockPick.countedId)
+                            ?.sellPriceSatang
+                        )
+                      }
                       step="0.01"
                       type="number"
                       defaultValue={stockPick.priceBaht}
                     />
                   </div>
-                ) : null}
+                ) : (
+                  <div className="field-pair staff-desk__quantity">
+                    <label htmlFor="bill-unit-price">{t("bills.unitPrice")}</label>
+                    <input
+                      id="bill-unit-price"
+                      inputMode="decimal"
+                      min="0"
+                      name="unit-price-baht"
+                      placeholder={t("bills.catalogPrice")}
+                      step="0.01"
+                      type="number"
+                    />
+                  </div>
+                )}
                 <div className="field-pair staff-desk__quantity">
                   <label htmlFor="bill-quantity">{t("bills.qty")}</label>
                   <input
@@ -458,6 +532,7 @@ export function StaffDeskBills({
                   {t("common.add")}
                 </button>
               </form>
+              </>
             ) : (
               <p className="form-message form-message--success" role="status">
                 {t("bills.cleared")}{" "}

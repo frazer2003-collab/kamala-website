@@ -18,6 +18,24 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-catalog-setup",
+    date: "2026-11-07",
+    title: "Cost, sell price, custom units, and stock projections",
+    summary:
+      "Menu and stock ask for cost and sell price. Units and categories are yours to set. Stock shows projections instead of raw movement history. Bill lines can be priced at 0 for owner use.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Menu item setup with cost and sell price fields",
+    },
+    changes: [
+      "Creating menu or stock items asks for cost and sell price.",
+      "Stock units are free text (ml, L, pack, bottle…) with suggestions.",
+      "Categories are managed on Menu items — add your own for the guesthouse.",
+      "Stock projections replace recent movements (14-day sales pace).",
+      "On a bill, change any line’s unit price (including 0) — stock still cuts on clear.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-copy-controls",
     date: "2026-11-07",
     title: "Clearer desk status and empty lists",

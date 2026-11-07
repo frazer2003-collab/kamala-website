@@ -9,7 +9,12 @@ import {
 import { StaffCombo } from "@/components/staff-combo";
 import { StaffDialog } from "@/components/staff-dialog";
 import { useStaffLocale } from "@/components/staff-locale";
-import { bilingualItemLabel, DESK_COUNTED_UNITS } from "@/lib/desk-items";
+import { bilingualItemLabel, DESK_UNIT_SUGGESTIONS } from "@/lib/desk-items";
+import { satangToBaht } from "@/lib/desk-money";
+import {
+  formatProjectionDays,
+  projectStockLevels,
+} from "@/lib/desk-stock-projections";
 import {
   headroom,
   mealsLeft,
@@ -21,8 +26,12 @@ import type {
   DeskStockMovement,
 } from "@/lib/desk-ops-data";
 
-function quantityLabel(quantity: number, unit: "count" | "grams") {
-  return unit === "grams" ? `${quantity.toLocaleString()} g` : quantity.toLocaleString();
+function quantityLabel(quantity: number, unit: string) {
+  const label = unit.trim() || "count";
+  if (label === "grams" || label === "g") {
+    return `${quantity.toLocaleString()} g`;
+  }
+  return `${quantity.toLocaleString()} ${label}`;
 }
 
 export function StaffDeskStock({
@@ -36,7 +45,7 @@ export function StaffDeskStock({
   movements: DeskStockMovement[];
   initialOpenId?: string | null;
 }) {
-  const { t, locale } = useStaffLocale();
+  const { t } = useStaffLocale();
   const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
   const [creating, setCreating] = useState(false);
 
@@ -53,6 +62,19 @@ export function StaffDeskStock({
     () => new Map(items.map((item) => [item.id, item])),
     [items],
   );
+  const projections = useMemo(
+    () =>
+      projectStockLevels(
+        items,
+        movements.map((movement) => ({
+          countedItemId: movement.countedItemId,
+          quantity: movement.quantity,
+          reason: movement.reason,
+          occurredAt: movement.occurredAt,
+        })),
+      ),
+    [items, movements],
+  );
   const editing = creating ? null : items.find((item) => item.id === selectedId) ?? null;
   const foods = sellables.filter(
     (item) => item.active && item.category === "food" && item.ingredients.length,
@@ -62,6 +84,10 @@ export function StaffDeskStock({
     label: bilingualItemLabel(item),
     keywords: `${item.nameEn} ${item.nameTh}`,
   }));
+  const unitSuggestions = useMemo(() => {
+    const custom = items.map((item) => item.unit).filter(Boolean);
+    return Array.from(new Set([...DESK_UNIT_SUGGESTIONS, ...custom]));
+  }, [items]);
 
   return (
     <>
@@ -102,7 +128,7 @@ export function StaffDeskStock({
           <header className="staff-desk__panel-head">
             <div>
               <h2 id="stock-list-title">{t("stock.counted")}</h2>
-              <p>Current quantity compared with the minimum.</p>
+              <p>{t("stock.countedHint")}</p>
             </div>
             {activeItems.length ? (
               <button
@@ -123,6 +149,7 @@ export function StaffDeskStock({
                 <thead>
                   <tr>
                     <th>{t("bills.item")}</th>
+                    <th>{t("stock.unit")}</th>
                     <th>{t("stock.onHand")}</th>
                     <th>{t("stock.minimum")}</th>
                     <th>{t("stock.headroom")}</th>
@@ -152,6 +179,7 @@ export function StaffDeskStock({
                         <td>
                           <strong>{bilingualItemLabel(item)}</strong>
                         </td>
+                        <td>{item.unit}</td>
                         <td>{quantityLabel(item.onHand, item.unit)}</td>
                         <td>{quantityLabel(item.minimum, item.unit)}</td>
                         <td>
@@ -228,30 +256,65 @@ export function StaffDeskStock({
         </form>
       </div>
 
-      <section className="staff-desk__panel" aria-labelledby="movement-history-title">
+      <section className="staff-desk__panel" aria-labelledby="stock-projection-title">
         <header className="staff-desk__panel-head">
-          <h2 id="movement-history-title">{t("stock.recent")}</h2>
+          <div>
+            <h2 id="stock-projection-title">{t("stock.projections")}</h2>
+            <p>{t("stock.projectionsHint")}</p>
+          </div>
         </header>
-        <ul className="staff-desk__history">
-          {movements.slice(0, 12).map((movement) => (
-            <li key={movement.id}>
-              <strong>
-                {itemById.get(movement.countedItemId)?.nameEn ?? "Removed item"}
-              </strong>
-              <span>
-                {movement.quantity > 0 ? "+" : ""}
-                {movement.quantity} {movement.reason.replace("_", " ")}
-              </span>
-              <small>
-                {movement.note ||
-                  new Date(movement.occurredAt).toLocaleString(
-                    locale === "th" ? "th" : "en",
-                  )}
-                {movement.actedBy ? ` · ${movement.actedBy}` : ""}
-              </small>
-            </li>
-          ))}
-        </ul>
+        {projections.length ? (
+          <div className="staff-desk__table-wrap">
+            <table className="staff-desk__table">
+              <thead>
+                <tr>
+                  <th>{t("bills.item")}</th>
+                  <th>{t("stock.onHand")}</th>
+                  <th>{t("stock.avgDaily")}</th>
+                  <th>{t("stock.daysToMin")}</th>
+                  <th>{t("stock.daysLeft")}</th>
+                  <th>{t("common.status")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projections.map((row) => {
+                  const item = itemById.get(row.countedItemId);
+                  if (!item) return null;
+                  return (
+                    <tr key={row.countedItemId}>
+                      <td>
+                        <strong>{bilingualItemLabel(item)}</strong>
+                      </td>
+                      <td>{quantityLabel(row.onHand, item.unit)}</td>
+                      <td>
+                        {row.avgDailyUse > 0
+                          ? `${row.avgDailyUse.toFixed(1)} / day`
+                          : "—"}
+                      </td>
+                      <td>{formatProjectionDays(row.daysToMinimum)}</td>
+                      <td>{formatProjectionDays(row.daysLeft)}</td>
+                      <td>
+                        <span
+                          className={`desk-status desk-status--${
+                            row.tone === "ok"
+                              ? "open"
+                              : row.tone === "watch"
+                                ? "incomplete"
+                                : "warning"
+                          }`}
+                        >
+                          {t(`stock.tone.${row.tone}`)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="staff-desk__empty">{t("stock.projectionsEmpty")}</p>
+        )}
       </section>
 
       <StaffDialog
@@ -274,63 +337,108 @@ export function StaffDeskStock({
       >
         <form action={saveCountedItem} className="staff-desk__form staff-desk__form--dialog">
           {editing ? <input name="id" type="hidden" value={editing.id} /> : null}
-          <div className="staff-desk__field-grid">
-            <div className="field-pair">
-              <label htmlFor="stock-name-th">{t("items.thaiName")}</label>
-              <input
-                defaultValue={editing?.nameTh}
-                id="stock-name-th"
-                name="name-th"
-                required
-              />
+
+          <fieldset className="staff-desk__fieldset">
+            <legend>{t("items.setupNames")}</legend>
+            <div className="staff-desk__field-grid">
+              <div className="field-pair">
+                <label htmlFor="stock-name-th">{t("items.thaiName")}</label>
+                <input
+                  defaultValue={editing?.nameTh}
+                  id="stock-name-th"
+                  name="name-th"
+                  required
+                />
+              </div>
+              <div className="field-pair">
+                <label htmlFor="stock-name-en">{t("items.englishName")}</label>
+                <input
+                  defaultValue={editing?.nameEn}
+                  id="stock-name-en"
+                  name="name-en"
+                  required
+                />
+              </div>
             </div>
-            <div className="field-pair">
-              <label htmlFor="stock-name-en">{t("items.englishName")}</label>
-              <input
-                defaultValue={editing?.nameEn}
-                id="stock-name-en"
-                name="name-en"
-                required
-              />
+          </fieldset>
+
+          <fieldset className="staff-desk__fieldset">
+            <legend>{t("stock.setupMeasure")}</legend>
+            <div className="staff-desk__field-grid">
+              <div className="field-pair">
+                <label htmlFor="stock-unit">{t("stock.unit")}</label>
+                <input
+                  defaultValue={editing?.unit ?? "count"}
+                  id="stock-unit"
+                  list="stock-unit-suggestions"
+                  name="unit"
+                  placeholder="ml, bottle, pack…"
+                  required
+                />
+                <datalist id="stock-unit-suggestions">
+                  {unitSuggestions.map((unit) => (
+                    <option key={unit} value={unit} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="field-pair">
+                <label htmlFor="stock-minimum">{t("stock.minimum")}</label>
+                <input
+                  defaultValue={editing?.minimum ?? 0}
+                  id="stock-minimum"
+                  min="0"
+                  name="minimum"
+                  type="number"
+                />
+              </div>
+              <div className="field-pair">
+                <label htmlFor="stock-opening">{t("stock.opening")}</label>
+                <input
+                  defaultValue={editing?.openingQuantity ?? 0}
+                  id="stock-opening"
+                  min="0"
+                  name="opening-quantity"
+                  type="number"
+                />
+              </div>
             </div>
-          </div>
-          <div className="staff-desk__field-grid">
-            <div className="field-pair">
-              <label htmlFor="stock-unit">{t("stock.unit")}</label>
-              <select
-                defaultValue={editing?.unit ?? "count"}
-                id="stock-unit"
-                name="unit"
-                required
-              >
-                {DESK_COUNTED_UNITS.map((unit) => (
-                  <option key={unit} value={unit}>
-                    {unit === "grams" ? t("stock.unitGrams") : t("stock.unitCount")}
-                  </option>
-                ))}
-              </select>
+            <p className="staff-desk__hint">{t("stock.unitHint")}</p>
+          </fieldset>
+
+          <fieldset className="staff-desk__fieldset">
+            <legend>{t("items.setupSell")}</legend>
+            <div className="staff-desk__field-grid">
+              <div className="field-pair">
+                <label htmlFor="stock-cost">{t("items.cost")}</label>
+                <input
+                  defaultValue={
+                    editing ? satangToBaht(editing.costSatang).toFixed(2) : "0"
+                  }
+                  id="stock-cost"
+                  min="0"
+                  name="cost-baht"
+                  step="0.01"
+                  type="number"
+                />
+              </div>
+              <div className="field-pair">
+                <label htmlFor="stock-sell">{t("items.sell")}</label>
+                <input
+                  defaultValue={
+                    editing
+                      ? satangToBaht(editing.sellPriceSatang).toFixed(2)
+                      : "0"
+                  }
+                  id="stock-sell"
+                  min="0"
+                  name="sell-price-baht"
+                  step="0.01"
+                  type="number"
+                />
+              </div>
             </div>
-            <div className="field-pair">
-              <label htmlFor="stock-minimum">{t("stock.minimum")}</label>
-              <input
-                defaultValue={editing?.minimum ?? 0}
-                id="stock-minimum"
-                min="0"
-                name="minimum"
-                type="number"
-              />
-            </div>
-          </div>
-          <div className="field-pair">
-            <label htmlFor="stock-opening">{t("stock.opening")}</label>
-            <input
-              defaultValue={editing?.openingQuantity ?? 0}
-              id="stock-opening"
-              min="0"
-              name="opening-quantity"
-              type="number"
-            />
-          </div>
+          </fieldset>
+
           {editing ? (
             <dl className="staff-desk__details">
               <div>
@@ -339,7 +447,12 @@ export function StaffDeskStock({
               </div>
               <div>
                 <dt>{t("stock.headroom")}</dt>
-                <dd>{quantityLabel(headroom(editing.onHand, editing.minimum), editing.unit)}</dd>
+                <dd>
+                  {quantityLabel(
+                    headroom(editing.onHand, editing.minimum),
+                    editing.unit,
+                  )}
+                </dd>
               </div>
             </dl>
           ) : null}

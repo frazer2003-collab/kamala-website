@@ -11,21 +11,22 @@ import {
   deleteDeskSellable,
   ensureSellableForCountedItem,
   listDeskCountedItems,
+  listDeskItemCategories,
   listDeskSellables,
   loadDeskBill,
   markDeskBillCleared,
   recordDeskStockMovement,
   removeDeskBillLine,
   saveDeskCountedItem,
+  saveDeskItemCategory,
   saveDeskLaundry,
   saveDeskSellable,
   updateDeskBill,
+  updateDeskBillLinePrice,
 } from "@/lib/desk-ops-data";
 import {
-  DESK_COUNTED_UNITS,
-  DESK_SELLABLE_CATEGORIES,
-  type DeskCountedUnit,
-  type DeskSellableCategory,
+  normalizeDeskUnit,
+  slugifyCategoryKey,
 } from "@/lib/desk-items";
 import {
   DESK_LAUNDRY_CATEGORIES,
@@ -246,11 +247,35 @@ export async function addBillLine(formData: FormData) {
     formData,
     required(formData, "sellable-item-id", "Item"),
   );
+  const sellables = await listDeskSellables();
+  const sellable = sellables.find((item) => item.id === sellableItemId);
+  if (!sellable) throw new Error("Unknown item.");
+  const overrideRaw = value(formData, "unit-price-baht");
+  const overrideSatang = overrideRaw ? parseBahtToSatang(overrideRaw) : null;
+  const unitPriceSatang =
+    overrideSatang != null ? overrideSatang : sellable.priceSatang;
   await addDeskBillLine({
     billId,
     sellableItemId,
     quantity: positiveInteger(formData, "quantity", 1),
+    unitPriceSatang,
   });
+  revalidateDesk();
+  redirect(billsReturnWithOpen(formData, billId));
+}
+
+export async function updateBillLinePrice(formData: FormData) {
+  await requireDeskWriteAccess("bills");
+  const billId = required(formData, "bill-id", "Bill");
+  const bill = await loadDeskBill(billId);
+  if (!bill || bill.status !== "open") throw new Error("This bill is not open.");
+  const lineId = required(formData, "line-id", "Bill line");
+  if (!bill.lines.some((line) => line.id === lineId)) {
+    throw new Error("Line is not on this bill.");
+  }
+  const unitPriceSatang = parseBahtToSatang(value(formData, "unit-price-baht"));
+  if (unitPriceSatang === null) throw new Error("Enter a valid baht price.");
+  await updateDeskBillLinePrice({ id: lineId, unitPriceSatang });
   revalidateDesk();
   redirect(billsReturnWithOpen(formData, billId));
 }
@@ -304,12 +329,16 @@ export async function clearBill(formData: FormData) {
 
 export async function saveSellableItem(formData: FormData) {
   await requireStaffSession();
-  const category = value(formData, "category") as DeskSellableCategory;
-  if (!DESK_SELLABLE_CATEGORIES.includes(category)) {
+  const category = value(formData, "category");
+  const categories = await listDeskItemCategories();
+  if (!categories.some((entry) => entry.active && entry.key === category)) {
     throw new Error("Choose an item category.");
   }
   const priceSatang = parseBahtToSatang(value(formData, "price-baht"));
-  if (priceSatang === null) throw new Error("Enter a valid baht price.");
+  if (priceSatang === null) throw new Error("Enter a valid sell price.");
+  const costRaw = value(formData, "cost-baht");
+  const costSatang = costRaw ? parseBahtToSatang(costRaw) : 0;
+  if (costSatang === null) throw new Error("Enter a valid cost price.");
   const countedItems = await listDeskCountedItems();
   const ingredients = countedItems.flatMap((item) => {
     const quantity = positiveInteger(formData, `ingredient-${item.id}`);
@@ -319,12 +348,13 @@ export async function saveSellableItem(formData: FormData) {
     .getAll("attached-laundry-id")
     .map(String)
     .filter(Boolean);
-  const id = await saveDeskSellable({
+  await saveDeskSellable({
     id: value(formData, "id") || undefined,
     nameTh: required(formData, "name-th", "Thai name"),
     nameEn: required(formData, "name-en", "English name"),
     category,
     priceSatang,
+    costSatang,
     minimum: nonNegativeInteger(formData, "minimum"),
     active: formData.get("active") === "on",
     ingredients,
@@ -334,17 +364,46 @@ export async function saveSellableItem(formData: FormData) {
   redirect("/staff/items");
 }
 
+export async function saveItemCategory(formData: FormData) {
+  await requireStaffSession();
+  const nameEn = required(formData, "name-en", "English name");
+  const nameTh = value(formData, "name-th") || nameEn;
+  const existingId = value(formData, "id") || undefined;
+  const key = existingId
+    ? required(formData, "key", "Category key")
+    : slugifyCategoryKey(value(formData, "key") || nameEn);
+  if (!key) throw new Error("Category needs an English name or key.");
+  await saveDeskItemCategory({
+    id: existingId,
+    key,
+    nameEn,
+    nameTh,
+    sortOrder: nonNegativeInteger(formData, "sort-order", 100),
+    active: existingId ? formData.get("active") === "on" : true,
+  });
+  revalidateDesk();
+  redirect("/staff/items");
+}
+
 export async function saveCountedItem(formData: FormData) {
   await requireStaffSession();
-  const unit = value(formData, "unit") as DeskCountedUnit;
-  if (!DESK_COUNTED_UNITS.includes(unit)) throw new Error("Choose a stock unit.");
-  const id = await saveDeskCountedItem({
+  const unit = normalizeDeskUnit(required(formData, "unit", "Unit"));
+  if (!unit) throw new Error("Choose or type a stock unit.");
+  const sellRaw = value(formData, "sell-price-baht");
+  const costRaw = value(formData, "cost-baht");
+  const sellPriceSatang = sellRaw ? parseBahtToSatang(sellRaw) : 0;
+  const costSatang = costRaw ? parseBahtToSatang(costRaw) : 0;
+  if (sellPriceSatang === null) throw new Error("Enter a valid sell price.");
+  if (costSatang === null) throw new Error("Enter a valid cost price.");
+  await saveDeskCountedItem({
     id: value(formData, "id") || undefined,
     nameTh: required(formData, "name-th", "Thai name"),
     nameEn: required(formData, "name-en", "English name"),
     unit,
     openingQuantity: nonNegativeInteger(formData, "opening-quantity"),
     minimum: nonNegativeInteger(formData, "minimum"),
+    costSatang,
+    sellPriceSatang,
     active: formData.get("active") === "on",
   });
   revalidateDesk();

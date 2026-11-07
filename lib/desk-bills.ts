@@ -6,6 +6,8 @@ export type DeskBillLine = {
   id?: string;
   sellableItemId: string;
   quantity: number;
+  /** Per-unit sell price for this line; falls back to catalog when omitted. */
+  unitPriceSatang?: number | null;
 };
 
 export type DeskSellableForBill = {
@@ -31,6 +33,30 @@ function sellableMap(
   return new Map(sellables.map((sellable) => [sellable.id, sellable]));
 }
 
+export function lineUnitPriceSatang(
+  line: DeskBillLine,
+  sellable: DeskSellableForBill | undefined,
+): number {
+  if (
+    line.unitPriceSatang != null &&
+    Number.isSafeInteger(line.unitPriceSatang) &&
+    line.unitPriceSatang >= 0
+  ) {
+    return line.unitPriceSatang;
+  }
+  if (!sellable) {
+    throw new Error(`Unknown sellable item: ${line.sellableItemId}`);
+  }
+  return sellable.priceSatang;
+}
+
+export function lineAmountSatang(
+  line: DeskBillLine,
+  sellable: DeskSellableForBill | undefined,
+): number {
+  return lineUnitPriceSatang(line, sellable) * line.quantity;
+}
+
 export function billTotalSatang(
   lines: readonly DeskBillLine[],
   sellables: readonly DeskSellableForBill[],
@@ -39,10 +65,7 @@ export function billTotalSatang(
 
   return lines.reduce((total, line) => {
     const sellable = byId.get(line.sellableItemId);
-    if (!sellable) {
-      throw new Error(`Unknown sellable item: ${line.sellableItemId}`);
-    }
-    return total + sellable.priceSatang * line.quantity;
+    return total + lineAmountSatang(line, sellable);
   }, 0);
 }
 
