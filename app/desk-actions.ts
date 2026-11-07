@@ -78,6 +78,22 @@ function isIsoDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function isQuiet(formData: FormData) {
+  return value(formData, "quiet") === "1";
+}
+
+type DeskQuietOk = { ok: true; id?: string };
+
+/** DeskQuietForm sets quiet=1 — return instead of redirect so the UI stays snappy. */
+function finishDeskMutation(
+  formData: FormData,
+  redirectTo: string,
+  result: DeskQuietOk = { ok: true },
+): DeskQuietOk {
+  if (isQuiet(formData)) return result;
+  redirect(redirectTo);
+}
+
 function safeDeskReturnTo(formData: FormData, fallback: string) {
   const next = value(formData, "return-to");
   if (
@@ -149,13 +165,17 @@ export async function createLaundryRecord(formData: FormData) {
   };
   const errors = validateLaundryRecord(input);
   if (errors.length) throw new Error(errors.join(" "));
-  await saveDeskLaundry({
+  const id = await saveDeskLaundry({
     ...input,
     staffNote: value(formData, "staff-note") || null,
     status,
   });
   revalidateDesk();
-  redirect(safeDeskReturnTo(formData, "/staff/laundry"));
+  return finishDeskMutation(
+    formData,
+    safeDeskReturnTo(formData, "/staff/laundry"),
+    { ok: true, id },
+  );
 }
 
 export async function updateLaundryRecord(formData: FormData) {
@@ -187,28 +207,32 @@ export async function updateLaundryRecord(formData: FormData) {
     status,
   });
   revalidateDesk();
-  redirect(safeDeskReturnTo(formData, "/staff/laundry"));
+  return finishDeskMutation(
+    formData,
+    safeDeskReturnTo(formData, "/staff/laundry"),
+    { ok: true, id },
+  );
 }
 
 export async function deleteLaundryRecord(formData: FormData) {
   await requireDeskWriteAccess("laundry");
   await deleteDeskLaundry(required(formData, "id", "Laundry record"));
   revalidateDesk();
-  redirect(safeDeskReturnTo(formData, "/staff/laundry"));
+  return finishDeskMutation(formData, safeDeskReturnTo(formData, "/staff/laundry"));
 }
 
 export async function deactivateSellableItem(formData: FormData) {
   await requireStaffSession();
   await deleteDeskSellable(required(formData, "id", "Item"));
   revalidateDesk();
-  redirect("/staff/items");
+  return finishDeskMutation(formData, "/staff/items");
 }
 
 export async function deactivateCountedItem(formData: FormData) {
   await requireStaffSession();
   await deleteDeskCountedItem(required(formData, "id", "Stock item"));
   revalidateDesk();
-  redirect("/staff/stock");
+  return finishDeskMutation(formData, "/staff/stock");
 }
 
 export async function createBill(formData: FormData) {
@@ -218,7 +242,10 @@ export async function createBill(formData: FormData) {
     room: value(formData, "room") || null,
   });
   revalidateDesk();
-  redirect(billsReturnWithOpen(formData, id));
+  return finishDeskMutation(formData, billsReturnWithOpen(formData, id), {
+    ok: true,
+    id,
+  });
 }
 
 export async function updateBill(formData: FormData) {
@@ -232,7 +259,10 @@ export async function updateBill(formData: FormData) {
     room: value(formData, "room") || null,
   });
   revalidateDesk();
-  redirect(billsReturnWithOpen(formData, billId));
+  return finishDeskMutation(formData, billsReturnWithOpen(formData, billId), {
+    ok: true,
+    id: billId,
+  });
 }
 
 async function resolveBillSellableId(formData: FormData, raw: string) {
@@ -270,7 +300,10 @@ export async function addBillLine(formData: FormData) {
     unitPriceSatang,
   });
   revalidateDesk();
-  redirect(billsReturnWithOpen(formData, billId));
+  return finishDeskMutation(formData, billsReturnWithOpen(formData, billId), {
+    ok: true,
+    id: billId,
+  });
 }
 
 export async function updateBillLinePrice(formData: FormData) {
@@ -286,7 +319,10 @@ export async function updateBillLinePrice(formData: FormData) {
   if (unitPriceSatang === null) throw new Error("Enter a valid baht price.");
   await updateDeskBillLinePrice({ id: lineId, unitPriceSatang });
   revalidateDesk();
-  redirect(billsReturnWithOpen(formData, billId));
+  return finishDeskMutation(formData, billsReturnWithOpen(formData, billId), {
+    ok: true,
+    id: billId,
+  });
 }
 
 export async function removeBillLine(formData: FormData) {
@@ -296,7 +332,10 @@ export async function removeBillLine(formData: FormData) {
   if (!bill || bill.status !== "open") throw new Error("This bill is not open.");
   await removeDeskBillLine(required(formData, "line-id", "Bill line"));
   revalidateDesk();
-  redirect(billsReturnWithOpen(formData, billId));
+  return finishDeskMutation(formData, billsReturnWithOpen(formData, billId), {
+    ok: true,
+    id: billId,
+  });
 }
 
 export async function clearBill(formData: FormData) {
@@ -305,7 +344,11 @@ export async function clearBill(formData: FormData) {
   const bill = await loadDeskBill(billId);
   if (!bill || bill.status === "cleared") {
     revalidateDesk();
-    redirect(safeDeskReturnTo(formData, "/staff/bills"));
+    return finishDeskMutation(
+      formData,
+      safeDeskReturnTo(formData, "/staff/bills"),
+      { ok: true, id: billId },
+    );
   }
   if (bill.lines.length === 0) {
     throw new Error("Cannot clear a bill with no lines.");
@@ -333,7 +376,11 @@ export async function clearBill(formData: FormData) {
   }
   await markDeskBillCleared(bill.id, actedBy);
   revalidateDesk();
-  redirect(safeDeskReturnTo(formData, "/staff/bills"));
+  return finishDeskMutation(
+    formData,
+    safeDeskReturnTo(formData, "/staff/bills"),
+    { ok: true, id: billId },
+  );
 }
 
 export async function saveSellableItem(formData: FormData) {
@@ -357,7 +404,7 @@ export async function saveSellableItem(formData: FormData) {
     .getAll("attached-laundry-id")
     .map(String)
     .filter(Boolean);
-  await saveDeskSellable({
+  const id = await saveDeskSellable({
     id: value(formData, "id") || undefined,
     nameTh: required(formData, "name-th", "Thai name"),
     nameEn: required(formData, "name-en", "English name"),
@@ -370,7 +417,7 @@ export async function saveSellableItem(formData: FormData) {
     attachedLaundryIds,
   });
   revalidateDesk();
-  redirect("/staff/items");
+  return finishDeskMutation(formData, "/staff/items", { ok: true, id });
 }
 
 export async function saveItemCategory(formData: FormData) {
@@ -382,7 +429,7 @@ export async function saveItemCategory(formData: FormData) {
     ? required(formData, "key", "Category key")
     : slugifyCategoryKey(value(formData, "key") || nameEn);
   if (!key) throw new Error("Category needs an English name or key.");
-  await saveDeskItemCategory({
+  const id = await saveDeskItemCategory({
     id: existingId,
     key,
     nameEn,
@@ -391,7 +438,7 @@ export async function saveItemCategory(formData: FormData) {
     active: existingId ? formData.get("active") === "on" : true,
   });
   revalidateDesk();
-  redirect("/staff/items");
+  return finishDeskMutation(formData, "/staff/items", { ok: true, id });
 }
 
 export async function saveCountedItem(formData: FormData) {
@@ -404,7 +451,7 @@ export async function saveCountedItem(formData: FormData) {
   const costSatang = costRaw ? parseBahtToSatang(costRaw) : 0;
   if (sellPriceSatang === null) throw new Error("Enter a valid sell price.");
   if (costSatang === null) throw new Error("Enter a valid cost price.");
-  await saveDeskCountedItem({
+  const id = await saveDeskCountedItem({
     id: value(formData, "id") || undefined,
     nameTh: required(formData, "name-th", "Thai name"),
     nameEn: required(formData, "name-en", "English name"),
@@ -416,7 +463,7 @@ export async function saveCountedItem(formData: FormData) {
     active: formData.get("active") === "on",
   });
   revalidateDesk();
-  redirect("/staff/stock");
+  return finishDeskMutation(formData, "/staff/stock", { ok: true, id });
 }
 
 export async function recordStockMovement(formData: FormData) {
@@ -440,7 +487,7 @@ export async function recordStockMovement(formData: FormData) {
     actedBy,
   });
   revalidateDesk();
-  redirect("/staff/stock");
+  return finishDeskMutation(formData, "/staff/stock");
 }
 
 export async function createExpense(formData: FormData) {
@@ -450,7 +497,7 @@ export async function createExpense(formData: FormData) {
   const expenseDate = value(formData, "expense-date") || getPropertyTodayIso();
   if (!isIsoDate(expenseDate)) throw new Error("Choose a valid date.");
   const actedBy = await resolveDeskActorLabel();
-  await createDeskExpense({
+  const id = await createDeskExpense({
     name: required(formData, "name", "Charge name"),
     amountSatang,
     staffNote: value(formData, "staff-note") || null,
@@ -459,8 +506,10 @@ export async function createExpense(formData: FormData) {
   });
   const returnTo = value(formData, "return-to");
   revalidateDesk();
-  redirect(
+  return finishDeskMutation(
+    formData,
     returnTo.startsWith("/staff/expenses") ? returnTo : "/staff/expenses",
+    { ok: true, id },
   );
 }
 
@@ -469,7 +518,8 @@ export async function deleteExpense(formData: FormData) {
   await deleteDeskExpense(required(formData, "id", "Expense"));
   const returnTo = value(formData, "return-to");
   revalidateDesk();
-  redirect(
+  return finishDeskMutation(
+    formData,
     returnTo.startsWith("/staff/expenses") ? returnTo : "/staff/expenses",
   );
 }

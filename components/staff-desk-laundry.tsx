@@ -6,6 +6,10 @@ import {
   deleteLaundryRecord,
   updateLaundryRecord,
 } from "@/app/desk-actions";
+import {
+  DeskQuietForm,
+  deskPendingLabel,
+} from "@/components/desk-quiet-form";
 import { StaffDialog } from "@/components/staff-dialog";
 import { useStaffLocale } from "@/components/staff-locale";
 import {
@@ -143,114 +147,127 @@ export function StaffDeskLaundry({
           )}
         </section>
 
-        <form action={createLaundryRecord} className="staff-desk__form">
-          <input name="return-to" type="hidden" value={returnTo} />
-          <h2>{t("laundry.add")}</h2>
-          <div className="field-pair">
-            <label htmlFor="laundry-name">{t("common.name")}</label>
-            <input
-              id="laundry-name"
-              name="name"
-              placeholder={t("laundry.placeholder")}
-              required
-            />
-          </div>
-          <div className="staff-desk__field-grid">
-            <div className="field-pair">
-              {sheetsOnly ? (
-                <>
-                  <label htmlFor="laundry-category">{t("laundry.category")}</label>
-                  <input name="category" type="hidden" value="sheets" />
-                  <input
-                    id="laundry-category"
-                    readOnly
-                    value={t("laundry.catSheets")}
-                  />
-                </>
-              ) : (
-                <>
-                  <label htmlFor="laundry-category">{t("laundry.category")}</label>
+        <DeskQuietForm
+          action={createLaundryRecord}
+          className="staff-desk__form"
+          resetOnSuccess
+          onSuccess={() => setMeasureType(sheetsOnly ? "count" : "kg")}
+        >
+          {(pending) => (
+            <>
+              <input name="return-to" type="hidden" value={returnTo} />
+              <h2>{t("laundry.add")}</h2>
+              <div className="field-pair">
+                <label htmlFor="laundry-name">{t("common.name")}</label>
+                <input
+                  id="laundry-name"
+                  name="name"
+                  placeholder={t("laundry.placeholder")}
+                  required
+                />
+              </div>
+              <div className="staff-desk__field-grid">
+                <div className="field-pair">
+                  {sheetsOnly ? (
+                    <>
+                      <label htmlFor="laundry-category">{t("laundry.category")}</label>
+                      <input name="category" type="hidden" value="sheets" />
+                      <input
+                        id="laundry-category"
+                        readOnly
+                        value={t("laundry.catSheets")}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label htmlFor="laundry-category">{t("laundry.category")}</label>
+                      <select
+                        defaultValue={DESK_LAUNDRY_CATEGORIES[0]}
+                        id="laundry-category"
+                        name="category"
+                        required
+                      >
+                        {categories.map((category) => (
+                          <option key={category} value={category}>
+                            {laundryCategoryLabel(category, t)}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                </div>
+                <div className="field-pair">
+                  <label htmlFor="laundry-status">{t("common.status")}</label>
                   <select
-                    defaultValue={DESK_LAUNDRY_CATEGORIES[0]}
-                    id="laundry-category"
-                    name="category"
+                    defaultValue={"sent" satisfies DeskLaundryStatus}
+                    id="laundry-status"
+                    name="status"
                     required
                   >
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {laundryCategoryLabel(category, t)}
+                    {DESK_LAUNDRY_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {laundryStatusLabel(status, t)}
                       </option>
                     ))}
                   </select>
-                </>
-              )}
-            </div>
-            <div className="field-pair">
-              <label htmlFor="laundry-status">{t("common.status")}</label>
-              <select
-                defaultValue={"sent" satisfies DeskLaundryStatus}
-                id="laundry-status"
-                name="status"
-                required
+                </div>
+              </div>
+              <div className="staff-desk__field-grid">
+                <div className="field-pair">
+                  <label htmlFor="laundry-type">{t("common.type")}</label>
+                  <select
+                    defaultValue={sheetsOnly ? "count" : "kg"}
+                    id="laundry-type"
+                    name="type"
+                    onChange={(event) =>
+                      setMeasureType(event.target.value === "count" ? "count" : "kg")
+                    }
+                  >
+                    <option value="kg">{t("laundry.kilograms")}</option>
+                    <option value="count">{t("laundry.pieces")}</option>
+                  </select>
+                </div>
+                <div className="field-pair">
+                  <label htmlFor="laundry-measure">
+                    {measureType === "kg" ? t("laundry.kilograms") : t("laundry.pieces")}
+                  </label>
+                  {measureType === "kg" ? (
+                    <input
+                      id="laundry-measure"
+                      key="kg"
+                      min="0.01"
+                      name="measure"
+                      required
+                      step="0.01"
+                      type="number"
+                    />
+                  ) : (
+                    <input
+                      id="laundry-measure"
+                      key="count"
+                      min="1"
+                      name="measure"
+                      required
+                      step="1"
+                      type="number"
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="field-pair">
+                <label htmlFor="laundry-note">{t("common.note")}</label>
+                <textarea id="laundry-note" name="staff-note" rows={3} />
+              </div>
+              <button
+                className="button button--primary"
+                disabled={pending}
+                type="submit"
               >
-                {DESK_LAUNDRY_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {laundryStatusLabel(status, t)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="staff-desk__field-grid">
-            <div className="field-pair">
-              <label htmlFor="laundry-type">{t("common.type")}</label>
-              <select
-                defaultValue={sheetsOnly ? "count" : "kg"}
-                id="laundry-type"
-                name="type"
-                onChange={(event) =>
-                  setMeasureType(event.target.value === "count" ? "count" : "kg")
-                }
-              >
-                <option value="kg">{t("laundry.kilograms")}</option>
-                <option value="count">{t("laundry.pieces")}</option>
-              </select>
-            </div>
-            <div className="field-pair">
-              <label htmlFor="laundry-measure">
-                {measureType === "kg" ? t("laundry.kilograms") : t("laundry.pieces")}
-              </label>
-              {measureType === "kg" ? (
-                <input
-                  id="laundry-measure"
-                  key="kg"
-                  min="0.01"
-                  name="measure"
-                  required
-                  step="0.01"
-                  type="number"
-                />
-              ) : (
-                <input
-                  id="laundry-measure"
-                  key="count"
-                  min="1"
-                  name="measure"
-                  required
-                  step="1"
-                  type="number"
-                />
-              )}
-            </div>
-          </div>
-          <div className="field-pair">
-            <label htmlFor="laundry-note">{t("common.note")}</label>
-            <textarea id="laundry-note" name="staff-note" rows={3} />
-          </div>
-          <button className="button button--primary" type="submit">
-            {t("laundry.addSlip")}
-          </button>
-        </form>
+                {deskPendingLabel(pending, t("laundry.addSlip"))}
+              </button>
+            </>
+          )}
+        </DeskQuietForm>
       </div>
 
       <StaffDialog
@@ -259,61 +276,84 @@ export function StaffDeskLaundry({
         title={selected ? selected.name : t("laundry.slip")}
         footer={
           selected ? (
-            <form action={deleteLaundryRecord}>
-              <input name="id" type="hidden" value={selected.id} />
-              <input name="return-to" type="hidden" value={returnTo} />
-              <button className="button button--quiet" type="submit">
-                {t("common.delete")}
-              </button>
-            </form>
+            <DeskQuietForm
+              action={deleteLaundryRecord}
+              onSuccess={() => setSelectedId(null)}
+            >
+              {(pending) => (
+                <>
+                  <input name="id" type="hidden" value={selected.id} />
+                  <input name="return-to" type="hidden" value={returnTo} />
+                  <button
+                    className="button button--quiet"
+                    disabled={pending}
+                    type="submit"
+                  >
+                    {deskPendingLabel(pending, t("common.delete"), "…")}
+                  </button>
+                </>
+              )}
+            </DeskQuietForm>
           ) : null
         }
       >
         {selected ? (
-          <form action={updateLaundryRecord} className="staff-desk__form staff-desk__form--dialog">
-            <input name="id" type="hidden" value={selected.id} />
-            <input name="return-to" type="hidden" value={returnTo} />
-            <input name="name" type="hidden" value={selected.name} />
-            <input name="category" type="hidden" value={selected.category} />
-            <input name="grams" type="hidden" value={selected.grams ?? ""} />
-            <input name="count" type="hidden" value={selected.count ?? ""} />
-            <dl className="staff-desk__details">
-              <div>
-                <dt>{t("laundry.category")}</dt>
-                <dd>{laundryCategoryLabel(selected.category, t)}</dd>
-              </div>
-              <div>
-                <dt>{t("laundry.measure")}</dt>
-                <dd>{formatLaundryMeasure(selected)}</dd>
-              </div>
-              <div>
-                <dt>{t("laundry.recorded")}</dt>
-                <dd>{dateTime(selected.recordedAt, locale)}</dd>
-              </div>
-            </dl>
-            <div className="field-pair">
-              <label htmlFor="slip-note">{t("common.note")}</label>
-              <textarea
-                defaultValue={selected.staffNote ?? ""}
-                id="slip-note"
-                name="staff-note"
-                rows={3}
-              />
-            </div>
-            <div className="field-pair">
-              <label htmlFor="slip-status">{t("laundry.updateStatus")}</label>
-              <select defaultValue={selected.status} id="slip-status" name="status">
-                {DESK_LAUNDRY_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {laundryStatusLabel(status, t)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button className="button button--secondary" type="submit">
-              {t("common.save")}
-            </button>
-          </form>
+          <DeskQuietForm
+            action={updateLaundryRecord}
+            className="staff-desk__form staff-desk__form--dialog"
+            onSuccess={() => setSelectedId(null)}
+          >
+            {(pending) => (
+              <>
+                <input name="id" type="hidden" value={selected.id} />
+                <input name="return-to" type="hidden" value={returnTo} />
+                <input name="name" type="hidden" value={selected.name} />
+                <input name="category" type="hidden" value={selected.category} />
+                <input name="grams" type="hidden" value={selected.grams ?? ""} />
+                <input name="count" type="hidden" value={selected.count ?? ""} />
+                <dl className="staff-desk__details">
+                  <div>
+                    <dt>{t("laundry.category")}</dt>
+                    <dd>{laundryCategoryLabel(selected.category, t)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("laundry.measure")}</dt>
+                    <dd>{formatLaundryMeasure(selected)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("laundry.recorded")}</dt>
+                    <dd>{dateTime(selected.recordedAt, locale)}</dd>
+                  </div>
+                </dl>
+                <div className="field-pair">
+                  <label htmlFor="slip-note">{t("common.note")}</label>
+                  <textarea
+                    defaultValue={selected.staffNote ?? ""}
+                    id="slip-note"
+                    name="staff-note"
+                    rows={3}
+                  />
+                </div>
+                <div className="field-pair">
+                  <label htmlFor="slip-status">{t("laundry.updateStatus")}</label>
+                  <select defaultValue={selected.status} id="slip-status" name="status">
+                    {DESK_LAUNDRY_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {laundryStatusLabel(status, t)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  className="button button--secondary"
+                  disabled={pending}
+                  type="submit"
+                >
+                  {deskPendingLabel(pending, t("common.save"))}
+                </button>
+              </>
+            )}
+          </DeskQuietForm>
         ) : null}
       </StaffDialog>
     </>

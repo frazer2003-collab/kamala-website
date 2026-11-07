@@ -1,6 +1,10 @@
 "use client";
 
 import { createExpense, deleteExpense } from "@/app/desk-actions";
+import {
+  DeskQuietForm,
+  deskPendingLabel,
+} from "@/components/desk-quiet-form";
 import { useStaffLocale } from "@/components/staff-locale";
 import { formatSatang } from "@/lib/desk-money";
 import type { DeskExpense } from "@/lib/desk-ops-data";
@@ -43,56 +47,69 @@ export function StaffDeskExpenses({
 
   return (
     <div className="staff-desk__expenses">
-      <form action={createExpense} className="staff-desk__form staff-desk__expense-create">
-        <input name="return-to" type="hidden" value={returnTo} />
-        <h2>{t("expenses.add")}</h2>
-        <div className="staff-desk__field-grid">
-          <div className="field-pair staff-desk__grow">
-            <label htmlFor="expense-name">{t("expenses.chargeName")}</label>
-            <input
-              id="expense-name"
-              name="name"
-              placeholder={t("expenses.chargePlaceholder")}
-              required
-            />
-          </div>
-          <div className="field-pair">
-            <label htmlFor="expense-amount">{t("expenses.cost")}</label>
-            <input
-              id="expense-amount"
-              inputMode="decimal"
-              min="0"
-              name="amount-baht"
-              placeholder="0"
-              required
-              step="0.01"
-              type="number"
-            />
-          </div>
-          <div className="field-pair">
-            <label htmlFor="expense-date">{t("expenses.date")}</label>
-            <input
-              defaultValue={todayIso}
-              id="expense-date"
-              max={todayIso}
-              name="expense-date"
-              required
-              type="date"
-            />
-          </div>
-        </div>
-        <div className="field-pair">
-          <label htmlFor="expense-note">{t("expenses.note")}</label>
-          <input
-            id="expense-note"
-            name="staff-note"
-            placeholder={t("expenses.notePlaceholder")}
-          />
-        </div>
-        <button className="button button--primary" type="submit">
-          {t("expenses.save")}
-        </button>
-      </form>
+      <DeskQuietForm
+        action={createExpense}
+        className="staff-desk__form staff-desk__expense-create"
+        resetOnSuccess
+      >
+        {(pending) => (
+          <>
+            <input name="return-to" type="hidden" value={returnTo} />
+            <h2>{t("expenses.add")}</h2>
+            <div className="staff-desk__field-grid">
+              <div className="field-pair staff-desk__grow">
+                <label htmlFor="expense-name">{t("expenses.chargeName")}</label>
+                <input
+                  autoFocus
+                  id="expense-name"
+                  name="name"
+                  placeholder={t("expenses.chargePlaceholder")}
+                  required
+                />
+              </div>
+              <div className="field-pair">
+                <label htmlFor="expense-amount">{t("expenses.cost")}</label>
+                <input
+                  id="expense-amount"
+                  inputMode="decimal"
+                  min="0"
+                  name="amount-baht"
+                  placeholder="0"
+                  required
+                  step="0.01"
+                  type="number"
+                />
+              </div>
+              <div className="field-pair">
+                <label htmlFor="expense-date">{t("expenses.date")}</label>
+                <input
+                  defaultValue={todayIso}
+                  id="expense-date"
+                  max={todayIso}
+                  name="expense-date"
+                  required
+                  type="date"
+                />
+              </div>
+            </div>
+            <div className="field-pair">
+              <label htmlFor="expense-note">{t("expenses.note")}</label>
+              <input
+                id="expense-note"
+                name="staff-note"
+                placeholder={t("expenses.notePlaceholder")}
+              />
+            </div>
+            <button
+              className="button button--primary"
+              disabled={pending}
+              type="submit"
+            >
+              {deskPendingLabel(pending, t("expenses.save"))}
+            </button>
+          </>
+        )}
+      </DeskQuietForm>
 
       <section className="staff-desk__panel" aria-labelledby="expense-list-title">
         <header className="staff-desk__panel-head">
@@ -157,20 +174,33 @@ export function StaffDeskExpenses({
                             <td>{formatSatang(expense.amountSatang)}</td>
                             <td>{expense.staffNote || "—"}</td>
                             <td>
-                              <form action={deleteExpense}>
-                                <input name="id" type="hidden" value={expense.id} />
-                                <input
-                                  name="return-to"
-                                  type="hidden"
-                                  value={returnTo}
-                                />
-                                <button
-                                  className="button button--quiet"
-                                  type="submit"
-                                >
-                                  {t("common.remove")}
-                                </button>
-                              </form>
+                              <DeskQuietForm action={deleteExpense}>
+                                {(pending) => (
+                                  <>
+                                    <input
+                                      name="id"
+                                      type="hidden"
+                                      value={expense.id}
+                                    />
+                                    <input
+                                      name="return-to"
+                                      type="hidden"
+                                      value={returnTo}
+                                    />
+                                    <button
+                                      className="button button--quiet"
+                                      disabled={pending}
+                                      type="submit"
+                                    >
+                                      {deskPendingLabel(
+                                        pending,
+                                        t("common.remove"),
+                                        "…",
+                                      )}
+                                    </button>
+                                  </>
+                                )}
+                              </DeskQuietForm>
                             </td>
                           </tr>
                         ))}

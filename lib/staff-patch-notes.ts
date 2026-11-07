@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-quiet-saves",
+    date: "2026-11-07",
+    title: "Faster desk saves — no full-screen wait",
+    summary:
+      "Bills, stock, laundry, menu, and expenses save with a button spinner only. Expenses moved under Desk.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Desk bill dialog with quick add line",
+    },
+    changes: [
+      "Adding lines, saving slips, and recording expenses no longer flash the full Saving screen.",
+      "Only the Save / Add button shows a short pending state; the list refreshes when done.",
+      "Expenses sits under Desk with Bills, Stock, Laundry, and Menu.",
+    ],
+  },
+  {
     id: "2026-11-07-expenses-gross-profit",
     date: "2026-11-07",
     title: "Expenses page and Finance gross profit",

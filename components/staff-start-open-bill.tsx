@@ -18,7 +18,12 @@ export function StaffStartOpenBill({
   }, []);
 
   return (
-    <form action={createBill} ref={formRef}>
+    <form
+      action={async (formData) => {
+        await createBill(formData);
+      }}
+      ref={formRef}
+    >
       <input name="return-to" type="hidden" value={returnTo} />
       <button className="button button--primary" type="submit">
         Opening bill…

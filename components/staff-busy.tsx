@@ -359,6 +359,10 @@ function StaffFormSubmitListener() {
       if (!form.closest(".staff-shell, .staff-login-shell")) {
         return;
       }
+      // Desk micro-actions: button-level pending only (see DeskQuietForm).
+      if (form.dataset.busy === "quiet") {
+        return;
+      }
       if (holdingRef.current) {
         return;
       }

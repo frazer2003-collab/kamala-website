@@ -6,6 +6,10 @@ import {
   saveItemCategory,
   saveSellableItem,
 } from "@/app/desk-actions";
+import {
+  DeskQuietForm,
+  deskPendingLabel,
+} from "@/components/desk-quiet-form";
 import { StaffDialog } from "@/components/staff-dialog";
 import { StaffIngredientsPicker } from "@/components/staff-ingredients-picker";
 import { useStaffLocale } from "@/components/staff-locale";
@@ -183,131 +187,160 @@ export function StaffDeskItems({
         title={editing ? t("items.edit") : t("items.create")}
         footer={
           editing ? (
-            <form action={deactivateSellableItem}>
-              <input name="id" type="hidden" value={editing.id} />
-              <button className="button button--quiet" type="submit">
-                {t("common.delete")}
-              </button>
-            </form>
+            <DeskQuietForm
+              action={deactivateSellableItem}
+              onSuccess={() => {
+                setSelectedId(null);
+                setCreating(false);
+              }}
+            >
+              {(pending) => (
+                <>
+                  <input name="id" type="hidden" value={editing.id} />
+                  <button
+                    className="button button--quiet"
+                    disabled={pending}
+                    type="submit"
+                  >
+                    {deskPendingLabel(pending, t("common.delete"), "…")}
+                  </button>
+                </>
+              )}
+            </DeskQuietForm>
           ) : null
         }
       >
-        <form action={saveSellableItem} className="staff-desk__form staff-desk__form--dialog">
-          {editing ? <input name="id" type="hidden" value={editing.id} /> : null}
+        <DeskQuietForm
+          action={saveSellableItem}
+          className="staff-desk__form staff-desk__form--dialog"
+          onSuccess={() => {
+            setSelectedId(null);
+            setCreating(false);
+          }}
+        >
+          {(pending) => (
+            <>
+              {editing ? <input name="id" type="hidden" value={editing.id} /> : null}
 
-          <fieldset className="staff-desk__fieldset">
-            <legend>{t("items.setupNames")}</legend>
-            <div className="staff-desk__field-grid">
-              <div className="field-pair">
-                <label htmlFor="item-name-th">{t("items.thaiName")}</label>
-                <input
-                  defaultValue={editing?.nameTh}
-                  id="item-name-th"
-                  name="name-th"
-                  required
-                />
-              </div>
-              <div className="field-pair">
-                <label htmlFor="item-name-en">{t("items.englishName")}</label>
-                <input
-                  defaultValue={editing?.nameEn}
-                  id="item-name-en"
-                  name="name-en"
-                  required
-                />
-              </div>
-            </div>
-          </fieldset>
-
-          <fieldset className="staff-desk__fieldset">
-            <legend>{t("items.setupSell")}</legend>
-            <div className="staff-desk__field-grid">
-              <div className="field-pair">
-                <label htmlFor="item-category">{t("items.category")}</label>
-                <select
-                  defaultValue={editing?.category ?? activeCategories[0]?.key ?? "extra"}
-                  id="item-category"
-                  name="category"
-                  required
-                >
-                  {activeCategories.map((entry) => (
-                    <option key={entry.key} value={entry.key}>
-                      {categoryLabel(entry, entry.key, locale)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field-pair">
-                <label htmlFor="item-cost">{t("items.cost")}</label>
-                <input
-                  defaultValue={
-                    editing ? satangToBaht(editing.costSatang).toFixed(2) : "0"
-                  }
-                  id="item-cost"
-                  min="0"
-                  name="cost-baht"
-                  step="0.01"
-                  type="number"
-                />
-              </div>
-              <div className="field-pair">
-                <label htmlFor="item-price">{t("items.sell")}</label>
-                <input
-                  defaultValue={
-                    editing ? satangToBaht(editing.priceSatang).toFixed(2) : ""
-                  }
-                  id="item-price"
-                  min="0"
-                  name="price-baht"
-                  required
-                  step="0.01"
-                  type="number"
-                />
-              </div>
-            </div>
-          </fieldset>
-
-          <StaffIngredientsPicker
-            countedItems={countedItems}
-            initial={editing?.ingredients}
-            key={editing?.id ?? "new"}
-          />
-
-          <fieldset className="staff-desk__fieldset">
-            <legend>{t("items.attachedLaundry")}</legend>
-            <div className="staff-desk__checks">
-              {laundryItems.length ? (
-                laundryItems.map((item) => (
-                  <label className="staff-desk__check" key={item.id}>
+              <fieldset className="staff-desk__fieldset">
+                <legend>{t("items.setupNames")}</legend>
+                <div className="staff-desk__field-grid">
+                  <div className="field-pair">
+                    <label htmlFor="item-name-th">{t("items.thaiName")}</label>
                     <input
-                      defaultChecked={editing?.attachedLaundryIds.includes(item.id)}
-                      name="attached-laundry-id"
-                      type="checkbox"
-                      value={item.id}
+                      defaultValue={editing?.nameTh}
+                      id="item-name-th"
+                      name="name-th"
+                      required
                     />
-                    {bilingualItemLabel(item)}
-                  </label>
-                ))
-              ) : (
-                <p className="staff-desk__empty">
-                  Create laundry items before attaching them to rooms.
-                </p>
-              )}
-            </div>
-          </fieldset>
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="item-name-en">{t("items.englishName")}</label>
+                    <input
+                      defaultValue={editing?.nameEn}
+                      id="item-name-en"
+                      name="name-en"
+                      required
+                    />
+                  </div>
+                </div>
+              </fieldset>
 
-          <label className="staff-desk__check">
-            <input
-              defaultChecked={editing?.active ?? true}
-              name="active"
-              type="checkbox"
-            />
-            {t("items.active")}
-          </label>
-          <button className="button button--primary" type="submit">
-            {t("items.save")}
-          </button>
-        </form>
+              <fieldset className="staff-desk__fieldset">
+                <legend>{t("items.setupSell")}</legend>
+                <div className="staff-desk__field-grid">
+                  <div className="field-pair">
+                    <label htmlFor="item-category">{t("items.category")}</label>
+                    <select
+                      defaultValue={editing?.category ?? activeCategories[0]?.key ?? "extra"}
+                      id="item-category"
+                      name="category"
+                      required
+                    >
+                      {activeCategories.map((entry) => (
+                        <option key={entry.key} value={entry.key}>
+                          {categoryLabel(entry, entry.key, locale)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="item-cost">{t("items.cost")}</label>
+                    <input
+                      defaultValue={
+                        editing ? satangToBaht(editing.costSatang).toFixed(2) : "0"
+                      }
+                      id="item-cost"
+                      min="0"
+                      name="cost-baht"
+                      step="0.01"
+                      type="number"
+                    />
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="item-price">{t("items.sell")}</label>
+                    <input
+                      defaultValue={
+                        editing ? satangToBaht(editing.priceSatang).toFixed(2) : ""
+                      }
+                      id="item-price"
+                      min="0"
+                      name="price-baht"
+                      required
+                      step="0.01"
+                      type="number"
+                    />
+                  </div>
+                </div>
+              </fieldset>
+
+              <StaffIngredientsPicker
+                countedItems={countedItems}
+                initial={editing?.ingredients}
+                key={editing?.id ?? "new"}
+              />
+
+              <fieldset className="staff-desk__fieldset">
+                <legend>{t("items.attachedLaundry")}</legend>
+                <div className="staff-desk__checks">
+                  {laundryItems.length ? (
+                    laundryItems.map((item) => (
+                      <label className="staff-desk__check" key={item.id}>
+                        <input
+                          defaultChecked={editing?.attachedLaundryIds.includes(item.id)}
+                          name="attached-laundry-id"
+                          type="checkbox"
+                          value={item.id}
+                        />
+                        {bilingualItemLabel(item)}
+                      </label>
+                    ))
+                  ) : (
+                    <p className="staff-desk__empty">
+                      Create laundry items before attaching them to rooms.
+                    </p>
+                  )}
+                </div>
+              </fieldset>
+
+              <label className="staff-desk__check">
+                <input
+                  defaultChecked={editing?.active ?? true}
+                  name="active"
+                  type="checkbox"
+                />
+                {t("items.active")}
+              </label>
+              <button
+                className="button button--primary"
+                disabled={pending}
+                type="submit"
+              >
+                {deskPendingLabel(pending, t("items.save"))}
+              </button>
+            </>
+          )}
+        </DeskQuietForm>
       </StaffDialog>
 
       <StaffDialog
@@ -323,66 +356,87 @@ export function StaffDeskItems({
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((entry) => (
                 <li key={entry.id}>
-                  <form action={saveItemCategory} className="staff-desk__category-row">
-                    <input name="id" type="hidden" value={entry.id} />
-                    <input name="key" type="hidden" value={entry.key} />
-                    <input
-                      aria-label={t("items.englishName")}
-                      defaultValue={entry.nameEn}
-                      name="name-en"
-                      required
-                    />
-                    <input
-                      aria-label={t("items.thaiName")}
-                      defaultValue={entry.nameTh}
-                      name="name-th"
-                    />
-                    <input
-                      aria-label={t("items.sortOrder")}
-                      defaultValue={entry.sortOrder}
-                      min="0"
-                      name="sort-order"
-                      type="number"
-                    />
-                    <label className="staff-desk__check">
-                      <input
-                        defaultChecked={entry.active}
-                        name="active"
-                        type="checkbox"
-                        value="on"
-                      />
-                      {t("common.active")}
-                    </label>
-                    <button className="button button--quiet" type="submit">
-                      {t("common.save")}
-                    </button>
-                  </form>
+                  <DeskQuietForm
+                    action={saveItemCategory}
+                    className="staff-desk__category-row"
+                  >
+                    {(pending) => (
+                      <>
+                        <input name="id" type="hidden" value={entry.id} />
+                        <input name="key" type="hidden" value={entry.key} />
+                        <input
+                          aria-label={t("items.englishName")}
+                          defaultValue={entry.nameEn}
+                          name="name-en"
+                          required
+                        />
+                        <input
+                          aria-label={t("items.thaiName")}
+                          defaultValue={entry.nameTh}
+                          name="name-th"
+                        />
+                        <input
+                          aria-label={t("items.sortOrder")}
+                          defaultValue={entry.sortOrder}
+                          min="0"
+                          name="sort-order"
+                          type="number"
+                        />
+                        <label className="staff-desk__check">
+                          <input
+                            defaultChecked={entry.active}
+                            name="active"
+                            type="checkbox"
+                            value="on"
+                          />
+                          {t("common.active")}
+                        </label>
+                        <button
+                          className="button button--quiet"
+                          disabled={pending}
+                          type="submit"
+                        >
+                          {deskPendingLabel(pending, t("common.save"))}
+                        </button>
+                      </>
+                    )}
+                  </DeskQuietForm>
                 </li>
               ))}
           </ul>
 
-          <form action={saveItemCategory} className="staff-desk__form">
-            <fieldset className="staff-desk__fieldset">
-              <legend>{t("items.addCategory")}</legend>
-              <div className="staff-desk__field-grid">
-                <div className="field-pair">
-                  <label htmlFor="cat-en">{t("items.englishName")}</label>
-                  <input id="cat-en" name="name-en" required />
+          <DeskQuietForm
+            action={saveItemCategory}
+            className="staff-desk__form"
+            resetOnSuccess
+          >
+            {(pending) => (
+              <fieldset className="staff-desk__fieldset">
+                <legend>{t("items.addCategory")}</legend>
+                <div className="staff-desk__field-grid">
+                  <div className="field-pair">
+                    <label htmlFor="cat-en">{t("items.englishName")}</label>
+                    <input id="cat-en" name="name-en" required />
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="cat-th">{t("items.thaiName")}</label>
+                    <input id="cat-th" name="name-th" />
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="cat-key">{t("items.categoryKey")}</label>
+                    <input id="cat-key" name="key" placeholder="snacks" />
+                  </div>
                 </div>
-                <div className="field-pair">
-                  <label htmlFor="cat-th">{t("items.thaiName")}</label>
-                  <input id="cat-th" name="name-th" />
-                </div>
-                <div className="field-pair">
-                  <label htmlFor="cat-key">{t("items.categoryKey")}</label>
-                  <input id="cat-key" name="key" placeholder="snacks" />
-                </div>
-              </div>
-              <button className="button button--secondary" type="submit">
-                {t("items.addCategory")}
-              </button>
-            </fieldset>
-          </form>
+                <button
+                  className="button button--secondary"
+                  disabled={pending}
+                  type="submit"
+                >
+                  {deskPendingLabel(pending, t("items.addCategory"))}
+                </button>
+              </fieldset>
+            )}
+          </DeskQuietForm>
         </div>
       </StaffDialog>
     </>

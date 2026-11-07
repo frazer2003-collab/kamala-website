@@ -10,6 +10,10 @@ import {
   updateBill,
   updateBillLinePrice,
 } from "@/app/desk-actions";
+import {
+  DeskQuietForm,
+  deskPendingLabel,
+} from "@/components/desk-quiet-form";
 import { StaffCombo } from "@/components/staff-combo";
 import { StaffDialog } from "@/components/staff-dialog";
 import { useStaffLocale } from "@/components/staff-locale";
@@ -131,25 +135,42 @@ export function StaffDeskBills({
     return () => window.clearInterval(timer);
   }, [router, selectedId]);
 
+  function softUrl(next: string) {
+    window.history.replaceState(null, "", next);
+  }
+
   function closeBill() {
     setConfirmClear(false);
     setSelectedId(null);
-    router.replace(returnTo);
+    softUrl(returnTo);
   }
 
   function openBill(id: string) {
     setConfirmClear(false);
     setSelectedId(id);
-    router.replace(`${returnTo}?open=${encodeURIComponent(id)}`);
+    softUrl(`${returnTo}?open=${encodeURIComponent(id)}`);
   }
 
   const newBillForm = (
-    <form action={createBill}>
-      <input name="return-to" type="hidden" value={returnTo} />
-      <button className="button button--primary" type="submit">
-        {t("bills.new")}
-      </button>
-    </form>
+    <DeskQuietForm
+      action={createBill}
+      onSuccess={(result) => {
+        if (result?.id) openBill(result.id);
+      }}
+    >
+      {(pending) => (
+        <>
+          <input name="return-to" type="hidden" value={returnTo} />
+          <button
+            className="button button--primary"
+            disabled={pending}
+            type="submit"
+          >
+            {deskPendingLabel(pending, t("bills.new"), "Opening…")}
+          </button>
+        </>
+      )}
+    </DeskQuietForm>
   );
 
   return (
@@ -218,38 +239,51 @@ export function StaffDeskBills({
             selected.lines.length === 0 ? (
               <p className="staff-desk__clear-empty">{t("bills.clearEmpty")}</p>
             ) : confirmClear ? (
-              <form action={clearBill} className="staff-desk__clear-confirm">
-                <input name="bill-id" type="hidden" value={selected.id} />
-                <input name="return-to" type="hidden" value={returnTo} />
-                <p>
-                  <strong>{selected.name}</strong>
-                  {" · "}
-                  {formatSatang(billTotalSatang(selected.lines, sellables))}
-                </p>
-                <p className="staff-desk__clear-confirm-note">
-                  {t("bills.clearConfirmNote")}
-                </p>
-                {clearWithoutStockIds.length ? (
-                  <p className="staff-desk__clear-confirm-note" role="status">
-                    {t("bills.clearNoStockWarn").replace(
-                      "{n}",
-                      String(clearWithoutStockIds.length),
-                    )}
-                  </p>
-                ) : null}
-                <div className="staff-desk__clear-confirm-actions">
-                  <button className="button button--primary" type="submit">
-                    {t("bills.clearConfirm")}
-                  </button>
-                  <button
-                    className="button button--secondary"
-                    onClick={() => setConfirmClear(false)}
-                    type="button"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                </div>
-              </form>
+              <DeskQuietForm
+                action={clearBill}
+                className="staff-desk__clear-confirm"
+                onSuccess={() => closeBill()}
+              >
+                {(pending) => (
+                  <>
+                    <input name="bill-id" type="hidden" value={selected.id} />
+                    <input name="return-to" type="hidden" value={returnTo} />
+                    <p>
+                      <strong>{selected.name}</strong>
+                      {" · "}
+                      {formatSatang(billTotalSatang(selected.lines, sellables))}
+                    </p>
+                    <p className="staff-desk__clear-confirm-note">
+                      {t("bills.clearConfirmNote")}
+                    </p>
+                    {clearWithoutStockIds.length ? (
+                      <p className="staff-desk__clear-confirm-note" role="status">
+                        {t("bills.clearNoStockWarn").replace(
+                          "{n}",
+                          String(clearWithoutStockIds.length),
+                        )}
+                      </p>
+                    ) : null}
+                    <div className="staff-desk__clear-confirm-actions">
+                      <button
+                        className="button button--primary"
+                        disabled={pending}
+                        type="submit"
+                      >
+                        {deskPendingLabel(pending, t("bills.clearConfirm"))}
+                      </button>
+                      <button
+                        className="button button--secondary"
+                        disabled={pending}
+                        onClick={() => setConfirmClear(false)}
+                        type="button"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </DeskQuietForm>
             ) : (
               <button
                 className="button button--primary"
@@ -265,7 +299,9 @@ export function StaffDeskBills({
         {selected ? (
           <>
             {selected.status === "open" ? (
-              <form action={updateBill} className="staff-desk__inline-form">
+              <DeskQuietForm action={updateBill} className="staff-desk__inline-form">
+                {(pending) => (
+                  <>
                 <input name="bill-id" type="hidden" value={selected.id} />
                 <input name="return-to" type="hidden" value={returnTo} />
                 <div className="field-pair staff-desk__grow">
@@ -288,10 +324,16 @@ export function StaffDeskBills({
                     placeholder="204"
                   />
                 </div>
-                <button className="button button--secondary" type="submit">
-                  {t("common.save")}
+                <button
+                  className="button button--secondary"
+                  disabled={pending}
+                  type="submit"
+                >
+                  {deskPendingLabel(pending, t("common.save"))}
                 </button>
-              </form>
+                  </>
+                )}
+              </DeskQuietForm>
             ) : (
               <dl className="staff-desk__details">
                 <div>
@@ -355,44 +397,54 @@ export function StaffDeskBills({
                           <td>{line.quantity}</td>
                           <td>
                             {selected.status === "open" ? (
-                              <form
-                                action={updateBillLinePrice}
-                                className="staff-desk__line-price"
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                <input
-                                  name="bill-id"
-                                  type="hidden"
-                                  value={selected.id}
-                                />
-                                <input
-                                  name="line-id"
-                                  type="hidden"
-                                  value={line.id}
-                                />
-                                <input
-                                  name="return-to"
-                                  type="hidden"
-                                  value={returnTo}
-                                />
-                                <input
-                                  aria-label={t("bills.unitPrice")}
-                                  defaultValue={satangToBaht(
-                                    line.unitPriceSatang,
-                                  ).toFixed(2)}
-                                  inputMode="decimal"
-                                  min="0"
-                                  name="unit-price-baht"
-                                  step="0.01"
-                                  type="number"
-                                />
-                                <button
-                                  className="button button--quiet"
-                                  type="submit"
+                              <div onClick={(event) => event.stopPropagation()}>
+                                <DeskQuietForm
+                                  action={updateBillLinePrice}
+                                  className="staff-desk__line-price"
                                 >
-                                  {t("common.save")}
-                                </button>
-                              </form>
+                                  {(pending) => (
+                                    <>
+                                      <input
+                                        name="bill-id"
+                                        type="hidden"
+                                        value={selected.id}
+                                      />
+                                      <input
+                                        name="line-id"
+                                        type="hidden"
+                                        value={line.id}
+                                      />
+                                      <input
+                                        name="return-to"
+                                        type="hidden"
+                                        value={returnTo}
+                                      />
+                                      <input
+                                        aria-label={t("bills.unitPrice")}
+                                        defaultValue={satangToBaht(
+                                          line.unitPriceSatang,
+                                        ).toFixed(2)}
+                                        inputMode="decimal"
+                                        min="0"
+                                        name="unit-price-baht"
+                                        step="0.01"
+                                        type="number"
+                                      />
+                                      <button
+                                        className="button button--quiet"
+                                        disabled={pending}
+                                        type="submit"
+                                      >
+                                        {deskPendingLabel(
+                                          pending,
+                                          t("common.save"),
+                                          "…",
+                                        )}
+                                      </button>
+                                    </>
+                                  )}
+                                </DeskQuietForm>
+                              </div>
                             ) : (
                               formatSatang(line.unitPriceSatang)
                             )}
@@ -404,32 +456,40 @@ export function StaffDeskBills({
                           </td>
                           <td>
                             {selected.status === "open" ? (
-                              <form
-                                action={removeBillLine}
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                <input
-                                  name="bill-id"
-                                  type="hidden"
-                                  value={selected.id}
-                                />
-                                <input
-                                  name="line-id"
-                                  type="hidden"
-                                  value={line.id}
-                                />
-                                <input
-                                  name="return-to"
-                                  type="hidden"
-                                  value={returnTo}
-                                />
-                                <button
-                                  className="button button--quiet"
-                                  type="submit"
-                                >
-                                  {t("common.remove")}
-                                </button>
-                              </form>
+                              <div onClick={(event) => event.stopPropagation()}>
+                                <DeskQuietForm action={removeBillLine}>
+                                  {(pending) => (
+                                    <>
+                                      <input
+                                        name="bill-id"
+                                        type="hidden"
+                                        value={selected.id}
+                                      />
+                                      <input
+                                        name="line-id"
+                                        type="hidden"
+                                        value={line.id}
+                                      />
+                                      <input
+                                        name="return-to"
+                                        type="hidden"
+                                        value={returnTo}
+                                      />
+                                      <button
+                                        className="button button--quiet"
+                                        disabled={pending}
+                                        type="submit"
+                                      >
+                                        {deskPendingLabel(
+                                          pending,
+                                          t("common.remove"),
+                                          "…",
+                                        )}
+                                      </button>
+                                    </>
+                                  )}
+                                </DeskQuietForm>
+                              </div>
                             ) : null}
                           </td>
                         </tr>
@@ -445,7 +505,14 @@ export function StaffDeskBills({
             {selected.status === "open" ? (
               <>
                 <p className="staff-desk__hint">{t("bills.priceOverrideHint")}</p>
-                <form action={addBillLine} className="staff-desk__inline-form">
+                <DeskQuietForm
+                  action={addBillLine}
+                  className="staff-desk__inline-form"
+                  onSuccess={() => setStockPick(null)}
+                  resetOnSuccess
+                >
+                  {(pending) => (
+                    <>
                 <input name="bill-id" type="hidden" value={selected.id} />
                 <input name="return-to" type="hidden" value={returnTo} />
                 <div className="field-pair staff-desk__grow">
@@ -528,10 +595,16 @@ export function StaffDeskBills({
                     type="number"
                   />
                 </div>
-                <button className="button button--secondary" type="submit">
-                  {t("common.add")}
+                <button
+                  className="button button--secondary"
+                  disabled={pending}
+                  type="submit"
+                >
+                  {deskPendingLabel(pending, t("common.add"), "Adding…")}
                 </button>
-              </form>
+                    </>
+                  )}
+                </DeskQuietForm>
               </>
             ) : (
               <p className="form-message form-message--success" role="status">
@@ -556,12 +629,33 @@ export function StaffNewBillButton({
   returnTo?: string;
   label: string;
 }) {
+  const router = useRouter();
   return (
-    <form action={createBill}>
-      <input name="return-to" type="hidden" value={returnTo} />
-      <button className="button button--primary" type="submit">
-        {label}
-      </button>
-    </form>
+    <DeskQuietForm
+      action={createBill}
+      onSuccess={(result) => {
+        if (result?.id) {
+          window.history.replaceState(
+            null,
+            "",
+            `${returnTo}?open=${encodeURIComponent(result.id)}`,
+          );
+          router.refresh();
+        }
+      }}
+    >
+      {(pending) => (
+        <>
+          <input name="return-to" type="hidden" value={returnTo} />
+          <button
+            className="button button--primary"
+            disabled={pending}
+            type="submit"
+          >
+            {deskPendingLabel(pending, label, "Opening…")}
+          </button>
+        </>
+      )}
+    </DeskQuietForm>
   );
 }

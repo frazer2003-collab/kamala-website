@@ -274,18 +274,18 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
             label: t("nav.menuItems"),
             icon: <IconItems />,
           },
-        ],
-      },
-      {
-        label: t("nav.money"),
-        items: [
-          { id: "sold" as const, href: "/staff/sold", label: t("nav.finance"), icon: <IconFinance /> },
           {
             id: "expenses" as const,
             href: "/staff/expenses",
             label: t("nav.expenses"),
             icon: <IconExpenses />,
           },
+        ],
+      },
+      {
+        label: t("nav.money"),
+        items: [
+          { id: "sold" as const, href: "/staff/sold", label: t("nav.finance"), icon: <IconFinance /> },
           {
             id: "promotions" as const,
             href: "/staff/promotions",

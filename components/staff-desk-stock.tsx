@@ -6,6 +6,10 @@ import {
   recordStockMovement,
   saveCountedItem,
 } from "@/app/desk-actions";
+import {
+  DeskQuietForm,
+  deskPendingLabel,
+} from "@/components/desk-quiet-form";
 import { StaffCombo } from "@/components/staff-combo";
 import { StaffDialog } from "@/components/staff-dialog";
 import { useStaffLocale } from "@/components/staff-locale";
@@ -214,46 +218,58 @@ export function StaffDeskStock({
           )}
         </section>
 
-        <form action={recordStockMovement} className="staff-desk__form">
-          <h2>{t("stock.receive")}</h2>
-          <div className="field-pair">
-            <StaffCombo
-              clearOnSelect={false}
-              id="movement-item"
-              label={t("bills.item")}
-              name="counted-item-id"
-              options={itemOptions}
-              placeholder={t("desk.typeToSearch")}
-              required
-            />
-          </div>
-          <div className="staff-desk__field-grid">
-            <div className="field-pair">
-              <label htmlFor="movement-reason">{t("stock.reason")}</label>
-              <select
-                defaultValue="purchase"
-                id="movement-reason"
-                name="reason"
-                required
+        <DeskQuietForm
+          action={recordStockMovement}
+          className="staff-desk__form"
+          resetOnSuccess
+        >
+          {(pending) => (
+            <>
+              <h2>{t("stock.receive")}</h2>
+              <div className="field-pair">
+                <StaffCombo
+                  clearOnSelect={false}
+                  id="movement-item"
+                  label={t("bills.item")}
+                  name="counted-item-id"
+                  options={itemOptions}
+                  placeholder={t("desk.typeToSearch")}
+                  required
+                />
+              </div>
+              <div className="staff-desk__field-grid">
+                <div className="field-pair">
+                  <label htmlFor="movement-reason">{t("stock.reason")}</label>
+                  <select
+                    defaultValue="purchase"
+                    id="movement-reason"
+                    name="reason"
+                    required
+                  >
+                    <option value="purchase">{t("stock.purchase")}</option>
+                    <option value="waste">{t("stock.waste")}</option>
+                    <option value="adjustment">{t("stock.adjustment")}</option>
+                  </select>
+                </div>
+                <div className="field-pair">
+                  <label htmlFor="movement-quantity">{t("common.quantity")}</label>
+                  <input id="movement-quantity" name="quantity" required type="number" />
+                </div>
+              </div>
+              <div className="field-pair">
+                <label htmlFor="movement-note">{t("common.note")}</label>
+                <input id="movement-note" name="note" placeholder="Supplier or reason" />
+              </div>
+              <button
+                className="button button--primary"
+                disabled={pending}
+                type="submit"
               >
-                <option value="purchase">{t("stock.purchase")}</option>
-                <option value="waste">{t("stock.waste")}</option>
-                <option value="adjustment">{t("stock.adjustment")}</option>
-              </select>
-            </div>
-            <div className="field-pair">
-              <label htmlFor="movement-quantity">{t("common.quantity")}</label>
-              <input id="movement-quantity" name="quantity" required type="number" />
-            </div>
-          </div>
-          <div className="field-pair">
-            <label htmlFor="movement-note">{t("common.note")}</label>
-            <input id="movement-note" name="note" placeholder="Supplier or reason" />
-          </div>
-          <button className="button button--primary" type="submit">
-            {t("stock.record")}
-          </button>
-        </form>
+                {deskPendingLabel(pending, t("stock.record"))}
+              </button>
+            </>
+          )}
+        </DeskQuietForm>
       </div>
 
       <section className="staff-desk__panel" aria-labelledby="stock-projection-title">
@@ -326,148 +342,177 @@ export function StaffDeskStock({
         title={editing ? t("stock.editCounted") : t("stock.addCounted")}
         footer={
           editing ? (
-            <form action={deactivateCountedItem}>
-              <input name="id" type="hidden" value={editing.id} />
-              <button className="button button--quiet" type="submit">
-                {t("common.delete")}
-              </button>
-            </form>
+            <DeskQuietForm
+              action={deactivateCountedItem}
+              onSuccess={() => {
+                setSelectedId(null);
+                setCreating(false);
+              }}
+            >
+              {(pending) => (
+                <>
+                  <input name="id" type="hidden" value={editing.id} />
+                  <button
+                    className="button button--quiet"
+                    disabled={pending}
+                    type="submit"
+                  >
+                    {deskPendingLabel(pending, t("common.delete"), "…")}
+                  </button>
+                </>
+              )}
+            </DeskQuietForm>
           ) : null
         }
       >
-        <form action={saveCountedItem} className="staff-desk__form staff-desk__form--dialog">
-          {editing ? <input name="id" type="hidden" value={editing.id} /> : null}
+        <DeskQuietForm
+          action={saveCountedItem}
+          className="staff-desk__form staff-desk__form--dialog"
+          onSuccess={() => {
+            setSelectedId(null);
+            setCreating(false);
+          }}
+        >
+          {(pending) => (
+            <>
+              {editing ? <input name="id" type="hidden" value={editing.id} /> : null}
 
-          <fieldset className="staff-desk__fieldset">
-            <legend>{t("items.setupNames")}</legend>
-            <div className="staff-desk__field-grid">
-              <div className="field-pair">
-                <label htmlFor="stock-name-th">{t("items.thaiName")}</label>
-                <input
-                  defaultValue={editing?.nameTh}
-                  id="stock-name-th"
-                  name="name-th"
-                  required
-                />
-              </div>
-              <div className="field-pair">
-                <label htmlFor="stock-name-en">{t("items.englishName")}</label>
-                <input
-                  defaultValue={editing?.nameEn}
-                  id="stock-name-en"
-                  name="name-en"
-                  required
-                />
-              </div>
-            </div>
-          </fieldset>
+              <fieldset className="staff-desk__fieldset">
+                <legend>{t("items.setupNames")}</legend>
+                <div className="staff-desk__field-grid">
+                  <div className="field-pair">
+                    <label htmlFor="stock-name-th">{t("items.thaiName")}</label>
+                    <input
+                      defaultValue={editing?.nameTh}
+                      id="stock-name-th"
+                      name="name-th"
+                      required
+                    />
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="stock-name-en">{t("items.englishName")}</label>
+                    <input
+                      defaultValue={editing?.nameEn}
+                      id="stock-name-en"
+                      name="name-en"
+                      required
+                    />
+                  </div>
+                </div>
+              </fieldset>
 
-          <fieldset className="staff-desk__fieldset">
-            <legend>{t("stock.setupMeasure")}</legend>
-            <div className="staff-desk__field-grid">
-              <div className="field-pair">
-                <label htmlFor="stock-unit">{t("stock.unit")}</label>
-                <input
-                  defaultValue={editing?.unit ?? "count"}
-                  id="stock-unit"
-                  list="stock-unit-suggestions"
-                  name="unit"
-                  placeholder="ml, bottle, pack…"
-                  required
-                />
-                <datalist id="stock-unit-suggestions">
-                  {unitSuggestions.map((unit) => (
-                    <option key={unit} value={unit} />
-                  ))}
-                </datalist>
-              </div>
-              <div className="field-pair">
-                <label htmlFor="stock-minimum">{t("stock.minimum")}</label>
-                <input
-                  defaultValue={editing?.minimum ?? 0}
-                  id="stock-minimum"
-                  min="0"
-                  name="minimum"
-                  type="number"
-                />
-              </div>
-              <div className="field-pair">
-                <label htmlFor="stock-opening">{t("stock.opening")}</label>
-                <input
-                  defaultValue={editing?.openingQuantity ?? 0}
-                  id="stock-opening"
-                  min="0"
-                  name="opening-quantity"
-                  type="number"
-                />
-              </div>
-            </div>
-            <p className="staff-desk__hint">{t("stock.unitHint")}</p>
-          </fieldset>
+              <fieldset className="staff-desk__fieldset">
+                <legend>{t("stock.setupMeasure")}</legend>
+                <div className="staff-desk__field-grid">
+                  <div className="field-pair">
+                    <label htmlFor="stock-unit">{t("stock.unit")}</label>
+                    <input
+                      defaultValue={editing?.unit ?? "count"}
+                      id="stock-unit"
+                      list="stock-unit-suggestions"
+                      name="unit"
+                      placeholder="ml, bottle, pack…"
+                      required
+                    />
+                    <datalist id="stock-unit-suggestions">
+                      {unitSuggestions.map((unit) => (
+                        <option key={unit} value={unit} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="stock-minimum">{t("stock.minimum")}</label>
+                    <input
+                      defaultValue={editing?.minimum ?? 0}
+                      id="stock-minimum"
+                      min="0"
+                      name="minimum"
+                      type="number"
+                    />
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="stock-opening">{t("stock.opening")}</label>
+                    <input
+                      defaultValue={editing?.openingQuantity ?? 0}
+                      id="stock-opening"
+                      min="0"
+                      name="opening-quantity"
+                      type="number"
+                    />
+                  </div>
+                </div>
+                <p className="staff-desk__hint">{t("stock.unitHint")}</p>
+              </fieldset>
 
-          <fieldset className="staff-desk__fieldset">
-            <legend>{t("items.setupSell")}</legend>
-            <div className="staff-desk__field-grid">
-              <div className="field-pair">
-                <label htmlFor="stock-cost">{t("items.cost")}</label>
-                <input
-                  defaultValue={
-                    editing ? satangToBaht(editing.costSatang).toFixed(2) : "0"
-                  }
-                  id="stock-cost"
-                  min="0"
-                  name="cost-baht"
-                  step="0.01"
-                  type="number"
-                />
-              </div>
-              <div className="field-pair">
-                <label htmlFor="stock-sell">{t("items.sell")}</label>
-                <input
-                  defaultValue={
-                    editing
-                      ? satangToBaht(editing.sellPriceSatang).toFixed(2)
-                      : "0"
-                  }
-                  id="stock-sell"
-                  min="0"
-                  name="sell-price-baht"
-                  step="0.01"
-                  type="number"
-                />
-              </div>
-            </div>
-          </fieldset>
+              <fieldset className="staff-desk__fieldset">
+                <legend>{t("items.setupSell")}</legend>
+                <div className="staff-desk__field-grid">
+                  <div className="field-pair">
+                    <label htmlFor="stock-cost">{t("items.cost")}</label>
+                    <input
+                      defaultValue={
+                        editing ? satangToBaht(editing.costSatang).toFixed(2) : "0"
+                      }
+                      id="stock-cost"
+                      min="0"
+                      name="cost-baht"
+                      step="0.01"
+                      type="number"
+                    />
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="stock-sell">{t("items.sell")}</label>
+                    <input
+                      defaultValue={
+                        editing
+                          ? satangToBaht(editing.sellPriceSatang).toFixed(2)
+                          : "0"
+                      }
+                      id="stock-sell"
+                      min="0"
+                      name="sell-price-baht"
+                      step="0.01"
+                      type="number"
+                    />
+                  </div>
+                </div>
+              </fieldset>
 
-          {editing ? (
-            <dl className="staff-desk__details">
-              <div>
-                <dt>{t("stock.onHand")}</dt>
-                <dd>{quantityLabel(editing.onHand, editing.unit)}</dd>
-              </div>
-              <div>
-                <dt>{t("stock.headroom")}</dt>
-                <dd>
-                  {quantityLabel(
-                    headroom(editing.onHand, editing.minimum),
-                    editing.unit,
-                  )}
-                </dd>
-              </div>
-            </dl>
-          ) : null}
-          <label className="staff-desk__check">
-            <input
-              defaultChecked={editing?.active ?? true}
-              name="active"
-              type="checkbox"
-            />
-            {t("stock.activeItem")}
-          </label>
-          <button className="button button--secondary" type="submit">
-            {t("stock.saveCounted")}
-          </button>
-        </form>
+              {editing ? (
+                <dl className="staff-desk__details">
+                  <div>
+                    <dt>{t("stock.onHand")}</dt>
+                    <dd>{quantityLabel(editing.onHand, editing.unit)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("stock.headroom")}</dt>
+                    <dd>
+                      {quantityLabel(
+                        headroom(editing.onHand, editing.minimum),
+                        editing.unit,
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              ) : null}
+              <label className="staff-desk__check">
+                <input
+                  defaultChecked={editing?.active ?? true}
+                  name="active"
+                  type="checkbox"
+                />
+                {t("stock.activeItem")}
+              </label>
+              <button
+                className="button button--secondary"
+                disabled={pending}
+                type="submit"
+              >
+                {deskPendingLabel(pending, t("stock.saveCounted"))}
+              </button>
+            </>
+          )}
+        </DeskQuietForm>
       </StaffDialog>
     </>
   );
