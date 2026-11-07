@@ -68,115 +68,130 @@ export function StaffDeskItems({
   );
   return (
     <>
-      <div className="staff-desk__filter staff-desk__filter--client">
-        <div className="field-pair staff-desk__grow">
-          <label htmlFor="items-q">{t("common.find")}</label>
-          <input
-            id="items-q"
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("desk.typeToSearch")}
-            type="search"
-            value={query}
-          />
+      <div className="staff-desk__list-toolbar staff-desk__list-toolbar--wrap">
+        <div className="staff-desk__filter staff-desk__filter--client">
+          <div className="field-pair staff-desk__grow">
+            <label htmlFor="items-q">{t("common.find")}</label>
+            <input
+              id="items-q"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("desk.typeToSearch")}
+              type="search"
+              value={query}
+            />
+          </div>
+          <div className="field-pair">
+            <label htmlFor="items-category">{t("items.category")}</label>
+            <select
+              id="items-category"
+              onChange={(event) => setCategory(event.target.value)}
+              value={category}
+            >
+              <option value="">{t("items.allCategories")}</option>
+              {activeCategories.map((entry) => (
+                <option key={entry.key} value={entry.key}>
+                  {categoryLabel(entry, entry.key, locale)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="field-pair">
-          <label htmlFor="items-category">{t("items.category")}</label>
-          <select
-            id="items-category"
-            onChange={(event) => setCategory(event.target.value)}
-            value={category}
+        <div className="staff-desk__list-toolbar-actions">
+          <button
+            className="button button--quiet"
+            onClick={() => setManagingCategories(true)}
+            type="button"
           >
-            <option value="">{t("items.allCategories")}</option>
-            {activeCategories.map((entry) => (
-              <option key={entry.key} value={entry.key}>
-                {categoryLabel(entry, entry.key, locale)}
-              </option>
-            ))}
-          </select>
+            {t("items.manageCategories")}
+          </button>
+          <button
+            className="button button--primary"
+            onClick={() => {
+              setCreating(true);
+              setSelectedId(null);
+            }}
+            type="button"
+          >
+            {t("items.new")}
+          </button>
         </div>
-        <button
-          className="button button--quiet"
-          onClick={() => setManagingCategories(true)}
-          type="button"
-        >
-          {t("items.manageCategories")}
-        </button>
-        <button
-          className="button button--quiet"
-          onClick={() => {
-            setCreating(true);
-            setSelectedId(null);
-          }}
-          type="button"
-        >
-          {t("items.new")}
-        </button>
       </div>
 
-      <section className="staff-desk__panel" aria-labelledby="catalog-title">
-        <header className="staff-desk__panel-head">
-          <h2 id="catalog-title">{t("items.catalog")}</h2>
-          <span>
-            {visible.length} {t("nav.items").toLowerCase()}
-          </span>
-        </header>
-        <div className="staff-desk__table-wrap">
-          <table className="staff-desk__table">
-            <thead>
-              <tr>
-                <th>{t("bills.item")}</th>
-                <th>{t("items.category")}</th>
-                <th>{t("items.cost")}</th>
-                <th>{t("items.sell")}</th>
-                <th>{t("items.recipe")}</th>
-                <th>{t("common.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((item) => (
-                <tr
-                  className="staff-desk__click-row"
-                  key={item.id}
-                  onClick={() => {
-                    setCreating(false);
-                    setSelectedId(item.id);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
+      <div className="staff-desk__panel">
+        {visible.length ? (
+          <div className="staff-desk__table-wrap">
+            <table className="staff-desk__table">
+              <thead>
+                <tr>
+                  <th>{t("bills.item")}</th>
+                  <th>{t("items.category")}</th>
+                  <th>{t("items.cost")}</th>
+                  <th>{t("items.sell")}</th>
+                  <th>{t("items.recipe")}</th>
+                  <th>{t("common.status")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((item) => (
+                  <tr
+                    className="staff-desk__click-row"
+                    key={item.id}
+                    onClick={() => {
                       setCreating(false);
                       setSelectedId(item.id);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <td>
-                    <strong>{bilingualItemLabel(item)}</strong>
-                  </td>
-                  <td>
-                    {categoryLabel(
-                      categoryByKey.get(item.category),
-                      item.category,
-                      locale,
-                    )}
-                  </td>
-                  <td>{formatSatang(item.costSatang)}</td>
-                  <td>{formatSatang(item.priceSatang)}</td>
-                  <td>{item.ingredients.length || "-"}</td>
-                  <td>
-                    <span
-                      className={`desk-status desk-status--${item.active ? "open" : "cleared"}`}
-                    >
-                      {item.active ? t("common.active") : "inactive"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setCreating(false);
+                        setSelectedId(item.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <td>
+                      <strong>{bilingualItemLabel(item)}</strong>
+                    </td>
+                    <td>
+                      {categoryLabel(
+                        categoryByKey.get(item.category),
+                        item.category,
+                        locale,
+                      )}
+                    </td>
+                    <td>{formatSatang(item.costSatang)}</td>
+                    <td>{formatSatang(item.priceSatang)}</td>
+                    <td>{item.ingredients.length || "—"}</td>
+                    <td>
+                      <span
+                        className={`desk-status desk-status--${item.active ? "open" : "cleared"}`}
+                      >
+                        {item.active ? t("common.active") : t("items.inactive")}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="staff-desk__empty-state">
+            <h2>{t("items.empty")}</h2>
+            <p>{t("items.emptyHint")}</p>
+            <button
+              className="button button--primary"
+              onClick={() => {
+                setCreating(true);
+                setSelectedId(null);
+              }}
+              type="button"
+            >
+              {t("items.new")}
+            </button>
+          </div>
+        )}
+      </div>
 
       <StaffDialog
         onClose={() => {

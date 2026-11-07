@@ -11,7 +11,6 @@ import type { DeskExpense } from "@/lib/desk-ops-data";
 
 function formatDay(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale === "th" ? "th" : "en", {
-    weekday: "short",
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -37,19 +36,11 @@ export function StaffDeskExpenses({
 }) {
   const { t, locale } = useStaffLocale();
 
-  const grouped = new Map<string, DeskExpense[]>();
-  for (const expense of expenses) {
-    const bucket = grouped.get(expense.expenseDate) ?? [];
-    bucket.push(expense);
-    grouped.set(expense.expenseDate, bucket);
-  }
-  const days = Array.from(grouped.keys());
-
   return (
     <div className="staff-desk__expenses">
       <DeskQuietForm
         action={createExpense}
-        className="staff-desk__form staff-desk__expense-create"
+        className="staff-desk__form staff-desk__form--strip"
         resetOnSuccess
       >
         {(pending) => (
@@ -81,7 +72,7 @@ export function StaffDeskExpenses({
                 />
               </div>
               <div className="field-pair">
-                <label htmlFor="expense-date">{t("expenses.date")}</label>
+                <label htmlFor="expense-date">{t("common.date")}</label>
                 <input
                   defaultValue={todayIso}
                   id="expense-date"
@@ -111,105 +102,71 @@ export function StaffDeskExpenses({
         )}
       </DeskQuietForm>
 
-      <section className="staff-desk__panel" aria-labelledby="expense-list-title">
-        <header className="staff-desk__panel-head">
-          <div>
-            <h2 id="expense-list-title">{t("expenses.records")}</h2>
-            <p>
-              {fromIso === toIso
-                ? formatDay(fromIso, locale)
-                : `${formatDay(fromIso, locale)} → ${formatDay(toIso, locale)}`}
-            </p>
-          </div>
-          <span>
-            {expenses.length} {t("expenses.entries")}
-          </span>
-        </header>
+      {truncated ? (
+        <p className="form-message" role="status">
+          {t("expenses.truncated")}
+        </p>
+      ) : null}
 
-        {truncated ? (
-          <p className="form-message" role="status">
-            {t("expenses.truncated")}
-          </p>
-        ) : null}
-
+      <div className="staff-desk__panel">
         {expenses.length ? (
-          <div className="staff-desk__expense-days">
-            {days.map((day) => {
-              const rows = grouped.get(day) ?? [];
-              const dayTotal = rows.reduce((sum, row) => sum + row.amountSatang, 0);
-              return (
-                <section
-                  aria-labelledby={`expense-day-${day}`}
-                  className="staff-desk__expense-day"
-                  key={day}
-                >
-                  <header className="staff-desk__expense-day-head">
-                    <h3 id={`expense-day-${day}`}>{formatDay(day, locale)}</h3>
-                    <strong>{formatSatang(dayTotal)}</strong>
-                  </header>
-                  <div className="staff-desk__table-wrap">
-                    <table className="staff-desk__table">
-                      <thead>
-                        <tr>
-                          <th>{t("expenses.chargeName")}</th>
-                          <th>{t("expenses.cost")}</th>
-                          <th>{t("expenses.note")}</th>
-                          <th>
-                            <span className="sr-only">{t("common.remove")}</span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((expense) => (
-                          <tr key={expense.id}>
-                            <td>
-                              <strong>{expense.name}</strong>
-                              {expense.actedBy ? (
-                                <small className="staff-desk__muted">
-                                  {" "}
-                                  · {expense.actedBy}
-                                </small>
-                              ) : null}
-                            </td>
-                            <td>{formatSatang(expense.amountSatang)}</td>
-                            <td>{expense.staffNote || "—"}</td>
-                            <td>
-                              <DeskQuietForm action={deleteExpense}>
-                                {(pending) => (
-                                  <>
-                                    <input
-                                      name="id"
-                                      type="hidden"
-                                      value={expense.id}
-                                    />
-                                    <input
-                                      name="return-to"
-                                      type="hidden"
-                                      value={returnTo}
-                                    />
-                                    <button
-                                      className="button button--quiet"
-                                      disabled={pending}
-                                      type="submit"
-                                    >
-                                      {deskPendingLabel(
-                                        pending,
-                                        t("common.remove"),
-                                        "…",
-                                      )}
-                                    </button>
-                                  </>
-                                )}
-                              </DeskQuietForm>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              );
-            })}
+          <div className="staff-desk__table-wrap">
+            <table className="staff-desk__table">
+              <thead>
+                <tr>
+                  <th>{t("expenses.chargeName")}</th>
+                  <th>{t("common.date")}</th>
+                  <th>{t("expenses.cost")}</th>
+                  <th>{t("expenses.note")}</th>
+                  <th>
+                    <span className="sr-only">{t("common.remove")}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((expense) => (
+                  <tr key={expense.id}>
+                    <td>
+                      <strong>{expense.name}</strong>
+                      {expense.actedBy ? (
+                        <small className="staff-desk__muted">
+                          {" "}
+                          · {expense.actedBy}
+                        </small>
+                      ) : null}
+                    </td>
+                    <td>{formatDay(expense.expenseDate, locale)}</td>
+                    <td>{formatSatang(expense.amountSatang)}</td>
+                    <td>{expense.staffNote || "—"}</td>
+                    <td>
+                      <DeskQuietForm action={deleteExpense}>
+                        {(pending) => (
+                          <>
+                            <input name="id" type="hidden" value={expense.id} />
+                            <input
+                              name="return-to"
+                              type="hidden"
+                              value={returnTo}
+                            />
+                            <button
+                              className="button button--quiet"
+                              disabled={pending}
+                              type="submit"
+                            >
+                              {deskPendingLabel(
+                                pending,
+                                t("common.remove"),
+                                "…",
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </DeskQuietForm>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="staff-desk__empty-state">
@@ -219,10 +176,15 @@ export function StaffDeskExpenses({
         )}
 
         <footer className="staff-desk__sum-bar" aria-live="polite">
-          <span>{t("expenses.rangeTotal")}</span>
+          <span>
+            {t("expenses.rangeTotal")}
+            {fromIso !== toIso
+              ? ` · ${formatDay(fromIso, locale)} → ${formatDay(toIso, locale)}`
+              : ""}
+          </span>
           <strong>{formatSatang(totalSatang)}</strong>
         </footer>
-      </section>
+      </div>
     </div>
   );
 }

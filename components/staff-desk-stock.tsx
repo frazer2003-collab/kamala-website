@@ -127,117 +127,114 @@ export function StaffDeskStock({
         </div>
       </section>
 
-      <div className="staff-desk__workspace">
-        <section className="staff-desk__panel" aria-labelledby="stock-list-title">
-          <header className="staff-desk__panel-head">
-            <div>
-              <h2 id="stock-list-title">{t("stock.counted")}</h2>
-              <p>{t("stock.countedHint")}</p>
-            </div>
-            {activeItems.length ? (
-              <button
-                className="button button--quiet"
-                onClick={() => {
-                  setCreating(true);
-                  setSelectedId(null);
-                }}
-                type="button"
-              >
-                {t("stock.addCounted")}
-              </button>
-            ) : null}
-          </header>
-          {activeItems.length ? (
-            <div className="staff-desk__table-wrap">
-              <table className="staff-desk__table">
-                <thead>
-                  <tr>
-                    <th>{t("bills.item")}</th>
-                    <th>{t("stock.unit")}</th>
-                    <th>{t("stock.onHand")}</th>
-                    <th>{t("stock.minimum")}</th>
-                    <th>{t("stock.headroom")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeItems.map((item) => {
-                    const room = headroom(item.onHand, item.minimum);
-                    return (
-                      <tr
-                        className="staff-desk__click-row"
-                        key={item.id}
-                        onClick={() => {
+      {activeItems.length ? (
+        <div className="staff-desk__list-toolbar">
+          <button
+            className="button button--primary"
+            onClick={() => {
+              setCreating(true);
+              setSelectedId(null);
+            }}
+            type="button"
+          >
+            {t("stock.addCounted")}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="staff-desk__panel">
+        {activeItems.length ? (
+          <div className="staff-desk__table-wrap">
+            <table className="staff-desk__table">
+              <thead>
+                <tr>
+                  <th>{t("bills.item")}</th>
+                  <th>{t("stock.unit")}</th>
+                  <th>{t("stock.onHand")}</th>
+                  <th>{t("stock.minimum")}</th>
+                  <th>{t("stock.headroom")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeItems.map((item) => {
+                  const room = headroom(item.onHand, item.minimum);
+                  return (
+                    <tr
+                      className="staff-desk__click-row"
+                      key={item.id}
+                      onClick={() => {
+                        setCreating(false);
+                        setSelectedId(item.id);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
                           setCreating(false);
                           setSelectedId(item.id);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setCreating(false);
-                            setSelectedId(item.id);
-                          }
-                        }}
-                        role="button"
-                        tabIndex={0}
-                      >
-                        <td>
-                          <strong>{bilingualItemLabel(item)}</strong>
-                        </td>
-                        <td>{item.unit}</td>
-                        <td>{quantityLabel(item.onHand, item.unit)}</td>
-                        <td>{quantityLabel(item.minimum, item.unit)}</td>
-                        <td>
-                          <span
-                            className={`desk-status ${room <= 0 ? "desk-status--warning" : "desk-status--open"}`}
-                          >
-                            {room > 0 ? "+" : ""}
-                            {quantityLabel(room, item.unit)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="staff-desk__empty-state">
-              <h2>{t("stock.empty")}</h2>
-              <p>{t("stock.emptyHint")}</p>
-              <button
-                className="button button--primary"
-                onClick={() => {
-                  setCreating(true);
-                  setSelectedId(null);
-                }}
-                type="button"
-              >
-                {t("stock.addCounted")}
-              </button>
-            </div>
-          )}
-        </section>
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <td>
+                        <strong>{bilingualItemLabel(item)}</strong>
+                      </td>
+                      <td>{item.unit}</td>
+                      <td>{quantityLabel(item.onHand, item.unit)}</td>
+                      <td>{quantityLabel(item.minimum, item.unit)}</td>
+                      <td>
+                        <span
+                          className={`desk-status ${room <= 0 ? "desk-status--warning" : "desk-status--open"}`}
+                        >
+                          {room > 0 ? "+" : ""}
+                          {quantityLabel(room, item.unit)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="staff-desk__empty-state">
+            <h2>{t("stock.empty")}</h2>
+            <p>{t("stock.emptyHint")}</p>
+            <button
+              className="button button--primary"
+              onClick={() => {
+                setCreating(true);
+                setSelectedId(null);
+              }}
+              type="button"
+            >
+              {t("stock.addCounted")}
+            </button>
+          </div>
+        )}
+      </div>
 
+      {activeItems.length ? (
         <DeskQuietForm
           action={recordStockMovement}
-          className="staff-desk__form"
+          className="staff-desk__form staff-desk__form--strip"
           resetOnSuccess
         >
           {(pending) => (
             <>
               <h2>{t("stock.receive")}</h2>
-              <div className="field-pair">
-                <StaffCombo
-                  clearOnSelect={false}
-                  id="movement-item"
-                  label={t("bills.item")}
-                  name="counted-item-id"
-                  options={itemOptions}
-                  placeholder={t("desk.typeToSearch")}
-                  required
-                />
-              </div>
               <div className="staff-desk__field-grid">
+                <div className="field-pair staff-desk__grow">
+                  <StaffCombo
+                    clearOnSelect={false}
+                    id="movement-item"
+                    label={t("bills.item")}
+                    name="counted-item-id"
+                    options={itemOptions}
+                    placeholder={t("desk.typeToSearch")}
+                    required
+                  />
+                </div>
                 <div className="field-pair">
                   <label htmlFor="movement-reason">{t("stock.reason")}</label>
                   <select
@@ -253,12 +250,21 @@ export function StaffDeskStock({
                 </div>
                 <div className="field-pair">
                   <label htmlFor="movement-quantity">{t("common.quantity")}</label>
-                  <input id="movement-quantity" name="quantity" required type="number" />
+                  <input
+                    id="movement-quantity"
+                    name="quantity"
+                    required
+                    type="number"
+                  />
                 </div>
               </div>
               <div className="field-pair">
                 <label htmlFor="movement-note">{t("common.note")}</label>
-                <input id="movement-note" name="note" placeholder={t("stock.reason")} />
+                <input
+                  id="movement-note"
+                  name="note"
+                  placeholder={t("stock.reason")}
+                />
               </div>
               <button
                 className="button button--primary"
@@ -270,15 +276,9 @@ export function StaffDeskStock({
             </>
           )}
         </DeskQuietForm>
-      </div>
+      ) : null}
 
-      <section className="staff-desk__panel" aria-labelledby="stock-projection-title">
-        <header className="staff-desk__panel-head">
-          <div>
-            <h2 id="stock-projection-title">{t("stock.projections")}</h2>
-            <p>{t("stock.projectionsHint")}</p>
-          </div>
-        </header>
+      <div className="staff-desk__panel">
         {projections.length ? (
           <div className="staff-desk__table-wrap">
             <table className="staff-desk__table">
@@ -329,9 +329,12 @@ export function StaffDeskStock({
             </table>
           </div>
         ) : (
-          <p className="staff-desk__empty">{t("stock.projectionsEmpty")}</p>
+          <div className="staff-desk__empty-state">
+            <h2>{t("stock.projections")}</h2>
+            <p>{t("stock.projectionsEmpty")}</p>
+          </div>
         )}
-      </section>
+      </div>
 
       <StaffDialog
         onClose={() => {

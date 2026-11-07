@@ -302,16 +302,27 @@
   gap: var(--space-4);
 }
 
-.staff-desk__expense-create {
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+.staff-desk__list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: var(--space-3);
 }
 
-.staff-desk__expense-days {
-  display: grid;
-  gap: var(--space-4);
+.staff-desk__list-toolbar--wrap {
+  justify-content: space-between;
+}
+
+.staff-desk__list-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.staff-desk__form--strip {
+  padding: var(--space-4);
 }
 
 .staff-desk__expense-day-head {

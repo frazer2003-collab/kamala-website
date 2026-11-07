@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-lists-like-bills",
+    date: "2026-11-07",
+    title: "Laundry, stock, expenses, and menu lists match Bills",
+    summary:
+      "Record lists use the same full-width table as Bills — click a row to open, Add in the toolbar, empty states with a clear button.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Desk bills-style record table with clickable rows",
+    },
+    changes: [
+      "Laundry no longer uses a side create form — Add slip opens a dialog; the list matches Bills.",
+      "Stock counted items are a full-width table; receive/adjust sits under the list.",
+      "Expenses are one flat table with Date (no day sections); Menu empty state matches Bills.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-usability-rev4",
     date: "2026-11-07",
     title: "Portal laundry and sidebar speak TH",
