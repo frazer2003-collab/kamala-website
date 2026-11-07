@@ -16,6 +16,7 @@ import { useStaffLocale } from "@/components/staff-locale";
 import {
   bilingualItemLabel,
   categoryLabel,
+  isHiddenMenuCategory,
   type DeskItemCategory,
 } from "@/lib/desk-items";
 import { formatSatang, satangToBaht } from "@/lib/desk-money";
@@ -36,14 +37,23 @@ export function StaffDeskItems({
 }) {
   const { t, locale } = useStaffLocale();
   const [query, setQuery] = useState(initialQuery);
-  const [category, setCategory] = useState(initialCategory);
+  const [category, setCategory] = useState(
+    isHiddenMenuCategory(initialCategory) ? "" : initialCategory,
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [managingCategories, setManagingCategories] = useState(false);
 
-  const activeCategories = useMemo(
-    () => categories.filter((entry) => entry.active).sort((a, b) => a.sortOrder - b.sortOrder),
+  const menuCategories = useMemo(
+    () => categories.filter((entry) => !isHiddenMenuCategory(entry.key)),
     [categories],
+  );
+  const activeCategories = useMemo(
+    () =>
+      menuCategories
+        .filter((entry) => entry.active)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [menuCategories],
   );
   const categoryByKey = useMemo(
     () => new Map(categories.map((entry) => [entry.key, entry])),
@@ -54,6 +64,7 @@ export function StaffDeskItems({
     const needle = query.trim().toLowerCase();
     return sellables.filter(
       (item) =>
+        !isHiddenMenuCategory(item.category) &&
         (!category || item.category === category) &&
         (!needle ||
           item.nameEn.toLowerCase().includes(needle) ||
@@ -63,9 +74,6 @@ export function StaffDeskItems({
 
   const selected = sellables.find((item) => item.id === selectedId) ?? null;
   const editing = creating ? null : selected;
-  const laundryItems = sellables.filter(
-    (item) => item.category === "laundry" && item.active,
-  );
   return (
     <>
       <div className="staff-desk__list-toolbar staff-desk__list-toolbar--wrap">
@@ -315,29 +323,6 @@ export function StaffDeskItems({
                 key={editing?.id ?? "new"}
               />
 
-              <fieldset className="staff-desk__fieldset">
-                <legend>{t("items.attachedLaundry")}</legend>
-                <div className="staff-desk__checks">
-                  {laundryItems.length ? (
-                    laundryItems.map((item) => (
-                      <label className="staff-desk__check" key={item.id}>
-                        <input
-                          defaultChecked={editing?.attachedLaundryIds.includes(item.id)}
-                          name="attached-laundry-id"
-                          type="checkbox"
-                          value={item.id}
-                        />
-                        {bilingualItemLabel(item)}
-                      </label>
-                    ))
-                  ) : (
-                    <p className="staff-desk__empty">
-                      Create laundry items before attaching them to rooms.
-                    </p>
-                  )}
-                </div>
-              </fieldset>
-
               <label className="staff-desk__check">
                 <input
                   defaultChecked={editing?.active ?? true}
@@ -366,7 +351,7 @@ export function StaffDeskItems({
         <div className="staff-desk__form staff-desk__form--dialog">
           <p className="staff-desk__hint">{t("items.categoriesHint")}</p>
           <ul className="staff-desk__category-list">
-            {categories
+            {menuCategories
               .slice()
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((entry) => (

@@ -5,7 +5,34 @@
   min-width: 0;
   flex-direction: column;
   gap: var(--space-4);
-  padding-block: var(--space-6);
+}
+
+/* Desk pages fill the content column with equal inset on every tool. */
+.staff-main.staff-desk {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: var(--space-6);
+}
+
+.staff-main.staff-desk > .staff-header {
+  margin-bottom: 0;
+}
+
+.staff-desk__section {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.staff-desk__section-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .staff-desk__header {

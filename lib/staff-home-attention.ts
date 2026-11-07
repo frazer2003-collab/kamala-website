@@ -80,7 +80,7 @@ export function homeLowStockItems(
       key: item.id,
       label: bilingualItemLabel(item),
       meta: `on hand ${item.onHand} · min ${item.minimum}`,
-      href: `/staff/stock?open=${encodeURIComponent(item.id)}`,
+      href: `/staff/items?open=${encodeURIComponent(item.id)}`,
     })),
   );
 }

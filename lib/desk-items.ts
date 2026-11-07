@@ -13,6 +13,9 @@ export const DESK_UNIT_SUGGESTIONS = [
 /** Seeded category keys with special desk behavior (do not rename casually). */
 export const DESK_SYSTEM_CATEGORY_KEYS = ["room", "laundry", "food"] as const;
 
+/** Guest laundry is desk slips/expenses — not a menu sellable category. */
+export const DESK_HIDDEN_MENU_CATEGORY_KEYS = ["laundry"] as const;
+
 /** @deprecated Prefer listDeskItemCategories — kept for tests/fallback labels. */
 export const DESK_SELLABLE_CATEGORIES = [
   "room",
@@ -21,6 +24,10 @@ export const DESK_SELLABLE_CATEGORIES = [
   "laundry",
   "extra",
 ] as const;
+
+export function isHiddenMenuCategory(key: string) {
+  return (DESK_HIDDEN_MENU_CATEGORY_KEYS as readonly string[]).includes(key);
+}
 
 /** @deprecated Units are free text; suggestions live in DESK_UNIT_SUGGESTIONS. */
 export const DESK_COUNTED_UNITS = ["count", "grams"] as const;

@@ -193,7 +193,7 @@ export default async function StaffHomePage() {
         lowStock > 0
           ? `${lowStock} item${lowStock === 1 ? "" : "s"} at or below minimum`
           : "Stock is above minimums",
-      href: "/staff/stock",
+      href: "/staff/items",
       attention: lowStock > 0,
       rank: lowStock > 0 ? 2 : 52,
       items: stockItems,

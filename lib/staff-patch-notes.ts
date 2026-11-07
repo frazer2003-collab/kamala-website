@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-menu-stock-merged",
+    date: "2026-11-07",
+    title: "Menu holds sellables and stock; laundry left the catalog",
+    summary:
+      "Stock lives under Menu with sellables. Guest laundry is no longer a menu category — use Laundry / Expenses. Desk pages fill the screen with even padding.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Menu page with sellable list and stock table together",
+    },
+    changes: [
+      "Guest laundry is removed from Menu categories and item setup.",
+      "Counted stock (receive, waste, adjust) sits on the same Menu page as sellables; /staff/stock redirects there.",
+      "Bills, Laundry, Menu, and Expenses use full-width desk layout with matching page padding.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-lists-like-bills",
     date: "2026-11-07",
     title: "Laundry, stock, expenses, and menu lists match Bills",

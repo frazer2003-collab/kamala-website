@@ -1,47 +1,18 @@
-import { StaffDeskStock } from "@/components/staff-desk-stock";
-import { StaffShell } from "@/components/staff-shell";
-import {
-  listDeskCountedItems,
-  listDeskSellables,
-  listDeskStockMovements,
-} from "@/lib/desk-ops-data";
+import { redirect } from "next/navigation";
 import { requireStaffSession } from "@/lib/staff-auth";
-import { getStaffLocale } from "@/lib/staff-locale-server";
-import { staffT } from "@/lib/staff-i18n";
-import "@/app/staff-desk.css";
 
 export const dynamic = "force-dynamic";
 
+/** Stock lives on Menu items — keep old bookmarks working. */
 export default async function StaffStockPage({
   searchParams,
 }: {
   searchParams: Promise<{ open?: string }>;
 }) {
   await requireStaffSession();
-  const locale = await getStaffLocale();
   const { open } = await searchParams;
-  const [items, sellables, movements] = await Promise.all([
-    listDeskCountedItems(),
-    listDeskSellables(),
-    listDeskStockMovements(),
-  ]);
-
-  return (
-    <StaffShell current="stock">
-      <section className="staff-main staff-desk" aria-labelledby="desk-stock-title">
-        <header className="staff-header staff-header--compact staff-desk__header">
-          <div>
-            <h1 id="desk-stock-title">{staffT(locale, "stock.title")}</h1>
-            <p>{staffT(locale, "stock.intro")}</p>
-          </div>
-        </header>
-        <StaffDeskStock
-          initialOpenId={open ?? null}
-          items={items}
-          movements={movements}
-          sellables={sellables}
-        />
-      </section>
-    </StaffShell>
-  );
+  if (open) {
+    redirect(`/staff/items?open=${encodeURIComponent(open)}`);
+  }
+  redirect("/staff/items");
 }

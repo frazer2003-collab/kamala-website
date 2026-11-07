@@ -234,7 +234,7 @@ export async function deactivateCountedItem(formData: FormData) {
   await requireStaffSession();
   await deleteDeskCountedItem(required(formData, "id", "Stock item"));
   revalidateDesk();
-  return finishDeskMutation(formData, "/staff/stock");
+  return finishDeskMutation(formData, "/staff/items");
 }
 
 export async function createBill(formData: FormData) {
@@ -389,6 +389,9 @@ export async function clearBill(formData: FormData) {
 export async function saveSellableItem(formData: FormData) {
   await requireStaffSession();
   const category = value(formData, "category");
+  if (category === "laundry") {
+    throw new Error("Guest laundry is tracked on Laundry / Expenses, not Menu.");
+  }
   const categories = await listDeskItemCategories();
   if (!categories.some((entry) => entry.active && entry.key === category)) {
     throw new Error("Choose an item category.");
@@ -403,10 +406,6 @@ export async function saveSellableItem(formData: FormData) {
     const quantity = positiveInteger(formData, `ingredient-${item.id}`);
     return quantity ? [{ countedItemId: item.id, quantity }] : [];
   });
-  const attachedLaundryIds = formData
-    .getAll("attached-laundry-id")
-    .map(String)
-    .filter(Boolean);
   const id = await saveDeskSellable({
     id: value(formData, "id") || undefined,
     nameTh: required(formData, "name-th", "Thai name"),
@@ -417,7 +416,7 @@ export async function saveSellableItem(formData: FormData) {
     minimum: nonNegativeInteger(formData, "minimum"),
     active: formData.get("active") === "on",
     ingredients,
-    attachedLaundryIds,
+    attachedLaundryIds: [],
   });
   revalidateDesk();
   return finishDeskMutation(formData, "/staff/items", { ok: true, id });
@@ -432,6 +431,9 @@ export async function saveItemCategory(formData: FormData) {
     ? required(formData, "key", "Category key")
     : slugifyCategoryKey(value(formData, "key") || nameEn);
   if (!key) throw new Error("Category needs an English name or key.");
+  if (key === "laundry") {
+    throw new Error("Guest laundry is tracked on Laundry / Expenses, not Menu.");
+  }
   const id = await saveDeskItemCategory({
     id: existingId,
     key,
@@ -466,7 +468,7 @@ export async function saveCountedItem(formData: FormData) {
     active: formData.get("active") === "on",
   });
   revalidateDesk();
-  return finishDeskMutation(formData, "/staff/stock", { ok: true, id });
+  return finishDeskMutation(formData, "/staff/items", { ok: true, id });
 }
 
 export async function recordStockMovement(formData: FormData) {
@@ -490,7 +492,7 @@ export async function recordStockMovement(formData: FormData) {
     actedBy,
   });
   revalidateDesk();
-  return finishDeskMutation(formData, "/staff/stock");
+  return finishDeskMutation(formData, "/staff/items");
 }
 
 export async function createExpense(formData: FormData) {

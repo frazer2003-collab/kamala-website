@@ -11,7 +11,6 @@ export type StaffNavCurrent =
   | "calendar"
   | "reservations"
   | "bills"
-  | "stock"
   | "laundry"
   | "items"
   | "expenses"
@@ -135,14 +134,6 @@ function IconBill() {
   );
 }
 
-function IconStock() {
-  return (
-    <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
-      <path d="m4 6 6-3 6 3-6 3zM4 6v8l6 3 6-3V6M10 9v8" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
 function IconLaundry() {
   return (
     <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
@@ -261,7 +252,6 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         label: t("nav.desk"),
         items: [
           { id: "bills" as const, href: "/staff/bills", label: t("nav.bills"), icon: <IconBill /> },
-          { id: "stock" as const, href: "/staff/stock", label: t("nav.stock"), icon: <IconStock /> },
           {
             id: "laundry" as const,
             href: "/staff/laundry",
