@@ -36,6 +36,7 @@ type StockMovementRow = {
   reason: DeskStockMovementReason;
   source_bill_line_id: string | null;
   note: string | null;
+  acted_by?: string | null;
   occurred_at: string;
   created_at: string;
 };
@@ -78,6 +79,7 @@ type BillRow = {
   status: DeskBillStatus;
   service_date: string;
   cleared_at: string | null;
+  cleared_by?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -162,6 +164,7 @@ export type DeskStockMovement = {
   reason: DeskStockMovementReason;
   sourceBillLineId: string | null;
   note: string | null;
+  actedBy: string | null;
   occurredAt: string;
   createdAt: string;
 };
@@ -352,6 +355,7 @@ export async function listDeskStockMovements(
     reason: row.reason,
     sourceBillLineId: row.source_bill_line_id,
     note: row.note,
+    actedBy: row.acted_by ?? null,
     occurredAt: row.occurred_at,
     createdAt: row.created_at,
   }));
@@ -404,6 +408,7 @@ export async function recordDeskStockMovement(input: {
   >;
   note?: string | null;
   sourceBillLineId?: string | null;
+  actedBy?: string | null;
 }) {
   const payload = {
     property_id: DESK_PROPERTY_ID,
@@ -412,6 +417,7 @@ export async function recordDeskStockMovement(input: {
     reason: input.reason,
     note: input.note || null,
     source_bill_line_id: input.sourceBillLineId || null,
+    acted_by: input.actedBy || null,
   };
   const { error } = await client().from("desk_stock_movements").insert(payload);
   if (input.sourceBillLineId && error?.code === "23505") {
@@ -671,12 +677,16 @@ export async function removeDeskBillLine(id: string) {
   throwIfError(error);
 }
 
-export async function markDeskBillCleared(id: string) {
+export async function markDeskBillCleared(
+  id: string,
+  actedBy?: string | null,
+) {
   const { error } = await client()
     .from("desk_bills")
     .update({
       status: "cleared",
       cleared_at: new Date().toISOString(),
+      cleared_by: actedBy || null,
       updated_at: new Date().toISOString(),
     })
     .eq("property_id", DESK_PROPERTY_ID)

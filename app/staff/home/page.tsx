@@ -229,8 +229,8 @@ export default async function StaffHomePage() {
         ? `${today.arriving} in · ${today.departing} out · ${today.inHouse} in-house`
         : "No arrivals, departures, or guests in-house today",
       href: todayHref,
-      attention: false,
-      rank: 40,
+      attention: today.arriving + today.departing > 0,
+      rank: today.arriving + today.departing > 0 ? 5 : 40,
     },
   ].sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title));
 
@@ -318,14 +318,6 @@ export default async function StaffHomePage() {
           <Link className="staff-home-link" href="/staff/items">
             <strong>Menu items</strong>
             <span>Prices, recipes, and room extras</span>
-          </Link>
-          <Link className="staff-home-link" href="/staff/portal/login?portal=bills">
-            <strong>Bills portal</strong>
-            <span>Desk-only login for bills</span>
-          </Link>
-          <Link className="staff-home-link" href="/staff/portal/login?portal=laundry">
-            <strong>Laundry portal</strong>
-            <span>Sheets-only laundry login</span>
           </Link>
         </div>
 

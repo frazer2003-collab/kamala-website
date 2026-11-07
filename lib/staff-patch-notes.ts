@@ -18,6 +18,55 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-copy-controls",
+    date: "2026-11-07",
+    title: "Clearer desk status and empty lists",
+    summary:
+      "Status labels show in EN/TH, tiny dropdowns use simple menus, and empty laundry/stock match the bills empty pattern. Busy Today rises into Needs attention.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Desk laundry and stock empty states with Add slip and Add counted item",
+    },
+    changes: [
+      "Bill and laundry status (and laundry category) show as Open/Cleared and Sent/Incomplete/Complete instead of raw codes.",
+      "Category, status, reason, and unit use a normal select — search combo stays for picking items.",
+      "Empty laundry and counted-stock lists show a title, hint, and primary Add button.",
+      "Today moves into Needs attention when there are arrivals or departures.",
+    ],
+  },
+  {
+    id: "2026-11-07-desk-acted-by",
+    date: "2026-11-07",
+    title: "Stock movements show who recorded them",
+    summary:
+      "Recent stock movements can show who recorded them (staff email or bills portal).",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Stock recent movements list with actor label",
+    },
+    changes: [
+      "Clearing a bill and recording stock now save who did it for later review.",
+      "Recent movements on Stock show the actor next to the note when available.",
+    ],
+  },
+  {
+    id: "2026-11-07-desk-nav-dialogs",
+    date: "2026-11-07",
+    title: "Sidebar Money / Site and steadier bill popups",
+    summary:
+      "Home sits above Stay; Money and Site are separate. Bill dialogs keep Clear visible and trap focus; laundry portal says Sheets.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff sidebar with Home above Stay and Money Site groups",
+    },
+    changes: [
+      "Sidebar: Home above Stay; Money (Finance, Discounts) and Site (Gallery, AI, Settings) are separate groups.",
+      "Portal shortcuts left Home; open them from the portal login URL when needed.",
+      "Laundry portal brand line says Sheets; bill dialogs keep the footer on screen with Tab trapped inside.",
+      "Item search options are taller for finger taps on shared tablets.",
+    ],
+  },
+  {
     id: "2026-11-07-home-attention-lists",
     date: "2026-11-07",
     title: "Home lists what needs attention",

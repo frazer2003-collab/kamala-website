@@ -5,7 +5,6 @@ import {
   deactivateSellableItem,
   saveSellableItem,
 } from "@/app/desk-actions";
-import { StaffCombo } from "@/components/staff-combo";
 import { StaffDialog } from "@/components/staff-dialog";
 import { StaffIngredientsPicker } from "@/components/staff-ingredients-picker";
 import { useStaffLocale } from "@/components/staff-locale";
@@ -49,10 +48,6 @@ export function StaffDeskItems({
   const laundryItems = sellables.filter(
     (item) => item.category === "laundry" && item.active,
   );
-  const categoryOptions = DESK_SELLABLE_CATEGORIES.map((entry) => ({
-    value: entry,
-    label: entry,
-  }));
 
   return (
     <>
@@ -191,16 +186,19 @@ export function StaffDeskItems({
           </div>
           <div className="staff-desk__field-grid">
             <div className="field-pair">
-              <StaffCombo
-                clearOnSelect={false}
+              <label htmlFor="item-category">{t("items.category")}</label>
+              <select
                 defaultValue={editing?.category ?? "extra"}
                 id="item-category"
-                label={t("items.category")}
                 name="category"
-                options={categoryOptions}
-                placeholder={t("desk.typeToSearch")}
                 required
-              />
+              >
+                {DESK_SELLABLE_CATEGORIES.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {entry}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="field-pair">
               <label htmlFor="item-price">{t("items.price")}</label>

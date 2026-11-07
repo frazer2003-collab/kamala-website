@@ -6,7 +6,6 @@ import {
   deleteLaundryRecord,
   updateLaundryRecord,
 } from "@/app/desk-actions";
-import { StaffCombo } from "@/components/staff-combo";
 import { StaffDialog } from "@/components/staff-dialog";
 import { useStaffLocale } from "@/components/staff-locale";
 import {
@@ -25,6 +24,22 @@ function dateTime(iso: string, locale: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(iso));
+}
+
+function laundryCategoryLabel(
+  category: DeskLaundryCategory,
+  t: (key: string) => string,
+) {
+  return category === "sheets" ? t("laundry.catSheets") : t("laundry.catLaundry");
+}
+
+function laundryStatusLabel(
+  status: DeskLaundryStatus,
+  t: (key: string) => string,
+) {
+  if (status === "sent") return t("laundry.sent");
+  if (status === "incomplete") return t("laundry.incomplete");
+  return t("laundry.complete");
 }
 
 export function StaffDeskLaundry({
@@ -54,14 +69,6 @@ export function StaffDeskLaundry({
   const categories = sheetsOnly
     ? (["sheets"] as const satisfies readonly DeskLaundryCategory[])
     : DESK_LAUNDRY_CATEGORIES;
-  const categoryOptions = categories.map((category) => ({
-    value: category,
-    label: category,
-  }));
-  const statusOptions = DESK_LAUNDRY_STATUSES.map((status) => ({
-    value: status,
-    label: status,
-  }));
   const visibleRecords = sheetsOnly
     ? records.filter((record) => record.category === "sheets")
     : records;
@@ -106,11 +113,11 @@ export function StaffDeskLaundry({
                       <td>
                         <strong>{record.name}</strong>
                       </td>
-                      <td>{record.category}</td>
+                      <td>{laundryCategoryLabel(record.category, t)}</td>
                       <td>{formatLaundryMeasure(record)}</td>
                       <td>
                         <span className={`desk-status desk-status--${record.status}`}>
-                          {record.status}
+                          {laundryStatusLabel(record.status, t)}
                         </span>
                       </td>
                       <td>{dateTime(record.recordedAt, locale)}</td>
@@ -120,7 +127,19 @@ export function StaffDeskLaundry({
               </table>
             </div>
           ) : (
-            <p className="staff-desk__empty">{t("laundry.empty")}</p>
+            <div className="staff-desk__empty-state">
+              <h2>{t("laundry.empty")}</h2>
+              <p>{t("laundry.emptyHint")}</p>
+              <button
+                className="button button--primary"
+                onClick={() => {
+                  document.getElementById("laundry-name")?.focus();
+                }}
+                type="button"
+              >
+                {t("laundry.addSlip")}
+              </button>
+            </div>
           )}
         </section>
 
@@ -141,32 +160,45 @@ export function StaffDeskLaundry({
               {sheetsOnly ? (
                 <>
                   <label htmlFor="laundry-category">{t("laundry.category")}</label>
-                  <input id="laundry-category" name="category" readOnly value="sheets" />
+                  <input name="category" type="hidden" value="sheets" />
+                  <input
+                    id="laundry-category"
+                    readOnly
+                    value={t("laundry.catSheets")}
+                  />
                 </>
               ) : (
-                <StaffCombo
-                  clearOnSelect={false}
-                  defaultValue={DESK_LAUNDRY_CATEGORIES[0]}
-                  id="laundry-category"
-                  label={t("laundry.category")}
-                  name="category"
-                  options={categoryOptions}
-                  placeholder={t("desk.typeToSearch")}
-                  required
-                />
+                <>
+                  <label htmlFor="laundry-category">{t("laundry.category")}</label>
+                  <select
+                    defaultValue={DESK_LAUNDRY_CATEGORIES[0]}
+                    id="laundry-category"
+                    name="category"
+                    required
+                  >
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {laundryCategoryLabel(category, t)}
+                      </option>
+                    ))}
+                  </select>
+                </>
               )}
             </div>
             <div className="field-pair">
-              <StaffCombo
-                clearOnSelect={false}
+              <label htmlFor="laundry-status">{t("common.status")}</label>
+              <select
                 defaultValue={"sent" satisfies DeskLaundryStatus}
                 id="laundry-status"
-                label={t("common.status")}
                 name="status"
-                options={statusOptions}
-                placeholder={t("desk.typeToSearch")}
                 required
-              />
+              >
+                {DESK_LAUNDRY_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {laundryStatusLabel(status, t)}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="staff-desk__field-grid">
@@ -248,7 +280,7 @@ export function StaffDeskLaundry({
             <dl className="staff-desk__details">
               <div>
                 <dt>{t("laundry.category")}</dt>
-                <dd>{selected.category}</dd>
+                <dd>{laundryCategoryLabel(selected.category, t)}</dd>
               </div>
               <div>
                 <dt>{t("laundry.measure")}</dt>
@@ -272,7 +304,9 @@ export function StaffDeskLaundry({
               <label htmlFor="slip-status">{t("laundry.updateStatus")}</label>
               <select defaultValue={selected.status} id="slip-status" name="status">
                 {DESK_LAUNDRY_STATUSES.map((status) => (
-                  <option key={status}>{status}</option>
+                  <option key={status} value={status}>
+                    {laundryStatusLabel(status, t)}
+                  </option>
                 ))}
               </select>
             </div>

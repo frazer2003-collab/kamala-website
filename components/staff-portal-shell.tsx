@@ -33,7 +33,7 @@ export function StaffPortalShell({
             </span>
             <span className="staff-sidebar__brand-text">
               <strong>Kamala</strong>
-              <small>{kind === "laundry" ? "Laundry" : "Bills"}</small>
+              <small>{kind === "laundry" ? "Sheets" : "Bills"}</small>
             </span>
           </Link>
         </div>

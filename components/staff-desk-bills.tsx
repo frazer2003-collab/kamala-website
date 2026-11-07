@@ -187,7 +187,9 @@ export function StaffDeskBills({
                     <td>{formatDate(bill.serviceDate, locale)}</td>
                     <td>
                       <span className={`desk-status desk-status--${bill.status}`}>
-                        {bill.status}
+                        {bill.status === "open"
+                          ? t("bills.open")
+                          : t("bills.cleared")}
                       </span>
                     </td>
                     <td>{formatSatang(billTotalSatang(bill.lines, sellables))}</td>
@@ -300,7 +302,7 @@ export function StaffDeskBills({
                 </div>
                 <div>
                   <dt>{t("common.status")}</dt>
-                  <dd>{selected.status}</dd>
+                  <dd>{t("bills.cleared")}</dd>
                 </div>
                 <div>
                   <dt>{t("bills.amount")}</dt>

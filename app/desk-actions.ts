@@ -94,6 +94,16 @@ async function requireDeskWriteAccess(kind: "bills" | "laundry" | "stock" | "ite
   await requireStaffSession();
 }
 
+/** Audit label for desk writes: staff subject, else portal kind, else staff. */
+async function resolveDeskActorLabel() {
+  const session = await getStaffSession();
+  if (session?.subject) return session.subject;
+  const portal = await getDeskPortalSession();
+  if (portal?.kind === "bills") return "portal:bills";
+  if (portal?.kind === "laundry") return "portal:laundry";
+  return "staff";
+}
+
 export async function createLaundryRecord(formData: FormData) {
   await requireDeskWriteAccess("laundry");
   const portal = await getDeskPortalSession();
@@ -266,6 +276,7 @@ export async function clearBill(formData: FormData) {
   if (bill.lines.length === 0) {
     throw new Error("Cannot clear a bill with no lines.");
   }
+  const actedBy = await resolveDeskActorLabel();
   // Reload sellables with recipes so stock movements match current catalog.
   const sellables = await listDeskSellables();
   const movements = planBillClear(
@@ -283,9 +294,10 @@ export async function clearBill(formData: FormData) {
       reason: movement.reason,
       sourceBillLineId: movement.billLineId,
       note: `Bill ${bill.name}`,
+      actedBy,
     });
   }
-  await markDeskBillCleared(bill.id);
+  await markDeskBillCleared(bill.id, actedBy);
   revalidateDesk();
   redirect(safeDeskReturnTo(formData, "/staff/bills"));
 }
@@ -351,11 +363,13 @@ export async function recordStockMovement(formData: FormData) {
   }
   const quantity =
     reason === "waste" ? -Math.abs(rawQuantity) : rawQuantity;
+  const actedBy = await resolveDeskActorLabel();
   await recordDeskStockMovement({
     countedItemId: required(formData, "counted-item-id", "Stock item"),
     quantity,
     reason: reason as "purchase" | "waste" | "adjustment",
     note: value(formData, "note") || null,
+    actedBy,
   });
   revalidateDesk();
   redirect("/staff/stock");

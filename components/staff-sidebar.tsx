@@ -213,12 +213,15 @@ function IconSettings() {
 export function StaffSidebar({ current }: StaffSidebarProps) {
   const { t } = useStaffLocale();
   const [collapsed, setCollapsed] = useState(false);
+  const homeItem = useMemo<NavItem>(
+    () => ({ id: "home", href: "/staff/home", label: t("nav.home"), icon: <IconHome /> }),
+    [t],
+  );
   const navGroups = useMemo(
     () => [
       {
         label: t("nav.stay"),
         items: [
-          { id: "home" as const, href: "/staff/home", label: t("nav.home"), icon: <IconHome /> },
           {
             id: "requests" as const,
             href: "/staff/transfers",
@@ -268,6 +271,11 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
             label: t("nav.discounts"),
             icon: <IconDiscounts />,
           },
+        ],
+      },
+      {
+        label: t("nav.site"),
+        items: [
           {
             id: "gallery" as const,
             href: "/staff/gallery",
@@ -349,6 +357,17 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         </button>
       </div>
       <nav className="staff-nav" id="staff-nav">
+        <div className="staff-nav__group">
+          <Link
+            aria-current={current === homeItem.id ? "page" : undefined}
+            aria-label={collapsed ? homeItem.label : undefined}
+            href={homeItem.href}
+            title={collapsed ? homeItem.label : undefined}
+          >
+            {homeItem.icon}
+            <span className="staff-nav__label">{homeItem.label}</span>
+          </Link>
+        </div>
         {navGroups.map((group) => (
           <div className="staff-nav__group" key={group.label}>
             <p className="staff-nav__section">{group.label}</p>

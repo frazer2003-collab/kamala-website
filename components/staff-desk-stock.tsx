@@ -62,15 +62,6 @@ export function StaffDeskStock({
     label: bilingualItemLabel(item),
     keywords: `${item.nameEn} ${item.nameTh}`,
   }));
-  const reasonOptions = [
-    { value: "purchase", label: t("stock.purchase") },
-    { value: "waste", label: t("stock.waste") },
-    { value: "adjustment", label: t("stock.adjustment") },
-  ];
-  const unitOptions = DESK_COUNTED_UNITS.map((unit) => ({
-    value: unit,
-    label: unit,
-  }));
 
   return (
     <>
@@ -113,28 +104,31 @@ export function StaffDeskStock({
               <h2 id="stock-list-title">{t("stock.counted")}</h2>
               <p>Current quantity compared with the minimum.</p>
             </div>
-            <button
-              className="button button--quiet"
-              onClick={() => {
-                setCreating(true);
-                setSelectedId(null);
-              }}
-              type="button"
-            >
-              {t("stock.addCounted")}
-            </button>
+            {activeItems.length ? (
+              <button
+                className="button button--quiet"
+                onClick={() => {
+                  setCreating(true);
+                  setSelectedId(null);
+                }}
+                type="button"
+              >
+                {t("stock.addCounted")}
+              </button>
+            ) : null}
           </header>
-          <div className="staff-desk__table-wrap">
-            <table className="staff-desk__table">
-              <thead>
-                <tr>
-                  <th>{t("bills.item")}</th>
-                  <th>{t("stock.onHand")}</th>
-                  <th>{t("stock.minimum")}</th>
-                  <th>{t("stock.headroom")}</th>
-                </tr>
-              </thead>
-              <tbody>
+          {activeItems.length ? (
+            <div className="staff-desk__table-wrap">
+              <table className="staff-desk__table">
+                <thead>
+                  <tr>
+                    <th>{t("bills.item")}</th>
+                    <th>{t("stock.onHand")}</th>
+                    <th>{t("stock.minimum")}</th>
+                    <th>{t("stock.headroom")}</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {activeItems.map((item) => {
                     const room = headroom(item.onHand, item.minimum);
                     return (
@@ -171,9 +165,25 @@ export function StaffDeskStock({
                       </tr>
                     );
                   })}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="staff-desk__empty-state">
+              <h2>{t("stock.empty")}</h2>
+              <p>{t("stock.emptyHint")}</p>
+              <button
+                className="button button--primary"
+                onClick={() => {
+                  setCreating(true);
+                  setSelectedId(null);
+                }}
+                type="button"
+              >
+                {t("stock.addCounted")}
+              </button>
+            </div>
+          )}
         </section>
 
         <form action={recordStockMovement} className="staff-desk__form">
@@ -191,16 +201,17 @@ export function StaffDeskStock({
           </div>
           <div className="staff-desk__field-grid">
             <div className="field-pair">
-              <StaffCombo
-                clearOnSelect={false}
+              <label htmlFor="movement-reason">{t("stock.reason")}</label>
+              <select
                 defaultValue="purchase"
                 id="movement-reason"
-                label="Reason"
                 name="reason"
-                options={reasonOptions}
-                placeholder={t("desk.typeToSearch")}
                 required
-              />
+              >
+                <option value="purchase">{t("stock.purchase")}</option>
+                <option value="waste">{t("stock.waste")}</option>
+                <option value="adjustment">{t("stock.adjustment")}</option>
+              </select>
             </div>
             <div className="field-pair">
               <label htmlFor="movement-quantity">{t("common.quantity")}</label>
@@ -236,6 +247,7 @@ export function StaffDeskStock({
                   new Date(movement.occurredAt).toLocaleString(
                     locale === "th" ? "th" : "en",
                   )}
+                {movement.actedBy ? ` · ${movement.actedBy}` : ""}
               </small>
             </li>
           ))}
@@ -284,16 +296,19 @@ export function StaffDeskStock({
           </div>
           <div className="staff-desk__field-grid">
             <div className="field-pair">
-              <StaffCombo
-                clearOnSelect={false}
+              <label htmlFor="stock-unit">{t("stock.unit")}</label>
+              <select
                 defaultValue={editing?.unit ?? "count"}
                 id="stock-unit"
-                label={t("stock.unit")}
                 name="unit"
-                options={unitOptions}
-                placeholder={t("desk.typeToSearch")}
                 required
-              />
+              >
+                {DESK_COUNTED_UNITS.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit === "grams" ? t("stock.unitGrams") : t("stock.unitCount")}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="field-pair">
               <label htmlFor="stock-minimum">{t("stock.minimum")}</label>
