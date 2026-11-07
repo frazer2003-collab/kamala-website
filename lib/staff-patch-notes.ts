@@ -18,6 +18,23 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-expenses-gross-profit",
+    date: "2026-11-07",
+    title: "Expenses page and Finance gross profit",
+    summary:
+      "Record business expenses by day/week/month with a running total. Finance shows gross profit from room revenue, bill sales, expenses, and food/drink cost.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Expenses list with range total and Finance gross profit panel",
+    },
+    changes: [
+      "New Expenses page under Money — charge name, cost, optional note.",
+      "Browse Today / This week / This month or any date range; sticky total at the bottom.",
+      "Finance adds Gross profit: room revenue + cleared bills − expenses − item cost on cleared bills.",
+      "Demo expense records are seeded so you can try the views immediately.",
+    ],
+  },
+  {
     id: "2026-11-07-catalog-setup",
     date: "2026-11-07",
     title: "Cost, sell price, custom units, and stock projections",

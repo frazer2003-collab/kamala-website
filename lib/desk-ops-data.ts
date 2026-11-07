@@ -125,6 +125,18 @@ type LaundryRow = {
   updated_at: string;
 };
 
+type ExpenseRow = {
+  id: string;
+  property_id: string;
+  name: string;
+  amount_satang: number;
+  staff_note: string | null;
+  expense_date: string;
+  acted_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type Table<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -144,6 +156,7 @@ type DeskDatabase = {
       desk_bills: Table<BillRow>;
       desk_bill_lines: Table<BillLineRow>;
       desk_laundry_records: Table<LaundryRow>;
+      desk_expenses: Table<ExpenseRow>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -238,6 +251,37 @@ export type DeskLaundryRecord = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type DeskExpense = {
+  id: string;
+  name: string;
+  amountSatang: number;
+  staffNote: string | null;
+  expenseDate: string;
+  actedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DeskClearedBillEconomics = {
+  billRevenueSatang: number;
+  foodDrinkCostSatang: number;
+  clearedBillCount: number;
+  lineCount: number;
+};
+
+function mapExpenseRow(row: ExpenseRow): DeskExpense {
+  return {
+    id: row.id,
+    name: row.name,
+    amountSatang: row.amount_satang,
+    staffNote: row.staff_note,
+    expenseDate: row.expense_date,
+    actedBy: row.acted_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 export function mapCountedItemRows(
   rows: CountedItemRow[],
@@ -911,4 +955,145 @@ export async function deleteDeskCountedItem(id: string) {
     .eq("property_id", DESK_PROPERTY_ID)
     .eq("id", id);
   throwIfError(error);
+}
+
+const EXPENSE_LIST_LIMIT = 2000;
+
+/** Range-scoped expense list — never loads the full history. */
+export async function listDeskExpensesInRange(
+  fromIso: string,
+  toIso: string,
+): Promise<{
+  expenses: DeskExpense[];
+  truncated: boolean;
+  totalSatang: number;
+  count: number;
+}> {
+  if (!hasStaffSupabaseConfig()) {
+    return { expenses: [], truncated: false, totalSatang: 0, count: 0 };
+  }
+  const [listResult, sumResult] = await Promise.all([
+    client()
+      .from("desk_expenses")
+      .select("*")
+      .eq("property_id", DESK_PROPERTY_ID)
+      .gte("expense_date", fromIso)
+      .lte("expense_date", toIso)
+      .order("expense_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(EXPENSE_LIST_LIMIT + 1),
+    client()
+      .from("desk_expenses")
+      .select("amount_satang")
+      .eq("property_id", DESK_PROPERTY_ID)
+      .gte("expense_date", fromIso)
+      .lte("expense_date", toIso),
+  ]);
+  throwIfError(listResult.error);
+  throwIfError(sumResult.error);
+  const rows = listResult.data ?? [];
+  const truncated = rows.length > EXPENSE_LIST_LIMIT;
+  const expenses = (truncated ? rows.slice(0, EXPENSE_LIST_LIMIT) : rows).map(
+    mapExpenseRow,
+  );
+  const amounts = sumResult.data ?? [];
+  const totalSatang = amounts.reduce(
+    (total, row) => total + (row.amount_satang ?? 0),
+    0,
+  );
+  return { expenses, truncated, totalSatang, count: amounts.length };
+}
+
+export async function createDeskExpense(input: {
+  name: string;
+  amountSatang: number;
+  staffNote?: string | null;
+  expenseDate: string;
+  actedBy?: string | null;
+}): Promise<string> {
+  const { data, error } = await client()
+    .from("desk_expenses")
+    .insert({
+      property_id: DESK_PROPERTY_ID,
+      name: input.name,
+      amount_satang: input.amountSatang,
+      staff_note: input.staffNote?.trim() || null,
+      expense_date: input.expenseDate,
+      acted_by: input.actedBy || null,
+    })
+    .select("id")
+    .single();
+  throwIfError(error);
+  if (!data) throw new Error("Expense was not created.");
+  return data.id;
+}
+
+export async function deleteDeskExpense(id: string) {
+  const { error } = await client()
+    .from("desk_expenses")
+    .delete()
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", id);
+  throwIfError(error);
+}
+
+/**
+ * Cleared-bill sales + food/drink cost for a service-date range.
+ * Cost uses the sellable catalog cost at query time (snapshot not stored on lines).
+ */
+export async function loadDeskClearedBillEconomics(
+  fromIso: string,
+  toIso: string,
+): Promise<DeskClearedBillEconomics> {
+  if (!hasStaffSupabaseConfig()) {
+    return {
+      billRevenueSatang: 0,
+      foodDrinkCostSatang: 0,
+      clearedBillCount: 0,
+      lineCount: 0,
+    };
+  }
+  const billsResult = await client()
+    .from("desk_bills")
+    .select("id")
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("status", "cleared")
+    .gte("service_date", fromIso)
+    .lte("service_date", toIso);
+  throwIfError(billsResult.error);
+  const billIds = (billsResult.data ?? []).map((row) => row.id);
+  if (billIds.length === 0) {
+    return {
+      billRevenueSatang: 0,
+      foodDrinkCostSatang: 0,
+      clearedBillCount: 0,
+      lineCount: 0,
+    };
+  }
+
+  const [linesResult, sellables] = await Promise.all([
+    client()
+      .from("desk_bill_lines")
+      .select("sellable_item_id,quantity,unit_price_satang")
+      .eq("property_id", DESK_PROPERTY_ID)
+      .in("bill_id", billIds),
+    listDeskSellables(),
+  ]);
+  throwIfError(linesResult.error);
+  const costBySellable = new Map(
+    sellables.map((item) => [item.id, item.costSatang] as const),
+  );
+  let billRevenueSatang = 0;
+  let foodDrinkCostSatang = 0;
+  for (const line of linesResult.data ?? []) {
+    billRevenueSatang += (line.unit_price_satang ?? 0) * line.quantity;
+    foodDrinkCostSatang +=
+      (costBySellable.get(line.sellable_item_id) ?? 0) * line.quantity;
+  }
+  return {
+    billRevenueSatang,
+    foodDrinkCostSatang,
+    clearedBillCount: billIds.length,
+    lineCount: (linesResult.data ?? []).length,
+  };
 }

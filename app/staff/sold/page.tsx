@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { CalendarDateStrip } from "@/components/calendar-date-strip";
+import { FinanceGrossProfit } from "@/components/finance-gross-profit";
 import { FinanceSoldPie } from "@/components/finance-revenue-pie";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffShell } from "@/components/staff-shell";
 import { getPropertyTodayIso, parseStaffTimelineRange } from "@/lib/calendar";
 import { formatMoneySuffix, type PropertyCurrency } from "@/lib/currency";
+import {
+  computeDeskGrossProfit,
+  isoMonthRangeContaining,
+  isoWeekRangeContaining,
+} from "@/lib/desk-expenses";
+import {
+  listDeskExpensesInRange,
+  loadDeskClearedBillEconomics,
+} from "@/lib/desk-ops-data";
 import { buildStaffInsightsReport } from "@/lib/staff-insights";
 import { loadStaffFinancePageData } from "@/lib/staff-finance-data";
 import { requireStaffSensitiveAccess } from "@/lib/staff-auth";
@@ -427,6 +437,16 @@ export default async function StaffSoldPage({
     );
   }
 
+  const todayIso = getPropertyTodayIso();
+  const [
+    financeData,
+    expenseRange,
+    billEconomics,
+  ] = await Promise.all([
+    loadStaffFinancePageData(fromIso, toIso),
+    listDeskExpensesInRange(fromIso, toIso),
+    loadDeskClearedBillEconomics(fromIso, toIso),
+  ]);
   const {
     rooms,
     bookingsResult,
@@ -436,7 +456,7 @@ export default async function StaffSoldPage({
     promotions,
     dayRatesParts,
     rateOverrides,
-  } = await loadStaffFinancePageData(fromIso, toIso);
+  } = financeData;
 
   const warnings = [
     bookingsResult.error,
@@ -458,12 +478,20 @@ export default async function StaffSoldPage({
     rateOverrides,
     // Desk clock in Thailand — not the Vercel UTC day — so still-open nights
     // match what staff can still sell on the calendar.
-    todayIso: getPropertyTodayIso(),
+    todayIso,
   });
   const currency = settings.currency;
   const soldRooms = report.rooms.filter((row) => row.nightsSold > 0);
   const quietRooms = report.rooms.filter((row) => row.nightsSold === 0);
   const noRoomsConfigured = rooms.length === 0;
+  const week = isoWeekRangeContaining(todayIso);
+  const month = isoMonthRangeContaining(todayIso);
+  const grossProfit = computeDeskGrossProfit({
+    roomRevenueSatang: Math.round(report.totals.earnedRoomRevenue * 100),
+    billRevenueSatang: billEconomics.billRevenueSatang,
+    expenseSatang: expenseRange.totalSatang,
+    foodDrinkCostSatang: billEconomics.foodDrinkCostSatang,
+  });
 
   return (
     <StaffShell current="sold">
@@ -637,6 +665,16 @@ export default async function StaffSoldPage({
                 ) : null}
               </section>
 
+              <FinanceGrossProfit
+                breakdown={grossProfit}
+                clearedBillCount={billEconomics.clearedBillCount}
+                currency={currency}
+                expenseCount={expenseRange.count}
+                fromIso={fromIso}
+                monthHref={`/staff/sold?month=${month.fromIso.slice(0, 7)}&from=${month.fromIso}&to=${month.toIso}`}
+                toIso={toIso}
+                weekHref={`/staff/sold?month=${week.fromIso.slice(0, 7)}&from=${week.fromIso}&to=${week.toIso}`}
+              />
               <FinancePriceGuide
                 currency={currency}
                 fromIso={fromIso}

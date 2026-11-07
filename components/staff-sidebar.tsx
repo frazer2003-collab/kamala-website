@@ -14,6 +14,7 @@ export type StaffNavCurrent =
   | "stock"
   | "laundry"
   | "items"
+  | "expenses"
   | "sold"
   | "promotions"
   | "gallery"
@@ -108,6 +109,20 @@ function IconFinance() {
         strokeWidth="1.5"
       />
       <path d="M13.5 5.5H16v2.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function IconExpenses() {
+  return (
+    <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
+      <path
+        d="M6 4.5h8v11H6zM8 7.5h4M8 10.5h4M8 13.5h2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
     </svg>
   );
 }
@@ -265,6 +280,12 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         label: t("nav.money"),
         items: [
           { id: "sold" as const, href: "/staff/sold", label: t("nav.finance"), icon: <IconFinance /> },
+          {
+            id: "expenses" as const,
+            href: "/staff/expenses",
+            label: t("nav.expenses"),
+            icon: <IconExpenses />,
+          },
           {
             id: "promotions" as const,
             href: "/staff/promotions",

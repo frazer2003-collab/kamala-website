@@ -6,7 +6,9 @@ import { planBillClear } from "@/lib/desk-bills";
 import {
   addDeskBillLine,
   createDeskBill,
+  createDeskExpense,
   deleteDeskCountedItem,
+  deleteDeskExpense,
   deleteDeskLaundry,
   deleteDeskSellable,
   ensureSellableForCountedItem,
@@ -24,6 +26,7 @@ import {
   updateDeskBill,
   updateDeskBillLinePrice,
 } from "@/lib/desk-ops-data";
+import { getPropertyTodayIso } from "@/lib/calendar";
 import {
   normalizeDeskUnit,
   slugifyCategoryKey,
@@ -65,8 +68,14 @@ function revalidateDesk() {
   revalidatePath("/staff/stock");
   revalidatePath("/staff/laundry");
   revalidatePath("/staff/items");
+  revalidatePath("/staff/expenses");
+  revalidatePath("/staff/sold");
   revalidatePath("/staff/portal/bills");
   revalidatePath("/staff/portal/laundry");
+}
+
+function isIsoDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function safeDeskReturnTo(formData: FormData, fallback: string) {
@@ -432,4 +441,35 @@ export async function recordStockMovement(formData: FormData) {
   });
   revalidateDesk();
   redirect("/staff/stock");
+}
+
+export async function createExpense(formData: FormData) {
+  await requireStaffSession();
+  const amountSatang = parseBahtToSatang(value(formData, "amount-baht"));
+  if (amountSatang === null) throw new Error("Enter a valid cost.");
+  const expenseDate = value(formData, "expense-date") || getPropertyTodayIso();
+  if (!isIsoDate(expenseDate)) throw new Error("Choose a valid date.");
+  const actedBy = await resolveDeskActorLabel();
+  await createDeskExpense({
+    name: required(formData, "name", "Charge name"),
+    amountSatang,
+    staffNote: value(formData, "staff-note") || null,
+    expenseDate,
+    actedBy,
+  });
+  const returnTo = value(formData, "return-to");
+  revalidateDesk();
+  redirect(
+    returnTo.startsWith("/staff/expenses") ? returnTo : "/staff/expenses",
+  );
+}
+
+export async function deleteExpense(formData: FormData) {
+  await requireStaffSession();
+  await deleteDeskExpense(required(formData, "id", "Expense"));
+  const returnTo = value(formData, "return-to");
+  revalidateDesk();
+  redirect(
+    returnTo.startsWith("/staff/expenses") ? returnTo : "/staff/expenses",
+  );
 }
