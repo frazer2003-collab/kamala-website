@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { StaffLocaleToggle, useStaffLocale } from "@/components/staff-locale";
 import { StaffLogoutForm } from "@/components/staff-logout-form";
 
 export type StaffNavCurrent =
@@ -209,39 +210,77 @@ function IconSettings() {
   );
 }
 
-const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
-  {
-    label: "Stay",
-    items: [
-      { id: "home", href: "/staff/home", label: "Home", icon: <IconHome /> },
-      { id: "requests", href: "/staff/transfers", label: "Transfers", icon: <IconTransfers /> },
-      { id: "calendar", href: "/staff/calendar", label: "Calendar", icon: <IconCalendar /> },
-      { id: "reservations", href: "/staff/reservations", label: "Reservations", icon: <IconReservations /> },
-    ],
-  },
-  {
-    label: "Desk",
-    items: [
-      { id: "bills", href: "/staff/bills", label: "Bills", icon: <IconBill /> },
-      { id: "stock", href: "/staff/stock", label: "Stock", icon: <IconStock /> },
-      { id: "laundry", href: "/staff/laundry", label: "Laundry", icon: <IconLaundry /> },
-      { id: "items", href: "/staff/items", label: "Items", icon: <IconItems /> },
-    ],
-  },
-  {
-    label: "Money & site",
-    items: [
-      { id: "sold", href: "/staff/sold", label: "Finance", icon: <IconFinance /> },
-      { id: "promotions", href: "/staff/promotions", label: "Discounts", icon: <IconDiscounts /> },
-      { id: "gallery", href: "/staff/gallery", label: "Gallery", icon: <IconGallery /> },
-      { id: "ai", href: "/staff/ai-search", label: "AI search", icon: <IconSearch /> },
-      { id: "settings", href: "/staff/settings", label: "Settings", icon: <IconSettings /> },
-    ],
-  },
-];
-
 export function StaffSidebar({ current }: StaffSidebarProps) {
+  const { t } = useStaffLocale();
   const [collapsed, setCollapsed] = useState(false);
+  const navGroups = useMemo(
+    () => [
+      {
+        label: t("nav.stay"),
+        items: [
+          { id: "home" as const, href: "/staff/home", label: t("nav.home"), icon: <IconHome /> },
+          {
+            id: "requests" as const,
+            href: "/staff/transfers",
+            label: t("nav.transfers"),
+            icon: <IconTransfers />,
+          },
+          {
+            id: "calendar" as const,
+            href: "/staff/calendar",
+            label: t("nav.calendar"),
+            icon: <IconCalendar />,
+          },
+          {
+            id: "reservations" as const,
+            href: "/staff/reservations",
+            label: t("nav.reservations"),
+            icon: <IconReservations />,
+          },
+        ],
+      },
+      {
+        label: t("nav.desk"),
+        items: [
+          { id: "bills" as const, href: "/staff/bills", label: t("nav.bills"), icon: <IconBill /> },
+          { id: "stock" as const, href: "/staff/stock", label: t("nav.stock"), icon: <IconStock /> },
+          {
+            id: "laundry" as const,
+            href: "/staff/laundry",
+            label: t("nav.laundry"),
+            icon: <IconLaundry />,
+          },
+          { id: "items" as const, href: "/staff/items", label: t("nav.items"), icon: <IconItems /> },
+        ],
+      },
+      {
+        label: t("nav.money"),
+        items: [
+          { id: "sold" as const, href: "/staff/sold", label: t("nav.finance"), icon: <IconFinance /> },
+          {
+            id: "promotions" as const,
+            href: "/staff/promotions",
+            label: t("nav.discounts"),
+            icon: <IconDiscounts />,
+          },
+          {
+            id: "gallery" as const,
+            href: "/staff/gallery",
+            label: t("nav.gallery"),
+            icon: <IconGallery />,
+          },
+          { id: "ai" as const, href: "/staff/ai-search", label: t("nav.ai"), icon: <IconSearch /> },
+          {
+            id: "settings" as const,
+            href: "/staff/settings",
+            label: t("nav.settings"),
+            icon: <IconSettings />,
+          },
+        ],
+      },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -281,13 +320,14 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
           </span>
           <span className="staff-sidebar__brand-text">
             <strong>Kamala</strong>
-            <small>Staff</small>
+            <small>{t("nav.staff")}</small>
           </span>
         </Link>
+        <StaffLocaleToggle />
         <button
           aria-controls="staff-nav"
           aria-expanded={!collapsed}
-          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+          aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
           className="staff-sidebar__collapse"
           onClick={toggleCollapsed}
           type="button"
@@ -304,7 +344,7 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         </button>
       </div>
       <nav className="staff-nav" id="staff-nav">
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div className="staff-nav__group" key={group.label}>
             <p className="staff-nav__section">{group.label}</p>
             {group.items.map((item) => (

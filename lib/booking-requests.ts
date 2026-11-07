@@ -31,6 +31,8 @@ export type StaffStayChange = {
 
 export type StaffBooking = Booking & {
   databaseId: string | null;
+  /** Raw booking created_at for sorting and ledger dates. */
+  createdAt?: string | null;
   bankTransferClaimed: boolean;
   stripePaymentIntentId: string | null;
   /** How staff collected payment when they marked Paid (not Stripe). */
@@ -121,6 +123,7 @@ export function mapBookingRequest(
     nights: row.nights,
     status: mapStatus(row.status),
     requestedAt: formatRequestedAt(row.created_at),
+    createdAt: row.created_at || null,
     note: row.note ?? "",
     contact: row.guest_email,
     phone: row.guest_phone ?? "",

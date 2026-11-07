@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reservations sort fixture</title>
+  <style>
+    body { margin: 0; background: #f9f7f7; color: #282225; font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif; }
+    main { width: 1180px; min-height: 640px; padding: 48px; }
+    h1 { margin: 0; font-size: 32px; letter-spacing: -.03em; color: #4a1d1d; }
+    p { margin: 8px 0 24px; color: #695e62; }
+    table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #e3dcde; border-radius: 12px; overflow: hidden; }
+    th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e3dcde; vertical-align: top; }
+    th { background: #f6f2f3; color: #695e62; font-size: 12px; }
+    th span { color: #7a2f36; }
+    strong { display: block; }
+    small { color: #695e62; }
+    .pill { display: inline-block; padding: 6px 10px; border-radius: 8px; background: #edf7f1; color: #2f7651; font-size: 12px; font-weight: 750; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Reservations</h1>
+    <p>Booked date shown. Columns sort and filter by room or payment.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Guest</th>
+          <th>Stay</th>
+          <th><span>Booked ↓</span></th>
+          <th>Room</th>
+          <th>Source</th>
+          <th>Payment</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Niran</strong><small>0812345678</small></td>
+          <td><strong>10 Aug 2026 to 12 Aug 2026</strong><small>2 nights</small></td>
+          <td><strong>1 Jul 2026</strong></td>
+          <td>Family GF<small>#116</small></td>
+          <td>Website</td>
+          <td><strong>฿2,000</strong><small>Paid</small></td>
+          <td><span class="pill">Upcoming</span></td>
+        </tr>
+        <tr>
+          <td><strong>Bo</strong></td>
+          <td><strong>5 Aug 2026 to 7 Aug 2026</strong><small>2 nights</small></td>
+          <td><strong>2 Jul 2026</strong></td>
+          <td>Family GF<small>#116</small></td>
+          <td>Airbnb</td>
+          <td><small>No price</small></td>
+          <td><span class="pill">Completed</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

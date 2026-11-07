@@ -35,6 +35,8 @@ export type StaffRoomBlock = {
   channelLabel: string | null;
   roomUnitId: string | null;
   roomNumber: string | null;
+  /** When the channel/closure row was created. */
+  createdAt?: string | null;
 };
 
 function mapRoomBlock(
@@ -61,6 +63,7 @@ function mapRoomBlock(
     channelLabel,
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
     roomNumber: null,
+    createdAt: row.created_at || null,
   };
 }
 

@@ -13,13 +13,20 @@ import {
   filterReservationRows,
   ledgerFilterLabel,
   ledgerStatusLabel,
+  nextReservationsSortDir,
   parseReservationsDateRange,
   parseReservationsLedgerFilter,
+  parseReservationsPayFilter,
   parseReservationsQuery,
+  parseReservationsRoomFilter,
+  parseReservationsSort,
+  parseReservationsSortDir,
   parseReservationsSource,
   reservationsListHref,
   sortReservationRows,
   type ReservationsLedgerFilter,
+  type ReservationsPayFilter,
+  type ReservationsSortKey,
 } from "@/lib/staff-reservations";
 import {
   attachRoomNumbers,
@@ -41,6 +48,25 @@ const LEDGER_FILTERS = [
   "no-show",
 ] as const satisfies readonly ReservationsLedgerFilter[];
 
+const PAY_FILTERS = [
+  "all",
+  "Paid",
+  "Unpaid",
+  "No charge",
+  "No price",
+  "Transfer to verify",
+] as const satisfies readonly ReservationsPayFilter[];
+
+const SORT_COLUMNS: { key: ReservationsSortKey; label: string }[] = [
+  { key: "guest", label: "Guest" },
+  { key: "stay", label: "Stay" },
+  { key: "booked", label: "Booked" },
+  { key: "room", label: "Room" },
+  { key: "source", label: "Source" },
+  { key: "payment", label: "Payment" },
+  { key: "status", label: "Status" },
+];
+
 function formatRangeLabel(fromIso: string, toIso: string) {
   const formatter = new Intl.DateTimeFormat("en", {
     month: "short",
@@ -61,6 +87,10 @@ export default async function StaffReservationsPage({
     ledger?: string;
     source?: string;
     q?: string;
+    room?: string;
+    pay?: string;
+    sort?: string;
+    dir?: string;
   }>;
 }) {
   await requireStaffSession();
@@ -70,6 +100,10 @@ export default async function StaffReservationsPage({
   const ledger = parseReservationsLedgerFilter(params.ledger);
   const source = parseReservationsSource(params.source);
   const query = parseReservationsQuery(params.q);
+  const room = parseReservationsRoomFilter(params.room);
+  const pay = parseReservationsPayFilter(params.pay);
+  const sort = parseReservationsSort(params.sort);
+  const dir = parseReservationsSortDir(params.dir);
   const todayIso = getTodayIso();
   const rangeLabel = formatRangeLabel(fromIso, toIso);
 
@@ -101,18 +135,36 @@ export default async function StaffReservationsPage({
   const matchedRows = filterReservationRows(allRows, {
     ledger: "all",
     query,
+    room,
+    pay,
     todayIso,
   });
   const counts = countLedgerStatuses(matchedRows);
   const visibleRows = sortReservationRows(
     filterReservationRows(matchedRows, { ledger, source, todayIso }),
+    sort,
+    dir,
   );
+
+  const roomOptions = Array.from(
+    new Set(allRows.map((row) => row.sublabel).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
 
   const warnings = [bookingsResult.error, channelsResult.error].filter(
     (message): message is string => Boolean(message),
   );
 
-  const filterBase = { from: fromIso, to: toIso, ledger, source, query };
+  const filterBase = {
+    from: fromIso,
+    to: toIso,
+    ledger,
+    source,
+    query,
+    room,
+    pay,
+    sort,
+    dir,
+  };
   const showingToday = fromIso === todayIso && toIso === todayIso;
 
   return (
@@ -126,8 +178,8 @@ export default async function StaffReservationsPage({
             <h1 id="staff-reservations-title">Reservations</h1>
             <p>
               Stays that occupy a night in these dates, including guests who
-              arrived earlier. Find a name, door, or phone, then open the stay
-              on the calendar.
+              arrived earlier. Sort any column, filter room or payment, and open
+              a stay on the calendar.
             </p>
           </div>
         </div>
@@ -176,6 +228,31 @@ export default async function StaffReservationsPage({
                     type="date"
                   />
                 </div>
+                <div className="field-pair">
+                  <label htmlFor="reservations-room">Room</label>
+                  <select defaultValue={room} id="reservations-room" name="room">
+                    <option value="">All rooms</option>
+                    {roomOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field-pair">
+                  <label htmlFor="reservations-pay">Payment</label>
+                  <select
+                    defaultValue={pay === "all" ? "" : pay}
+                    id="reservations-pay"
+                    name="pay"
+                  >
+                    {PAY_FILTERS.map((option) => (
+                      <option key={option} value={option === "all" ? "" : option}>
+                        {option === "all" ? "All payments" : option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               {ledger !== "all" ? (
                 <input name="ledger" type="hidden" value={ledger} />
@@ -183,6 +260,8 @@ export default async function StaffReservationsPage({
               {source !== "all" ? (
                 <input name="source" type="hidden" value={source} />
               ) : null}
+              {sort !== "stay" ? <input name="sort" type="hidden" value={sort} /> : null}
+              {dir !== "asc" ? <input name="dir" type="hidden" value={dir} /> : null}
               <button className="button button--primary" type="submit">
                 Search
               </button>
@@ -193,6 +272,8 @@ export default async function StaffReservationsPage({
                 Showing <strong>{visibleRows.length}</strong> of {matchedRows.length}{" "}
                 stays, {rangeLabel}
                 {query ? ` matching "${query}"` : ""}
+                {room ? ` in ${room}` : ""}
+                {pay !== "all" ? ` · ${pay}` : ""}
               </span>
               {showingToday ? null : (
                 <Link
@@ -200,6 +281,10 @@ export default async function StaffReservationsPage({
                     from: todayIso,
                     to: todayIso,
                     query,
+                    room,
+                    pay,
+                    sort,
+                    dir,
                   })}
                 >
                   In house today
@@ -291,12 +376,42 @@ export default async function StaffReservationsPage({
                   </caption>
                   <thead>
                     <tr>
-                      <th scope="col">Guest</th>
-                      <th scope="col">Stay</th>
-                      <th scope="col">Room</th>
-                      <th scope="col">Source</th>
-                      <th scope="col">Payment</th>
-                      <th scope="col">Status</th>
+                      {SORT_COLUMNS.map((column) => {
+                        const active = sort === column.key;
+                        const nextDir = nextReservationsSortDir(sort, dir, column.key);
+                        return (
+                          <th
+                            aria-sort={
+                              active
+                                ? dir === "asc"
+                                  ? "ascending"
+                                  : "descending"
+                                : "none"
+                            }
+                            key={column.key}
+                            scope="col"
+                          >
+                            <Link
+                              className={[
+                                "staff-reservations__sort",
+                                active ? "staff-reservations__sort--active" : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                              href={reservationsListHref({
+                                ...filterBase,
+                                sort: column.key,
+                                dir: nextDir,
+                              })}
+                            >
+                              <span>{column.label}</span>
+                              <span aria-hidden="true" className="staff-reservations__sort-mark">
+                                {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
+                              </span>
+                            </Link>
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
@@ -322,6 +437,13 @@ export default async function StaffReservationsPage({
                           <span className="staff-reservations__meta">
                             {row.nights} {row.nights === 1 ? "night" : "nights"}
                           </span>
+                        </td>
+                        <td data-label="Booked">
+                          {row.bookedLabel ? (
+                            <span className="staff-reservations__stay">{row.bookedLabel}</span>
+                          ) : (
+                            <span className="staff-reservations__meta">—</span>
+                          )}
                         </td>
                         <td data-label="Room">
                           <span>{row.sublabel}</span>

@@ -3,12 +3,15 @@ import { describe, it } from "node:test";
 import type { StaffBooking } from "./booking-requests";
 import type { StaffRoomBlock } from "./room-blocks";
 import {
+  bookedDateFromTimestamp,
   buildReservationRows,
   classifyWebsiteLedgerStatus,
   countLedgerStatuses,
   filterReservationRows,
   parseReservationsDateRange,
   parseReservationsLedgerFilter,
+  parseReservationsPayFilter,
+  parseReservationsSort,
   rowMatchesLedgerFilter,
   sortReservationRows,
 } from "./staff-reservations";
@@ -25,6 +28,7 @@ function websiteBooking(
     nights: 1,
     status: partial.status ?? "confirmed",
     requestedAt: "Recently",
+    createdAt: partial.createdAt ?? "2026-07-01T04:00:00.000Z",
     note: "",
     contact: "g@example.com",
     phone: partial.phone ?? "",
@@ -53,6 +57,7 @@ function channelBlock(partial: {
   guestName?: string;
   channelLabel?: string | null;
   bookingSource?: StaffRoomBlock["bookingSource"];
+  createdAt?: string | null;
 }): StaffRoomBlock {
   return {
     id: partial.id.slice(0, 8).toUpperCase(),
@@ -69,6 +74,7 @@ function channelBlock(partial: {
     channelLabel: partial.channelLabel ?? "Airbnb",
     roomUnitId: "unit-1",
     roomNumber: "116",
+    createdAt: partial.createdAt ?? "2026-07-02T10:00:00.000Z",
   };
 }
 
@@ -105,6 +111,7 @@ describe("buildReservationRows", () => {
           channelLabel: null,
           roomUnitId: null,
           roomNumber: null,
+          createdAt: "2026-07-15T00:00:00.000Z",
         },
       ],
       knownUnitIds: new Set(["unit-1"]),
@@ -336,9 +343,50 @@ describe("filterReservationRows", () => {
     assert.equal(airbnb[0]?.sourceLabel, "Airbnb");
   });
 
-  it("sorts by arrival date", () => {
+  it("sorts by arrival date by default", () => {
     const sorted = sortReservationRows(rows);
     assert.equal(sorted[0]?.arrivalDate, "2026-08-03");
+  });
+
+  it("filters by room and payment, and sorts by booked date", () => {
+    const bookedRows = buildReservationRows({
+      bookings: [
+        websiteBooking({
+          id: "early",
+          guest: "Early book",
+          arrivalDate: "2026-08-20",
+          departureDate: "2026-08-21",
+          createdAt: "2026-06-01T03:00:00.000Z",
+        }),
+        websiteBooking({
+          id: "late",
+          guest: "Late book",
+          arrivalDate: "2026-08-10",
+          departureDate: "2026-08-11",
+          createdAt: "2026-07-15T03:00:00.000Z",
+          room: "Superior",
+          roomId: "courtyard",
+        }),
+      ],
+      blocks: [],
+      knownUnitIds: new Set(["unit-1"]),
+      fromIso: "2026-08-01",
+      toIso: "2026-08-31",
+      todayIso: "2026-08-01",
+    });
+
+    assert.equal(
+      filterReservationRows(bookedRows, { ledger: "all", room: "Superior" }).length,
+      1,
+    );
+    assert.equal(
+      filterReservationRows(bookedRows, { ledger: "all", pay: "Paid" }).length,
+      2,
+    );
+    const byBooked = sortReservationRows(bookedRows, "booked", "asc");
+    assert.equal(byBooked[0]?.id, "early");
+    assert.equal(byBooked[0]?.bookedAt, "2026-06-01");
+    assert.ok(byBooked[0]?.bookedLabel);
   });
 });
 
@@ -346,6 +394,9 @@ describe("parse reservation query values", () => {
   it("accepts ledger filter and date range", () => {
     assert.equal(parseReservationsLedgerFilter("no-show"), "no-show");
     assert.equal(parseReservationsLedgerFilter("nope"), "all");
+    assert.equal(parseReservationsSort("booked"), "booked");
+    assert.equal(parseReservationsPayFilter("Unpaid"), "Unpaid");
+    assert.equal(bookedDateFromTimestamp("2026-07-01T17:30:00.000Z"), "2026-07-02");
     const range = parseReservationsDateRange({
       from: "2026-08-05",
       to: "2026-08-01",

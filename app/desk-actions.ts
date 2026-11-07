@@ -6,6 +6,9 @@ import { planBillClear } from "@/lib/desk-bills";
 import {
   addDeskBillLine,
   createDeskBill,
+  deleteDeskCountedItem,
+  deleteDeskLaundry,
+  deleteDeskSellable,
   listDeskCountedItems,
   listDeskSellables,
   loadDeskBill,
@@ -70,18 +73,24 @@ export async function createLaundryRecord(formData: FormData) {
   if (!DESK_LAUNDRY_STATUSES.includes(status)) {
     throw new Error("Choose a laundry status.");
   }
-  const measureType = value(formData, "measure-type");
-  const kg = Number(value(formData, "kg"));
-  const count = positiveInteger(formData, "count");
-  const grams =
-    measureType === "kg" && Number.isFinite(kg) && kg > 0
-      ? Math.round(kg * 1000)
-      : null;
+  const measureType = value(formData, "type") || value(formData, "measure-type");
+  const measureRaw = value(formData, "measure");
+  let grams: number | null = null;
+  let count: number | null = null;
+  if (measureType === "count") {
+    count =
+      positiveInteger(formData, "measure") ||
+      positiveInteger(formData, "count") ||
+      null;
+  } else {
+    const kg = Number(measureRaw || value(formData, "kg"));
+    grams = Number.isFinite(kg) && kg > 0 ? Math.round(kg * 1000) : null;
+  }
   const input = {
     name: value(formData, "name"),
     category,
     grams,
-    count: measureType === "count" ? count || null : null,
+    count,
     email: null,
   };
   const errors = validateLaundryRecord(input);
@@ -124,7 +133,28 @@ export async function updateLaundryRecord(formData: FormData) {
     status,
   });
   revalidateDesk();
-  redirect(`/staff/laundry?open=${encodeURIComponent(id)}`);
+  redirect("/staff/laundry");
+}
+
+export async function deleteLaundryRecord(formData: FormData) {
+  await requireStaffSession();
+  await deleteDeskLaundry(required(formData, "id", "Laundry record"));
+  revalidateDesk();
+  redirect("/staff/laundry");
+}
+
+export async function deactivateSellableItem(formData: FormData) {
+  await requireStaffSession();
+  await deleteDeskSellable(required(formData, "id", "Item"));
+  revalidateDesk();
+  redirect("/staff/items");
+}
+
+export async function deactivateCountedItem(formData: FormData) {
+  await requireStaffSession();
+  await deleteDeskCountedItem(required(formData, "id", "Stock item"));
+  revalidateDesk();
+  redirect("/staff/stock");
 }
 
 export async function createBill(formData: FormData) {
@@ -229,7 +259,7 @@ export async function saveSellableItem(formData: FormData) {
     attachedLaundryIds,
   });
   revalidateDesk();
-  redirect(`/staff/items?edit=${encodeURIComponent(id)}`);
+  redirect("/staff/items");
 }
 
 export async function saveCountedItem(formData: FormData) {
@@ -246,7 +276,7 @@ export async function saveCountedItem(formData: FormData) {
     active: formData.get("active") === "on",
   });
   revalidateDesk();
-  redirect(`/staff/stock?edit=${encodeURIComponent(id)}`);
+  redirect("/staff/stock");
 }
 
 export async function recordStockMovement(formData: FormData) {

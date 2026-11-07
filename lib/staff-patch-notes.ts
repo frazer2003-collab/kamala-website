@@ -18,6 +18,40 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-speed-th",
+    date: "2026-11-07",
+    title: "Faster desk tools and Thai staff language",
+    summary:
+      "Desk lists open in popups, search picks items with Enter, and EN/TH switches the whole staff site.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff desk bills popup with searchable item picker",
+    },
+    changes: [
+      "Desk dropdowns are typeable: search, Enter to choose, then the field clears for the next pick.",
+      "Laundry uses one measure field that follows Type (kilograms or piece count).",
+      "Items recipes use a search list to add ingredients quickly.",
+      "Clicking a laundry, stock, bill, or catalog record opens a popup instead of reloading the page.",
+      "An EN/TH button in the sidebar translates staff navigation and page wording.",
+    ],
+  },
+  {
+    id: "2026-11-07-reservations-sort-filter",
+    date: "2026-11-07",
+    title: "Reservations shows booked date and sortable columns",
+    summary:
+      "Each stay shows when it was booked. Click a column to sort, and filter by room or payment.",
+    image: {
+      src: "/staff/patch-notes/reservations-sort.jpg",
+      alt: "Reservations table with Booked column and sortable headers",
+    },
+    changes: [
+      "A Booked column shows the Bangkok calendar day the stay was created.",
+      "Every column sorts ascending or descending from the header.",
+      "Room and Payment filters sit with Find and the date range.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-operations",
     date: "2026-11-07",
     title: "Bills, stock, laundry, and desk items",

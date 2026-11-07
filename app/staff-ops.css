@@ -467,6 +467,35 @@
   min-height: 2.75rem;
 }
 
+.staff-locale-toggle {
+  flex: 0 0 auto;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-maroon);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.staff-locale-toggle:hover {
+  background: var(--color-maroon-wash);
+}
+
+.staff-locale-toggle:focus-visible {
+  outline: 2px solid var(--color-maroon);
+  outline-offset: 2px;
+}
+
+.staff-sidebar--collapsed .staff-locale-toggle {
+  width: 2.25rem;
+  padding-inline: 0;
+}
+
 .staff-sidebar__collapse {
   flex: 0 0 auto;
   display: inline-flex;

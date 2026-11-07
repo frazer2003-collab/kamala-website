@@ -38,6 +38,25 @@ export type LedgerStatus =
 
 export type ReservationsLedgerFilter = "all" | LedgerStatus;
 
+export type ReservationsSortKey =
+  | "guest"
+  | "stay"
+  | "booked"
+  | "room"
+  | "source"
+  | "payment"
+  | "status";
+
+export type ReservationsSortDir = "asc" | "desc";
+
+export type ReservationsPayFilter =
+  | "all"
+  | "Paid"
+  | "Unpaid"
+  | "No charge"
+  | "No price"
+  | "Transfer to verify";
+
 export type ReservationRow = {
   id: string;
   kind: ReservationRowKind;
@@ -49,6 +68,8 @@ export type ReservationRow = {
   departureDate: string;
   checkInLabel: string;
   checkOutLabel: string;
+  /** ISO date (Bangkok calendar day) when the stay was booked, if known. */
+  bookedAt: string | null;
   bookedLabel: string | null;
   doorLabel: string | null;
   needsRoom: boolean;
@@ -86,6 +107,34 @@ function formatIsoDate(iso: string) {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+/** Calendar day in Asia/Bangkok from a timestamptz string. */
+export function bookedDateFromTimestamp(createdAt: string | null | undefined) {
+  if (!createdAt) {
+    return null;
+  }
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!year || !month || !day) {
+    return null;
+  }
+  return `${year}-${month}-${day}`;
+}
+
+function formatBookedLabel(bookedAt: string | null) {
+  return bookedAt ? formatIsoDate(bookedAt) : null;
 }
 
 function calendarHrefForRange(options: {
@@ -261,6 +310,7 @@ export function buildReservationRows({
     const key = getStaffBookingKey(booking);
     const pay = websitePay(booking, currency);
     const phone = booking.phone.trim();
+    const bookedAt = bookedDateFromTimestamp(booking.createdAt);
 
     rows.push({
       id: key,
@@ -273,7 +323,8 @@ export function buildReservationRows({
       departureDate: booking.departureDate,
       checkInLabel: formatIsoDate(booking.arrivalDate),
       checkOutLabel: formatIsoDate(booking.departureDate),
-      bookedLabel: booking.requestedAt === "Recently" ? null : booking.requestedAt,
+      bookedAt,
+      bookedLabel: formatBookedLabel(bookedAt),
       doorLabel: needsRoom
         ? null
         : booking.roomNumber
@@ -314,6 +365,7 @@ export function buildReservationRows({
       formatBookingSource(block.bookingSource) !== "—"
         ? formatBookingSource(block.bookingSource)
         : block.channelLabel || "Channel";
+    const bookedAt = bookedDateFromTimestamp(block.createdAt);
 
     rows.push({
       id: key,
@@ -326,7 +378,8 @@ export function buildReservationRows({
       departureDate: block.endDate,
       checkInLabel: formatIsoDate(block.startDate),
       checkOutLabel: formatIsoDate(block.endDate),
-      bookedLabel: null,
+      bookedAt,
+      bookedLabel: formatBookedLabel(bookedAt),
       doorLabel: needsRoom
         ? null
         : block.roomNumber
@@ -417,11 +470,15 @@ export function filterReservationRows(
     ledger: ReservationsLedgerFilter;
     source?: BookingSource | "website" | "all";
     query?: string;
+    room?: string;
+    pay?: ReservationsPayFilter;
     todayIso?: string;
   },
 ) {
   const todayIso = filters.todayIso ?? getTodayIso();
   const query = filters.query ?? "";
+  const room = (filters.room ?? "").trim().toLowerCase();
+  const pay = filters.pay ?? "all";
 
   return rows.filter((row) => {
     if (!rowMatchesReservationQuery(row, query)) {
@@ -442,17 +499,77 @@ export function filterReservationRows(
       }
     }
 
+    if (room && row.sublabel.toLowerCase() !== room) {
+      return false;
+    }
+
+    if (pay !== "all" && row.payLabel !== pay) {
+      return false;
+    }
+
     return true;
   });
 }
 
-export function sortReservationRows(rows: ReservationRow[]) {
-  return [...rows].sort((a, b) => {
-    if (a.arrivalDate !== b.arrivalDate) {
-      return a.arrivalDate.localeCompare(b.arrivalDate);
-    }
-    return a.label.localeCompare(b.label);
-  });
+function compareNullableIso(a: string | null, b: string | null) {
+  if (a === b) {
+    return 0;
+  }
+  if (!a) {
+    return 1;
+  }
+  if (!b) {
+    return -1;
+  }
+  return a.localeCompare(b);
+}
+
+function compareReservationSortValue(
+  a: ReservationRow,
+  b: ReservationRow,
+  key: ReservationsSortKey,
+) {
+  switch (key) {
+    case "guest":
+      return a.label.localeCompare(b.label) || a.id.localeCompare(b.id);
+    case "stay":
+      return (
+        a.arrivalDate.localeCompare(b.arrivalDate) ||
+        a.departureDate.localeCompare(b.departureDate) ||
+        a.label.localeCompare(b.label)
+      );
+    case "booked":
+      return compareNullableIso(a.bookedAt, b.bookedAt) || a.label.localeCompare(b.label);
+    case "room":
+      return (
+        a.sublabel.localeCompare(b.sublabel) ||
+        (a.doorLabel ?? "").localeCompare(b.doorLabel ?? "") ||
+        a.label.localeCompare(b.label)
+      );
+    case "source":
+      return a.sourceLabel.localeCompare(b.sourceLabel) || a.label.localeCompare(b.label);
+    case "payment":
+      return (
+        a.payLabel.localeCompare(b.payLabel) ||
+        (a.moneyLabel ?? "").localeCompare(b.moneyLabel ?? "") ||
+        a.label.localeCompare(b.label)
+      );
+    case "status":
+      return (
+        a.ledgerStatus.localeCompare(b.ledgerStatus) ||
+        a.statusLabel.localeCompare(b.statusLabel) ||
+        a.label.localeCompare(b.label)
+      );
+  }
+}
+
+export function sortReservationRows(
+  rows: ReservationRow[],
+  sort: ReservationsSortKey = "stay",
+  dir: ReservationsSortDir = "asc",
+) {
+  const direction = dir === "desc" ? -1 : 1;
+  return [...rows].sort((a, b) => compareReservationSortValue(a, b, sort) * direction);
 }
 
 export function parseReservationsLedgerFilter(value?: string): ReservationsLedgerFilter {
@@ -505,12 +622,63 @@ export function parseReservationsQuery(value?: string) {
   return (value ?? "").trim().slice(0, 80);
 }
 
+export function parseReservationsSort(value?: string): ReservationsSortKey {
+  if (
+    value === "guest" ||
+    value === "stay" ||
+    value === "booked" ||
+    value === "room" ||
+    value === "source" ||
+    value === "payment" ||
+    value === "status"
+  ) {
+    return value;
+  }
+  return "stay";
+}
+
+export function parseReservationsSortDir(value?: string): ReservationsSortDir {
+  return value === "desc" ? "desc" : "asc";
+}
+
+export function parseReservationsRoomFilter(value?: string) {
+  return (value ?? "").trim().slice(0, 40);
+}
+
+export function parseReservationsPayFilter(value?: string): ReservationsPayFilter {
+  if (
+    value === "Paid" ||
+    value === "Unpaid" ||
+    value === "No charge" ||
+    value === "No price" ||
+    value === "Transfer to verify"
+  ) {
+    return value;
+  }
+  return "all";
+}
+
+export function nextReservationsSortDir(
+  currentSort: ReservationsSortKey,
+  currentDir: ReservationsSortDir,
+  nextSort: ReservationsSortKey,
+): ReservationsSortDir {
+  if (currentSort === nextSort) {
+    return currentDir === "asc" ? "desc" : "asc";
+  }
+  return nextSort === "booked" || nextSort === "stay" ? "desc" : "asc";
+}
+
 export function reservationsListHref(options: {
   from: string;
   to: string;
   ledger?: ReservationsLedgerFilter;
   source?: BookingSource | "website" | "all";
   query?: string;
+  room?: string;
+  pay?: ReservationsPayFilter;
+  sort?: ReservationsSortKey;
+  dir?: ReservationsSortDir;
 }) {
   const params = new URLSearchParams();
   params.set("from", options.from);
@@ -524,6 +692,22 @@ export function reservationsListHref(options: {
   const query = parseReservationsQuery(options.query);
   if (query) {
     params.set("q", query);
+  }
+  const room = parseReservationsRoomFilter(options.room);
+  if (room) {
+    params.set("room", room);
+  }
+  const pay = options.pay ?? "all";
+  if (pay !== "all") {
+    params.set("pay", pay);
+  }
+  const sort = options.sort ?? "stay";
+  const dir = options.dir ?? "asc";
+  if (sort !== "stay") {
+    params.set("sort", sort);
+  }
+  if (dir !== "asc") {
+    params.set("dir", dir);
   }
   return `/staff/reservations?${params.toString()}`;
 }

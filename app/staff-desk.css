@@ -474,6 +474,200 @@
   }
 }
 
+.staff-desk__row-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.staff-desk__row-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.staff-desk__rail-button {
+  display: flex;
+  width: 100%;
+  min-height: 3.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.staff-desk__rail-button[aria-current="true"] {
+  background: var(--color-maroon-wash);
+}
+
+.staff-desk__details {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.staff-desk__details div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.staff-desk__details dt {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.staff-desk__details dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.staff-desk__ingredient-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.staff-desk__ingredient-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5rem auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.staff-desk__ingredient-list small {
+  display: block;
+  color: var(--color-muted);
+}
+
+.staff-desk__form--dialog {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.staff-desk__filter--client {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.staff-combo {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.staff-combo__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  left: 0;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--color-ink) 12%, transparent);
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.staff-combo__option {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.staff-combo__option:hover,
+.staff-combo__option--active {
+  background: var(--color-maroon-wash);
+}
+
+.staff-combo__empty {
+  padding: 0.7rem;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.staff-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+}
+
+.staff-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--color-ink) 42%, transparent);
+  cursor: pointer;
+}
+
+.staff-dialog__panel {
+  position: relative;
+  z-index: 1;
+  width: min(40rem, 100%);
+  max-height: min(90vh, 52rem);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--color-ink) 18%, transparent);
+}
+
+.staff-dialog__head,
+.staff-dialog__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.staff-dialog__foot {
+  border-bottom: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.staff-dialog__head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.staff-dialog__body {
+  padding: var(--space-4);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .staff-desk__rail-list a,
   .staff-desk .button {

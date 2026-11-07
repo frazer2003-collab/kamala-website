@@ -676,3 +676,36 @@ export async function saveDeskLaundry(input: {
   if (!data) throw new Error("Laundry record was not created.");
   return data.id;
 }
+
+export async function deleteDeskLaundry(id: string) {
+  const { error } = await client()
+    .from("desk_laundry_records")
+    .delete()
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", id);
+  throwIfError(error);
+}
+
+export async function deleteDeskSellable(id: string) {
+  const { error } = await client()
+    .from("desk_sellable_items")
+    .update({
+      active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", id);
+  throwIfError(error);
+}
+
+export async function deleteDeskCountedItem(id: string) {
+  const { error } = await client()
+    .from("desk_counted_items")
+    .update({
+      active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", id);
+  throwIfError(error);
+}
