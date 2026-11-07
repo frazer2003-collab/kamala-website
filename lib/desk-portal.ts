@@ -5,7 +5,8 @@ import { getStaffSessionSecret, hasStaffAuthConfig } from "@/lib/staff-session-e
 export const STAFF_PORTAL_COOKIE_NAME = "kamala_desk_portal";
 export type DeskPortalKind = "bills" | "laundry";
 
-const PORTAL_MAX_AGE_SECONDS = 12 * 60 * 60;
+/** Align with staff idle window so a forgotten tablet does not stay open all day. */
+const PORTAL_MAX_AGE_SECONDS = 45 * 60;
 
 export function getDeskPortalPasscode(kind: DeskPortalKind) {
   if (kind === "bills") {

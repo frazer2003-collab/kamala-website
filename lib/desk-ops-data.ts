@@ -450,7 +450,7 @@ export async function listDeskSellables(): Promise<DeskSellableItem[]> {
 /** Create or reuse a 1:1 sellable so counted stock can be sold on bills. */
 export async function ensureSellableForCountedItem(
   countedItemId: string,
-  priceSatang = 5000,
+  priceSatang?: number,
 ): Promise<string> {
   const [countedItems, sellables] = await Promise.all([
     listDeskCountedItems(),
@@ -469,6 +469,13 @@ export async function ensureSellableForCountedItem(
       item.ingredients[0]?.quantity === 1,
   );
   if (existing) return existing.id;
+  if (
+    priceSatang == null ||
+    !Number.isSafeInteger(priceSatang) ||
+    priceSatang < 0
+  ) {
+    throw new Error("Enter a baht price for this stock item.");
+  }
   return saveDeskSellable({
     nameTh: counted.nameTh,
     nameEn: counted.nameEn,

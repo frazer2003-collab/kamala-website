@@ -15,9 +15,19 @@ import "@/app/staff-session-idle.css";
 const ACTIVITY_THROTTLE_MS = 1000;
 const TICK_MS = 1000;
 
-function readSharedActivity(fallback: number) {
+type StaffSessionIdleGuardProps = {
+  /** localStorage key shared across tabs of the same session kind. */
+  storageKey?: string;
+  timeoutMs?: number;
+  /** Server action that signs the user out. */
+  onLogout?: () => void | Promise<void>;
+  /** Shown in the idle copy (“This … has been idle”). */
+  surfaceLabel?: string;
+};
+
+function readSharedActivity(storageKey: string, fallback: number) {
   try {
-    const raw = window.localStorage.getItem(STAFF_IDLE_STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
     if (Number.isFinite(parsed) && parsed > 0) {
       return Math.max(fallback, parsed);
@@ -28,11 +38,19 @@ function readSharedActivity(fallback: number) {
   return fallback;
 }
 
-function writeSharedActivity(at: number) {
+function writeSharedActivity(storageKey: string, at: number) {
   try {
-    window.localStorage.setItem(STAFF_IDLE_STORAGE_KEY, String(at));
+    window.localStorage.setItem(storageKey, String(at));
   } catch {
     // Ignore quota / privacy errors.
+  }
+}
+
+function clearSharedActivity(storageKey: string) {
+  try {
+    window.localStorage.removeItem(storageKey);
+  } catch {
+    // Private mode / blocked storage.
   }
 }
 
@@ -40,20 +58,25 @@ function writeSharedActivity(at: number) {
  * Signs staff out after a long idle stretch so forgotten tabs
  * do not keep a front-desk session open overnight.
  */
-export function StaffSessionIdleGuard() {
+export function StaffSessionIdleGuard({
+  storageKey = STAFF_IDLE_STORAGE_KEY,
+  timeoutMs = STAFF_IDLE_TIMEOUT_MS,
+  onLogout = logoutStaff,
+  surfaceLabel = "staff page",
+}: StaffSessionIdleGuardProps = {}) {
   const titleId = useId();
   const stayButtonRef = useRef<HTMLButtonElement>(null);
   const lastActivityRef = useRef(Date.now());
   const lastWriteRef = useRef(0);
   const signingOutRef = useRef(false);
   const [phase, setPhase] = useState<"active" | "warning">("active");
-  const [msRemaining, setMsRemaining] = useState(STAFF_IDLE_TIMEOUT_MS);
+  const [msRemaining, setMsRemaining] = useState(timeoutMs);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     const boot = Date.now();
-    lastActivityRef.current = readSharedActivity(boot);
-    writeSharedActivity(lastActivityRef.current);
+    lastActivityRef.current = readSharedActivity(storageKey, boot);
+    writeSharedActivity(storageKey, lastActivityRef.current);
 
     function markActivity() {
       if (signingOutRef.current) {
@@ -63,7 +86,7 @@ export function StaffSessionIdleGuard() {
       lastActivityRef.current = now;
       if (now - lastWriteRef.current >= ACTIVITY_THROTTLE_MS) {
         lastWriteRef.current = now;
-        writeSharedActivity(now);
+        writeSharedActivity(storageKey, now);
       }
       setPhase((current) => (current === "warning" ? "active" : current));
     }
@@ -73,9 +96,12 @@ export function StaffSessionIdleGuard() {
         return;
       }
       signingOutRef.current = true;
-      clearStaffIdleActivity();
+      clearSharedActivity(storageKey);
+      if (storageKey === STAFF_IDLE_STORAGE_KEY) {
+        clearStaffIdleActivity();
+      }
       startTransition(() => {
-        void logoutStaff();
+        void onLogout();
       });
     }
 
@@ -84,10 +110,10 @@ export function StaffSessionIdleGuard() {
         return;
       }
       const now = Date.now();
-      const lastActivity = readSharedActivity(lastActivityRef.current);
+      const lastActivity = readSharedActivity(storageKey, lastActivityRef.current);
       lastActivityRef.current = lastActivity;
-      const nextPhase = staffIdlePhase(now, lastActivity);
-      const remaining = staffIdleMsRemaining(now, lastActivity);
+      const nextPhase = staffIdlePhase(now, lastActivity, timeoutMs);
+      const remaining = staffIdleMsRemaining(now, lastActivity, timeoutMs);
       setMsRemaining(remaining);
 
       if (nextPhase === "expired") {
@@ -118,7 +144,7 @@ export function StaffSessionIdleGuard() {
     }
 
     function onStorage(event: StorageEvent) {
-      if (event.key === STAFF_IDLE_STORAGE_KEY) {
+      if (event.key === storageKey) {
         evaluate();
       }
     }
@@ -136,7 +162,7 @@ export function StaffSessionIdleGuard() {
       window.removeEventListener("storage", onStorage);
       window.clearInterval(tickId);
     };
-  }, []);
+  }, [onLogout, storageKey, timeoutMs]);
 
   useEffect(() => {
     if (phase !== "warning") {
@@ -149,7 +175,7 @@ export function StaffSessionIdleGuard() {
     return null;
   }
 
-  const minutes = Math.round(STAFF_IDLE_TIMEOUT_MS / 60_000);
+  const minutes = Math.round(timeoutMs / 60_000);
 
   return (
     <div
@@ -161,7 +187,7 @@ export function StaffSessionIdleGuard() {
       <div className="staff-session-idle__panel">
         <h2 id={titleId}>Still there?</h2>
         <p>
-          This staff page has been idle. For safety we sign out after{" "}
+          This {surfaceLabel} has been idle. For safety we sign out after{" "}
           {minutes} minutes without use, so a forgotten tab does not stay open.
         </p>
         <p className="staff-session-idle__countdown" aria-live="polite">
@@ -175,9 +201,9 @@ export function StaffSessionIdleGuard() {
               const now = Date.now();
               lastActivityRef.current = now;
               lastWriteRef.current = now;
-              writeSharedActivity(now);
+              writeSharedActivity(storageKey, now);
               setPhase("active");
-              setMsRemaining(STAFF_IDLE_TIMEOUT_MS);
+              setMsRemaining(timeoutMs);
             }}
             ref={stayButtonRef}
             type="button"
@@ -189,9 +215,12 @@ export function StaffSessionIdleGuard() {
             disabled={pending}
             onClick={() => {
               signingOutRef.current = true;
-              clearStaffIdleActivity();
+              clearSharedActivity(storageKey);
+              if (storageKey === STAFF_IDLE_STORAGE_KEY) {
+                clearStaffIdleActivity();
+              }
               startTransition(() => {
-                void logoutStaff();
+                void onLogout();
               });
             }}
             type="button"

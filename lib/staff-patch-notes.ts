@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-desk-money-integrity",
+    date: "2026-11-07",
+    title: "Stock prices on bills and safer portals",
+    summary:
+      "Selling stock on a bill asks for a baht price. Clear warns when lines have no recipe. Desk portals sign out when idle.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Bill popup with stock price field and clear warning",
+    },
+    changes: [
+      "Adding a stock item to a bill requires a baht price the first time (no silent ฿50).",
+      "Clear bill warns if any lines have no recipe and will not cut stock.",
+      "Bills and laundry portals use a shorter session and the same idle sign-out as full staff.",
+    ],
+  },
+  {
     id: "2026-11-07-bill-item-pick",
     date: "2026-11-07",
     title: "Bill item pick shows the chosen name",

@@ -89,3 +89,20 @@ export function planBillClear(
 
   return movements;
 }
+
+/** Sellable ids on the bill that will not post stock when cleared (empty recipe). */
+export function billLineSellableIdsWithoutStockCut(
+  lines: readonly DeskBillLine[],
+  sellables: readonly DeskSellableForBill[],
+): string[] {
+  const byId = sellableMap(sellables);
+  const missing: string[] = [];
+  for (const line of lines) {
+    const sellable = byId.get(line.sellableItemId);
+    if (!sellable) continue;
+    if (sellable.ingredients.length === 0 && !missing.includes(sellable.id)) {
+      missing.push(sellable.id);
+    }
+  }
+  return missing;
+}

@@ -12,9 +12,12 @@ import {
 import { StaffCombo } from "@/components/staff-combo";
 import { StaffDialog } from "@/components/staff-dialog";
 import { useStaffLocale } from "@/components/staff-locale";
-import { billTotalSatang } from "@/lib/desk-bills";
+import {
+  billLineSellableIdsWithoutStockCut,
+  billTotalSatang,
+} from "@/lib/desk-bills";
 import { bilingualItemLabel } from "@/lib/desk-items";
-import { formatSatang } from "@/lib/desk-money";
+import { formatSatang, satangToBaht } from "@/lib/desk-money";
 import type {
   DeskBill,
   DeskCountedItem,
@@ -48,6 +51,10 @@ export function StaffDeskBills({
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [stockPick, setStockPick] = useState<{
+    countedId: string;
+    priceBaht: string;
+  } | null>(null);
   const selected = useMemo(
     () => bills.find((bill) => bill.id === selectedId) ?? null,
     [bills, selectedId],
@@ -56,6 +63,21 @@ export function StaffDeskBills({
     () => new Map(sellables.map((item) => [item.id, item])),
     [sellables],
   );
+  const stockSellableByCountedId = useMemo(() => {
+    const map = new Map<string, DeskSellableItem>();
+    for (const item of sellables) {
+      if (
+        !item.active ||
+        item.ingredients.length !== 1 ||
+        item.ingredients[0]?.quantity !== 1
+      ) {
+        continue;
+      }
+      const countedId = item.ingredients[0]?.countedItemId;
+      if (countedId && !map.has(countedId)) map.set(countedId, item);
+    }
+    return map;
+  }, [sellables]);
   const itemOptions = useMemo(() => {
     const menu = sellables
       .filter((item) => item.active)
@@ -66,13 +88,25 @@ export function StaffDeskBills({
       }));
     const stock = countedItems
       .filter((item) => item.active)
-      .map((item) => ({
-        value: `stock:${item.id}`,
-        label: `${bilingualItemLabel(item)} · stock`,
-        keywords: `${item.nameEn} ${item.nameTh} stock counted`,
-      }));
+      .map((item) => {
+        const linked = stockSellableByCountedId.get(item.id);
+        return {
+          value: `stock:${item.id}`,
+          label: linked
+            ? `${bilingualItemLabel(item)} · stock · ${formatSatang(linked.priceSatang)}`
+            : `${bilingualItemLabel(item)} · stock · set price`,
+          keywords: `${item.nameEn} ${item.nameTh} stock counted`,
+        };
+      });
     return [...menu, ...stock];
-  }, [sellables, countedItems]);
+  }, [sellables, countedItems, stockSellableByCountedId]);
+  const clearWithoutStockIds = useMemo(
+    () =>
+      selected
+        ? billLineSellableIdsWithoutStockCut(selected.lines, sellables)
+        : [],
+    [selected, sellables],
+  );
 
   useEffect(() => {
     setSelectedId(initialOpenId);
@@ -80,6 +114,7 @@ export function StaffDeskBills({
 
   useEffect(() => {
     setConfirmClear(false);
+    setStockPick(null);
   }, [selectedId]);
 
   useEffect(() => {
@@ -190,6 +225,14 @@ export function StaffDeskBills({
                 <p className="staff-desk__clear-confirm-note">
                   {t("bills.clearConfirmNote")}
                 </p>
+                {clearWithoutStockIds.length ? (
+                  <p className="staff-desk__clear-confirm-note" role="status">
+                    {t("bills.clearNoStockWarn").replace(
+                      "{n}",
+                      String(clearWithoutStockIds.length),
+                    )}
+                  </p>
+                ) : null}
                 <div className="staff-desk__clear-confirm-actions">
                   <button className="button button--primary" type="submit">
                     {t("bills.clearConfirm")}
@@ -360,11 +403,44 @@ export function StaffDeskBills({
                     id="bill-item"
                     label={t("bills.addItem")}
                     name="sellable-item-id"
+                    onSelect={(option) => {
+                      if (!option?.value.startsWith("stock:")) {
+                        setStockPick(null);
+                        return;
+                      }
+                      const countedId = option.value.slice("stock:".length);
+                      const linked = stockSellableByCountedId.get(countedId);
+                      setStockPick({
+                        countedId,
+                        priceBaht: linked
+                          ? String(satangToBaht(linked.priceSatang))
+                          : "",
+                      });
+                    }}
                     options={itemOptions}
                     placeholder={t("desk.typeToSearch")}
                     required
                   />
                 </div>
+                {stockPick ? (
+                  <div className="field-pair staff-desk__quantity">
+                    <label htmlFor="bill-stock-price">
+                      {t("bills.stockPrice")}
+                    </label>
+                    <input
+                      id="bill-stock-price"
+                      inputMode="decimal"
+                      key={`stock-price-${stockPick.countedId}-${stockPick.priceBaht}`}
+                      min="0"
+                      name="stock-price-baht"
+                      placeholder="0"
+                      required={!stockSellableByCountedId.has(stockPick.countedId)}
+                      step="0.01"
+                      type="number"
+                      defaultValue={stockPick.priceBaht}
+                    />
+                  </div>
+                ) : null}
                 <div className="field-pair staff-desk__quantity">
                   <label htmlFor="bill-quantity">{t("bills.qty")}</label>
                   <input

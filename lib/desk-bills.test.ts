@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { billTotalSatang, planBillClear } from "./desk-bills";
+import {
+  billLineSellableIdsWithoutStockCut,
+  billTotalSatang,
+  planBillClear,
+} from "./desk-bills";
 
 const sellables = [
   {
@@ -15,6 +19,11 @@ const sellables = [
     id: "coffee",
     priceSatang: 8000,
     ingredients: [{ countedItemId: "beans", quantity: 18 }],
+  },
+  {
+    id: "tour",
+    priceSatang: 150000,
+    ingredients: [],
   },
 ];
 
@@ -76,6 +85,20 @@ describe("desk bills", () => {
         sellables,
       ),
       [],
+    );
+  });
+
+  it("lists sellables on the bill that will not cut stock", () => {
+    assert.deepEqual(
+      billLineSellableIdsWithoutStockCut(
+        [
+          { sellableItemId: "breakfast", quantity: 1 },
+          { sellableItemId: "tour", quantity: 2 },
+          { sellableItemId: "tour", quantity: 1 },
+        ],
+        sellables,
+      ),
+      ["tour"],
     );
   });
 });

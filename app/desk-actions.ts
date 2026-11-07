@@ -215,9 +215,14 @@ export async function updateBill(formData: FormData) {
   redirect(billsReturnWithOpen(formData, billId));
 }
 
-async function resolveBillSellableId(raw: string) {
+async function resolveBillSellableId(formData: FormData, raw: string) {
   if (raw.startsWith("stock:")) {
-    return ensureSellableForCountedItem(raw.slice("stock:".length));
+    const priceRaw = value(formData, "stock-price-baht");
+    const priceSatang = priceRaw ? parseBahtToSatang(priceRaw) : null;
+    return ensureSellableForCountedItem(
+      raw.slice("stock:".length),
+      priceSatang === null ? undefined : priceSatang,
+    );
   }
   return raw;
 }
@@ -228,6 +233,7 @@ export async function addBillLine(formData: FormData) {
   const bill = await loadDeskBill(billId);
   if (!bill || bill.status !== "open") throw new Error("This bill is not open.");
   const sellableItemId = await resolveBillSellableId(
+    formData,
     required(formData, "sellable-item-id", "Item"),
   );
   await addDeskBillLine({
