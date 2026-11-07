@@ -19,6 +19,7 @@ import {
   saveDeskCountedItem,
   saveDeskLaundry,
   saveDeskSellable,
+  updateDeskBill,
 } from "@/lib/desk-ops-data";
 import {
   DESK_COUNTED_UNITS,
@@ -78,6 +79,10 @@ function safeDeskReturnTo(formData: FormData, fallback: string) {
     return next;
   }
   return fallback;
+}
+
+function billsReturnWithOpen(formData: FormData, billId: string) {
+  return `${safeDeskReturnTo(formData, "/staff/bills")}?open=${encodeURIComponent(billId)}`;
 }
 
 async function requireDeskWriteAccess(kind: "bills" | "laundry" | "stock" | "items") {
@@ -189,19 +194,25 @@ export async function deactivateCountedItem(formData: FormData) {
 export async function createBill(formData: FormData) {
   await requireDeskWriteAccess("bills");
   const id = await createDeskBill({
+    name: value(formData, "name") || "New bill",
+    room: value(formData, "room") || null,
+  });
+  revalidateDesk();
+  redirect(billsReturnWithOpen(formData, id));
+}
+
+export async function updateBill(formData: FormData) {
+  await requireDeskWriteAccess("bills");
+  const billId = required(formData, "bill-id", "Bill");
+  const bill = await loadDeskBill(billId);
+  if (!bill || bill.status !== "open") throw new Error("This bill is not open.");
+  await updateDeskBill({
+    id: billId,
     name: required(formData, "name", "Bill name"),
     room: value(formData, "room") || null,
   });
-  const rawSellable = value(formData, "sellable-item-id");
-  if (rawSellable) {
-    await addDeskBillLine({
-      billId: id,
-      sellableItemId: await resolveBillSellableId(rawSellable),
-      quantity: positiveInteger(formData, "quantity", 1),
-    });
-  }
   revalidateDesk();
-  redirect(safeDeskReturnTo(formData, "/staff/bills"));
+  redirect(billsReturnWithOpen(formData, billId));
 }
 
 async function resolveBillSellableId(raw: string) {
@@ -225,7 +236,7 @@ export async function addBillLine(formData: FormData) {
     quantity: positiveInteger(formData, "quantity", 1),
   });
   revalidateDesk();
-  redirect(safeDeskReturnTo(formData, "/staff/bills"));
+  redirect(billsReturnWithOpen(formData, billId));
 }
 
 export async function removeBillLine(formData: FormData) {
@@ -235,7 +246,7 @@ export async function removeBillLine(formData: FormData) {
   if (!bill || bill.status !== "open") throw new Error("This bill is not open.");
   await removeDeskBillLine(required(formData, "line-id", "Bill line"));
   revalidateDesk();
-  redirect(safeDeskReturnTo(formData, "/staff/bills"));
+  redirect(billsReturnWithOpen(formData, billId));
 }
 
 export async function clearBill(formData: FormData) {

@@ -623,6 +623,24 @@ export async function createDeskBill(input: {
   return data.id;
 }
 
+export async function updateDeskBill(input: {
+  id: string;
+  name: string;
+  room?: string | null;
+}) {
+  const { error } = await client()
+    .from("desk_bills")
+    .update({
+      name: input.name,
+      room: input.room || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", input.id)
+    .eq("status", "open");
+  throwIfError(error);
+}
+
 export async function addDeskBillLine(input: {
   billId: string;
   sellableItemId: string;

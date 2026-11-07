@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { StaffDeskBills } from "@/components/staff-desk-bills";
+import { StaffDeskBills, StaffNewBillButton } from "@/components/staff-desk-bills";
 import { StaffShell } from "@/components/staff-shell";
 import {
   listDeskBills,
@@ -14,9 +13,14 @@ import "@/app/staff-desk.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffBillsPage() {
+export default async function StaffBillsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ open?: string }>;
+}) {
   await requireStaffSession();
   const locale = await getStaffLocale();
+  const { open } = await searchParams;
   const [bills, sellables, countedItems] = await Promise.all([
     listDeskBills(),
     listDeskSellables(),
@@ -31,9 +35,7 @@ export default async function StaffBillsPage() {
             <h1 id="desk-bills-title">{staffT(locale, "bills.title")}</h1>
             <p>{staffT(locale, "bills.intro")}</p>
           </div>
-          <Link className="button button--primary" href="/staff/bills/new">
-            {staffT(locale, "bills.new")}
-          </Link>
+          <StaffNewBillButton label={staffT(locale, "bills.new")} />
         </header>
 
         {!hasStaffSupabaseConfig() ? (
@@ -44,6 +46,7 @@ export default async function StaffBillsPage() {
           <StaffDeskBills
             bills={bills}
             countedItems={countedItems}
+            initialOpenId={open ?? null}
             sellables={sellables}
           />
         )}

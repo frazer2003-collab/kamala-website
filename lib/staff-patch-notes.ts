@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-07-live-bills",
+    date: "2026-11-07",
+    title: "New bill opens a live tab",
+    summary:
+      "Pressing New bill creates the open tab immediately. Items save to that bill as you add them so the desk stays accurate.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff desk bills list with an open live tab",
+    },
+    changes: [
+      "New bill creates an open tab right away and opens it for naming and items.",
+      "Each add or remove updates the bill record immediately for anyone on Bills.",
+      "The bills list refreshes every few seconds so the desk sees open tabs and lines live.",
+    ],
+  },
+  {
     id: "2026-11-07-desk-portals-home",
     date: "2026-11-07",
     title: "Menu items, desk portals, and priority Home",

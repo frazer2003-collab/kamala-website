@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { StaffDeskBills } from "@/components/staff-desk-bills";
+import { StaffDeskBills, StaffNewBillButton } from "@/components/staff-desk-bills";
 import { StaffLocaleProvider } from "@/components/staff-locale";
 import { StaffPortalShell } from "@/components/staff-portal-shell";
 import {
@@ -15,12 +14,17 @@ import "@/app/staff-ops.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function PortalBillsPage() {
+export default async function PortalBillsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ open?: string }>;
+}) {
   const portal = await getDeskPortalSession();
   if (!portal || portal.kind !== "bills") {
     redirect("/staff/portal/login?portal=bills");
   }
   const locale = await getStaffLocale();
+  const { open } = await searchParams;
   const [bills, sellables, countedItems] = await Promise.all([
     listDeskBills(),
     listDeskSellables(),
@@ -36,14 +40,15 @@ export default async function PortalBillsPage() {
               <h1 id="portal-bills-title">Bills</h1>
               <p>Open tabs, add menu or stock items, then clear when paid.</p>
             </div>
-            <Link className="button button--primary" href="/staff/portal/bills/new">
-              New bill
-            </Link>
+            <StaffNewBillButton
+              label="New bill"
+              returnTo="/staff/portal/bills"
+            />
           </header>
           <StaffDeskBills
             bills={bills}
             countedItems={countedItems}
-            newBillHref="/staff/portal/bills/new"
+            initialOpenId={open ?? null}
             returnTo="/staff/portal/bills"
             sellables={sellables}
           />
