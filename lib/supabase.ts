@@ -50,6 +50,8 @@ export type BookingRequestRow = {
   conversation_token: string | null;
   room_unit_id: string | null;
   bed_setup?: string | null;
+  /** Last day staff marked the room cleaned for this stay (Home deep-clean board). */
+  housekeeping_cleaned_on?: string | null;
   discount_code_id?: string | null;
   discount_code_text?: string | null;
   /** Guest-requested move waiting on a Thai bank top-up that staff must confirm. */

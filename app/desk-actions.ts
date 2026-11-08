@@ -308,6 +308,12 @@ export async function createTourSale(formData: FormData) {
   const session = await getStaffSession();
   const name = required(formData, "name", "Trip or tour name");
   const guestName = value(formData, "guest-name") || null;
+  const pickupRaw = value(formData, "pickup-time").trim();
+  const pickupTime = pickupRaw
+    ? pickupRaw.length === 5
+      ? pickupRaw
+      : pickupRaw.slice(0, 5)
+    : null;
   const id = await saveDeskTourSale({
     name,
     amountSatang,
@@ -315,6 +321,7 @@ export async function createTourSale(formData: FormData) {
     staffNote: value(formData, "staff-note") || null,
     saleDate,
     tripDate,
+    pickupTime,
     paymentStatus,
     guestName,
     guestPhone: value(formData, "guest-phone") || null,

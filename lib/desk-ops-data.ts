@@ -148,6 +148,7 @@ type TourSaleRow = {
   staff_note: string | null;
   sale_date: string;
   trip_date: string | null;
+  pickup_time?: string | null;
   payment_status: string;
   guest_name: string | null;
   guest_phone: string | null;
@@ -307,6 +308,8 @@ export type DeskTourSale = {
   staffNote: string | null;
   saleDate: string;
   tripDate: string | null;
+  /** Bangkok local HH:MM on tripDate. */
+  pickupTime: string | null;
   paymentStatus: DeskTourPaymentStatus;
   guestName: string | null;
   guestPhone: string | null;
@@ -465,6 +468,7 @@ function parseTourPaymentStatus(value: string | null | undefined): DeskTourPayme
 }
 
 export function mapTourSaleRow(row: TourSaleRow): DeskTourSale {
+  const pickupRaw = row.pickup_time?.trim() || null;
   return {
     id: row.id,
     name: row.name,
@@ -473,6 +477,7 @@ export function mapTourSaleRow(row: TourSaleRow): DeskTourSale {
     staffNote: row.staff_note,
     saleDate: row.sale_date,
     tripDate: row.trip_date,
+    pickupTime: pickupRaw,
     paymentStatus: parseTourPaymentStatus(row.payment_status),
     guestName: row.guest_name,
     guestPhone: row.guest_phone,
@@ -1118,6 +1123,7 @@ export async function saveDeskTourSale(input: {
   staffNote?: string | null;
   saleDate: string;
   tripDate?: string | null;
+  pickupTime?: string | null;
   paymentStatus?: DeskTourPaymentStatus;
   guestName?: string | null;
   guestPhone?: string | null;
@@ -1135,6 +1141,7 @@ export async function saveDeskTourSale(input: {
       staff_note: input.staffNote || null,
       sale_date: input.saleDate,
       trip_date: tripDate,
+      pickup_time: input.pickupTime?.trim() || null,
       payment_status: input.paymentStatus ?? "unpaid",
       guest_name: input.guestName?.trim() || null,
       guest_phone: input.guestPhone?.trim() || null,

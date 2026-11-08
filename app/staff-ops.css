@@ -648,6 +648,112 @@
   gap: var(--space-3);
 }
 
+.staff-home-board {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.staff-home-board__section {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.staff-home-board__section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.staff-home-board__section-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.staff-home-board__count {
+  min-width: 1.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.staff-home-board__empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.staff-home-board__list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-home-board__row {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.55rem;
+  background: var(--color-surface-muted);
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.staff-home-board__row:hover,
+.staff-home-board__row:focus-visible {
+  border-color: color-mix(in srgb, var(--color-maroon) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-maroon-wash) 40%, var(--color-surface));
+}
+
+.staff-home-board__row strong {
+  font-size: 0.95rem;
+}
+
+.staff-home-board__row span {
+  color: var(--color-muted);
+  font-size: 0.84rem;
+}
+
+.staff-home-board__cta {
+  color: var(--color-maroon) !important;
+  font-weight: 600;
+}
+
+.staff-home-board__split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.staff-home-board__clean {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+@media (max-width: 800px) {
+  .staff-home-board__split {
+    grid-template-columns: 1fr;
+  }
+}
+
 .staff-home-attention {
   display: grid;
   gap: var(--space-3);

@@ -18,6 +18,24 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-home-ops-board",
+    date: "2026-11-08",
+    title: "Home is today’s ops board",
+    summary:
+      "Home now lists bank to confirm, today’s check-ins/outs, upcoming tour pickups, 3-night cleans, and unanswered messages. Notifications left the Stay nav.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff Home board with bank, moves, tours, cleans, and messages",
+    },
+    changes: [
+      "Bank to confirm: Thai bank website payments with confirm/reject on Home.",
+      "Check-in / check-out today lists with door numbers.",
+      "Tours show from 24h before pickup until 6h after — set Pickup time on Trips.",
+      "Deep clean due after 3 nights in-house; Cleaned clears the row until the next 3 nights.",
+      "Needs reply lists unanswered guest threads. Notifications removed from Stay nav.",
+    ],
+  },
+  {
     id: "2026-11-08-calendar-bed-edit",
     date: "2026-11-08",
     title: "Change bed type on calendar stays",

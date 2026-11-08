@@ -37,6 +37,8 @@ export type StaffBooking = Booking & {
   stripePaymentIntentId: string | null;
   /** How staff collected payment when they marked Paid (not Stripe). */
   paymentCollectedVia?: PaymentCollectedVia | null;
+  /** Last day staff marked this stay cleaned (Home deep-clean board). */
+  housekeepingCleanedOn?: string | null;
   /** Guest move waiting on a bank top-up staff must confirm. */
   pendingStayChange?: StaffStayChange | null;
   /** Bank refund staff still owe after a cheaper guest change. */
@@ -143,6 +145,7 @@ export function mapBookingRequest(
     roomUnitId: roomUnitIdOverride ?? row.room_unit_id ?? null,
     roomNumber: null,
     bedSetup: parseBedSetup(row.bed_setup),
+    housekeepingCleanedOn: row.housekeeping_cleaned_on ?? null,
     pendingStayChange:
       row.pending_room_id && row.pending_arrival_date && row.pending_departure_date
         ? {

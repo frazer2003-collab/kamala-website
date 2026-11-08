@@ -267,12 +267,6 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         label: t("nav.stay"),
         items: [
           {
-            id: "requests" as const,
-            href: "/staff/transfers",
-            label: t("nav.notifications"),
-            icon: <IconTransfers />,
-          },
-          {
             id: "calendar" as const,
             href: "/staff/calendar",
             label: t("nav.calendar"),

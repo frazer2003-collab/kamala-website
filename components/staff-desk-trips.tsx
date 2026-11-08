@@ -222,6 +222,14 @@ export function StaffDeskTrips({
                   />
                 </div>
                 <div className="field-pair">
+                  <label htmlFor="trip-pickup">{t("trips.pickupTime")}</label>
+                  <input
+                    id="trip-pickup"
+                    name="pickup-time"
+                    type="time"
+                  />
+                </div>
+                <div className="field-pair">
                   <label htmlFor="trip-sale-date">{t("trips.soldDate")}</label>
                   <input
                     defaultValue={todayIso}
