@@ -45,7 +45,7 @@ export type BookingRequestRow = {
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   bank_transfer_claimed_at: string | null;
-  /** Staff-marked Paid rail: cash or thai_bank. Null for Stripe card stays. */
+  /** Staff-marked Paid rail: cash, thai_bank, or stripe. Guest Checkout may leave this null. */
   payment_collected_via?: string | null;
   conversation_token: string | null;
   room_unit_id: string | null;

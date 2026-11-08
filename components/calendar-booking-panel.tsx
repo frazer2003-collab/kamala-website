@@ -57,7 +57,7 @@ type CalendarBookingPanelProps = {
   depositAmount?: number;
   /** Card payment that Stripe can refund. Bank transfers have no payment intent. */
   paidByCard?: boolean;
-  /** Cash or Thai bank when staff marked Paid (not Stripe). */
+  /** Cash, Thai bank, or Stripe when staff marked Paid. */
   paymentCollectedVia?: PaymentCollectedVia | null;
   bookingSource: BookingSource | null;
   estimatedTotal: number;
@@ -425,7 +425,7 @@ export function CalendarBookingPanel({
             ) : fieldIsOta && fields.depositPaid ? (
               <span className="field-help">
                 {formatBookingSource(fields.bookingSource)} stays are always
-                card — no Cash / Thai bank needed.
+                card — no Cash / Thai bank / Stripe needed.
               </span>
             ) : fields.depositPaid ? (
               <fieldset className="payment-collected-via">
@@ -464,12 +464,29 @@ export function CalendarBookingPanel({
                   />
                   Thai bank
                 </label>
+                <label>
+                  <input
+                    checked={fields.paymentCollectedVia === "stripe"}
+                    disabled={!canManage}
+                    name="payment-collected-via"
+                    onChange={() =>
+                      setFields((current) => ({
+                        ...current,
+                        paymentCollectedVia: "stripe",
+                      }))
+                    }
+                    required
+                    type="radio"
+                    value="stripe"
+                  />
+                  Stripe
+                </label>
               </fieldset>
             ) : (
               <span className="field-help">
                 Unpaid still keeps the room booked — it only reminds staff to
                 collect at check-in. Mark Paid when money is received, then
-                choose Cash or Thai bank.
+                choose Cash, Thai bank, or Stripe.
               </span>
             )}
           </div>

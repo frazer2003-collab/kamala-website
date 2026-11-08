@@ -75,6 +75,8 @@ export type ReservationRow = {
   checkOutLabel: string;
   /** ISO date (Bangkok calendar day) when the stay was booked, if known. */
   bookedAt: string | null;
+  /** Full created_at timestamp for same-day sort accuracy. */
+  bookedAtTime: string | null;
   bookedLabel: string | null;
   doorLabel: string | null;
   needsRoom: boolean;
@@ -362,6 +364,7 @@ export function buildReservationRows({
       checkInLabel: formatIsoDate(booking.arrivalDate),
       checkOutLabel: formatIsoDate(booking.departureDate),
       bookedAt,
+      bookedAtTime: booking.createdAt || null,
       bookedLabel: formatBookedLabel(bookedAt),
       doorLabel: needsRoom
         ? null
@@ -428,6 +431,7 @@ export function buildReservationRows({
       checkInLabel: formatIsoDate(block.startDate),
       checkOutLabel: formatIsoDate(block.endDate),
       bookedAt,
+      bookedAtTime: block.createdAt || null,
       bookedLabel: formatBookedLabel(bookedAt),
       doorLabel: needsRoom
         ? null
@@ -603,7 +607,10 @@ function compareReservationSortValue(
         a.label.localeCompare(b.label)
       );
     case "booked":
-      return compareNullableIso(a.bookedAt, b.bookedAt) || a.label.localeCompare(b.label);
+      return (
+        compareNullableIso(a.bookedAtTime ?? a.bookedAt, b.bookedAtTime ?? b.bookedAt) ||
+        a.label.localeCompare(b.label)
+      );
     case "room":
       return (
         a.sublabel.localeCompare(b.sublabel) ||
@@ -640,20 +647,22 @@ export function sortReservationRows(
 ) {
   const direction = dir === "desc" ? -1 : 1;
   return [...rows].sort((a, b) => {
-    // Keep unknown booked dates at the end regardless of direction.
+    // Keep unknown booked times at the end regardless of direction.
+    // Prefer full timestamps so same-day creates sort newest-first accurately.
     if (sort === "booked") {
-      if (!a.bookedAt && !b.bookedAt) {
+      const aTime = a.bookedAtTime ?? a.bookedAt;
+      const bTime = b.bookedAtTime ?? b.bookedAt;
+      if (!aTime && !bTime) {
         return a.label.localeCompare(b.label);
       }
-      if (!a.bookedAt) {
+      if (!aTime) {
         return 1;
       }
-      if (!b.bookedAt) {
+      if (!bTime) {
         return -1;
       }
       return (
-        (a.bookedAt.localeCompare(b.bookedAt) || a.label.localeCompare(b.label)) *
-        direction
+        (aTime.localeCompare(bTime) || a.label.localeCompare(b.label)) * direction
       );
     }
     return compareReservationSortValue(a, b, sort) * direction;

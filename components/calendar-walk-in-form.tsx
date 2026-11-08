@@ -113,7 +113,7 @@ function walkInErrorCopy(code?: string) {
     case "invalid-bed":
       return "Choose bed type: TWN or DBL.";
     case "payment-method":
-      return "Choose Cash or Thai bank when marking Paid (not needed for OTAs).";
+      return "Choose Cash, Thai bank, or Stripe when marking Paid (not needed for OTAs).";
     case "capacity-verify-failed":
     case "unavailable":
     case "no-assignable-door":
@@ -563,44 +563,56 @@ export function CalendarWalkInForm({
             />
             Paid
           </label>
-          {depositPaid && sourceIsOta ? (
-            <span className="field-help">
-              {formatBookingSource(bookingSource)} stays are always card —
-              no Cash / Thai bank needed.
-            </span>
-          ) : depositPaid ? (
-            <fieldset className="payment-collected-via">
-              <legend className="sr-only">How was payment collected?</legend>
-              <label>
-                <input
-                  checked={paymentCollectedVia === "cash"}
-                  disabled={!canManage || pending}
-                  name="payment-collected-via"
-                  onChange={() => setField("paymentCollectedVia", "cash")}
-                  required
-                  type="radio"
-                  value="cash"
-                />
-                Cash
-              </label>
-              <label>
-                <input
-                  checked={paymentCollectedVia === "thai_bank"}
-                  disabled={!canManage || pending}
-                  name="payment-collected-via"
-                  onChange={() => setField("paymentCollectedVia", "thai_bank")}
-                  required
-                  type="radio"
-                  value="thai_bank"
-                />
-                Thai bank
-              </label>
-            </fieldset>
-          ) : (
-            <span className="field-help">
-              Unchecked holds the room unpaid. When Paid, choose Cash or Thai bank.
-            </span>
-          )}
+            {depositPaid && sourceIsOta ? (
+              <span className="field-help">
+                {formatBookingSource(bookingSource)} stays are always card —
+                no Cash / Thai bank / Stripe needed.
+              </span>
+            ) : depositPaid ? (
+              <fieldset className="payment-collected-via">
+                <legend className="sr-only">How was payment collected?</legend>
+                <label>
+                  <input
+                    checked={paymentCollectedVia === "cash"}
+                    disabled={!canManage || pending}
+                    name="payment-collected-via"
+                    onChange={() => setField("paymentCollectedVia", "cash")}
+                    required
+                    type="radio"
+                    value="cash"
+                  />
+                  Cash
+                </label>
+                <label>
+                  <input
+                    checked={paymentCollectedVia === "thai_bank"}
+                    disabled={!canManage || pending}
+                    name="payment-collected-via"
+                    onChange={() => setField("paymentCollectedVia", "thai_bank")}
+                    required
+                    type="radio"
+                    value="thai_bank"
+                  />
+                  Thai bank
+                </label>
+                <label>
+                  <input
+                    checked={paymentCollectedVia === "stripe"}
+                    disabled={!canManage || pending}
+                    name="payment-collected-via"
+                    onChange={() => setField("paymentCollectedVia", "stripe")}
+                    required
+                    type="radio"
+                    value="stripe"
+                  />
+                  Stripe
+                </label>
+              </fieldset>
+            ) : (
+              <span className="field-help">
+                Unchecked holds the room unpaid. When Paid, choose Cash, Thai bank, or Stripe.
+              </span>
+            )}
         </div>
 
         <div className="field-pair field-pair--wide">

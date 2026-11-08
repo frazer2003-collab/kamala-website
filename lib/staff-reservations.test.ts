@@ -353,6 +353,36 @@ describe("filterReservationRows", () => {
     assert.equal(byStay[0]?.arrivalDate, "2026-08-03");
   });
 
+  it("sorts same-day bookings by exact created time", () => {
+    const sameDay = buildReservationRows({
+      bookings: [
+        websiteBooking({
+          id: "older",
+          guest: "Older today",
+          arrivalDate: "2026-08-20",
+          departureDate: "2026-08-21",
+          createdAt: "2026-08-01T02:00:00.000Z",
+        }),
+        websiteBooking({
+          id: "newer",
+          guest: "Newer today",
+          arrivalDate: "2026-08-10",
+          departureDate: "2026-08-11",
+          createdAt: "2026-08-01T10:00:00.000Z",
+        }),
+      ],
+      blocks: [],
+      knownUnitIds: new Set(["unit-1"]),
+      fromIso: "2026-08-01",
+      toIso: "2026-08-31",
+      todayIso: "2026-08-01",
+    });
+    const newestFirst = sortReservationRows(sameDay, "booked", "desc");
+    assert.equal(newestFirst[0]?.id, "newer");
+    assert.equal(newestFirst[1]?.id, "older");
+    assert.equal(newestFirst[0]?.bookedAt, newestFirst[1]?.bookedAt);
+  });
+
   it("keeps unknown booked dates last when sorting newest first", () => {
     const withMissing = [
       ...rows,
@@ -361,6 +391,7 @@ describe("filterReservationRows", () => {
         id: "no-booked",
         label: "Unknown booked",
         bookedAt: null,
+        bookedAtTime: null,
         bookedLabel: null,
       },
     ];

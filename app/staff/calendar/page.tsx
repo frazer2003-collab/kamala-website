@@ -328,7 +328,7 @@ export default async function StaffCalendarPage({
           : error === "invalid-source"
             ? "Choose a booking source."
           : error === "payment-method"
-            ? "Choose Cash or Thai bank when marking Paid (not needed for Airbnb, Booking.com, or Expedia)."
+            ? "Choose Cash, Thai bank, or Stripe when marking Paid (not needed for Airbnb, Booking.com, or Expedia)."
           : error === "cancel-reason"
             ? "Choose whether this is a cancellation or a no-show before removing the stay."
           : error === "refund-failed"

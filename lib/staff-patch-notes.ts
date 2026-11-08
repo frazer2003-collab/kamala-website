@@ -18,6 +18,21 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-booked-sort-stripe",
+    date: "2026-11-08",
+    title: "All bookings newest-first by time · Stripe paid option",
+    summary:
+      "Same-day bookings now sort by exact booked time. Paid can be Cash, Thai bank, or Stripe.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "All bookings sorted by booked time with Stripe paid option",
+    },
+    changes: [
+      "All bookings Booked sort uses the full create time, so today’s newest stay is on top.",
+      "New booking and stay edit Paid checklist adds Stripe beside Cash and Thai bank.",
+    ],
+  },
+  {
     id: "2026-11-08-bed-code-new-booking",
     date: "2026-11-08",
     title: "Bed code on new booking · All bookings columns",

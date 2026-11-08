@@ -7,15 +7,17 @@ import {
 } from "./payment-collected";
 
 describe("payment collected via", () => {
-  it("parses cash and thai bank only", () => {
+  it("parses cash, thai bank, and stripe", () => {
     assert.equal(parsePaymentCollectedVia("cash"), "cash");
     assert.equal(parsePaymentCollectedVia("thai_bank"), "thai_bank");
+    assert.equal(parsePaymentCollectedVia("stripe"), "stripe");
     assert.equal(parsePaymentCollectedVia("card"), null);
     assert.equal(parsePaymentCollectedVia(""), null);
   });
 
   it("labels paid stays for staff", () => {
     assert.equal(formatPaymentCollectedVia("cash"), "Cash");
+    assert.equal(formatPaymentCollectedVia("stripe"), "Stripe");
     assert.equal(
       formatStaffPaidLabel({
         depositPaid: true,
@@ -39,6 +41,14 @@ describe("payment collected via", () => {
         paymentCollectedVia: "cash",
       }),
       "Paid · Cash",
+    );
+    assert.equal(
+      formatStaffPaidLabel({
+        depositPaid: true,
+        paidByCard: false,
+        paymentCollectedVia: "stripe",
+      }),
+      "Paid · Stripe",
     );
     assert.equal(
       formatStaffPaidLabel({ depositPaid: false, paidByCard: false }),
