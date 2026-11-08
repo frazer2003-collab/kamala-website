@@ -327,6 +327,8 @@ export default async function StaffCalendarPage({
             ? "Enter a stay total of 0 or more, or leave blank to use the usual rate for these dates."
           : error === "invalid-source"
             ? "Choose a booking source."
+          : error === "invalid-bed"
+            ? "Choose bed type: TWN or DBL."
           : error === "payment-method"
             ? "Choose Cash, Thai bank, or Stripe when marking Paid (not needed for Airbnb, Booking.com, or Expedia)."
           : error === "cancel-reason"

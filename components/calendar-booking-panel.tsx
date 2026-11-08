@@ -17,6 +17,7 @@ import {
 } from "@/lib/booking-source";
 import type { PropertyCurrency } from "@/lib/currency";
 import { formatMoneySuffix } from "@/lib/currency";
+import { formatBedSetupCode, type BedSetup } from "@/lib/bed-setup";
 import type { PaymentCollectedVia } from "@/lib/payment-collected";
 import type { StayEndReason } from "@/lib/stay-end-reason";
 import { staffCapacityErrorMessage } from "@/lib/booking-overbook";
@@ -26,6 +27,12 @@ import {
 } from "@/lib/pricing";
 import type { RoomUnit, UnitOccupancy } from "@/lib/room-units";
 import { getAssignableUnitsForStay, getRoomUnitById } from "@/lib/room-units";
+
+type BedCode = "" | "TWN" | "DBL";
+
+function bedCodeFromSetup(setup: BedSetup | null | undefined): BedCode {
+  return setup ? (formatBedSetupCode(setup) as BedCode) : "";
+}
 
 const WALK_IN_EMAIL_PLACEHOLDER = "walk-in@kamala.local";
 
@@ -60,6 +67,7 @@ type CalendarBookingPanelProps = {
   /** Cash, Thai bank, or Stripe when staff marked Paid. */
   paymentCollectedVia?: PaymentCollectedVia | null;
   bookingSource: BookingSource | null;
+  bedSetup?: BedSetup | null;
   estimatedTotal: number;
   currency: PropertyCurrency;
   promotions: RoomPromotionRate[];
@@ -102,6 +110,7 @@ export function CalendarBookingPanel({
   paidByCard = false,
   paymentCollectedVia = null,
   bookingSource,
+  bedSetup = null,
   estimatedTotal,
   currency,
   promotions,
@@ -134,6 +143,7 @@ export function CalendarBookingPanel({
     roomUnitId: roomUnitId ?? "",
     estimatedTotal: String(estimatedTotal),
     bookingSource: bookingSource ?? "walk-in",
+    bedSetup: bedCodeFromSetup(bedSetup),
     depositPaid,
     paymentCollectedVia: paymentCollectedVia ?? "",
   });
@@ -154,6 +164,7 @@ export function CalendarBookingPanel({
       roomUnitId: roomUnitId ?? "",
       estimatedTotal: String(estimatedTotal),
       bookingSource: bookingSource ?? "walk-in",
+      bedSetup: bedCodeFromSetup(bedSetup),
       depositPaid,
       paymentCollectedVia: paymentCollectedVia ?? "",
     });
@@ -169,6 +180,7 @@ export function CalendarBookingPanel({
     roomUnitId,
     estimatedTotal,
     bookingSource,
+    bedSetup,
     depositPaid,
     paymentCollectedVia,
   ]);
@@ -382,6 +394,31 @@ export function CalendarBookingPanel({
           ) : null}
         </div>
         <div className="calendar-ops-row">
+          <div className="field-pair">
+            <label htmlFor={`calendar-bed-setup-${bookingKey}`}>Bed</label>
+            <select
+              disabled={!canManage}
+              id={`calendar-bed-setup-${bookingKey}`}
+              name="bed-setup"
+              onChange={(event) =>
+                setFields((current) => ({
+                  ...current,
+                  bedSetup: (event.target.value === "TWN" ||
+                  event.target.value === "DBL"
+                    ? event.target.value
+                    : "") as BedCode,
+                }))
+              }
+              required
+              value={fields.bedSetup}
+            >
+              <option disabled value="">
+                TWN or DBL
+              </option>
+              <option value="TWN">TWN — twin</option>
+              <option value="DBL">DBL — double / king</option>
+            </select>
+          </div>
           <BookingSourceField
             disabled={!canManage}
             id={`calendar-booking-source-${bookingKey}`}
@@ -396,7 +433,8 @@ export function CalendarBookingPanel({
             }
             value={fields.bookingSource}
           />
-          <div className="field-pair field-pair--check">
+        </div>
+        <div className="field-pair field-pair--check">
             {paidByCard ? (
               <input name="deposit-paid" type="hidden" value="1" />
             ) : null}
@@ -489,7 +527,6 @@ export function CalendarBookingPanel({
                 choose Cash, Thai bank, or Stripe.
               </span>
             )}
-          </div>
         </div>
         <div className="field-pair field-pair--wide">
           <label htmlFor={`calendar-guest-name-${bookingKey}`}>Guest</label>

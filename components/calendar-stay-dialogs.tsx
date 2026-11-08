@@ -5,7 +5,7 @@ import { CalendarBookingDialog } from "@/components/calendar-booking-dialog";
 import { CalendarBookingPanel } from "@/components/calendar-booking-panel";
 import { StayOpenConversation } from "@/components/stay-open-conversation";
 import { useCalendarStaySelection } from "@/components/calendar-stay-selection";
-import { formatBedSetup } from "@/lib/bed-setup";
+import { formatBedSetup, formatBedSetupCode } from "@/lib/bed-setup";
 import {
   formatBookingSource,
   isOtaBookingSource,
@@ -170,12 +170,14 @@ export function CalendarStayDialogs({
                 {selectedBooking.nights} nights
               </dd>
             </div>
-            {selectedBooking.bedSetup ? (
-              <div>
-                <dt>Bed setup</dt>
-                <dd>{formatBedSetup(selectedBooking.bedSetup)} requested</dd>
-              </div>
-            ) : null}
+            <div>
+              <dt>Bed</dt>
+              <dd>
+                {selectedBooking.bedSetup
+                  ? `${formatBedSetupCode(selectedBooking.bedSetup)} · ${formatBedSetup(selectedBooking.bedSetup)}`
+                  : "—"}
+              </dd>
+            </div>
           </dl>
 
           {selectedBooking.databaseId ? (
@@ -202,6 +204,7 @@ export function CalendarStayDialogs({
             arrivalDate={selectedBooking.arrivalDate}
             bookingKey={selectedKey}
             bookingSource={selectedBooking.bookingSource}
+            bedSetup={selectedBooking.bedSetup}
             canCancelStay={
               canManageSelected &&
               isStaffCalendarManageableStay(selectedBooking)

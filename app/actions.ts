@@ -1284,6 +1284,12 @@ export async function updateConfirmedBooking(
     redirect(`${bookingHref}&error=invalid-source`);
   }
 
+  const bedResolution = resolveStaffBedSetup(getValue(formData, "bed-setup"));
+  if (bedResolution.error || !bedResolution.bedSetup) {
+    redirect(`${bookingHref}&error=invalid-bed`);
+  }
+  const bedSetup = bedResolution.bedSetup;
+
   const wantPaid = getValue(formData, "deposit-paid") === "1";
   const paidByCard = Boolean(booking.stripe_payment_intent_id);
   const isOtaPaid = isOtaBookingSource(bookingSource);
@@ -1328,6 +1334,7 @@ export async function updateConfirmedBooking(
     nights,
     estimated_total: estimatedTotal,
     booking_source: bookingSource,
+    bed_setup: bedSetup,
     deposit_paid_at: depositPaidAt,
     deposit_amount: depositAmount,
     staff_note: nextStaffNote,
