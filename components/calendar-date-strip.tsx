@@ -20,18 +20,26 @@ type CalendarDateStripProps = {
    * pages can pass it into this client component.
    */
   pathname?: string;
+  /** Extra query params preserved when applying a custom range. */
+  extraParams?: Record<string, string | undefined>;
 };
 
 function buildPathHref(
   pathname: string,
   fromIso: string,
   toIso: string,
+  extraParams?: Record<string, string | undefined>,
 ) {
   const params = new URLSearchParams({
     month: fromIso.slice(0, 7),
     from: fromIso,
     to: toIso,
   });
+  if (extraParams) {
+    for (const [key, value] of Object.entries(extraParams)) {
+      if (value) params.set(key, value);
+    }
+  }
   return `${pathname}?${params.toString()}`;
 }
 
@@ -41,6 +49,7 @@ export function CalendarDateStrip({
   selectedBookingKey,
   selectedBlockKey,
   pathname,
+  extraParams,
 }: CalendarDateStripProps) {
   const router = useRouter();
   const staySelection = useCalendarStaySelection();
@@ -65,7 +74,7 @@ export function CalendarDateStrip({
     setFromValue(clamped.fromIso);
     setToValue(clamped.toIso);
     const href = pathname
-      ? buildPathHref(pathname, clamped.fromIso, clamped.toIso)
+      ? buildPathHref(pathname, clamped.fromIso, clamped.toIso, extraParams)
       : buildStaffCalendarHref({
           month: clamped.fromIso.slice(0, 7),
           from: clamped.fromIso,

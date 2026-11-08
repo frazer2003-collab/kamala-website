@@ -1738,6 +1738,32 @@
   letter-spacing: -0.01em;
 }
 
+.booking-row__reason {
+  display: inline-flex !important;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 0.1rem;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-maroon-wash) 70%, var(--color-surface));
+  color: var(--color-maroon) !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.booking-row__reason--reply,
+.booking-row__reason--refund,
+.booking-row__reason--bank,
+.booking-row__reason--hold {
+  background: color-mix(in srgb, var(--color-maroon) 14%, var(--color-surface));
+}
+
+.booking-row--notice .staff-status {
+  display: none;
+}
+
 .booking-row span {
   color: var(--color-muted);
   font-size: 0.92rem;

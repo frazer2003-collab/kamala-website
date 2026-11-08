@@ -518,6 +518,29 @@ export async function getDeclinedBookings() {
   return fetchBookingsFromSupabase(["declined"], "updated_at");
 }
 
+const BOOKING_RANGE_STATUSES = [
+  "confirmed",
+  "pending_payment",
+  "awaiting",
+  "needs-reply",
+  "declined",
+  "new",
+] as const;
+
+/** Inclusive Bangkok calendar-day bounds for timestamptz filters. */
+export function bangkokCreatedAtBounds(fromIso: string, toIso: string) {
+  return {
+    createdFrom: `${fromIso}T00:00:00+07:00`,
+    createdToExclusive: `${addIsoDay(toIso, 1)}T00:00:00+07:00`,
+  };
+}
+
+function addIsoDay(iso: string, days: number) {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
 /** Bookings that occupy a night inside a date range (includes declined). */
 export async function getBookingsForDateRange(fromIso: string, toIso: string) {
   if (!hasStaffSupabaseConfig()) {
@@ -535,15 +558,57 @@ export async function getBookingsForDateRange(fromIso: string, toIso: string) {
       .select("*")
       .lte("arrival_date", toIso)
       .gt("departure_date", fromIso)
-      .in("status", [
-        "confirmed",
-        "pending_payment",
-        "awaiting",
-        "needs-reply",
-        "declined",
-        "new",
-      ])
+      .in("status", [...BOOKING_RANGE_STATUSES])
       .order("arrival_date", { ascending: true })
+      .limit(500);
+
+    const unitMap =
+      error || !data ? new Map<string, string>() : await getBookingRoomUnitMap(supabase);
+
+    if (error || !data) {
+      return {
+        bookings: [],
+        source: "supabase" as const,
+        error: "Could not load bookings from Supabase.",
+      };
+    }
+
+    return {
+      bookings: data.map((row) =>
+        mapBookingRequest(row, unitMap.get(row.id) ?? row.room_unit_id ?? null),
+      ),
+      source: "supabase" as const,
+      error: null,
+    };
+  } catch {
+    return {
+      bookings: [],
+      source: "supabase" as const,
+      error: "Supabase is not configured correctly.",
+    };
+  }
+}
+
+/** Bookings whose created_at falls on a Bangkok calendar day in [fromIso, toIso]. */
+export async function getBookingsBookedInDateRange(fromIso: string, toIso: string) {
+  if (!hasStaffSupabaseConfig()) {
+    return {
+      bookings: [],
+      source: "sample" as const,
+      error: "Supabase is not configured. Connect the database to load live bookings.",
+    };
+  }
+
+  try {
+    const supabase = createStaffSupabaseClient();
+    const { createdFrom, createdToExclusive } = bangkokCreatedAtBounds(fromIso, toIso);
+    const { data, error } = await supabase
+      .from("booking_requests")
+      .select("*")
+      .gte("created_at", createdFrom)
+      .lt("created_at", createdToExclusive)
+      .in("status", [...BOOKING_RANGE_STATUSES])
+      .order("created_at", { ascending: false })
       .limit(500);
 
     const unitMap =

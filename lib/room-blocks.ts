@@ -1,3 +1,4 @@
+import { bangkokCreatedAtBounds } from "@/lib/booking-requests";
 import {
   formatBookingSource,
   inferBookingSourceFromChannelLabel,
@@ -199,6 +200,62 @@ export async function getChannelReservationsForRange(fromIso: string, toIso: str
         .lte("start_date", toIso)
         .gt("end_date", fromIso)
         .order("start_date", { ascending: true })
+        .limit(ROOM_BLOCK_RANGE_LIMIT),
+      getBlockRoomUnitMap(supabase),
+    ]);
+
+    if (error || !data) {
+      return {
+        blocks: [] as StaffRoomBlock[],
+        source: "sample" as const,
+        error: "Could not load channel reservations.",
+      };
+    }
+
+    const blocks = data
+      .map((row) => mapRoomBlock(row, unitMap.get(row.id) ?? row.room_unit_id ?? null))
+      .filter(isChannelReservation);
+
+    return {
+      blocks,
+      source: "supabase" as const,
+      error: null,
+    };
+  } catch {
+    return {
+      blocks: [] as StaffRoomBlock[],
+      source: "sample" as const,
+      error: "Supabase is not configured correctly.",
+    };
+  }
+}
+
+/** Channel stays booked (created_at) on a Bangkok day in [fromIso, toIso]. */
+export async function getChannelReservationsBookedInRange(
+  fromIso: string,
+  toIso: string,
+) {
+  if (!hasStaffSupabaseConfig()) {
+    return {
+      blocks: [] as StaffRoomBlock[],
+      source: "sample" as const,
+      error: null,
+    };
+  }
+
+  try {
+    const supabase = createStaffSupabaseClient();
+    const { createdFrom, createdToExclusive } = bangkokCreatedAtBounds(
+      fromIso,
+      toIso,
+    );
+    const [{ data, error }, unitMap] = await Promise.all([
+      supabase
+        .from("room_blocks")
+        .select("*")
+        .gte("created_at", createdFrom)
+        .lt("created_at", createdToExclusive)
+        .order("created_at", { ascending: false })
         .limit(ROOM_BLOCK_RANGE_LIMIT),
       getBlockRoomUnitMap(supabase),
     ]);

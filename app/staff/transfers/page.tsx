@@ -27,6 +27,16 @@ import {
   requireStaffSessionDetails,
   staffCanWriteCalendar,
 } from "@/lib/staff-auth";
+import { staffT } from "@/lib/staff-i18n";
+import { getStaffLocale } from "@/lib/staff-locale-server";
+import {
+  getStaffNotificationKind,
+  getStaffNotificationReason,
+  matchesStaffNotificationFilter,
+  parseStaffNotificationFilter,
+  staffNotificationPriority,
+  type StaffNotificationFilter,
+} from "@/lib/staff-notifications";
 import {
   formatOverlapErrorMessage,
   parseOverlapDays,
@@ -48,55 +58,13 @@ const BookingChat = nextDynamic(
 
 export const dynamic = "force-dynamic";
 
-type InboxFilter = "all" | "new" | "awaiting" | "needs-reply";
-
-const statusCopy: Record<BookingStatus, string> = {
-  new: "New request",
-  pending_payment: "Awaiting payment",
-  awaiting: "Payment received",
-  "needs-reply": "Needs staff reply",
-  confirmed: "Confirmed",
-  declined: "Closed",
-};
-
 function getBookingStatusCopy(booking: StaffBooking) {
-  if (booking.pendingStayChange) {
-    return "Transfer to confirm";
-  }
-
-  if ((booking.refundDue ?? 0) > 0) {
-    return "Refund to send";
-  }
-
-  if (
-    booking.status === "awaiting" &&
-    booking.bankTransferClaimed &&
-    !booking.depositPaid
-  ) {
-    return "Transfer to verify";
-  }
-
-  return statusCopy[booking.status];
-}
-
-const STATUS_SORT: Partial<Record<BookingStatus, number>> = {
-  "needs-reply": 0,
-  new: 1,
-  awaiting: 2,
-  pending_payment: 3,
-};
-
-function parseInboxFilter(value: string | undefined): InboxFilter {
-  if (value === "new" || value === "awaiting" || value === "needs-reply") {
-    return value;
-  }
-
-  return "all";
+  return getStaffNotificationReason(booking);
 }
 
 function buildStaffHref(options: {
   booking?: string | null;
-  filter?: InboxFilter;
+  filter?: StaffNotificationFilter;
   view?: "inbox" | null;
 }) {
   const params = new URLSearchParams();
@@ -139,20 +107,9 @@ function sortInboxBookings(
   bookings: StaffBooking[],
   previews: Map<string, InboxMessagePreview>,
 ) {
-  const rank = (booking: StaffBooking) => {
-    // Money waiting on staff outranks idle new requests.
-    if ((booking.refundDue ?? 0) > 0) return 0;
-    if (isUnverifiedBankHold(booking) || isAbandonedCheckoutHold(booking)) {
-      return 1;
-    }
-    if (hasStaffStayChangeTask(booking)) return STATUS_SORT.awaiting ?? 3;
-    if (booking.status === "needs-reply") return 2;
-    return STATUS_SORT[booking.status] ?? 9;
-  };
-
   return [...bookings].sort((left, right) => {
-    const leftRank = rank(left);
-    const rightRank = rank(right);
+    const leftRank = staffNotificationPriority(left);
+    const rightRank = staffNotificationPriority(right);
     if (leftRank !== rightRank) {
       return leftRank - rightRank;
     }
@@ -183,22 +140,13 @@ function getRowSecondaryLine(
 }
 
 function getStatusTone(booking: StaffBooking): BookingStatus {
+  const kind = getStaffNotificationKind(booking);
+  if (kind === "reply") return "needs-reply";
+  if (kind === "new") return "new";
+  if (kind === "refund" || kind === "bank" || kind === "stay-change" || kind === "hold") {
+    return "awaiting";
+  }
   return hasStaffStayChangeTask(booking) ? "awaiting" : booking.status;
-}
-
-function matchesInboxFilter(booking: StaffBooking, filter: InboxFilter) {
-  if (filter === "all") {
-    return true;
-  }
-  if (filter === "awaiting") {
-    return (
-      booking.status === "awaiting" ||
-      hasStaffStayChangeTask(booking) ||
-      (booking.refundDue ?? 0) > 0 ||
-      isUnverifiedBankHold(booking)
-    );
-  }
-  return booking.status === filter;
 }
 
 function getMoneyState(booking: StaffBooking) {
@@ -264,6 +212,7 @@ export default async function StaffBookingsPage({
 }) {
   const staffSession = await requireStaffSessionDetails();
   const canWrite = staffCanWriteCalendar(staffSession);
+  const locale = await getStaffLocale();
 
   const {
     booking: selectedBookingId,
@@ -276,7 +225,7 @@ export default async function StaffBookingsPage({
     "stay-change": stayChangeResult,
     refund,
   } = await searchParams;
-  const inboxFilter = parseInboxFilter(filterParam);
+  const inboxFilter = parseStaffNotificationFilter(filterParam);
   const preferInboxView = viewParam === "inbox";
 
   // Abandoned carts are purged by /api/cron/abandoned-checkouts (not on every
@@ -294,7 +243,7 @@ export default async function StaffBookingsPage({
 
   const sortedOpen = sortInboxBookings(staffBookings.bookings, messagePreviews);
   const visibleOpen = sortedOpen.filter((booking) =>
-    matchesInboxFilter(booking, inboxFilter),
+    matchesStaffNotificationFilter(booking, inboxFilter),
   );
 
   let selected =
@@ -324,22 +273,20 @@ export default async function StaffBookingsPage({
   const selectedCheckoutHold = selected ? isAbandonedCheckoutHold(selected) : false;
   const selectedBankHold = selected ? isUnverifiedBankHold(selected) : false;
   const selectedMoney = selected ? getMoneyState(selected) : null;
-  const newRequestCount = staffBookings.bookings.filter(
-    (booking) => booking.status === "new",
+  const newRequestCount = staffBookings.bookings.filter((booking) =>
+    matchesStaffNotificationFilter(booking, "new"),
   ).length;
-  const needsReplyCount = staffBookings.bookings.filter(
-    (booking) => booking.status === "needs-reply",
+  const needsReplyCount = staffBookings.bookings.filter((booking) =>
+    matchesStaffNotificationFilter(booking, "reply"),
   ).length;
-  const awaitingCount = staffBookings.bookings.filter((booking) =>
-    matchesInboxFilter(booking, "awaiting"),
+  const moneyCount = staffBookings.bookings.filter((booking) =>
+    matchesStaffNotificationFilter(booking, "money"),
   ).length;
   const selectedStayChangeTask = selected ? hasStaffStayChangeTask(selected) : false;
   const pendingChangeRoomName = selected?.pendingStayChange
     ? (rooms.find((room) => room.id === selected.pendingStayChange?.roomId)?.name ??
       selected.pendingStayChange.roomId)
     : null;
-  const checkoutHoldCount = staffBookings.bookings.filter(isAbandonedCheckoutHold)
-    .length;
   const focusDetailOnMobile = Boolean(selected) && !preferInboxView;
   const selectedKey = selected ? getStaffBookingKey(selected) : null;
   const inboxRoomTypeError =
@@ -351,11 +298,31 @@ export default async function StaffBookingsPage({
           ? `Could not update the room type.${errorDetail ? ` ${errorDetail}` : ""}`
           : null;
 
-  const filterTabs: { id: InboxFilter; label: string; count: number }[] = [
-    { id: "needs-reply", label: "Need reply", count: needsReplyCount },
-    { id: "new", label: "New", count: newRequestCount },
-    { id: "awaiting", label: "Bank check", count: awaitingCount },
-    { id: "all", label: "All open", count: staffBookings.bookings.length },
+  const filterTabs: {
+    id: StaffNotificationFilter;
+    label: string;
+    count: number;
+  }[] = [
+    {
+      id: "all",
+      label: staffT(locale, "transfers.filterAll"),
+      count: staffBookings.bookings.length,
+    },
+    {
+      id: "money",
+      label: staffT(locale, "transfers.filterMoney"),
+      count: moneyCount,
+    },
+    {
+      id: "reply",
+      label: staffT(locale, "transfers.filterReply"),
+      count: needsReplyCount,
+    },
+    {
+      id: "new",
+      label: staffT(locale, "transfers.filterNew"),
+      count: newRequestCount,
+    },
   ];
 
   return (
@@ -363,111 +330,15 @@ export default async function StaffBookingsPage({
       <section className="staff-main" aria-labelledby="staff-title">
         <div className="staff-header staff-header--compact">
           <div>
-            <h1 id="staff-title">Pending payments</h1>
+            <h1 id="staff-title">{staffT(locale, "transfers.title")}</h1>
             <p>
-              Card stays confirm on their own. Use this page to verify Thai bank
-              transfers, answer guests, and send bank refunds.
-              {staffBookings.bookings.length === 0 ? (
-                <> No open bank items. Confirmed stays live on the calendar.</>
-              ) : needsReplyCount > 0 ? (
-                <>
-                  {" "}
-                  <Link
-                    href={buildStaffHref({
-                      filter: "needs-reply",
-                      view: "inbox",
-                    })}
-                  >
-                    {needsReplyCount} waiting for a reply
-                  </Link>
-                  {newRequestCount > 0 ? (
-                    <>
-                      {" · "}
-                      <Link
-                        href={buildStaffHref({
-                          filter: "new",
-                          view: "inbox",
-                        })}
-                      >
-                        {newRequestCount} new
-                      </Link>
-                    </>
-                  ) : null}
-                  {awaitingCount > 0 ? (
-                    <>
-                      {" · "}
-                      <Link
-                        href={buildStaffHref({
-                          filter: "awaiting",
-                          view: "inbox",
-                        })}
-                      >
-                        {awaitingCount} transfer to check
-                      </Link>
-                    </>
-                  ) : null}
-                  {checkoutHoldCount > 0 ? (
-                    <>
-                      {" · "}
-                      <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
-                        {checkoutHoldCount} unfinished checkout
-                        {checkoutHoldCount === 1 ? "" : "s"}
-                      </Link>
-                    </>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  {" "}
-                  <Link
-                    href={buildStaffHref({ filter: "all", view: "inbox" })}
-                  >
-                    {staffBookings.bookings.length} open
-                  </Link>
-                  {newRequestCount > 0 ? (
-                    <>
-                      {" · "}
-                      <Link
-                        href={buildStaffHref({
-                          filter: "new",
-                          view: "inbox",
-                        })}
-                      >
-                        {newRequestCount} new
-                      </Link>
-                    </>
-                  ) : null}
-                  {awaitingCount > 0 ? (
-                    <>
-                      {" · "}
-                      <Link
-                        href={buildStaffHref({
-                          filter: "awaiting",
-                          view: "inbox",
-                        })}
-                      >
-                        {awaitingCount} transfer to check
-                      </Link>
-                    </>
-                  ) : null}
-                  {checkoutHoldCount > 0 ? (
-                    <>
-                      {" · "}
-                      <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
-                        {checkoutHoldCount} unfinished checkout
-                        {checkoutHoldCount === 1 ? "" : "s"}
-                      </Link>
-                    </>
-                  ) : null}
-                </>
-              )}
+              {staffBookings.bookings.length === 0
+                ? staffT(locale, "transfers.emptyHint")
+                : `${staffBookings.bookings.length} open · card stays confirm on their own`}
               {" · "}
               <Link href="/staff/calendar">Calendar</Link>
             </p>
           </div>
-          <Link className="button button--quiet" href="/">
-            Guest site
-          </Link>
         </div>
 
         {error === "cancel-hold-failed" || error === "release-failed" ? (
@@ -569,7 +440,7 @@ export default async function StaffBookingsPage({
         >
           <section className="booking-list" aria-labelledby="requests-title">
             <div className="booking-list__header">
-              <h2 id="requests-title">Open transfers</h2>
+              <h2 id="requests-title">{staffT(locale, "transfers.listTitle")}</h2>
               <span
                 className={`booking-list__source booking-list__source--${staffBookings.source}`}
               >
@@ -578,7 +449,10 @@ export default async function StaffBookingsPage({
             </div>
 
             {staffBookings.bookings.length > 0 ? (
-              <nav className="booking-list__filters" aria-label="Filter requests">
+              <nav
+                className="booking-list__filters"
+                aria-label={staffT(locale, "transfers.listTitle")}
+              >
                 {filterTabs.map((tab) => {
                   if (tab.id !== "all" && tab.count === 0) {
                     return null;
@@ -592,7 +466,7 @@ export default async function StaffBookingsPage({
                       className={`booking-list__filter${
                         isActive ? " booking-list__filter--active" : ""
                       }${
-                        tab.id === "needs-reply" && tab.count > 0
+                        tab.id === "reply" && tab.count > 0
                           ? " booking-list__filter--urgent"
                           : ""
                       }`}
@@ -623,22 +497,35 @@ export default async function StaffBookingsPage({
                     ? messagePreviews.get(booking.databaseId)
                     : undefined;
                   const secondary = getRowSecondaryLine(booking, preview);
-                  const isUrgent = booking.status === "needs-reply";
+                  const reason = getStaffNotificationReason(booking);
+                  const kind = getStaffNotificationKind(booking);
+                  const isUrgent =
+                    kind === "reply" ||
+                    kind === "refund" ||
+                    kind === "bank" ||
+                    kind === "hold";
 
                   return (
                     <article
-                      className={`booking-row${
+                      className={`booking-row booking-row--notice${
                         isSelected ? " booking-row--selected" : ""
                       }${isUrgent ? " booking-row--urgent" : ""}`}
                       key={bookingKey}
                     >
                       <Link className="booking-row__link" href={bookingHref}>
                         <div className="booking-row__main">
+                          <span
+                            className={`booking-row__reason booking-row__reason--${kind}`}
+                          >
+                            {reason}
+                          </span>
                           <strong>{booking.guest}</strong>
                           <span className="booking-row__preview">{secondary}</span>
                           <span className="booking-row__meta">
                             {booking.room} · {booking.dates}
-                            {preview ? ` · ${preview.ageLabel}` : ` · ${booking.requestedAt}`}
+                            {preview
+                              ? ` · ${preview.ageLabel}`
+                              : ` · ${booking.requestedAt}`}
                           </span>
                         </div>
                         <div
@@ -654,22 +541,19 @@ export default async function StaffBookingsPage({
               </div>
             ) : staffBookings.bookings.length > 0 ? (
               <div className="staff-empty-state">
-                <h3>No requests in this filter.</h3>
-                <p>Try another filter, or show the full open inbox.</p>
+                <h3>No notifications in this filter.</h3>
+                <p>Try another filter, or show everything waiting.</p>
                 <Link
                   className="button button--secondary"
                   href={buildStaffHref({ filter: "all", view: "inbox" })}
                 >
-                  Show all open
+                  Show all
                 </Link>
               </div>
             ) : (
               <div className="staff-empty-state">
-                <h3>No bank items to check.</h3>
-                <p>
-                  Thai bank transfers, guest messages, and bank refunds show
-                  here. Card bookings confirm themselves and go to the calendar.
-                </p>
+                <h3>{staffT(locale, "transfers.empty")}</h3>
+                <p>{staffT(locale, "transfers.emptyHint")}</p>
                 <Link className="button button--secondary" href="/staff/calendar">
                   Open calendar
                 </Link>
@@ -690,7 +574,7 @@ export default async function StaffBookingsPage({
                   view: "inbox",
                 })}
               >
-                ← Inbox
+                ← {staffT(locale, "transfers.back")}
               </Link>
               <div className="reservation-detail__top">
                 <span>{selected.id}</span>

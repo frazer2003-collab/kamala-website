@@ -57,6 +57,9 @@ export type ReservationsPayFilter =
   | "No price"
   | "Transfer to verify";
 
+/** Whether the date strip filters by stay nights or the day the stay was booked. */
+export type ReservationsDateMode = "stay" | "booked";
+
 export type ReservationRow = {
   id: string;
   kind: ReservationRowKind;
@@ -282,6 +285,22 @@ export function classifyChannelLedgerStatus(
   return "confirmed";
 }
 
+export function reservationMatchesDateMode(
+  row: Pick<ReservationRow, "arrivalDate" | "departureDate" | "bookedAt">,
+  fromIso: string,
+  toIso: string,
+  dateMode: ReservationsDateMode,
+) {
+  if (dateMode === "booked") {
+    return Boolean(row.bookedAt && row.bookedAt >= fromIso && row.bookedAt <= toIso);
+  }
+  return dateRangeOverlapsBooking(
+    { arrivalDate: row.arrivalDate, departureDate: row.departureDate },
+    fromIso,
+    toIso,
+  );
+}
+
 export function buildReservationRows({
   bookings,
   blocks,
@@ -290,6 +309,7 @@ export function buildReservationRows({
   toIso,
   currency,
   todayIso = getTodayIso(),
+  dateMode = "stay",
 }: {
   bookings: StaffBooking[];
   blocks: StaffRoomBlock[];
@@ -298,11 +318,24 @@ export function buildReservationRows({
   toIso: string;
   currency?: PropertyCurrency;
   todayIso?: string;
+  dateMode?: ReservationsDateMode;
 }): ReservationRow[] {
   const rows: ReservationRow[] = [];
 
   for (const booking of bookings) {
-    if (!dateRangeOverlapsBooking(booking, fromIso, toIso)) {
+    const bookedAt = bookedDateFromTimestamp(booking.createdAt);
+    if (
+      !reservationMatchesDateMode(
+        {
+          arrivalDate: booking.arrivalDate,
+          departureDate: booking.departureDate,
+          bookedAt,
+        },
+        fromIso,
+        toIso,
+        dateMode,
+      )
+    ) {
       continue;
     }
 
@@ -312,7 +345,6 @@ export function buildReservationRows({
     const pay = websitePay(booking, currency);
     const phone = booking.phone.trim();
     const email = booking.contact.trim();
-    const bookedAt = bookedDateFromTimestamp(booking.createdAt);
 
     rows.push({
       id: key,
@@ -352,11 +384,19 @@ export function buildReservationRows({
       continue;
     }
 
-    const stay = {
-      arrivalDate: block.startDate,
-      departureDate: block.endDate,
-    };
-    if (!dateRangeOverlapsBooking(stay, fromIso, toIso)) {
+    const bookedAt = bookedDateFromTimestamp(block.createdAt);
+    if (
+      !reservationMatchesDateMode(
+        {
+          arrivalDate: block.startDate,
+          departureDate: block.endDate,
+          bookedAt,
+        },
+        fromIso,
+        toIso,
+        dateMode,
+      )
+    ) {
       continue;
     }
 
@@ -368,7 +408,6 @@ export function buildReservationRows({
       formatBookingSource(block.bookingSource) !== "—"
         ? formatBookingSource(block.bookingSource)
         : block.channelLabel || "Channel";
-    const bookedAt = bookedDateFromTimestamp(block.createdAt);
     const phone = block.guestPhone.trim();
     const email = block.guestEmail.trim();
 
@@ -684,6 +723,10 @@ export function parseReservationsSortDir(
   return defaultReservationsSortDir(sort);
 }
 
+export function parseReservationsDateMode(value?: string): ReservationsDateMode {
+  return value === "booked" ? "booked" : "stay";
+}
+
 export function parseReservationsRoomFilter(value?: string) {
   return (value ?? "").trim().slice(0, 40);
 }
@@ -715,6 +758,7 @@ export function nextReservationsSortDir(
 export function reservationsListHref(options: {
   from: string;
   to: string;
+  dateMode?: ReservationsDateMode;
   ledger?: ReservationsLedgerFilter;
   source?: BookingSource | "website" | "all";
   query?: string;
@@ -728,6 +772,10 @@ export function reservationsListHref(options: {
   params.set("month", options.from.slice(0, 7));
   params.set("from", options.from);
   params.set("to", options.to);
+  const dateMode = options.dateMode ?? "stay";
+  if (dateMode !== "stay") {
+    params.set("by", dateMode);
+  }
   if (options.ledger && options.ledger !== "all") {
     params.set("ledger", options.ledger);
   }

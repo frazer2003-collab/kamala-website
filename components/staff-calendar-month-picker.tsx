@@ -22,6 +22,7 @@ type StaffCalendarMonthPickerProps = {
    * pages can pass it into this client component.
    */
   pathname?: string;
+  extraParams?: Record<string, string | undefined>;
 };
 
 function buildMonthHref(
@@ -29,6 +30,7 @@ function buildMonthHref(
   monthKey: string,
   selectedBookingKey?: string,
   selectedBlockKey?: string,
+  extraParams?: Record<string, string | undefined>,
 ) {
   const selection = defaultStaffTimelineSelectionRange(monthKey);
   const params = new URLSearchParams({
@@ -36,6 +38,12 @@ function buildMonthHref(
     from: selection.fromIso,
     to: selection.toIso,
   });
+
+  if (extraParams) {
+    for (const [key, value] of Object.entries(extraParams)) {
+      if (value) params.set(key, value);
+    }
+  }
 
   if (!pathname || pathname === "/staff/calendar") {
     if (selectedBookingKey) {
@@ -54,6 +62,7 @@ export function StaffCalendarMonthPicker({
   selectedBookingKey,
   selectedBlockKey,
   pathname,
+  extraParams,
 }: StaffCalendarMonthPickerProps) {
   const router = useRouter();
   const { year, month } = parseCalendarMonth(monthKey);
@@ -65,7 +74,13 @@ export function StaffCalendarMonthPicker({
   const prevLabel = formatCalendarMonthLabel(prev.year, prev.month);
   const nextLabel = formatCalendarMonthLabel(next.year, next.month);
   const hrefFor = (key: string) =>
-    buildMonthHref(pathname, key, selectedBookingKey, selectedBlockKey);
+    buildMonthHref(
+      pathname,
+      key,
+      selectedBookingKey,
+      selectedBlockKey,
+      extraParams,
+    );
 
   return (
     <div className="staff-calendar-toolbar__month-nav">

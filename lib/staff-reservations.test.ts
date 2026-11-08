@@ -8,6 +8,7 @@ import {
   classifyWebsiteLedgerStatus,
   countLedgerStatuses,
   filterReservationRows,
+  parseReservationsDateMode,
   parseReservationsDateRange,
   parseReservationsLedgerFilter,
   parseReservationsPayFilter,
@@ -415,6 +416,8 @@ describe("parse reservation query values", () => {
     assert.equal(parseReservationsLedgerFilter("nope"), "all");
     assert.equal(parseReservationsSort("booked"), "booked");
     assert.equal(parseReservationsPayFilter("Unpaid"), "Unpaid");
+    assert.equal(parseReservationsDateMode("booked"), "booked");
+    assert.equal(parseReservationsDateMode(undefined), "stay");
     assert.equal(bookedDateFromTimestamp("2026-07-01T17:30:00.000Z"), "2026-07-02");
     const range = parseReservationsDateRange({
       from: "2026-08-05",
@@ -422,6 +425,35 @@ describe("parse reservation query values", () => {
     });
     assert.equal(range.fromIso, "2026-08-01");
     assert.equal(range.toIso, "2026-08-05");
+  });
+
+  it("filters by date booked instead of stay nights", () => {
+    const rows = buildReservationRows({
+      bookings: [
+        websiteBooking({
+          id: "booked-in-july",
+          guest: "July booker",
+          arrivalDate: "2026-09-10",
+          departureDate: "2026-09-12",
+          createdAt: "2026-07-15T03:00:00.000Z",
+        }),
+        websiteBooking({
+          id: "stay-in-july",
+          guest: "July stay",
+          arrivalDate: "2026-07-10",
+          departureDate: "2026-07-12",
+          createdAt: "2026-06-01T03:00:00.000Z",
+        }),
+      ],
+      blocks: [],
+      knownUnitIds: new Set(["unit-1"]),
+      fromIso: "2026-07-01",
+      toIso: "2026-07-31",
+      todayIso: "2026-07-01",
+      dateMode: "booked",
+    });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.id, "booked-in-july");
   });
 
   it("matches upcoming for future active stays", () => {

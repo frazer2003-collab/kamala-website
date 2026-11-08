@@ -18,6 +18,7 @@ import {
   reservationsListHref,
   type LedgerStatusCounts,
   type ReservationRow,
+  type ReservationsDateMode,
   type ReservationsLedgerFilter,
   type ReservationsPayFilter,
   type ReservationsSortDir,
@@ -55,6 +56,7 @@ const SORT_COLUMNS: { key: ReservationsSortKey; labelKey: string }[] = [
 type FilterBase = {
   from: string;
   to: string;
+  dateMode: ReservationsDateMode;
   ledger: ReservationsLedgerFilter;
   source: BookingSource | "website" | "all";
   query: string;
@@ -131,6 +133,9 @@ export function StaffDeskReservations({
       <input name="month" type="hidden" value={filterBase.from.slice(0, 7)} />
       <input name="from" type="hidden" value={filterBase.from} />
       <input name="to" type="hidden" value={filterBase.to} />
+      {filterBase.dateMode !== "stay" ? (
+        <input name="by" type="hidden" value={filterBase.dateMode} />
+      ) : null}
       {filterBase.ledger !== "all" ? (
         <input name="ledger" type="hidden" value={filterBase.ledger} />
       ) : null}

@@ -162,7 +162,7 @@ export default async function StaffHomePage() {
     {
       key: "transfers",
       eyebrow: "Thai bank",
-      title: "Transfers",
+      title: "Notifications",
       body:
         inbox.total > 0
           ? `${inbox.total} open · ${transferParts.join(" · ") || "review inbox"}`
@@ -313,7 +313,7 @@ export default async function StaffHomePage() {
           </Link>
           <Link className="staff-home-link" href="/staff/sold">
             <strong>Finance</strong>
-            <span>Month accounts. Refunds to send are on Transfers.</span>
+            <span>Month accounts. Refunds to send are on Notifications.</span>
           </Link>
           <Link className="staff-home-link" href="/staff/items">
             <strong>Menu items</strong>

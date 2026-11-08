@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-notifications-date-mode",
+    date: "2026-11-08",
+    title: "Notifications + All bookings date mode",
+    summary:
+      "Pending payments is now Notifications. All bookings can filter by stay dates or the date booked.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Notifications feed and All bookings stay-or-booked date filter",
+    },
+    changes: [
+      "Pending payments renamed to Notifications — reason-first rows for verify transfer, reply, refund, and stay change.",
+      "All bookings adds Stay dates / Date booked so the date strip can mean either.",
+      "Home attention card title matches Notifications.",
+    ],
+  },
+  {
     id: "2026-11-08-all-bookings-desk",
     date: "2026-11-08",
     title: "All bookings matches Bills desk list",

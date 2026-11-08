@@ -1,10 +1,17 @@
+import Link from "next/link";
 import { StaffDeskRangeBand } from "@/components/staff-desk-range-band";
 import { StaffDeskReservations } from "@/components/staff-desk-reservations";
 import { StaffShell } from "@/components/staff-shell";
-import { getBookingsForDateRange } from "@/lib/booking-requests";
+import {
+  getBookingsBookedInDateRange,
+  getBookingsForDateRange,
+} from "@/lib/booking-requests";
 import { parseDeskListRange } from "@/lib/desk-range";
 import { getPropertySettings } from "@/lib/property-settings";
-import { getChannelReservationsForRange } from "@/lib/room-blocks";
+import {
+  getChannelReservationsBookedInRange,
+  getChannelReservationsForRange,
+} from "@/lib/room-blocks";
 import {
   attachRoomNumbers,
   getKnownUnitIdSet,
@@ -17,6 +24,7 @@ import {
   buildReservationRows,
   countLedgerStatuses,
   filterReservationRows,
+  parseReservationsDateMode,
   parseReservationsLedgerFilter,
   parseReservationsPayFilter,
   parseReservationsQuery,
@@ -40,6 +48,7 @@ export default async function StaffReservationsPage({
     to?: string;
     month?: string;
     view?: string;
+    by?: string;
     ledger?: string;
     source?: string;
     q?: string;
@@ -54,6 +63,7 @@ export default async function StaffReservationsPage({
   const locale = await getStaffLocale();
   const params = await searchParams;
   const { fromIso, toIso, monthKey, todayIso } = parseDeskListRange(params);
+  const dateMode = parseReservationsDateMode(params.by);
   const ledger = parseReservationsLedgerFilter(params.ledger);
   const source = parseReservationsSource(params.source);
   const query = parseReservationsQuery(params.q);
@@ -62,10 +72,17 @@ export default async function StaffReservationsPage({
   const sort = parseReservationsSort(params.sort);
   const dir = parseReservationsSortDir(params.dir, sort);
 
+  const loadBookings =
+    dateMode === "booked" ? getBookingsBookedInDateRange : getBookingsForDateRange;
+  const loadChannels =
+    dateMode === "booked"
+      ? getChannelReservationsBookedInRange
+      : getChannelReservationsForRange;
+
   const [bookingsResult, channelsResult, roomUnitsResult, settings, supabaseReady] =
     await Promise.all([
-      getBookingsForDateRange(fromIso, toIso),
-      getChannelReservationsForRange(fromIso, toIso),
+      loadBookings(fromIso, toIso),
+      loadChannels(fromIso, toIso),
       getStaffRoomUnits(),
       getPropertySettings(),
       Promise.resolve(hasStaffSupabaseConfig()),
@@ -89,6 +106,7 @@ export default async function StaffReservationsPage({
     toIso,
     currency: settings.currency,
     todayIso,
+    dateMode,
   });
   const matchedRows = filterReservationRows(allRows, {
     ledger: "all",
@@ -115,6 +133,7 @@ export default async function StaffReservationsPage({
   const filterBase = {
     from: fromIso,
     to: toIso,
+    dateMode,
     ledger,
     source,
     query,
@@ -124,6 +143,27 @@ export default async function StaffReservationsPage({
     dir,
   };
   const returnTo = reservationsListHref(filterBase);
+  const rangeExtra =
+    dateMode === "booked"
+      ? {
+          by: "booked",
+          ...(ledger !== "all" ? { ledger } : {}),
+          ...(source !== "all" ? { source } : {}),
+          ...(query ? { q: query } : {}),
+          ...(room ? { room } : {}),
+          ...(pay !== "all" ? { pay } : {}),
+          ...(sort !== "booked" ? { sort } : {}),
+          ...(dir !== "desc" || sort !== "booked" ? { dir } : {}),
+        }
+      : {
+          ...(ledger !== "all" ? { ledger } : {}),
+          ...(source !== "all" ? { source } : {}),
+          ...(query ? { q: query } : {}),
+          ...(room ? { room } : {}),
+          ...(pay !== "all" ? { pay } : {}),
+          ...(sort !== "booked" ? { sort } : {}),
+          ...(dir !== "desc" || sort !== "booked" ? { dir } : {}),
+        };
 
   return (
     <StaffShell current="reservations">
@@ -139,7 +179,41 @@ export default async function StaffReservationsPage({
           </div>
         </header>
 
+        <div
+          className="staff-desk__filter-row"
+          aria-label={staffT(locale, "reservations.dateMode")}
+          role="group"
+        >
+          <Link
+            aria-current={dateMode === "stay" ? "true" : undefined}
+            className={[
+              "staff-desk__chip",
+              dateMode === "stay" ? "staff-desk__chip--active" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            href={reservationsListHref({ ...filterBase, dateMode: "stay" })}
+            prefetch={false}
+          >
+            {staffT(locale, "reservations.byStay")}
+          </Link>
+          <Link
+            aria-current={dateMode === "booked" ? "true" : undefined}
+            className={[
+              "staff-desk__chip",
+              dateMode === "booked" ? "staff-desk__chip--active" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            href={reservationsListHref({ ...filterBase, dateMode: "booked" })}
+            prefetch={false}
+          >
+            {staffT(locale, "reservations.byBooked")}
+          </Link>
+        </div>
+
         <StaffDeskRangeBand
+          extraParams={rangeExtra}
           fromIso={fromIso}
           locale={locale}
           monthKey={monthKey}

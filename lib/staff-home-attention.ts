@@ -1,6 +1,7 @@
 import {
   hasStaffStayChangeTask,
   isAbandonedCheckoutHold,
+  isUnverifiedBankHold,
   needsClosedRefund,
   type StaffBooking,
 } from "@/lib/booking-requests";
@@ -92,12 +93,13 @@ export function homeTransferAttentionItems(
   for (const booking of bookings) {
     if (!booking.databaseId) continue;
     let meta = "";
-    if (needsClosedRefund(booking)) meta = "Refund";
-    else if (hasStaffStayChangeTask(booking)) meta = "Stay change";
-    else if (booking.status === "needs-reply") meta = "Needs reply";
+    if (needsClosedRefund(booking)) meta = "Send refund";
+    else if (hasStaffStayChangeTask(booking)) meta = "Confirm stay change";
+    else if (booking.status === "needs-reply") meta = "Reply to guest";
     else if (isAbandonedCheckoutHold(booking)) meta = "Checkout hold";
-    else if (booking.status === "awaiting") meta = "Awaiting payment";
-    else if (booking.status === "new") meta = "New request";
+    else if (isUnverifiedBankHold(booking) || booking.status === "awaiting") {
+      meta = "Verify transfer";
+    } else if (booking.status === "new") meta = "New request";
     else continue;
 
     items.push({
