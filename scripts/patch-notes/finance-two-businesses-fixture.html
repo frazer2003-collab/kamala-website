@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Finance two businesses fixture</title>
+    <style>
+      :root {
+        --ink: #2a1f1d;
+        --muted: #6e605c;
+        --border: #e3d9d6;
+        --maroon: #8b2e2a;
+        --fnb: #2f5d50;
+        --canvas: #faf8f7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #d8d0cd;
+        color: var(--ink);
+        font: 15px/1.35 "Segoe UI", system-ui, sans-serif;
+      }
+      .shot {
+        width: 580px;
+        padding: 16px;
+        border-radius: 14px;
+        background: var(--canvas);
+        border: 1px solid #cfc5c1;
+        display: grid;
+        gap: 14px;
+      }
+      .shot > h1 {
+        margin: 0;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .book {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+      }
+      .book--rooms { box-shadow: inset 4px 0 0 var(--maroon); }
+      .book--fnb { box-shadow: inset 4px 0 0 var(--fnb); }
+      .book--owner {
+        border-style: dashed;
+        background: #f3eeec;
+      }
+      .chip {
+        margin: 0;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+      .lead {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.45rem 0;
+        border-top: 1px solid var(--border);
+        font-variant-numeric: tabular-nums;
+      }
+      .row:first-of-type { border-top: 0; }
+      .row strong { font-size: 1rem; }
+      .muted { color: var(--muted); font-size: 0.8rem; }
+      .total {
+        margin: 0;
+        font-size: 1.45rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shot">
+      <h1>Finance</h1>
+
+      <section class="book book--rooms">
+        <p class="chip">Business 1 · Rooms</p>
+        <h2 class="title">Rooms</h2>
+        <p class="lead">By source / OTA — lodging book only</p>
+        <div class="row"><span>Airbnb</span><strong>฿56,000</strong></div>
+        <div class="row"><span>Expedia</span><span class="muted">3 unpriced nights</span></div>
+        <div class="row"><span>Booking.com</span><strong>฿22,400</strong></div>
+        <div class="row"><span>Website</span><strong>฿88,000</strong></div>
+        <div class="row"><span>Walk-in</span><strong>฿20,000</strong></div>
+      </section>
+
+      <section class="book book--fnb">
+        <p class="chip">Business 2 · F&amp;B</p>
+        <h2 class="title">F&amp;B</h2>
+        <p class="lead">Cleared bills only — not room stays</p>
+        <p class="total">฿42,150</p>
+        <div class="row"><span>Cash</span><strong>฿28,900</strong></div>
+        <div class="row"><span>Thai bank</span><strong>฿9,250</strong></div>
+        <div class="row"><span>Stripe</span><strong>฿4,000</strong></div>
+      </section>
+
+      <section class="book book--owner">
+        <p class="chip">Owner only</p>
+        <h2 class="title">Combined view</h2>
+        <p class="lead">Not either accountant’s book</p>
+        <div class="row"><span>Gross profit</span><strong>฿198,150</strong></div>
+      </section>
+    </div>
+  </body>
+</html>

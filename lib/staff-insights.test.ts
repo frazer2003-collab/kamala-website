@@ -600,6 +600,63 @@ describe("buildStaffInsightsReport", () => {
     assert.equal(fourDoors.totals.nightsStillOpen - threeDoors.totals.nightsStillOpen, 3);
   });
 
+  it("splits rooms money by Website, Walk-in, and each OTA", () => {
+    const report = buildStaffInsightsReport({
+      fromIso: "2026-10-01",
+      toIso: "2026-10-05",
+      todayIso: "2026-10-05",
+      rooms: [{ ...rooms[0]!, availableCount: 2 }],
+      bookings: [
+        booking({
+          id: "web",
+          databaseId: "db-web",
+          roomId: "superior",
+          arrivalDate: "2026-10-01",
+          departureDate: "2026-10-03",
+          estimatedTotal: 2000,
+          depositPaid: true,
+          bookingSource: "website",
+        }),
+        booking({
+          id: "airbnb-priced",
+          databaseId: "db-abnb",
+          roomId: "superior",
+          arrivalDate: "2026-10-03",
+          departureDate: "2026-10-04",
+          estimatedTotal: 900,
+          depositPaid: true,
+          bookingSource: "airbnb",
+        }),
+      ],
+      channelBlocks: [
+        channel({
+          id: "expedia-block",
+          databaseId: "cdb-exp",
+          roomId: "superior",
+          startDate: "2026-10-04",
+          endDate: "2026-10-05",
+          bookingSource: "expedia",
+          channelLabel: "Expedia",
+        }),
+      ],
+    });
+
+    const byLabel = Object.fromEntries(
+      report.bySource.map((row) => [row.label, row]),
+    );
+    assert.equal(byLabel.Website?.earnedRevenue, 2000);
+    assert.equal(byLabel.Website?.nights, 2);
+    assert.equal(byLabel.Airbnb?.earnedRevenue, 900);
+    assert.equal(byLabel.Airbnb?.nights, 1);
+    assert.equal(byLabel.Expedia?.nights, 1);
+    assert.equal(byLabel.Expedia?.earnedRevenue, 0);
+    assert.equal(byLabel.Expedia?.unpricedNights, 1);
+    assert.deepEqual(
+      report.bySource.map((row) => row.label),
+      ["Airbnb", "Expedia", "Website"],
+    );
+  });
+
   it("separates money already collected from money still owed", () => {
     const report = buildStaffInsightsReport({
       fromIso: "2026-10-01",

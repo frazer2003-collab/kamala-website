@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarDateStrip } from "@/components/calendar-date-strip";
+import { FinanceBySource } from "@/components/finance-by-source";
 import { FinanceFnBSales } from "@/components/finance-fnb-sales";
 import { FinanceGrossProfit } from "@/components/finance-gross-profit";
 import { FinancePaymentRails } from "@/components/finance-payment-rails";
@@ -93,8 +94,9 @@ function FinancePageHeader({
       <div className="staff-sold__intro">
         <h1 id="staff-sold-title">Finance</h1>
         <p>
-          Rooms and F&amp;B are separate accounting accounts. Rooms cover stays
-          and payments; F&amp;B covers cleared bills. Gross profit combines both.
+          Two separate businesses for two accountants: Rooms (stays / each OTA)
+          and F&amp;B (cleared bills). Do not mix them. Gross profit at the bottom
+          is an owner-only combined view.
         </p>
       </div>
       <div className="staff-sold__dates-band">
@@ -131,7 +133,7 @@ function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
       <div className="staff-sold__overview">
         <div className="staff-sold__summary">
           <p className="staff-sold__range-chip">{report.rangeLabel}</p>
-          <p className="staff-sold__account-chip">Rooms account</p>
+          <p className="staff-sold__account-chip">Rooms business</p>
           <h2 className="staff-sold__section-title">Rooms earned</h2>
           <p className="staff-sold__total">
             {hasMoney ? (
@@ -348,9 +350,8 @@ function FinanceAccounts({
         <h2 className="staff-sold__section-title">Rooms accounts</h2>
       </header>
       <p className="staff-sold__section-lead">
-        Room stay payments in this range, split by payment rail. Earned money
-        can include a night the guest has not paid for yet. F&amp;B bills are
-        under the F&amp;B account.
+        Rooms business payments only, split by Cash / Thai bank / Stripe. F&amp;B
+        bills never appear here.
       </p>
       {hasCheck ? (
         <dl className="staff-sold__accounts">
@@ -530,13 +531,32 @@ export default async function StaffSoldPage({
             you can see what sold.
           </p>
         ) : (
-          <div className="staff-sold__body">
-            <FinanceRangeOverview currency={currency} report={report} />
+          <div className="staff-sold__books">
+            <article
+              className="staff-sold__business staff-sold__business--rooms"
+              aria-labelledby="rooms-business-title"
+            >
+              <header className="staff-sold__business-head">
+                <p className="staff-sold__account-chip">Business 1 · Rooms</p>
+                <h2
+                  className="staff-sold__business-title"
+                  id="rooms-business-title"
+                >
+                  Rooms
+                </h2>
+                <p className="staff-sold__business-lead">
+                  Lodging book for the rooms accountant — stays, each OTA,
+                  occupancy, and room payments. Not F&amp;B.
+                </p>
+              </header>
 
-            <div className="staff-sold__ledger">
-              <p className="staff-sold__stream-label" role="presentation">
-                Rooms account
-              </p>
+              <div className="staff-sold__business-body">
+                <FinanceRangeOverview currency={currency} report={report} />
+                <div className="staff-sold__ledger">
+                  <FinanceBySource
+                    currency={currency}
+                    rows={report.bySource}
+                  />
               <section
                 className="staff-sold__ledger-panel"
                 aria-label="Sold by room"
@@ -683,20 +703,52 @@ export default async function StaffSoldPage({
                 toIso={toIso}
               />
               <FinanceAccounts currency={currency} report={report} />
+                </div>
+              </div>
+            </article>
 
-              <p className="staff-sold__stream-label" role="presentation">
-                F&amp;B account
-              </p>
+            <article
+              className="staff-sold__business staff-sold__business--fnb"
+              aria-labelledby="fnb-business-title"
+            >
+              <header className="staff-sold__business-head">
+                <p className="staff-sold__account-chip">Business 2 · F&amp;B</p>
+                <h2
+                  className="staff-sold__business-title"
+                  id="fnb-business-title"
+                >
+                  F&amp;B
+                </h2>
+                <p className="staff-sold__business-lead">
+                  Food &amp; drink book for the F&amp;B accountant — cleared
+                  bills, cost, and payment rails only. Not room stays.
+                </p>
+              </header>
               <FinanceFnBSales
                 currency={currency}
                 economics={billEconomics}
                 fromIso={fromIso}
                 toIso={toIso}
               />
+            </article>
 
-              <p className="staff-sold__stream-label" role="presentation">
-                Combined
-              </p>
+            <article
+              className="staff-sold__business staff-sold__business--owner"
+              aria-labelledby="owner-combined-title"
+            >
+              <header className="staff-sold__business-head">
+                <p className="staff-sold__account-chip">Owner only</p>
+                <h2
+                  className="staff-sold__business-title"
+                  id="owner-combined-title"
+                >
+                  Combined view
+                </h2>
+                <p className="staff-sold__business-lead">
+                  Mixes Rooms + F&amp;B + Expenses. Not a book for either
+                  accountant — use only when you want one owner total.
+                </p>
+              </header>
               <FinanceGrossProfit
                 breakdown={grossProfit}
                 clearedBillCount={billEconomics.clearedBillCount}
@@ -707,7 +759,7 @@ export default async function StaffSoldPage({
                 toIso={toIso}
                 weekHref={`/staff/sold?month=${week.fromIso.slice(0, 7)}&from=${week.fromIso}&to=${week.toIso}`}
               />
-            </div>
+            </article>
           </div>
         )}
       </section>

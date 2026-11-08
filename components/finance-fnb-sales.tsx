@@ -42,8 +42,8 @@ export function FinanceFnBSales({
         <strong>
           {fromIso} → {toIso}
         </strong>
-        . Separate accounting account from room stays. Cleared bills tag Cash,
-        Thai bank, or Stripe.
+        . This is the whole F&amp;B book — room stays never enter here. Bills
+        tag Cash, Thai bank, or Stripe.
       </p>
 
       {!hasSales ? (

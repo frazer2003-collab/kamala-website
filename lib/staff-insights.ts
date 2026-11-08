@@ -33,6 +33,21 @@ export type StaffInsightsSourceCount = {
   stays: number;
 };
 
+/** Rooms money and nights for one booking source / OTA label. */
+export type StaffInsightsSourceMoney = {
+  label: string;
+  stays: number;
+  nights: number;
+  /** Saved stay total (+ card bank charge) for nights in range. */
+  estimatedRevenue: number;
+  /** Already-happened share of estimatedRevenue. */
+  earnedRevenue: number;
+  collected: number;
+  unpaid: number;
+  /** Channel / OTA nights with no saved selling price. */
+  unpricedNights: number;
+};
+
 export type StaffInsightsRoomRow = {
   roomId: string;
   roomName: string;
@@ -146,6 +161,11 @@ export type StaffInsightsReport = {
     /** Bank refunds staff still have to send. The site does not move this money. */
     refundsToSend: number;
   };
+  /**
+   * Rooms money by Website / Walk-in / each OTA.
+   * Channel blocks that have no saved price still appear with unpriced nights.
+   */
+  bySource: StaffInsightsSourceMoney[];
   revenueNote: string;
 };
 
@@ -503,6 +523,55 @@ function bumpSource(map: Map<string, number>, label: string) {
   map.set(label, (map.get(label) ?? 0) + 1);
 }
 
+const SOURCE_MONEY_ORDER = [
+  "Airbnb",
+  "Expedia",
+  "Booking.com",
+  "Website",
+  "Walk-in",
+] as const;
+
+function emptySourceMoney(label: string): StaffInsightsSourceMoney {
+  return {
+    label,
+    stays: 0,
+    nights: 0,
+    estimatedRevenue: 0,
+    earnedRevenue: 0,
+    collected: 0,
+    unpaid: 0,
+    unpricedNights: 0,
+  };
+}
+
+function touchSourceMoney(
+  map: Map<string, StaffInsightsSourceMoney>,
+  label: string,
+) {
+  let row = map.get(label);
+  if (!row) {
+    row = emptySourceMoney(label);
+    map.set(label, row);
+  }
+  return row;
+}
+
+function sortSourceMoneyRows(rows: StaffInsightsSourceMoney[]) {
+  const rank = new Map(
+    SOURCE_MONEY_ORDER.map((label, index) => [label, index] as const),
+  );
+  return rows.slice().sort((a, b) => {
+    const aRank = rank.get(a.label as (typeof SOURCE_MONEY_ORDER)[number]) ?? 100;
+    const bRank = rank.get(b.label as (typeof SOURCE_MONEY_ORDER)[number]) ?? 100;
+    return (
+      aRank - bRank ||
+      b.earnedRevenue - a.earnedRevenue ||
+      b.nights - a.nights ||
+      a.label.localeCompare(b.label)
+    );
+  });
+}
+
 function buildRangeDays(rangeStart: string, rangeEnd: string): CalendarDay[] {
   const days: CalendarDay[] = [];
   let cursor = rangeStart;
@@ -581,6 +650,7 @@ export function buildStaffInsightsReport({
     channelByKey.set(stay.databaseId ?? stay.id, stay);
   }
   const uniqueChannelStays = [...channelByKey.values()];
+  const sourceMoney = new Map<string, StaffInsightsSourceMoney>();
   const staffClosures = monthBlocks.filter((block) => !isChannelReservation(block));
   const calendarDays = buildRangeDays(rangeStart, rangeEnd);
 
@@ -637,7 +707,11 @@ export function buildStaffInsightsReport({
       }
       nightsSold += nights;
       stayCount += 1;
-      bumpSource(sources, websiteSourceLabel(booking.bookingSource));
+      const sourceLabel = websiteSourceLabel(booking.bookingSource);
+      bumpSource(sources, sourceLabel);
+      const sourceRow = touchSourceMoney(sourceMoney, sourceLabel);
+      sourceRow.stays += 1;
+      sourceRow.nights += nights;
       refundsToSend += Math.max(0, booking.refundDue ?? 0);
       // Finance money comes only from the saved stay total. Missing totals are
       // unpriced; a total of 0 is an owner stay / giveaway — occupies the door
@@ -648,6 +722,7 @@ export function buildStaffInsightsReport({
           !Number.isFinite(booking.estimatedTotal)
         ) {
           unpricedNights += nights;
+          sourceRow.unpricedNights += nights;
         }
         continue;
       }
@@ -696,10 +771,13 @@ export function buildStaffInsightsReport({
       pricedNights += nights;
       const stayInRange = roomMoney.inRange + chargeInRange;
       const stayEarned = roomMoney.earned + chargeEarned;
+      sourceRow.estimatedRevenue += stayInRange;
+      sourceRow.earnedRevenue += stayEarned;
       if (booking.depositPaid) {
         collected += stayInRange;
         collectedEarned += stayEarned;
         collectedBank += chargeInRange;
+        sourceRow.collected += stayInRange;
         addToPaymentRail(
           collectedByRail,
           resolveStayPaymentRail({
@@ -713,6 +791,7 @@ export function buildStaffInsightsReport({
       } else {
         unpaid += roomMoney.inRange;
         unpaidEarned += roomMoney.earned;
+        sourceRow.unpaid += roomMoney.inRange;
         if (booking.bankTransferClaimed) {
           bankClaimedUnpaid += roomMoney.inRange;
         }
@@ -731,9 +810,14 @@ export function buildStaffInsightsReport({
       }
       nightsSold += nights;
       stayCount += 1;
-      bumpSource(sources, channelSourceLabel(stay));
+      const sourceLabel = channelSourceLabel(stay);
+      bumpSource(sources, sourceLabel);
+      const sourceRow = touchSourceMoney(sourceMoney, sourceLabel);
+      sourceRow.stays += 1;
+      sourceRow.nights += nights;
       // No OTA selling price is stored. Quoting our own rate would invent revenue.
       unpricedNights += nights;
+      sourceRow.unpricedNights += nights;
     }
 
     const estimatedRevenue = websiteRevenue + bankCharge;
@@ -933,6 +1017,7 @@ export function buildStaffInsightsReport({
     rooms: rows,
     totals,
     accounts,
+    bySource: sortSourceMoneyRows([...sourceMoney.values()]),
     revenueNote:
       "Earned money is the saved stay total for nights in this range that have already happened, plus the card bank charge on those nights. The bank charge is not part of the room price. Nights still ahead are not earned yet. Booking-channel nights have no saved price, so they are left out of the money. A stay total of 0 (owner stay or giveaway) is left out of the money too.",
   };

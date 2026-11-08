@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-finance-two-businesses",
+    date: "2026-11-08",
+    title: "Finance: Rooms vs F&B as two businesses",
+    summary:
+      "Finance is two accountant books — Rooms (by each OTA) and F&B. Gross profit stays owner-only combined.",
+    image: {
+      src: "/staff/patch-notes/finance-two-businesses.jpg",
+      alt: "Finance page with separate Rooms and F&B business books and OTA split",
+    },
+    changes: [
+      "Rooms and F&B are separate framed books so accountants do not mix them.",
+      "Rooms lists money by Website, Walk-in, Airbnb, Expedia, and Booking.com.",
+      "Gross profit is labelled owner-only — not either accountant’s book.",
+    ],
+  },
+  {
     id: "2026-11-08-payment-rails",
     date: "2026-11-08",
     title: "Payment rails on bills + Finance",

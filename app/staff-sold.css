@@ -83,6 +83,69 @@
   align-items: start;
 }
 
+.staff-sold__books {
+  display: grid;
+  gap: var(--space-8);
+  width: min(100%, 68rem);
+}
+
+.staff-sold__business {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.staff-sold__business--rooms {
+  border-color: color-mix(in srgb, var(--color-maroon) 28%, var(--color-border));
+  box-shadow: inset 4px 0 0 var(--color-maroon);
+}
+
+.staff-sold__business--fnb {
+  border-color: color-mix(in srgb, #2f5d50 30%, var(--color-border));
+  box-shadow: inset 4px 0 0 #2f5d50;
+}
+
+.staff-sold__business--owner {
+  border-style: dashed;
+  background: var(--color-surface-muted);
+}
+
+.staff-sold__business-head {
+  display: grid;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.staff-sold__business-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.staff-sold__business-lead {
+  margin: 0;
+  max-width: 56ch;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.staff-sold__business-body {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
 .staff-sold__aside {
   min-width: 0;
 }
@@ -755,6 +818,11 @@
     gap: var(--space-8) var(--space-10);
   }
 
+  .staff-sold__business-body {
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 17rem);
+    gap: var(--space-8) var(--space-10);
+  }
+
   .staff-sold__ledger {
     order: 1;
   }
@@ -782,9 +850,14 @@
     flex: none;
   }
 
-  .staff-sold__body {
+  .staff-sold__body,
+  .staff-sold__books {
     width: 100%;
     gap: var(--space-6);
+  }
+
+  .staff-sold__business {
+    padding: var(--space-4);
   }
 
   .staff-sold__overview {

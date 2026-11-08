@@ -46,9 +46,9 @@ export function FinanceGrossProfit({
         </p>
       </header>
       <p className="staff-sold__section-lead">
-        Combined view only: rooms earned + F&amp;B bill sales, minus Expenses
-        page records and food/drink cost (item cost × qty on cleared bills).
-        Range{" "}
+        Owner-only mix of two businesses: Rooms earned + F&amp;B bill sales,
+        minus Expenses page records and food/drink cost. Do not post this total
+        to either accountant&apos;s book. Range{" "}
         <strong>
           {fromIso} → {toIso}
         </strong>
