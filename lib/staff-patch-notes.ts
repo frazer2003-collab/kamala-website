@@ -18,6 +18,38 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-payment-rails",
+    date: "2026-11-08",
+    title: "Payment rails on bills + Finance",
+    summary:
+      "Clearing a bill now asks Cash, Thai bank, or Stripe. Finance splits Rooms and F&B collected money by those rails.",
+    image: {
+      src: "/staff/patch-notes/finance-payment-rails.jpg",
+      alt: "Finance Rooms and F&B blocks with Cash, Thai bank, and Stripe totals",
+    },
+    changes: [
+      "Clear bill requires Cash / Thai bank / Stripe — same rails as stays.",
+      "Cleared bill detail shows how it was paid.",
+      "Finance Rooms accounts and F&B sales show collected money by rail.",
+    ],
+  },
+  {
+    id: "2026-11-08-finance-rooms-fnb",
+    date: "2026-11-08",
+    title: "Finance: Rooms vs F&B accounts",
+    summary:
+      "Finance now shows Rooms and F&B as separate accounts. Gross profit stays the only combined view.",
+    image: {
+      src: "/staff/patch-notes/finance-rooms-fnb.jpg",
+      alt: "Finance page with Rooms account, F&B sales, and combined gross profit",
+    },
+    changes: [
+      "Rooms earned, sold by room, room prices, and rooms accounts stay in the Rooms account.",
+      "New F&B sales block shows cleared bill sales, cost, and contribution for the date range.",
+      "Gross profit is labelled as the combined Rooms + F&B view.",
+    ],
+  },
+  {
     id: "2026-11-08-home-ops-board",
     date: "2026-11-08",
     title: "Home is today’s ops board",

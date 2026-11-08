@@ -306,6 +306,36 @@ export function StaffDeskBills({
                     <p className="staff-desk__clear-confirm-note">
                       {t("bills.clearConfirmNote")}
                     </p>
+                    <fieldset className="payment-collected-via">
+                      <legend>{t("bills.paidHow")}</legend>
+                      <label>
+                        <input
+                          name="payment-collected-via"
+                          required
+                          type="radio"
+                          value="cash"
+                        />
+                        {t("bills.payCash")}
+                      </label>
+                      <label>
+                        <input
+                          name="payment-collected-via"
+                          required
+                          type="radio"
+                          value="thai_bank"
+                        />
+                        {t("bills.payThaiBank")}
+                      </label>
+                      <label>
+                        <input
+                          name="payment-collected-via"
+                          required
+                          type="radio"
+                          value="stripe"
+                        />
+                        {t("bills.payStripe")}
+                      </label>
+                    </fieldset>
                     {clearWithoutStockIds.length ? (
                       <p className="staff-desk__clear-confirm-note" role="status">
                         {t("bills.clearNoStockWarn").replace(
@@ -406,6 +436,18 @@ export function StaffDeskBills({
                 <div>
                   <dt>{t("common.status")}</dt>
                   <dd>{t("bills.cleared")}</dd>
+                </div>
+                <div>
+                  <dt>{t("bills.paidHow")}</dt>
+                  <dd>
+                    {selected.paymentCollectedVia === "cash"
+                      ? t("bills.payCash")
+                      : selected.paymentCollectedVia === "thai_bank"
+                        ? t("bills.payThaiBank")
+                        : selected.paymentCollectedVia === "stripe"
+                          ? t("bills.payStripe")
+                          : t("bills.payUntagged")}
+                  </dd>
                 </div>
                 <div>
                   <dt>{t("bills.amount")}</dt>

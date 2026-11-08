@@ -46,8 +46,9 @@ export function FinanceGrossProfit({
         </p>
       </header>
       <p className="staff-sold__section-lead">
-        Room stay earnings plus cleared bill sales, minus Expenses page records
-        and food/drink cost (item cost × qty on cleared bills). Range{" "}
+        Combined view only: rooms earned + F&amp;B bill sales, minus Expenses
+        page records and food/drink cost (item cost × qty on cleared bills).
+        Range{" "}
         <strong>
           {fromIso} → {toIso}
         </strong>

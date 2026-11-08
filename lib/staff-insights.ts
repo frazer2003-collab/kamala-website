@@ -7,6 +7,7 @@ import {
 import type { StaffBooking } from "@/lib/booking-requests";
 import {
   BOOKING_SOURCE_LABELS,
+  isOtaBookingSource,
   type BookingSource,
 } from "@/lib/booking-source";
 import type { Room } from "@/lib/content";
@@ -16,6 +17,12 @@ import {
   type RoomPromotionRate,
 } from "@/lib/pricing";
 import { calculateStripeChargeAmount } from "@/lib/payment-pricing";
+import {
+  addToPaymentRail,
+  emptyPaymentRailTotals,
+  resolveStayPaymentRail,
+  type PaymentRailTotals,
+} from "@/lib/payment-collected";
 import {
   isChannelReservation,
   type StaffRoomBlock,
@@ -77,6 +84,8 @@ export type StaffInsightsRoomRow = {
   collected: number;
   collectedEarned: number;
   collectedBankCharge: number;
+  /** Paid stay money split by payment rail. */
+  collectedByRail: PaymentRailTotals;
   /** Stays on the books with no payment marked. */
   unpaid: number;
   unpaidEarned: number;
@@ -126,6 +135,8 @@ export type StaffInsightsReport = {
     /** Paid, and the night has not happened yet. */
     collectedAhead: number;
     collectedBankCharge: number;
+    /** Paid stay money split by payment rail. */
+    collectedByRail: PaymentRailTotals;
     /** Stays on the books with no payment marked. */
     unpaid: number;
     /** Unpaid money for nights that have already happened. */
@@ -602,6 +613,7 @@ export function buildStaffInsightsReport({
     let collected = 0;
     let collectedEarned = 0;
     let collectedBank = 0;
+    const collectedByRail = emptyPaymentRailTotals();
     let unpaid = 0;
     let unpaidEarned = 0;
     let bankClaimedUnpaid = 0;
@@ -688,6 +700,16 @@ export function buildStaffInsightsReport({
         collected += stayInRange;
         collectedEarned += stayEarned;
         collectedBank += chargeInRange;
+        addToPaymentRail(
+          collectedByRail,
+          resolveStayPaymentRail({
+            depositPaid: true,
+            paymentCollectedVia: booking.paymentCollectedVia,
+            stripePaymentIntentId: booking.stripePaymentIntentId,
+            paidViaOta: isOtaBookingSource(booking.bookingSource),
+          }),
+          stayInRange,
+        );
       } else {
         unpaid += roomMoney.inRange;
         unpaidEarned += roomMoney.earned;
@@ -777,6 +799,7 @@ export function buildStaffInsightsReport({
       collected,
       collectedEarned,
       collectedBankCharge: collectedBank,
+      collectedByRail,
       unpaid,
       unpaidEarned,
       bankClaimedUnpaid,
@@ -881,11 +904,19 @@ export function buildStaffInsightsReport({
   };
   const collected = rows.reduce((sum, row) => sum + row.collected, 0);
   const collectedEarned = rows.reduce((sum, row) => sum + row.collectedEarned, 0);
+  const collectedByRail = emptyPaymentRailTotals();
+  for (const row of rows) {
+    collectedByRail.cash += row.collectedByRail.cash;
+    collectedByRail.thai_bank += row.collectedByRail.thai_bank;
+    collectedByRail.stripe += row.collectedByRail.stripe;
+    collectedByRail.untagged += row.collectedByRail.untagged;
+  }
   const accounts = {
     collected,
     collectedEarned,
     collectedAhead: collected - collectedEarned,
     collectedBankCharge: rows.reduce((sum, row) => sum + row.collectedBankCharge, 0),
+    collectedByRail,
     unpaid: rows.reduce((sum, row) => sum + row.unpaid, 0),
     unpaidEarned: rows.reduce((sum, row) => sum + row.unpaidEarned, 0),
     bankClaimedUnpaid: rows.reduce((sum, row) => sum + row.bankClaimedUnpaid, 0),

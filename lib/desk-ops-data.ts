@@ -14,6 +14,13 @@ import {
 import { DESK_PROPERTY_ID } from "@/lib/desk-property";
 import type { DeskStockMovementReason } from "@/lib/desk-stock";
 import {
+  addToPaymentRail,
+  emptyPaymentRailTotals,
+  parsePaymentCollectedVia,
+  type PaymentCollectedVia,
+  type PaymentRailTotals,
+} from "@/lib/payment-collected";
+import {
   createStaffSupabaseClient,
   hasStaffSupabaseConfig,
 } from "@/lib/supabase";
@@ -98,6 +105,7 @@ type BillRow = {
   service_date: string;
   cleared_at: string | null;
   cleared_by?: string | null;
+  payment_collected_via?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -267,6 +275,8 @@ export type DeskBill = {
   status: DeskBillStatus;
   serviceDate: string;
   clearedAt: string | null;
+  /** Set when cleared: cash / thai_bank / stripe. Null on older clears. */
+  paymentCollectedVia: PaymentCollectedVia | null;
   createdAt: string;
   updatedAt: string;
   lines: DeskBillLineData[];
@@ -324,6 +334,8 @@ export type DeskClearedBillEconomics = {
   foodDrinkCostSatang: number;
   clearedBillCount: number;
   lineCount: number;
+  /** Cleared bill sales split by payment rail (satang). */
+  revenueByRail: PaymentRailTotals;
 };
 
 function mapExpenseRow(row: ExpenseRow): DeskExpense {
@@ -430,6 +442,7 @@ function mapBill(row: BillRow, lines: BillLineRow[]): DeskBill {
     status: row.status,
     serviceDate: row.service_date,
     clearedAt: row.cleared_at,
+    paymentCollectedVia: parsePaymentCollectedVia(row.payment_collected_via),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lines: lines.filter((line) => line.bill_id === row.id).map(mapBillLine),
@@ -978,13 +991,18 @@ export async function removeDeskBillLine(id: string) {
 export async function markDeskBillCleared(
   id: string,
   actedBy?: string | null,
+  paymentCollectedVia?: PaymentCollectedVia | null,
 ) {
+  if (!paymentCollectedVia) {
+    throw new Error("Choose Cash, Thai bank, or Stripe before clearing.");
+  }
   const { error } = await client()
     .from("desk_bills")
     .update({
       status: "cleared",
       cleared_at: new Date().toISOString(),
       cleared_by: actedBy || null,
+      payment_collected_via: paymentCollectedVia,
       updated_at: new Date().toISOString(),
     })
     .eq("property_id", DESK_PROPERTY_ID)
@@ -1306,30 +1324,40 @@ export async function loadDeskClearedBillEconomics(
       foodDrinkCostSatang: 0,
       clearedBillCount: 0,
       lineCount: 0,
+      revenueByRail: emptyPaymentRailTotals(),
     };
   }
   const billsResult = await client()
     .from("desk_bills")
-    .select("id")
+    .select("id, payment_collected_via")
     .eq("property_id", DESK_PROPERTY_ID)
     .eq("status", "cleared")
     .gte("service_date", fromIso)
     .lte("service_date", toIso);
   throwIfError(billsResult.error);
-  const billIds = (billsResult.data ?? []).map((row) => row.id);
+  const billRows = billsResult.data ?? [];
+  const billIds = billRows.map((row) => row.id);
   if (billIds.length === 0) {
     return {
       billRevenueSatang: 0,
       foodDrinkCostSatang: 0,
       clearedBillCount: 0,
       lineCount: 0,
+      revenueByRail: emptyPaymentRailTotals(),
     };
   }
+
+  const railByBill = new Map(
+    billRows.map(
+      (row) =>
+        [row.id, parsePaymentCollectedVia(row.payment_collected_via)] as const,
+    ),
+  );
 
   const [linesResult, sellables] = await Promise.all([
     client()
       .from("desk_bill_lines")
-      .select("sellable_item_id,quantity,unit_price_satang")
+      .select("bill_id,sellable_item_id,quantity,unit_price_satang")
       .eq("property_id", DESK_PROPERTY_ID)
       .in("bill_id", billIds),
     listDeskSellables(),
@@ -1340,15 +1368,23 @@ export async function loadDeskClearedBillEconomics(
   );
   let billRevenueSatang = 0;
   let foodDrinkCostSatang = 0;
+  const revenueByRail = emptyPaymentRailTotals();
   for (const line of linesResult.data ?? []) {
-    billRevenueSatang += (line.unit_price_satang ?? 0) * line.quantity;
+    const lineRevenue = (line.unit_price_satang ?? 0) * line.quantity;
+    billRevenueSatang += lineRevenue;
     foodDrinkCostSatang +=
       (costBySellable.get(line.sellable_item_id) ?? 0) * line.quantity;
+    addToPaymentRail(
+      revenueByRail,
+      railByBill.get(line.bill_id) ?? null,
+      lineRevenue,
+    );
   }
   return {
     billRevenueSatang,
     foodDrinkCostSatang,
     clearedBillCount: billIds.length,
     lineCount: (linesResult.data ?? []).length,
+    revenueByRail,
   };
 }

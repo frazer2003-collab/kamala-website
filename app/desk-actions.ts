@@ -48,6 +48,7 @@ import {
 } from "@/lib/desk-laundry";
 import { parseBahtToSatang } from "@/lib/desk-money";
 import { getDeskPortalSession } from "@/lib/desk-portal";
+import { parsePaymentCollectedVia } from "@/lib/payment-collected";
 import { getStaffSession, requireStaffSession } from "@/lib/staff-auth";
 import { staffT } from "@/lib/staff-i18n";
 import { getStaffLocale } from "@/lib/staff-locale-server";
@@ -499,6 +500,12 @@ export async function clearBill(formData: FormData) {
   if (bill.lines.length === 0) {
     throw new Error("Cannot clear a bill with no lines.");
   }
+  const paymentCollectedVia = parsePaymentCollectedVia(
+    value(formData, "payment-collected-via"),
+  );
+  if (!paymentCollectedVia) {
+    throw new Error("Choose Cash, Thai bank, or Stripe before clearing.");
+  }
   const actedBy = await resolveDeskActorLabel();
   // Reload sellables with recipes so stock movements match current catalog.
   const sellables = await listDeskSellables();
@@ -520,7 +527,7 @@ export async function clearBill(formData: FormData) {
       actedBy,
     });
   }
-  await markDeskBillCleared(bill.id, actedBy);
+  await markDeskBillCleared(bill.id, actedBy, paymentCollectedVia);
   revalidateDesk();
   return finishDeskMutation(
     formData,

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Finance Rooms vs F&amp;B fixture</title>
+    <style>
+      :root {
+        --color-canvas: #faf8f7;
+        --color-surface: #ffffff;
+        --color-ink: #2a1f1d;
+        --color-muted: #6e605c;
+        --color-border: #e3d9d6;
+        --color-maroon: #8b2e2a;
+        --radius-md: 10px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #d8d0cd;
+        color: var(--color-ink);
+        font: 15px/1.35 "Segoe UI", system-ui, sans-serif;
+      }
+      .shot {
+        width: 560px;
+        margin: 0;
+        padding: 18px;
+        border-radius: 14px;
+        background: var(--color-canvas);
+        border: 1px solid #cfc5c1;
+        display: grid;
+        gap: 14px;
+      }
+      .shot > h1 {
+        margin: 0;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        font-weight: 700;
+      }
+      .stream {
+        margin: 0;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+      }
+      .panel {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        display: grid;
+        gap: 0.55rem;
+      }
+      .chip {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+      .account {
+        margin: 0;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+      }
+      .total {
+        margin: 0;
+        font-size: 1.55rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+      .line {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 0.84rem;
+        font-variant-numeric: tabular-nums;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.65rem 1rem;
+        margin: 0.25rem 0 0;
+      }
+      .grid dt {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+      .grid dd {
+        margin: 0.15rem 0 0;
+        font-size: 0.92rem;
+        font-weight: 750;
+        font-variant-numeric: tabular-nums;
+      }
+      .profit {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        margin-top: 0.25rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--color-border);
+      }
+      .profit span {
+        color: var(--color-muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+      .profit strong {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--color-maroon);
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shot" id="shot">
+      <h1>Finance</h1>
+
+      <p class="stream">Rooms account</p>
+      <section class="panel" aria-label="Rooms earned">
+        <p class="chip">1–30 Nov 2026</p>
+        <p class="account">Rooms account</p>
+        <h2 class="title">Rooms earned</h2>
+        <p class="total">฿186,400</p>
+        <p class="line">Room ฿180,000 · Bank charge ฿6,400</p>
+        <p class="line">142 of 180 nights · 48 stays · 79%</p>
+      </section>
+
+      <p class="stream">F&amp;B account</p>
+      <section class="panel" aria-label="F&amp;B sales">
+        <div style="display:flex;justify-content:space-between;gap:1rem;align-items:baseline">
+          <h2 class="title">F&amp;B sales</h2>
+          <p class="chip">Open Bills</p>
+        </div>
+        <p class="line">Cleared food &amp; drink bills. Separate from room stays.</p>
+        <p class="total">฿42,150</p>
+        <dl class="grid">
+          <div>
+            <dt>Cleared bills</dt>
+            <dd>86 bills · 214 lines</dd>
+          </div>
+          <div>
+            <dt>Food &amp; drink cost</dt>
+            <dd>−฿14,800</dd>
+          </div>
+          <div>
+            <dt>Contribution</dt>
+            <dd>฿27,350</dd>
+          </div>
+        </dl>
+      </section>
+
+      <p class="stream">Combined</p>
+      <section class="panel" aria-label="Gross profit">
+        <h2 class="title">Gross profit</h2>
+        <p class="line">Combined view only: rooms earned + F&amp;B bill sales.</p>
+        <dl class="grid">
+          <div>
+            <dt>Room revenue</dt>
+            <dd>฿180,000</dd>
+          </div>
+          <div>
+            <dt>Bill sales (86)</dt>
+            <dd>฿42,150</dd>
+          </div>
+          <div>
+            <dt>Expenses recorded</dt>
+            <dd>−฿9,200</dd>
+          </div>
+          <div>
+            <dt>Food &amp; drink cost</dt>
+            <dd>−฿14,800</dd>
+          </div>
+        </dl>
+        <div class="profit">
+          <span>Gross profit</span>
+          <strong>฿198,150</strong>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

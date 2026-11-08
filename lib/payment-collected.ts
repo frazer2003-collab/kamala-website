@@ -2,6 +2,15 @@ export const PAYMENT_COLLECTED_VIA = ["cash", "thai_bank", "stripe"] as const;
 
 export type PaymentCollectedVia = (typeof PAYMENT_COLLECTED_VIA)[number];
 
+/** Money totals split by how payment moved (plus untagged legacy rows). */
+export type PaymentRailTotals = Record<PaymentCollectedVia, number> & {
+  untagged: number;
+};
+
+export function emptyPaymentRailTotals(): PaymentRailTotals {
+  return { cash: 0, thai_bank: 0, stripe: 0, untagged: 0 };
+}
+
 export function parsePaymentCollectedVia(
   value: string | null | undefined,
 ): PaymentCollectedVia | null {
@@ -9,6 +18,43 @@ export function parsePaymentCollectedVia(
     return value;
   }
   return null;
+}
+
+/**
+ * Resolve the bookkeeping rail for a paid stay.
+ * Explicit staff mark wins; Stripe PI / OTA card land in Stripe.
+ */
+export function resolveStayPaymentRail(options: {
+  depositPaid: boolean;
+  paymentCollectedVia?: PaymentCollectedVia | null;
+  stripePaymentIntentId?: string | null;
+  paidViaOta?: boolean;
+}): PaymentCollectedVia | null {
+  if (!options.depositPaid) {
+    return null;
+  }
+  if (options.paymentCollectedVia) {
+    return options.paymentCollectedVia;
+  }
+  if (options.stripePaymentIntentId || options.paidViaOta) {
+    return "stripe";
+  }
+  return null;
+}
+
+export function addToPaymentRail(
+  totals: PaymentRailTotals,
+  rail: PaymentCollectedVia | null,
+  amount: number,
+) {
+  if (amount === 0) {
+    return;
+  }
+  if (rail) {
+    totals[rail] += amount;
+  } else {
+    totals.untagged += amount;
+  }
 }
 
 export function formatPaymentCollectedVia(

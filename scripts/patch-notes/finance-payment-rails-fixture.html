@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Finance payment rails fixture</title>
+    <style>
+      :root {
+        --color-canvas: #faf8f7;
+        --color-surface: #ffffff;
+        --color-ink: #2a1f1d;
+        --color-muted: #6e605c;
+        --color-border: #e3d9d6;
+        --color-maroon: #8b2e2a;
+        --radius-md: 10px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #d8d0cd;
+        color: var(--color-ink);
+        font: 15px/1.35 "Segoe UI", system-ui, sans-serif;
+      }
+      .shot {
+        width: 560px;
+        margin: 0;
+        padding: 18px;
+        border-radius: 14px;
+        background: var(--color-canvas);
+        border: 1px solid #cfc5c1;
+        display: grid;
+        gap: 14px;
+      }
+      .shot > h1 {
+        margin: 0;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        font-weight: 700;
+      }
+      .stream {
+        margin: 0;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+      }
+      .panel {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        display: grid;
+        gap: 0.55rem;
+      }
+      .title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+      }
+      .total {
+        margin: 0;
+        font-size: 1.45rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+      .line {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 0.84rem;
+      }
+      .rails {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.65rem;
+        margin-top: 0.35rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--color-border);
+      }
+      .rails dt {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 0.72rem;
+        font-weight: 750;
+      }
+      .rails dd {
+        margin: 0.15rem 0 0;
+        font-size: 0.92rem;
+        font-weight: 750;
+        font-variant-numeric: tabular-nums;
+      }
+      .clear {
+        display: grid;
+        gap: 0.55rem;
+      }
+      .radios {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1rem;
+        font-size: 0.88rem;
+        font-weight: 650;
+      }
+      .radios label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      .btn {
+        justify-self: start;
+        margin-top: 0.25rem;
+        padding: 0.45rem 0.85rem;
+        border: 0;
+        border-radius: 8px;
+        background: var(--color-maroon);
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shot" id="shot">
+      <h1>Payment rails</h1>
+
+      <p class="stream">Clear bill</p>
+      <section class="panel clear" aria-label="Clear bill">
+        <h2 class="title">Confirm clear</h2>
+        <p class="line">Table 3 · ฿1,240</p>
+        <p class="line">Paid how?</p>
+        <div class="radios">
+          <label><input checked type="radio" /> Cash</label>
+          <label><input type="radio" /> Thai bank</label>
+          <label><input type="radio" /> Stripe</label>
+        </div>
+        <button class="btn" type="button">Confirm clear</button>
+      </section>
+
+      <p class="stream">Rooms account</p>
+      <section class="panel" aria-label="Rooms collected">
+        <h2 class="title">Rooms accounts</h2>
+        <p class="line">Collected</p>
+        <p class="total">฿186,400</p>
+        <dl class="rails">
+          <div>
+            <dt>Cash</dt>
+            <dd>฿42,000</dd>
+          </div>
+          <div>
+            <dt>Thai bank</dt>
+            <dd>฿88,400</dd>
+          </div>
+          <div>
+            <dt>Stripe</dt>
+            <dd>฿56,000</dd>
+          </div>
+        </dl>
+      </section>
+
+      <p class="stream">F&amp;B account</p>
+      <section class="panel" aria-label="F&amp;B sales">
+        <h2 class="title">F&amp;B sales</h2>
+        <p class="total">฿42,150</p>
+        <dl class="rails">
+          <div>
+            <dt>Cash</dt>
+            <dd>฿28,900</dd>
+          </div>
+          <div>
+            <dt>Thai bank</dt>
+            <dd>฿9,250</dd>
+          </div>
+          <div>
+            <dt>Stripe</dt>
+            <dd>฿4,000</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </body>
+</html>

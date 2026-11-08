@@ -145,6 +145,11 @@ const en: Dict = {
   "bills.clear": "Clear bill",
   "bills.clearConfirm": "Confirm clear",
   "bills.clearConfirmNote": "Clearing deducts stock once.",
+  "bills.paidHow": "Paid how?",
+  "bills.payCash": "Cash",
+  "bills.payThaiBank": "Thai bank",
+  "bills.payStripe": "Stripe",
+  "bills.payUntagged": "Not tagged",
   "bills.clearNoStockWarn":
     "{n} line(s) have no recipe — clearing will not change stock for them.",
   "bills.clearEmpty": "Add items before clearing.",
@@ -469,6 +474,11 @@ const th: Dict = {
   "bills.clear": "ปิดบิล",
   "bills.clearConfirm": "ยืนยันปิดบิล",
   "bills.clearConfirmNote": "ปิดบิลจะตัดสต็อกครั้งเดียว",
+  "bills.paidHow": "ชำระอย่างไร?",
+  "bills.payCash": "เงินสด",
+  "bills.payThaiBank": "โอนไทย",
+  "bills.payStripe": "Stripe",
+  "bills.payUntagged": "ยังไม่ระบุ",
   "bills.clearNoStockWarn":
     "มี {n} รายการไม่มีสูตร — ปิดบิลจะไม่ตัดสต็อกของรายการเหล่านี้",
   "bills.clearEmpty": "เพิ่มรายการก่อนปิดบิล",

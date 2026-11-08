@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CalendarDateStrip } from "@/components/calendar-date-strip";
+import { FinanceFnBSales } from "@/components/finance-fnb-sales";
 import { FinanceGrossProfit } from "@/components/finance-gross-profit";
+import { FinancePaymentRails } from "@/components/finance-payment-rails";
 import { FinanceSoldPie } from "@/components/finance-revenue-pie";
 import { StaffCalendarMonthPicker } from "@/components/staff-calendar-month-picker";
 import { StaffShell } from "@/components/staff-shell";
@@ -91,8 +93,8 @@ function FinancePageHeader({
       <div className="staff-sold__intro">
         <h1 id="staff-sold-title">Finance</h1>
         <p>
-          What has been earned, how the published rates compare with what guests
-          paid, and which payments still need a check.
+          Rooms and F&amp;B are separate accounting accounts. Rooms cover stays
+          and payments; F&amp;B covers cleared bills. Gross profit combines both.
         </p>
       </div>
       <div className="staff-sold__dates-band">
@@ -129,7 +131,8 @@ function FinanceRangeOverview({ currency, report }: FinanceRangeOverviewProps) {
       <div className="staff-sold__overview">
         <div className="staff-sold__summary">
           <p className="staff-sold__range-chip">{report.rangeLabel}</p>
-          <h2 className="staff-sold__section-title">Earned</h2>
+          <p className="staff-sold__account-chip">Rooms account</p>
+          <h2 className="staff-sold__section-title">Rooms earned</h2>
           <p className="staff-sold__total">
             {hasMoney ? (
               <span className="staff-sold__total-value">
@@ -340,13 +343,14 @@ function FinanceAccounts({
       : "";
 
   return (
-    <section className="staff-sold__ledger-panel" aria-label="Accounts">
+    <section className="staff-sold__ledger-panel" aria-label="Rooms accounts">
       <header className="staff-sold__ledger-head">
-        <h2 className="staff-sold__section-title">Accounts</h2>
+        <h2 className="staff-sold__section-title">Rooms accounts</h2>
       </header>
       <p className="staff-sold__section-lead">
-        Payments marked on stays in this range. Earned money can include a night
-        the guest has not paid for yet.
+        Room stay payments in this range, split by payment rail. Earned money
+        can include a night the guest has not paid for yet. F&amp;B bills are
+        under the F&amp;B account.
       </p>
       {hasCheck ? (
         <dl className="staff-sold__accounts">
@@ -361,6 +365,10 @@ function FinanceAccounts({
                 ? ` Includes ${formatMoneySuffix(accounts.collectedBankCharge, currency)} card bank charge.`
                 : ""}
             </dd>
+            <FinancePaymentRails
+              currency={currency}
+              totals={accounts.collectedByRail}
+            />
           </div>
           <div>
             <dt>Still to collect</dt>
@@ -526,6 +534,9 @@ export default async function StaffSoldPage({
             <FinanceRangeOverview currency={currency} report={report} />
 
             <div className="staff-sold__ledger">
+              <p className="staff-sold__stream-label" role="presentation">
+                Rooms account
+              </p>
               <section
                 className="staff-sold__ledger-panel"
                 aria-label="Sold by room"
@@ -665,6 +676,27 @@ export default async function StaffSoldPage({
                 ) : null}
               </section>
 
+              <FinancePriceGuide
+                currency={currency}
+                fromIso={fromIso}
+                report={report}
+                toIso={toIso}
+              />
+              <FinanceAccounts currency={currency} report={report} />
+
+              <p className="staff-sold__stream-label" role="presentation">
+                F&amp;B account
+              </p>
+              <FinanceFnBSales
+                currency={currency}
+                economics={billEconomics}
+                fromIso={fromIso}
+                toIso={toIso}
+              />
+
+              <p className="staff-sold__stream-label" role="presentation">
+                Combined
+              </p>
               <FinanceGrossProfit
                 breakdown={grossProfit}
                 clearedBillCount={billEconomics.clearedBillCount}
@@ -675,13 +707,6 @@ export default async function StaffSoldPage({
                 toIso={toIso}
                 weekHref={`/staff/sold?month=${week.fromIso.slice(0, 7)}&from=${week.fromIso}&to=${week.toIso}`}
               />
-              <FinancePriceGuide
-                currency={currency}
-                fromIso={fromIso}
-                report={report}
-                toIso={toIso}
-              />
-              <FinanceAccounts currency={currency} report={report} />
             </div>
           </div>
         )}
