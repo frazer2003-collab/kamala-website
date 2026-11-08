@@ -3,12 +3,14 @@ import { describe, it } from "node:test";
 import type { Room } from "@/lib/content";
 import { computeGuestNightAvailability } from "@/lib/guest-night-availability-core";
 import {
+  canGuestCancelStay,
   canGuestChangeStay,
   describeStayChangeOutcome,
   isSameStay,
   resolveStayChangeOutcome,
   resolveStayChangePayment,
 } from "@/lib/guest-stay-change";
+import { countStayNights } from "@/lib/stay-dates";
 
 const thb = (amount: number) => `${amount} THB`;
 
@@ -164,6 +166,51 @@ describe("canGuestChangeStay", () => {
       reason: "stay-started",
     });
     assert.deepEqual(canGuestChangeStay({ ...base, hasPendingChange: true }), {
+      ok: false,
+      reason: "change-pending",
+    });
+  });
+});
+
+describe("canGuestCancelStay", () => {
+  const base = {
+    status: "confirmed",
+    arrivalDate: "2026-10-10",
+    todayIso: "2026-10-03",
+    hasPendingChange: false,
+    daysUntilArrival: countStayNights("2026-10-03", "2026-10-10"),
+  };
+
+  it("allows cancel when check-in is more than 3 days away", () => {
+    assert.deepEqual(canGuestCancelStay(base), { ok: true });
+    assert.equal(base.daysUntilArrival, 7);
+  });
+
+  it("blocks cancel within 3 days of check-in", () => {
+    assert.deepEqual(
+      canGuestCancelStay({
+        ...base,
+        arrivalDate: "2026-10-06",
+        daysUntilArrival: countStayNights("2026-10-03", "2026-10-06"),
+      }),
+      { ok: false, reason: "too-close" },
+    );
+    assert.deepEqual(
+      canGuestCancelStay({
+        ...base,
+        arrivalDate: "2026-10-03",
+        daysUntilArrival: countStayNights("2026-10-03", "2026-10-03"),
+      }),
+      { ok: false, reason: "too-close" },
+    );
+  });
+
+  it("blocks unconfirmed and pending-change stays", () => {
+    assert.equal(
+      canGuestCancelStay({ ...base, status: "awaiting" }).ok,
+      false,
+    );
+    assert.deepEqual(canGuestCancelStay({ ...base, hasPendingChange: true }), {
       ok: false,
       reason: "change-pending",
     });

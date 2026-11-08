@@ -63,6 +63,47 @@ export function canGuestChangeStay({
   return { ok: true };
 }
 
+/** Free online cancel when check-in is more than this many days away. */
+export const GUEST_FREE_CANCEL_MIN_DAYS = 3;
+
+export type StayCancelEligibility =
+  | { ok: true }
+  | { ok: false; reason: "not-confirmed" | "too-close" | "change-pending" };
+
+/**
+ * Guests may cancel online when arrival is more than 3 days after today
+ * (matches the site cancellation policy).
+ */
+export function canGuestCancelStay({
+  status,
+  arrivalDate,
+  todayIso,
+  hasPendingChange,
+  daysUntilArrival,
+}: {
+  status: string;
+  arrivalDate: string;
+  todayIso: string;
+  hasPendingChange: boolean;
+  /** Whole nights from today to arrival; null when arrival is not after today. */
+  daysUntilArrival: number | null;
+}): StayCancelEligibility {
+  if (status !== "confirmed") {
+    return { ok: false, reason: "not-confirmed" };
+  }
+  if (hasPendingChange) {
+    return { ok: false, reason: "change-pending" };
+  }
+  if (
+    arrivalDate <= todayIso ||
+    daysUntilArrival === null ||
+    daysUntilArrival <= GUEST_FREE_CANCEL_MIN_DAYS
+  ) {
+    return { ok: false, reason: "too-close" };
+  }
+  return { ok: true };
+}
+
 export function isSameStay(
   current: { roomId: string; arrivalDate: string; departureDate: string },
   next: { roomId: string; arrivalDate: string; departureDate: string },

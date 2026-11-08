@@ -295,6 +295,8 @@ export default async function StaffBookingsPage({
             </p>
           ) : null}
           <StaffNotificationsFeed
+            canManage={canWrite}
+            currency={settings.currency}
             focus={noticeFocus}
             initialOpenId={openNoticeId ?? null}
             notifications={feed.notifications}

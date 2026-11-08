@@ -18,6 +18,23 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-bank-notices-all-items",
+    date: "2026-11-08",
+    title: "Thai bank pending in Notifications · All items · trip Preview",
+    summary:
+      "Confirm or reject Thai bank transfers from Notifications. SKU is All items. Trip slips open as a clean Preview tab.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Notifications with Thai bank confirm or reject and All items in the sidebar",
+    },
+    changes: [
+      "Thai bank pending bookings show under Needs you — confirm or reject in the notification popup.",
+      "Trip & tour sold notices are removed so the feed stays booking work.",
+      "SKU renamed to All items.",
+      "Trips Preview opens the confirmation slip in a new tab with no toolbar buttons.",
+    ],
+  },
+  {
     id: "2026-11-08-notifications-digest",
     date: "2026-11-08",
     title: "Notifications digest: Needs you vs activity",

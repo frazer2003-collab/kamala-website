@@ -127,7 +127,29 @@ describe("notification digest", () => {
     assert.equal(digest.summary.moneyCount, 1);
     assert.equal(digest.actionItems.length, 2);
     assert.ok(digest.actionItems.some((row) => row.guestLabel === "Nok"));
+    assert.ok(digest.actionItems.some((row) => row.kind === "transfer_verify"));
     assert.ok(digest.activityItems.some((row) => row.kind === "booking_confirmed"));
     assert.equal(parseNotificationFocus("messages"), "messages");
+  });
+
+  it("hides trip sold noise from the feed", () => {
+    const digest = buildNotificationDigest({
+      notifications: [
+        notice({
+          id: "t1",
+          kind: "trip_sold",
+          title: "Ada · Island trip",
+        }),
+        notice({
+          id: "c1",
+          kind: "booking_confirmed",
+          title: "Bo · confirmed",
+          bookingId: "b2",
+        }),
+      ],
+      openBookings: [],
+    });
+    assert.ok(digest.activityItems.every((row) => row.kind !== "trip_sold"));
+    assert.ok(digest.activityItems.some((row) => row.kind === "booking_confirmed"));
   });
 });

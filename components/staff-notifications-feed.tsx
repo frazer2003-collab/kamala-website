@@ -6,9 +6,16 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/app/staff/notification-actions";
+import { StaffCancelHoldPanel } from "@/components/staff-cancel-hold-panel";
 import { StaffDialog } from "@/components/staff-dialog";
 import { useStaffLocale } from "@/components/staff-locale";
-import type { StaffBooking } from "@/lib/booking-requests";
+import { StaffRequestDecisionPanel } from "@/components/staff-request-decision-panel";
+import {
+  getStaffBookingKey,
+  isUnverifiedBankHold,
+  type StaffBooking,
+} from "@/lib/booking-requests";
+import type { PropertyCurrency } from "@/lib/currency";
 import {
   buildNotificationDigest,
   formatStayRangeLabel,
@@ -78,11 +85,15 @@ export function StaffNotificationsFeed({
   openBookings,
   focus = "all",
   initialOpenId = null,
+  canManage = false,
+  currency = "thb",
 }: {
   notifications: StaffDeskNotification[];
   openBookings: StaffBooking[];
   focus?: NotificationFocus;
   initialOpenId?: string | null;
+  canManage?: boolean;
+  currency?: PropertyCurrency;
 }) {
   const { t, locale } = useStaffLocale();
   const [openId, setOpenId] = useState<string | null>(initialOpenId);
@@ -103,6 +114,21 @@ export function StaffNotificationsFeed({
     const pool = [...digest.actionItems, ...digest.activityItems];
     return pool.find((row) => row.id === openId) ?? null;
   }, [digest, openId]);
+
+  const selectedBooking = useMemo(() => {
+    if (!selected?.bookingId) return null;
+    return (
+      openBookings.find((booking) => {
+        const id = booking.databaseId || getStaffBookingKey(booking);
+        return id === selected.bookingId;
+      }) ?? null
+    );
+  }, [openBookings, selected]);
+
+  const bankPending =
+    selected?.kind === "transfer_verify" &&
+    selectedBooking &&
+    isUnverifiedBankHold(selectedBooking);
 
   useEffect(() => {
     setItems(notifications);
@@ -288,7 +314,7 @@ export function StaffNotificationsFeed({
         open={Boolean(selected)}
         title={selected?.guestLabel ?? t("transfers.title")}
         footer={
-          selected?.href ? (
+          bankPending ? null : selected?.href ? (
             <Link
               className="button button--primary"
               href={selected.href}
@@ -300,35 +326,61 @@ export function StaffNotificationsFeed({
         }
       >
         {selected ? (
-          <dl className="staff-desk__detail-list">
-            <div>
-              <dt>{t("common.type")}</dt>
-              <dd>{notificationKindLabel(selected.kind)}</dd>
-            </div>
-            <div>
-              <dt>{t("common.date")}</dt>
-              <dd>
-                {new Intl.DateTimeFormat(locale === "th" ? "th" : "en", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                }).format(new Date(selected.createdAt))}
-              </dd>
-            </div>
-            <div>
-              <dt>{t("reservations.stay")}</dt>
-              <dd>
-                {formatStayRangeLabel(
-                  selected.stayArrival,
-                  selected.stayDeparture,
-                  locale,
-                ) || "—"}
-              </dd>
-            </div>
-            <div>
-              <dt>{t("common.note")}</dt>
-              <dd>{selected.body || "—"}</dd>
-            </div>
-          </dl>
+          <>
+            <dl className="staff-desk__detail-list">
+              <div>
+                <dt>{t("common.type")}</dt>
+                <dd>{notificationKindLabel(selected.kind)}</dd>
+              </div>
+              <div>
+                <dt>{t("common.date")}</dt>
+                <dd>
+                  {new Intl.DateTimeFormat(locale === "th" ? "th" : "en", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }).format(new Date(selected.createdAt))}
+                </dd>
+              </div>
+              <div>
+                <dt>{t("reservations.stay")}</dt>
+                <dd>
+                  {formatStayRangeLabel(
+                    selected.stayArrival,
+                    selected.stayDeparture,
+                    locale,
+                  ) || "—"}
+                </dd>
+              </div>
+              <div>
+                <dt>{t("common.note")}</dt>
+                <dd>{selected.body || "—"}</dd>
+              </div>
+            </dl>
+            {bankPending && selectedBooking?.databaseId ? (
+              <div className="staff-notice-decide">
+                <StaffCancelHoldPanel
+                  bookingId={selectedBooking.databaseId}
+                  canManage={canManage && Boolean(selectedBooking.databaseId)}
+                  guestName={selectedBooking.guest}
+                  holdKind="bank-transfer-hold"
+                />
+                <StaffRequestDecisionPanel
+                  alreadyConfirmed={false}
+                  bankTransferClaimed={selectedBooking.bankTransferClaimed}
+                  bookingId={selectedBooking.databaseId}
+                  canManage={canManage && Boolean(selectedBooking.databaseId)}
+                  currency={currency}
+                  depositAmount={selectedBooking.depositAmount}
+                  depositPaid={selectedBooking.depositPaid}
+                  guestEmail={selectedBooking.contact}
+                  guestName={selectedBooking.guest}
+                  needsReply={selectedBooking.status === "needs-reply"}
+                  paidByCard={Boolean(selectedBooking.stripePaymentIntentId)}
+                  unclaimedCheckout={false}
+                />
+              </div>
+            ) : null}
+          </>
         ) : null}
       </StaffDialog>
     </div>

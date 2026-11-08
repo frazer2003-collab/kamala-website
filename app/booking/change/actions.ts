@@ -106,6 +106,15 @@ export async function submitGuestStayChange(
 }
 
 /** Runs after the card form succeeds (or Stripe redirects back) so the guest sees the result at once. */
+export async function cancelGuestBooking(
+  token: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { cancelGuestStayByToken } = await import(
+    "@/lib/guest-stay-cancel-server"
+  );
+  return cancelGuestStayByToken(token);
+}
+
 export async function finishGuestCardStayChange(
   token: string,
   paymentIntentId: string,

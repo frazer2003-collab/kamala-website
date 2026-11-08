@@ -706,6 +706,14 @@
   line-height: 1.35;
 }
 
+.staff-notice-decide {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border, #e7e0d6);
+}
+
 .staff-messages-chatbox {
   display: grid;
   gap: 0.75rem;

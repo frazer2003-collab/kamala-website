@@ -321,18 +321,6 @@ export async function createTourSale(formData: FormData) {
     guestEmail: value(formData, "guest-email") || null,
     actedBy: session?.subject ?? null,
   });
-  const { recordStaffDeskNotification } = await import(
-    "@/lib/staff-desk-notifications"
-  );
-  await recordStaffDeskNotification({
-    kind: "trip_sold",
-    title: guestName ? `${guestName} · ${name}` : name,
-    body: `Trip ${tripDate} · ${paymentStatus}`,
-    tripSaleId: id,
-    stayArrival: tripDate,
-    stayDeparture: tripDate,
-    href: `/staff/trips?open=${encodeURIComponent(id)}`,
-  });
   revalidateDesk();
   return finishDeskMutation(
     formData,

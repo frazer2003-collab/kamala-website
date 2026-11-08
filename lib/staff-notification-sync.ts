@@ -68,7 +68,10 @@ export async function syncActionNotifications(bookings: StaffBooking[]) {
       bookingId,
       stayArrival: booking.arrivalDate,
       stayDeparture: booking.departureDate,
-      href: `/staff/transfers?booking=${encodeURIComponent(bookingId)}`,
+      href:
+        kind === "transfer_verify"
+          ? `/staff/transfers?open=${encodeURIComponent(`live:${bookingId}:${kind}`)}`
+          : `/staff/transfers?booking=${encodeURIComponent(bookingId)}`,
     });
     knownBookingKinds.add(key);
   }

@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDeskTourSale } from "@/lib/desk-ops-data";
 import { formatSatang } from "@/lib/desk-money";
 import { getPropertySettings } from "@/lib/property-settings";
 import { requireStaffSession } from "@/lib/staff-auth";
-import { TripSlipPrint } from "@/components/trip-slip-print";
 
 export const dynamic = "force-dynamic";
 
@@ -48,13 +46,6 @@ export default async function TripSlipPage({
 
   return (
     <main className="trip-slip">
-      <div className="trip-slip__toolbar no-print">
-        <Link className="button button--secondary" href="/staff/trips" prefetch={false}>
-          Back to Trips
-        </Link>
-        <TripSlipPrint />
-      </div>
-
       <article className="trip-slip__card" aria-label="Trip confirmation slip">
         <header className="trip-slip__header">
           <p className="trip-slip__eyebrow">Trip &amp; tour confirmation</p>
@@ -124,11 +115,6 @@ export default async function TripSlipPage({
           color: #1c1917;
           font-family: Georgia, "Times New Roman", serif;
         }
-        .trip-slip__toolbar {
-          display: flex;
-          gap: 0.75rem;
-          margin-bottom: 1rem;
-        }
         .trip-slip__card {
           max-width: 40rem;
           margin: 0 auto;
@@ -175,7 +161,6 @@ export default async function TripSlipPage({
           font-size: 0.92rem;
         }
         @media print {
-          .no-print { display: none !important; }
           .trip-slip { background: white; padding: 0; }
           .trip-slip__card { border: 0; max-width: none; }
         }

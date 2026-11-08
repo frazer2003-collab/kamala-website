@@ -67,7 +67,7 @@ function ctaForKind(kind: StaffDeskNotificationKind): string | null {
     case "reply_needed":
       return "Reply";
     case "transfer_verify":
-      return "Verify";
+      return "Confirm or reject";
     case "refund_due":
       return "Refund";
     case "checkout_hold":
@@ -176,7 +176,10 @@ export function liveActionNotifications(
       tripSaleId: null,
       stayArrival: booking.arrivalDate,
       stayDeparture: booking.departureDate,
-      href: `/staff/transfers?booking=${encodeURIComponent(bookingId)}&view=inbox`,
+      href:
+        kind === "transfer_verify"
+          ? `/staff/transfers?open=${encodeURIComponent(`live:${bookingId}:${kind}`)}`
+          : `/staff/transfers?booking=${encodeURIComponent(bookingId)}&view=inbox`,
       readAt: null,
       createdAt: nowIso,
     });
@@ -197,7 +200,8 @@ export function buildNotificationDigest({
   actionItems: NotificationDigestItem[];
   activityItems: NotificationDigestItem[];
 } {
-  const collapsed = collapseLifecycleNoise(notifications);
+  const withoutTripNoise = notifications.filter((row) => row.kind !== "trip_sold");
+  const collapsed = collapseLifecycleNoise(withoutTripNoise);
   const liveActions = liveActionNotifications(openBookings);
 
   const liveKeys = new Set(

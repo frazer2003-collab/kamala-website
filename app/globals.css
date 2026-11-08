@@ -4217,6 +4217,28 @@ textarea:focus {
   max-width: 42ch;
 }
 
+.booking-chat-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.booking-chat-page__actions-error,
+.booking-chat-page__actions-note {
+  margin: 0;
+  flex-basis: 100%;
+  font-size: 0.92rem;
+}
+
+.booking-chat-page__actions-error {
+  color: var(--color-danger, #9f1239);
+}
+
+.booking-chat-page__actions-note {
+  color: var(--color-muted);
+}
+
 .booking-chat-page__back {
   margin-top: var(--space-4);
 }

@@ -1,13 +1,22 @@
 import type { Viewport } from "next";
 import Link from "next/link";
 import { BookingChat } from "@/components/booking-chat";
+import { GuestConversationActions } from "@/components/guest-conversation-actions";
 import { GuestTopbar } from "@/components/guest-topbar";
 import { SiteFooter } from "@/components/site-footer";
 import {
   getBookingByConversationToken,
+  getGuestChangePath,
   isChatReadOnly,
 } from "@/lib/booking-chat";
+import { getPropertyTodayIso } from "@/lib/calendar";
+import {
+  canGuestCancelStay,
+  canGuestChangeStay,
+} from "@/lib/guest-stay-change";
+import { hasPendingStayChange } from "@/lib/guest-stay-change-server";
 import { getPropertySettings } from "@/lib/property-settings";
+import { countStayNights } from "@/lib/stay-dates";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +52,22 @@ export default async function BookingMessagesPage({
     );
   }
 
+  const todayIso = getPropertyTodayIso();
+  const pendingChange = hasPendingStayChange(booking);
+  const canModify = canGuestChangeStay({
+    status: booking.status,
+    arrivalDate: booking.arrival_date,
+    todayIso,
+    hasPendingChange: pendingChange,
+  }).ok;
+  const canCancel = canGuestCancelStay({
+    status: booking.status,
+    arrivalDate: booking.arrival_date,
+    todayIso,
+    hasPendingChange: pendingChange,
+    daysUntilArrival: countStayNights(todayIso, booking.arrival_date),
+  }).ok;
+
   return (
     <main className="guest-site site-shell guest-site--conversation">
       <GuestTopbar settings={settings} />
@@ -55,6 +80,12 @@ export default async function BookingMessagesPage({
           <p className="booking-chat-page__intro">
             Private messages about your stay. We email you when there is a reply.
           </p>
+          <GuestConversationActions
+            canCancel={canCancel}
+            canModify={canModify}
+            changeHref={getGuestChangePath(token)}
+            token={token}
+          />
         </header>
         <div className="booking-chat-page__chat">
           <BookingChat

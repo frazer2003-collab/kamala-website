@@ -309,8 +309,12 @@ export function getGuestChatUrl(token: string) {
   return `${getAppBaseUrl()}${getGuestChatPath(token)}`;
 }
 
+export function getGuestChangePath(token: string) {
+  return `/booking/change?token=${encodeURIComponent(token)}`;
+}
+
 export function getGuestChangeUrl(token: string) {
-  return `${getAppBaseUrl()}/booking/change?token=${encodeURIComponent(token)}`;
+  return `${getAppBaseUrl()}${getGuestChangePath(token)}`;
 }
 
 export function parseBookingRefFromSubject(subject: string) {

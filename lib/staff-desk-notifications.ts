@@ -100,7 +100,7 @@ export function notificationKindLabel(kind: StaffDeskNotificationKind) {
     case "booking_moved":
       return "Dates moved";
     case "transfer_verify":
-      return "Verify transfer";
+      return "Thai bank pending";
     case "reply_needed":
       return "Reply needed";
     case "refund_due":
