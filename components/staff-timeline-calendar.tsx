@@ -339,6 +339,7 @@ function DoorReservationRow({
                     roomId: primaryRoomId,
                     date: day.iso,
                     unitId: unit.id,
+                    mode: "walk-in",
                   })
                 }
                 style={{ gridColumn: column }}

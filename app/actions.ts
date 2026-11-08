@@ -118,6 +118,7 @@ import {
 } from "@/lib/stripe";
 import {
   resolveBedSetupForRoom,
+  resolveStaffBedSetup,
 } from "@/lib/bed-setup";
 import { MAX_STAY_NIGHTS, MIN_STAY_NIGHTS, countStayNights, isStayLengthAllowed } from "@/lib/stay-dates";
 import { cleanFoundViaDetail, parseFoundVia } from "@/lib/found-via";
@@ -2353,6 +2354,7 @@ export type WalkInBookingState = {
     staffNote: string;
     customTotal: string;
     bookingSource: string;
+    bedSetup: string;
     depositPaid: boolean;
     paymentCollectedVia: string;
     showEmail: boolean;
@@ -2372,6 +2374,7 @@ function walkInValuesFromForm(formData: FormData, fallbackArrival: string) {
     staffNote: getValue(formData, "staff-note"),
     customTotal,
     bookingSource: getValue(formData, "booking-source") || "walk-in",
+    bedSetup: getValue(formData, "bed-setup"),
     depositPaid: getValue(formData, "deposit-paid") === "1",
     paymentCollectedVia: getValue(formData, "payment-collected-via"),
     showEmail: Boolean(guestEmail) || getValue(formData, "show-email") === "1",
@@ -2435,6 +2438,12 @@ export async function createWalkInBooking(
   if (!bookingSource) {
     return walkInError("invalid-source", formData, arrival);
   }
+
+  const bedResolution = resolveStaffBedSetup(getValue(formData, "bed-setup"));
+  if (bedResolution.error || !bedResolution.bedSetup) {
+    return walkInError("invalid-bed", formData, arrival);
+  }
+  const bedSetup = bedResolution.bedSetup;
 
   const customTotalRaw = getValue(formData, "custom-total").trim();
   let customTotal: number | null = null;
@@ -2534,6 +2543,7 @@ export async function createWalkInBooking(
     nights,
     estimated_total: estimatedTotal,
     booking_source: bookingSource,
+    bed_setup: bedSetup,
     note: "New booking",
     staff_note: staffNote || null,
     status: "confirmed" as const,

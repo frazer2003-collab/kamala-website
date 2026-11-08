@@ -18,6 +18,22 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-bed-code-new-booking",
+    date: "2026-11-08",
+    title: "Bed code on new booking · All bookings columns",
+    summary:
+      "New calendar bookings ask for bed as TWN or DBL. All bookings leads with bed code and shows source. Empty-day taps open the new-booking form ready for keyboard entry.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "All bookings table with bed code and source columns",
+    },
+    changes: [
+      "Empty door-day cell opens New booking directly with a denser two-column form.",
+      "Bed type required as TWN or DBL on staff create. Ctrl+Enter saves, Esc goes back.",
+      "All bookings: Bed is the first column; Source is shown in the table.",
+    ],
+  },
+  {
     id: "2026-11-08-bank-notices-all-items",
     date: "2026-11-08",
     title: "Thai bank pending in Notifications · All items · trip Preview",

@@ -7,6 +7,7 @@ import {
   parseCalendarMonth,
 } from "@/lib/calendar";
 import { countStayNights } from "@/lib/stay-dates";
+import { formatBedSetupCode } from "@/lib/bed-setup";
 import {
   getStaffBookingKey,
   isInventoryHoldBooking,
@@ -39,6 +40,7 @@ export type LedgerStatus =
 export type ReservationsLedgerFilter = "all" | LedgerStatus;
 
 export type ReservationsSortKey =
+  | "bed"
   | "guest"
   | "stay"
   | "booked"
@@ -79,6 +81,8 @@ export type ReservationRow = {
   nights: number;
   phone: string | null;
   email: string | null;
+  /** Desk bed code TWN / DBL, or null when unknown. */
+  bedCode: string | null;
   sourceLabel: string;
   moneyLabel: string | null;
   /** Paid, Unpaid, No charge, No price, or Transfer to verify. */
@@ -368,6 +372,7 @@ export function buildReservationRows({
       nights: stayNightCount(booking.arrivalDate, booking.departureDate),
       phone: phone || null,
       email: email || null,
+      bedCode: booking.bedSetup ? formatBedSetupCode(booking.bedSetup) : null,
       sourceLabel: websiteSourceLabel(booking),
       moneyLabel: pay.moneyLabel,
       payLabel: pay.payLabel,
@@ -433,6 +438,7 @@ export function buildReservationRows({
       nights: stayNightCount(block.startDate, block.endDate),
       phone: phone || null,
       email: email || null,
+      bedCode: null,
       sourceLabel,
       moneyLabel: null,
       payLabel: "No price",
@@ -507,6 +513,7 @@ export function rowMatchesReservationQuery(row: ReservationRow, query: string) {
     row.doorLabel,
     row.phone,
     row.email,
+    row.bedCode,
     row.sourceLabel,
   ]
     .filter((part): part is string => Boolean(part))
@@ -582,6 +589,11 @@ function compareReservationSortValue(
   key: ReservationsSortKey,
 ) {
   switch (key) {
+    case "bed":
+      return (
+        (a.bedCode ?? "").localeCompare(b.bedCode ?? "") ||
+        a.label.localeCompare(b.label)
+      );
     case "guest":
       return a.label.localeCompare(b.label) || a.id.localeCompare(b.id);
     case "stay":
@@ -700,6 +712,7 @@ export function parseReservationsQuery(value?: string) {
 
 export function parseReservationsSort(value?: string): ReservationsSortKey {
   if (
+    value === "bed" ||
     value === "guest" ||
     value === "stay" ||
     value === "booked" ||

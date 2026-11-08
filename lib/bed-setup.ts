@@ -12,9 +12,38 @@ export function isBedSetup(value: string): value is BedSetup {
   return value === "double" || value === "twin";
 }
 
+/**
+ * Accepts stored values (double/twin) and desk codes (DBL/TWN), plus king.
+ */
 export function parseBedSetup(value: string | null | undefined): BedSetup | null {
   const normalized = value?.trim().toLowerCase() ?? "";
-  return isBedSetup(normalized) ? normalized : null;
+  if (normalized === "twin" || normalized === "twn") {
+    return "twin";
+  }
+  if (
+    normalized === "double" ||
+    normalized === "dbl" ||
+    normalized === "king"
+  ) {
+    return "double";
+  }
+  return null;
+}
+
+/** Desk shorthand shown in All bookings and staff create. */
+export function formatBedSetupCode(setup: BedSetup): string {
+  return setup === "twin" ? "TWN" : "DBL";
+}
+
+/** Staff create always needs a bed code; any room type may store it. */
+export function resolveStaffBedSetup(
+  requested: string | null | undefined,
+): { bedSetup: BedSetup | null; error: string | null } {
+  const parsed = parseBedSetup(requested);
+  if (!parsed) {
+    return { bedSetup: null, error: BED_SETUP_REQUIRED_ERROR };
+  }
+  return { bedSetup: parsed, error: null };
 }
 
 export function roomOffersBedSetupChoice(roomId?: string): boolean {

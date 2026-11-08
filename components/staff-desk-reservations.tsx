@@ -45,10 +45,12 @@ const PAY_FILTERS = [
 ] as const satisfies readonly ReservationsPayFilter[];
 
 const SORT_COLUMNS: { key: ReservationsSortKey; labelKey: string }[] = [
+  { key: "bed", labelKey: "reservations.bed" },
   { key: "guest", labelKey: "reservations.guest" },
   { key: "stay", labelKey: "reservations.stay" },
   { key: "booked", labelKey: "reservations.booked" },
   { key: "room", labelKey: "common.room" },
+  { key: "source", labelKey: "reservations.source" },
   { key: "payment", labelKey: "reservations.payment" },
   { key: "status", labelKey: "common.status" },
 ];
@@ -361,6 +363,11 @@ export function StaffDeskReservations({
                     tabIndex={0}
                   >
                     <td>
+                      <strong className="staff-desk__bed-code">
+                        {row.bedCode ?? "—"}
+                      </strong>
+                    </td>
+                    <td>
                       <strong>{row.label}</strong>
                       {row.phone ? (
                         <small className="staff-desk__muted">
@@ -396,6 +403,7 @@ export function StaffDeskReservations({
                         </small>
                       ) : null}
                     </td>
+                    <td>{row.sourceLabel}</td>
                     <td>
                       {row.moneyLabel ? (
                         <>
@@ -458,6 +466,10 @@ export function StaffDeskReservations({
       >
         {selected ? (
           <dl className="staff-desk__detail-list">
+            <div>
+              <dt>{t("reservations.bed")}</dt>
+              <dd>{selected.bedCode ?? "—"}</dd>
+            </div>
             <div>
               <dt>{t("reservations.stay")}</dt>
               <dd>

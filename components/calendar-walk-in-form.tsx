@@ -57,11 +57,21 @@ type WalkInFields = {
   staffNote: string;
   customTotal: string;
   bookingSource: BookingSource;
+  bedSetup: "" | "TWN" | "DBL";
   depositPaid: boolean;
   paymentCollectedVia: string;
   showEmail: boolean;
   showTotal: boolean;
 };
+
+function bedCodeFromValue(value: string): "" | "TWN" | "DBL" {
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "TWN" || normalized === "TWIN") return "TWN";
+  if (normalized === "DBL" || normalized === "DOUBLE" || normalized === "KING") {
+    return "DBL";
+  }
+  return "";
+}
 
 function fieldsFromValues(values: WalkInBookingState["values"]): WalkInFields {
   return {
@@ -73,6 +83,7 @@ function fieldsFromValues(values: WalkInBookingState["values"]): WalkInFields {
     staffNote: values.staffNote,
     customTotal: values.customTotal,
     bookingSource: (values.bookingSource as BookingSource | "") || "walk-in",
+    bedSetup: bedCodeFromValue(values.bedSetup ?? ""),
     depositPaid: values.depositPaid,
     paymentCollectedVia: values.paymentCollectedVia || "",
     // A returned email or total means the field was open when staff submitted.
@@ -99,6 +110,8 @@ function walkInErrorCopy(code?: string) {
       return "Stay total must be 0 or more, or leave blank.";
     case "invalid-source":
       return "Choose a source.";
+    case "invalid-bed":
+      return "Choose bed type: TWN or DBL.";
     case "payment-method":
       return "Choose Cash or Thai bank when marking Paid (not needed for OTAs).";
     case "capacity-verify-failed":
@@ -146,6 +159,7 @@ export function CalendarWalkInForm({
         staffNote: "",
         customTotal: "",
         bookingSource: "walk-in",
+        bedSetup: "",
         depositPaid: false,
         paymentCollectedVia: "",
         showEmail: false,
@@ -157,6 +171,7 @@ export function CalendarWalkInForm({
   const [state, formAction, pending] = useActionState(createWalkInBooking, initialState);
   const [fields, setFields] = useState(() => fieldsFromValues(initialState.values));
   const [syncedState, setSyncedState] = useState(state);
+  const formRef = useRef<HTMLFormElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const totalRef = useRef<HTMLInputElement>(null);
@@ -180,6 +195,7 @@ export function CalendarWalkInForm({
     staffNote,
     customTotal,
     bookingSource,
+    bedSetup,
     depositPaid,
     paymentCollectedVia,
     showEmail,
@@ -211,6 +227,27 @@ export function CalendarWalkInForm({
     }
     revealTarget.current = null;
   }, [showEmail, showTotal]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const meta = event.metaKey || event.ctrlKey;
+      if (meta && event.key === "Enter") {
+        event.preventDefault();
+        if (!canManage || pending) return;
+        formRef.current?.requestSubmit();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!pending) onBack();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [canManage, onBack, pending]);
 
   const departureBounds = departureBoundsForArrival(arrival);
 
@@ -252,6 +289,7 @@ export function CalendarWalkInForm({
   const datesInvalid =
     state.error === "invalid-dates" || state.error === "past-date";
   const totalInvalid = state.error === "invalid-custom-total";
+  const bedInvalid = state.error === "invalid-bed";
 
   return (
     <>
@@ -264,14 +302,12 @@ export function CalendarWalkInForm({
           </>
         ) : null}
       </p>
-      <p className="detail-help">
-        Enter every stay here — website, walk-in, Airbnb, Booking.com, or Expedia.
-        OTA stays get the same Conversation as walk-ins once saved.
-        Past dates are allowed when you need to backfill an old booking. Pick the source
-        below.
+      <p className="detail-help calendar-walk-in__hint">
+        Tab through fields. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves ·{" "}
+        <kbd>Esc</kbd> goes back.
         {roomUnitNumber
-          ? ` This stay will be assigned to door #${roomUnitNumber}.`
-          : " A free door for this room type is assigned when you save; you can change it on the stay afterwards."}
+          ? ` Door #${roomUnitNumber} is assigned on save.`
+          : " A free door is assigned on save."}
       </p>
       {displayError ? (
         <p
@@ -284,7 +320,11 @@ export function CalendarWalkInForm({
           {displayError}
         </p>
       ) : null}
-      <form action={formAction} className="calendar-manage-form">
+      <form
+        action={formAction}
+        className="calendar-manage-form calendar-walk-in"
+        ref={formRef}
+      >
         <StaffFormBusyBridge />
         <CalendarRangeFields fromIso={fromIso} monthKey={monthKey} toIso={toIso} />
         <input name="room-id" type="hidden" value={roomId} />
@@ -293,73 +333,79 @@ export function CalendarWalkInForm({
         ) : null}
         {showEmail ? <input name="show-email" type="hidden" value="1" /> : null}
         {showTotal ? <input name="show-total" type="hidden" value="1" /> : null}
-        <div className="field-pair">
-          <label htmlFor="walk-in-guest-name">Guest</label>
-          <input
-            aria-describedby={nameInvalid ? errorId : undefined}
-            aria-invalid={nameInvalid || undefined}
-            autoCapitalize="words"
-            autoComplete="name"
-            autoFocus
-            disabled={!canManage || pending}
-            id="walk-in-guest-name"
-            maxLength={GUEST_NAME_MAX}
-            minLength={2}
-            name="guest-name"
-            onChange={(event) => setField("guestName", event.target.value)}
-            required
-            type="text"
-            value={guestName}
-          />
+
+        <div className="calendar-ops-row">
+          <div className="field-pair">
+            <label htmlFor="walk-in-guest-name">Guest</label>
+            <input
+              aria-describedby={nameInvalid ? errorId : undefined}
+              aria-invalid={nameInvalid || undefined}
+              autoCapitalize="words"
+              autoComplete="name"
+              autoFocus
+              disabled={!canManage || pending}
+              id="walk-in-guest-name"
+              maxLength={GUEST_NAME_MAX}
+              minLength={2}
+              name="guest-name"
+              onChange={(event) => setField("guestName", event.target.value)}
+              required
+              type="text"
+              value={guestName}
+            />
+          </div>
+          <div className="field-pair">
+            <label htmlFor="walk-in-guest-phone">Phone</label>
+            <input
+              aria-describedby={phoneInvalid ? errorId : undefined}
+              aria-invalid={phoneInvalid || undefined}
+              autoComplete="tel"
+              disabled={!canManage || pending}
+              id="walk-in-guest-phone"
+              inputMode="tel"
+              maxLength={30}
+              name="guest-phone"
+              onChange={(event) => setField("guestPhone", event.target.value)}
+              type="tel"
+              value={guestPhone}
+            />
+          </div>
         </div>
-        <div className="field-pair">
-          <label htmlFor="walk-in-guest-phone">Phone</label>
-          <input
-            aria-describedby={phoneInvalid ? errorId : undefined}
-            aria-invalid={phoneInvalid || undefined}
-            autoComplete="tel"
-            disabled={!canManage || pending}
-            id="walk-in-guest-phone"
-            inputMode="tel"
-            maxLength={30}
-            name="guest-phone"
-            onChange={(event) => setField("guestPhone", event.target.value)}
-            type="tel"
-            value={guestPhone}
-          />
-        </div>
-        <div className="field-pair">
-          <label htmlFor="walk-in-arrival">Arrival</label>
-          <input
-            aria-describedby={datesInvalid ? errorId : undefined}
-            aria-invalid={datesInvalid || undefined}
-            disabled={!canManage || pending}
-            id="walk-in-arrival"
-            name="arrival"
-            onChange={(event) => changeArrival(event.target.value)}
-            required
-            type="date"
-            value={arrival}
-          />
-        </div>
-        <div className="field-pair">
-          <label htmlFor="walk-in-departure">Departure</label>
-          <input
-            aria-describedby={
-              [datesInvalid ? errorId : null, quoteId].filter(Boolean).join(" ") ||
-              undefined
-            }
-            aria-invalid={datesInvalid || undefined}
-            disabled={!canManage || pending}
-            id="walk-in-departure"
-            max={departureBounds?.max}
-            min={departureBounds?.min}
-            name="departure"
-            onChange={(event) => setField("departure", event.target.value)}
-            required
-            type="date"
-            value={departure}
-          />
+
+        <div className="calendar-ops-row">
+          <div className="field-pair">
+            <label htmlFor="walk-in-arrival">Arrival</label>
+            <input
+              aria-describedby={datesInvalid ? errorId : undefined}
+              aria-invalid={datesInvalid || undefined}
+              disabled={!canManage || pending}
+              id="walk-in-arrival"
+              name="arrival"
+              onChange={(event) => changeArrival(event.target.value)}
+              required
+              type="date"
+              value={arrival}
+            />
+          </div>
+          <div className="field-pair">
+            <label htmlFor="walk-in-departure">Departure</label>
+            <input
+              aria-describedby={
+                [datesInvalid ? errorId : null, quoteId].filter(Boolean).join(" ") ||
+                undefined
+              }
+              aria-invalid={datesInvalid || undefined}
+              disabled={!canManage || pending}
+              id="walk-in-departure"
+              max={departureBounds?.max}
+              min={departureBounds?.min}
+              name="departure"
+              onChange={(event) => setField("departure", event.target.value)}
+              required
+              type="date"
+              value={departure}
+            />
+          </div>
         </div>
 
         {quoteLabel ? (
@@ -369,92 +415,31 @@ export function CalendarWalkInForm({
           </p>
         ) : null}
 
-        {showEmail ? (
-          <div className="field-pair">
-            <label htmlFor="walk-in-guest-email">Email</label>
-            <input
-              aria-describedby={
-                [emailInvalid ? errorId : null, emailHelpId]
-                  .filter(Boolean)
-                  .join(" ")
-              }
-              aria-invalid={emailInvalid || undefined}
-              autoComplete="email"
-              disabled={!canManage || pending}
-              id="walk-in-guest-email"
-              name="guest-email"
-              onChange={(event) => setField("guestEmail", event.target.value)}
-              ref={emailRef}
-              type="email"
-              value={guestEmail}
-            />
-            <span className="field-help" id={emailHelpId}>
-              Leave blank if the guest has no email. After you save, Conversation
-              opens on the stay so you can message them here.
-            </span>
-          </div>
-        ) : (
-          <div className="field-pair field-pair--wide">
-            <button
-              className="button button--quiet"
-              disabled={!canManage || pending}
-              onClick={() => {
-                revealTarget.current = "email";
-                setField("showEmail", true);
-              }}
-              type="button"
-            >
-              Add email
-            </button>
-          </div>
-        )}
-
-        {showTotal ? (
-          <div className="field-pair">
-            <label htmlFor="walk-in-custom-total">
-              Stay total (optional, {currency.toUpperCase()})
-            </label>
-            <input
-              aria-describedby={
-                [totalInvalid ? errorId : null, totalHelpId]
-                  .filter(Boolean)
-                  .join(" ")
-              }
-              aria-invalid={totalInvalid || undefined}
-              disabled={!canManage || pending}
-              id="walk-in-custom-total"
-              inputMode="decimal"
-              min={0}
-              name="custom-total"
-              onChange={(event) => setField("customTotal", event.target.value)}
-              placeholder={quote.nights > 0 ? String(quote.total) : undefined}
-              ref={totalRef}
-              step="any"
-              type="number"
-              value={customTotal}
-            />
-            <span className="field-help" id={totalHelpId}>
-              Leave blank to use the usual rate
-              {quoteLabel ? ` (${quoteLabel})` : ""}. Zero is allowed.
-            </span>
-          </div>
-        ) : (
-          <div className="field-pair field-pair--wide">
-            <button
-              className="button button--quiet"
-              disabled={!canManage || pending}
-              onClick={() => {
-                revealTarget.current = "total";
-                setField("showTotal", true);
-              }}
-              type="button"
-            >
-              Adjust stay total
-            </button>
-          </div>
-        )}
-
         <div className="calendar-ops-row">
+          <div className="field-pair">
+            <label htmlFor="walk-in-bed-setup">Bed</label>
+            <select
+              aria-describedby={bedInvalid ? errorId : undefined}
+              aria-invalid={bedInvalid || undefined}
+              disabled={!canManage || pending}
+              id="walk-in-bed-setup"
+              name="bed-setup"
+              onChange={(event) =>
+                setField(
+                  "bedSetup",
+                  bedCodeFromValue(event.target.value) || ("" as const),
+                )
+              }
+              required
+              value={bedSetup}
+            >
+              <option disabled value="">
+                TWN or DBL
+              </option>
+              <option value="TWN">TWN — twin</option>
+              <option value="DBL">DBL — double / king</option>
+            </select>
+          </div>
           <BookingSourceField
             disabled={!canManage || pending}
             id="walk-in-booking-source"
@@ -469,67 +454,153 @@ export function CalendarWalkInForm({
             }
             value={bookingSource}
           />
-          <div className="field-pair field-pair--check">
-            <label htmlFor="walk-in-deposit-paid">
+        </div>
+
+        <div className="calendar-ops-row calendar-ops-row--tools">
+          {showEmail ? (
+            <div className="field-pair">
+              <label htmlFor="walk-in-guest-email">Email</label>
               <input
-                checked={depositPaid}
-                disabled={!canManage || pending}
-                id="walk-in-deposit-paid"
-                name="deposit-paid"
-                onChange={(event) =>
-                  setFields((current) => ({
-                    ...current,
-                    depositPaid: event.target.checked,
-                    paymentCollectedVia: event.target.checked
-                      ? current.paymentCollectedVia
-                      : "",
-                  }))
+                aria-describedby={
+                  [emailInvalid ? errorId : null, emailHelpId]
+                    .filter(Boolean)
+                    .join(" ")
                 }
-                type="checkbox"
-                value="1"
+                aria-invalid={emailInvalid || undefined}
+                autoComplete="email"
+                disabled={!canManage || pending}
+                id="walk-in-guest-email"
+                name="guest-email"
+                onChange={(event) => setField("guestEmail", event.target.value)}
+                ref={emailRef}
+                type="email"
+                value={guestEmail}
               />
-              Paid
-            </label>
-            {depositPaid && sourceIsOta ? (
-              <span className="field-help">
-                {formatBookingSource(bookingSource)} stays are always card —
-                no Cash / Thai bank needed.
+              <span className="field-help" id={emailHelpId}>
+                Leave blank if none. Conversation opens after save.
               </span>
-            ) : depositPaid ? (
-              <fieldset className="payment-collected-via">
-                <legend className="sr-only">How was payment collected?</legend>
-                <label>
-                  <input
-                    checked={paymentCollectedVia === "cash"}
-                    disabled={!canManage || pending}
-                    name="payment-collected-via"
-                    onChange={() => setField("paymentCollectedVia", "cash")}
-                    required
-                    type="radio"
-                    value="cash"
-                  />
-                  Cash
-                </label>
-                <label>
-                  <input
-                    checked={paymentCollectedVia === "thai_bank"}
-                    disabled={!canManage || pending}
-                    name="payment-collected-via"
-                    onChange={() => setField("paymentCollectedVia", "thai_bank")}
-                    required
-                    type="radio"
-                    value="thai_bank"
-                  />
-                  Thai bank
-                </label>
-              </fieldset>
-            ) : (
-              <span className="field-help">
-                Leave unchecked if collecting later — the stay still holds the
-                room. When marking Paid, choose Cash or Thai bank.
+            </div>
+          ) : (
+            <div className="field-pair field-pair--wide">
+              <button
+                className="button button--quiet"
+                disabled={!canManage || pending}
+                onClick={() => {
+                  revealTarget.current = "email";
+                  setField("showEmail", true);
+                }}
+                type="button"
+              >
+                Add email
+              </button>
+            </div>
+          )}
+
+          {showTotal ? (
+            <div className="field-pair">
+              <label htmlFor="walk-in-custom-total">
+                Stay total ({currency.toUpperCase()})
+              </label>
+              <input
+                aria-describedby={
+                  [totalInvalid ? errorId : null, totalHelpId]
+                    .filter(Boolean)
+                    .join(" ")
+                }
+                aria-invalid={totalInvalid || undefined}
+                disabled={!canManage || pending}
+                id="walk-in-custom-total"
+                inputMode="decimal"
+                min={0}
+                name="custom-total"
+                onChange={(event) => setField("customTotal", event.target.value)}
+                placeholder={quote.nights > 0 ? String(quote.total) : undefined}
+                ref={totalRef}
+                step="any"
+                type="number"
+                value={customTotal}
+              />
+              <span className="field-help" id={totalHelpId}>
+                Blank uses usual rate
+                {quoteLabel ? ` (${quoteLabel})` : ""}.
               </span>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="field-pair field-pair--wide">
+              <button
+                className="button button--quiet"
+                disabled={!canManage || pending}
+                onClick={() => {
+                  revealTarget.current = "total";
+                  setField("showTotal", true);
+                }}
+                type="button"
+              >
+                Adjust stay total
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="field-pair field-pair--check">
+          <label htmlFor="walk-in-deposit-paid">
+            <input
+              checked={depositPaid}
+              disabled={!canManage || pending}
+              id="walk-in-deposit-paid"
+              name="deposit-paid"
+              onChange={(event) =>
+                setFields((current) => ({
+                  ...current,
+                  depositPaid: event.target.checked,
+                  paymentCollectedVia: event.target.checked
+                    ? current.paymentCollectedVia
+                    : "",
+                }))
+              }
+              type="checkbox"
+              value="1"
+            />
+            Paid
+          </label>
+          {depositPaid && sourceIsOta ? (
+            <span className="field-help">
+              {formatBookingSource(bookingSource)} stays are always card —
+              no Cash / Thai bank needed.
+            </span>
+          ) : depositPaid ? (
+            <fieldset className="payment-collected-via">
+              <legend className="sr-only">How was payment collected?</legend>
+              <label>
+                <input
+                  checked={paymentCollectedVia === "cash"}
+                  disabled={!canManage || pending}
+                  name="payment-collected-via"
+                  onChange={() => setField("paymentCollectedVia", "cash")}
+                  required
+                  type="radio"
+                  value="cash"
+                />
+                Cash
+              </label>
+              <label>
+                <input
+                  checked={paymentCollectedVia === "thai_bank"}
+                  disabled={!canManage || pending}
+                  name="payment-collected-via"
+                  onChange={() => setField("paymentCollectedVia", "thai_bank")}
+                  required
+                  type="radio"
+                  value="thai_bank"
+                />
+                Thai bank
+              </label>
+            </fieldset>
+          ) : (
+            <span className="field-help">
+              Unchecked holds the room unpaid. When Paid, choose Cash or Thai bank.
+            </span>
+          )}
         </div>
 
         <div className="field-pair field-pair--wide">
@@ -539,8 +610,8 @@ export function CalendarWalkInForm({
             id="walk-in-note"
             name="staff-note"
             onChange={(event) => setField("staffNote", event.target.value)}
-            placeholder="Arrival instructions, payment notes, or internal reminders."
-            rows={3}
+            placeholder="Arrival, payment, or desk reminders."
+            rows={2}
             value={staffNote}
           />
         </div>
