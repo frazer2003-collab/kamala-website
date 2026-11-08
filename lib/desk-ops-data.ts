@@ -123,7 +123,22 @@ type LaundryRow = {
   staff_note: string | null;
   email: string | null;
   recorded_at: string;
+  received_at: string | null;
+  price_satang: number;
   status: DeskLaundryStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+type TourSaleRow = {
+  id: string;
+  property_id: string;
+  name: string;
+  amount_satang: number;
+  guests: number;
+  staff_note: string | null;
+  sale_date: string;
+  acted_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -160,6 +175,7 @@ type DeskDatabase = {
       desk_bill_lines: Table<BillLineRow>;
       desk_laundry_records: Table<LaundryRow>;
       desk_expenses: Table<ExpenseRow>;
+      desk_tour_sales: Table<TourSaleRow>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -251,6 +267,8 @@ export type DeskLaundryRecord = {
   staffNote: string | null;
   email: string | null;
   recordedAt: string;
+  receivedAt: string | null;
+  priceSatang: number;
   status: DeskLaundryStatus;
   createdAt: string;
   updatedAt: string;
@@ -262,6 +280,18 @@ export type DeskExpense = {
   amountSatang: number;
   staffNote: string | null;
   expenseDate: string;
+  actedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DeskTourSale = {
+  id: string;
+  name: string;
+  amountSatang: number;
+  guests: number;
+  staffNote: string | null;
+  saleDate: string;
   actedBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -395,7 +425,23 @@ export function mapLaundryRow(row: LaundryRow): DeskLaundryRecord {
     staffNote: row.staff_note,
     email: row.email,
     recordedAt: row.recorded_at,
+    receivedAt: row.received_at,
+    priceSatang: row.price_satang ?? 0,
     status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function mapTourSaleRow(row: TourSaleRow): DeskTourSale {
+  return {
+    id: row.id,
+    name: row.name,
+    amountSatang: row.amount_satang,
+    guests: row.guests,
+    staffNote: row.staff_note,
+    saleDate: row.sale_date,
+    actedBy: row.acted_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -927,6 +973,8 @@ export async function saveDeskLaundry(input: {
   staffNote?: string | null;
   email?: string | null;
   status: DeskLaundryStatus;
+  priceSatang: number;
+  receivedAt?: string | null;
 }): Promise<string> {
   const payload = {
     property_id: DESK_PROPERTY_ID,
@@ -938,7 +986,11 @@ export async function saveDeskLaundry(input: {
     staff_note: input.staffNote || null,
     email: input.email || null,
     status: input.status,
+    price_satang: input.priceSatang,
     updated_at: new Date().toISOString(),
+    ...(input.receivedAt !== undefined
+      ? { received_at: input.receivedAt }
+      : {}),
   };
   if (input.id) {
     const { error } = await client()
@@ -957,6 +1009,82 @@ export async function saveDeskLaundry(input: {
   throwIfError(error);
   if (!data) throw new Error("Laundry record was not created.");
   return data.id;
+}
+
+export async function markDeskLaundryReceived(id: string): Promise<void> {
+  const { error } = await client()
+    .from("desk_laundry_records")
+    .update({
+      received_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", id)
+    .is("received_at", null);
+  throwIfError(error);
+}
+
+export async function listDeskTourSalesInRange(
+  fromIso: string,
+  toIso: string,
+): Promise<{
+  sales: DeskTourSale[];
+  totalSatang: number;
+  count: number;
+}> {
+  if (!hasStaffSupabaseConfig()) {
+    return { sales: [], totalSatang: 0, count: 0 };
+  }
+  const { data, error } = await client()
+    .from("desk_tour_sales")
+    .select("*")
+    .eq("property_id", DESK_PROPERTY_ID)
+    .gte("sale_date", fromIso)
+    .lte("sale_date", toIso)
+    .order("sale_date", { ascending: false })
+    .order("created_at", { ascending: false });
+  throwIfError(error);
+  const sales = (data ?? []).map(mapTourSaleRow);
+  return {
+    sales,
+    totalSatang: sales.reduce((sum, row) => sum + row.amountSatang, 0),
+    count: sales.length,
+  };
+}
+
+export async function saveDeskTourSale(input: {
+  name: string;
+  amountSatang: number;
+  guests: number;
+  staffNote?: string | null;
+  saleDate: string;
+  actedBy?: string | null;
+}): Promise<string> {
+  const { data, error } = await client()
+    .from("desk_tour_sales")
+    .insert({
+      property_id: DESK_PROPERTY_ID,
+      name: input.name,
+      amount_satang: input.amountSatang,
+      guests: input.guests,
+      staff_note: input.staffNote || null,
+      sale_date: input.saleDate,
+      acted_by: input.actedBy || null,
+    })
+    .select("id")
+    .single();
+  throwIfError(error);
+  if (!data) throw new Error("Tour sale was not created.");
+  return data.id;
+}
+
+export async function deleteDeskTourSale(id: string) {
+  const { error } = await client()
+    .from("desk_tour_sales")
+    .delete()
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", id);
+  throwIfError(error);
 }
 
 export async function deleteDeskLaundry(id: string) {

@@ -53,7 +53,7 @@ export function homeOpenLaundryItems(
   records: readonly DeskLaundryRecord[],
 ): StaffHomeAttentionItem[] {
   const open = records.filter(
-    (record) => record.status === "sent" || record.status === "incomplete",
+    (record) => record.status === "unpaid" || !record.receivedAt,
   );
   return capItems(
     open.map((record) => ({

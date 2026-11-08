@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   createLaundryRecord,
   deleteLaundryRecord,
+  receiveLaundryRecord,
   updateLaundryRecord,
 } from "@/app/desk-actions";
 import { StaffDeskActionsMenu } from "@/components/staff-desk-actions-menu";
@@ -22,6 +23,7 @@ import {
   type DeskLaundryCategory,
   type DeskLaundryStatus,
 } from "@/lib/desk-laundry";
+import { formatSatang, satangToBaht } from "@/lib/desk-money";
 import type { DeskLaundryRecord } from "@/lib/desk-ops-data";
 
 function dateTime(iso: string, locale: string) {
@@ -44,9 +46,7 @@ function laundryStatusLabel(
   status: DeskLaundryStatus,
   t: (key: string) => string,
 ) {
-  if (status === "sent") return t("laundry.sent");
-  if (status === "incomplete") return t("laundry.incomplete");
-  return t("laundry.complete");
+  return status === "paid" ? t("laundry.paid") : t("laundry.unpaid");
 }
 
 function LaundryCreateFields({
@@ -118,25 +118,26 @@ function LaundryCreateFields({
             </>
           )}
         </div>
-        <div className="field-pair">
-          <label htmlFor="laundry-status">{t("common.status")}</label>
-          <select
-            defaultValue={"sent" satisfies DeskLaundryStatus}
-            id="laundry-status"
-            name="status"
-            required
-          >
-            {DESK_LAUNDRY_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {laundryStatusLabel(status, t)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!sheetsMode ? (
+          <div className="field-pair">
+            <label htmlFor="laundry-measure-type">{t("laundry.measure")}</label>
+            <select
+              id="laundry-measure-type"
+              name="measure-type"
+              onChange={(event) =>
+                setMeasureType(event.target.value === "count" ? "count" : "kg")
+              }
+              value={measureType}
+            >
+              <option value="kg">{t("laundry.kilograms")}</option>
+              <option value="count">{t("laundry.pieces")}</option>
+            </select>
+          </div>
+        ) : null}
       </div>
 
       {sheetsMode ? (
-        <fieldset className="staff-desk__fieldset">
+        <fieldset className="staff-desk__sheet-fieldset">
           <legend>{t("laundry.sheetItems")}</legend>
           <p className="staff-desk__hint">{t("laundry.sheetItemsHint")}</p>
           <div className="staff-desk__sheet-lines">
@@ -148,10 +149,9 @@ function LaundryCreateFields({
                 <input
                   id={`sheet-${item.key}`}
                   inputMode="numeric"
-                  min="0"
+                  min={0}
                   name={`sheet-${item.key}`}
-                  placeholder="0"
-                  step="1"
+                  step={1}
                   type="number"
                 />
               </div>
@@ -159,49 +159,52 @@ function LaundryCreateFields({
           </div>
         </fieldset>
       ) : (
-        <div className="staff-desk__field-grid">
-          <div className="field-pair">
-            <label htmlFor="laundry-type">{t("common.type")}</label>
-            <select
-              id="laundry-type"
-              name="type"
-              onChange={(event) =>
-                setMeasureType(event.target.value === "count" ? "count" : "kg")
-              }
-              value={measureType}
-            >
-              <option value="kg">{t("laundry.kilograms")}</option>
-              <option value="count">{t("laundry.pieces")}</option>
-            </select>
-          </div>
-          <div className="field-pair">
-            <label htmlFor="laundry-measure">
-              {measureType === "kg" ? t("laundry.kilograms") : t("laundry.pieces")}
-            </label>
-            {measureType === "kg" ? (
-              <input
-                id="laundry-measure"
-                key="kg"
-                min="0.01"
-                name="measure"
-                required
-                step="0.01"
-                type="number"
-              />
-            ) : (
-              <input
-                id="laundry-measure"
-                key="count"
-                min="1"
-                name="measure"
-                required
-                step="1"
-                type="number"
-              />
-            )}
-          </div>
+        <div className="field-pair">
+          <label htmlFor="laundry-measure">
+            {measureType === "kg" ? t("laundry.kilograms") : t("laundry.pieces")}
+          </label>
+          <input
+            id="laundry-measure"
+            inputMode="decimal"
+            min={measureType === "kg" ? 0.1 : 1}
+            name="measure"
+            required
+            step={measureType === "kg" ? 0.1 : 1}
+            type="number"
+          />
+          <input name="type" type="hidden" value={measureType} />
         </div>
       )}
+
+      <div className="staff-desk__field-grid">
+        <div className="field-pair">
+          <label htmlFor="laundry-price">{t("laundry.price")}</label>
+          <input
+            id="laundry-price"
+            inputMode="decimal"
+            min={0}
+            name="price-baht"
+            placeholder="0"
+            required
+            step="0.01"
+            type="number"
+          />
+        </div>
+        <div className="field-pair">
+          <label htmlFor="laundry-status">{t("common.status")}</label>
+          <select
+            defaultValue="unpaid"
+            id="laundry-status"
+            name="status"
+          >
+            {DESK_LAUNDRY_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {laundryStatusLabel(status, t)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <div className="field-pair">
         <label htmlFor="laundry-note">{t("common.note")}</label>
@@ -225,7 +228,6 @@ export function StaffDeskLaundry({
   initialOpenId = null,
 }: {
   records: DeskLaundryRecord[];
-  /** Portal mode: only sheets category can be submitted. */
   sheetsOnly?: boolean;
   returnTo?: string;
   initialOpenId?: string | null;
@@ -303,40 +305,70 @@ export function StaffDeskLaundry({
                   <th>{t("common.name")}</th>
                   <th>{t("common.type")}</th>
                   <th>{t("laundry.measure")}</th>
+                  <th>{t("laundry.price")}</th>
                   <th>{t("common.status")}</th>
-                  <th>{t("laundry.recorded")}</th>
+                  <th>{t("laundry.sent")}</th>
+                  <th>{t("laundry.received")}</th>
+                  <th>
+                    <span className="sr-only">{t("laundry.markReceived")}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {visibleRecords.map((record) => (
-                  <tr
-                    className="staff-desk__click-row"
-                    key={record.id}
-                    onClick={() => {
-                      setCreating(false);
-                      setSelectedId(record.id);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        setCreating(false);
-                        setSelectedId(record.id);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
+                  <tr key={record.id}>
                     <td>
-                      <strong>{record.name}</strong>
+                      <button
+                        className="staff-desk__row-open"
+                        onClick={() => {
+                          setCreating(false);
+                          setSelectedId(record.id);
+                        }}
+                        type="button"
+                      >
+                        <strong>{record.name}</strong>
+                      </button>
                     </td>
                     <td>{laundryCategoryLabel(record.category, t)}</td>
                     <td>{formatLaundryMeasure(record, locale)}</td>
+                    <td>{formatSatang(record.priceSatang)}</td>
                     <td>
                       <span className={`desk-status desk-status--${record.status}`}>
                         {laundryStatusLabel(record.status, t)}
                       </span>
                     </td>
                     <td>{dateTime(record.recordedAt, locale)}</td>
+                    <td>
+                      {record.receivedAt
+                        ? dateTime(record.receivedAt, locale)
+                        : t("laundry.out")}
+                    </td>
+                    <td>
+                      {!record.receivedAt ? (
+                        <DeskQuietForm action={receiveLaundryRecord}>
+                          {(pending) => (
+                            <>
+                              <input name="id" type="hidden" value={record.id} />
+                              <input name="return-to" type="hidden" value={returnTo} />
+                              <button
+                                className="button button--secondary button--compact"
+                                disabled={pending}
+                                onClick={(event) => event.stopPropagation()}
+                                type="submit"
+                              >
+                                {deskPendingLabel(
+                                  pending,
+                                  t("laundry.markReceived"),
+                                  "…",
+                                )}
+                              </button>
+                            </>
+                          )}
+                        </DeskQuietForm>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -444,10 +476,47 @@ export function StaffDeskLaundry({
                     <dd>{formatLaundryMeasure(selected, locale)}</dd>
                   </div>
                   <div>
-                    <dt>{t("laundry.recorded")}</dt>
+                    <dt>{t("laundry.sent")}</dt>
                     <dd>{dateTime(selected.recordedAt, locale)}</dd>
                   </div>
+                  <div>
+                    <dt>{t("laundry.received")}</dt>
+                    <dd>
+                      {selected.receivedAt
+                        ? dateTime(selected.receivedAt, locale)
+                        : t("laundry.out")}
+                    </dd>
+                  </div>
                 </dl>
+                <div className="staff-desk__field-grid">
+                  <div className="field-pair">
+                    <label htmlFor="slip-price">{t("laundry.price")}</label>
+                    <input
+                      defaultValue={satangToBaht(selected.priceSatang)}
+                      id="slip-price"
+                      inputMode="decimal"
+                      min={0}
+                      name="price-baht"
+                      required
+                      step="0.01"
+                      type="number"
+                    />
+                  </div>
+                  <div className="field-pair">
+                    <label htmlFor="slip-status">{t("laundry.updateStatus")}</label>
+                    <select
+                      defaultValue={selected.status}
+                      id="slip-status"
+                      name="status"
+                    >
+                      {DESK_LAUNDRY_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {laundryStatusLabel(status, t)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <div className="field-pair">
                   <label htmlFor="slip-note">{t("common.note")}</label>
                   <textarea
@@ -456,20 +525,6 @@ export function StaffDeskLaundry({
                     name="staff-note"
                     rows={3}
                   />
-                </div>
-                <div className="field-pair">
-                  <label htmlFor="slip-status">{t("laundry.updateStatus")}</label>
-                  <select
-                    defaultValue={selected.status}
-                    id="slip-status"
-                    name="status"
-                  >
-                    {DESK_LAUNDRY_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {laundryStatusLabel(status, t)}
-                      </option>
-                    ))}
-                  </select>
                 </div>
                 <button
                   className="button button--secondary"

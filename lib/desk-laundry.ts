@@ -1,9 +1,5 @@
 export const DESK_LAUNDRY_CATEGORIES = ["laundry", "sheets"] as const;
-export const DESK_LAUNDRY_STATUSES = [
-  "sent",
-  "incomplete",
-  "complete",
-] as const;
+export const DESK_LAUNDRY_STATUSES = ["unpaid", "paid"] as const;
 
 /** Fixed sheet items staff count when sending linens out. */
 export const DESK_SHEET_ITEMS = [

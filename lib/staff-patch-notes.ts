@@ -18,6 +18,39 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-all-bookings-desk",
+    date: "2026-11-08",
+    title: "All bookings matches Bills desk list",
+    summary:
+      "All bookings uses the Bills date strip and table. Newest bookings first, with stay dates and full guest detail on tap.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "All bookings desk list with stay and booked dates",
+    },
+    changes: [
+      "All bookings uses the same Today / This week / This month strip as Bills and Expenses.",
+      "List defaults to most recently booked first; stay dates, room, payment, and status stay on each row.",
+      "Tap a row for phone, email, source, and Open on calendar.",
+    ],
+  },
+  {
+    id: "2026-11-08-nav-laundry-trips",
+    date: "2026-11-08",
+    title: "Nav rename, Messages, laundry paid/received, Trips",
+    summary:
+      "Stay items sit with Home. F&B / Pending payments / All bookings. Messages list, laundry unpaid-paid with receive, Trips & Tours sales.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff navigation and desk lists",
+    },
+    changes: [
+      "Stay group removed — Pending payments, Calendar, All bookings, and Messages sit under Home.",
+      "Desk is Other income: F&B (food icon), Laundry, Menu, Expenses, Trips & Tours.",
+      "Messages lists guest threads newest-first and flags unanswered chats.",
+      "Laundry slips use Unpaid/Paid, a price, sent and received dates, plus a Received button on open slips.",
+    ],
+  },
+  {
     id: "2026-11-07-fluid-invocations",
     date: "2026-11-07",
     title: "Quieter Bills and Calendar server load",

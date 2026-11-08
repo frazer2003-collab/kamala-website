@@ -105,6 +105,105 @@ export function pickLatestMessagePreviews(
   return previews;
 }
 
+export type StaffMessageThread = {
+  bookingId: string;
+  guestName: string;
+  roomName: string;
+  status: BookingRequestRow["status"];
+  needsReply: boolean;
+  lastSender: BookingMessageRow["sender"];
+  lastBody: string;
+  lastAt: string;
+  ageLabel: string;
+};
+
+/** Recent guest/staff threads for the Messages page (newest first). */
+export async function listStaffMessageThreads(limit = 80): Promise<StaffMessageThread[]> {
+  if (!hasStaffSupabaseConfig()) {
+    return [];
+  }
+
+  const supabase = createStaffSupabaseClient();
+  const { data: messages, error } = await supabase
+    .from("booking_messages")
+    .select("booking_request_id, sender, body, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(limit * 4, 80), 400));
+
+  if (error || !messages?.length) {
+    return [];
+  }
+
+  const latestByBooking = new Map<
+    string,
+    {
+      sender: BookingMessageRow["sender"];
+      body: string;
+      createdAt: string;
+    }
+  >();
+  for (const row of messages) {
+    if (latestByBooking.has(row.booking_request_id)) continue;
+    latestByBooking.set(row.booking_request_id, {
+      sender: row.sender as BookingMessageRow["sender"],
+      body: row.body,
+      createdAt: row.created_at,
+    });
+    if (latestByBooking.size >= limit) break;
+  }
+
+  const bookingIds = [...latestByBooking.keys()];
+  const [{ data: bookings, error: bookingError }, { data: rooms }] =
+    await Promise.all([
+      supabase
+        .from("booking_requests")
+        .select("id, guest_name, room_id, status")
+        .in("id", bookingIds),
+      supabase.from("rooms").select("id, name"),
+    ]);
+
+  if (bookingError || !bookings) {
+    return [];
+  }
+
+  const roomNameById = new Map(
+    (rooms ?? []).map((row) => [row.id, row.name] as const),
+  );
+
+  const bookingById = new Map(
+    bookings.map((row) => [
+      row.id,
+      {
+        guestName: row.guest_name,
+        roomName: roomNameById.get(row.room_id) ?? "Room",
+        status: row.status as BookingRequestRow["status"],
+      },
+    ]),
+  );
+
+  const nowMs = Date.now();
+  const threads: StaffMessageThread[] = [];
+  for (const [bookingId, preview] of latestByBooking) {
+    const booking = bookingById.get(bookingId);
+    if (!booking) continue;
+    threads.push({
+      bookingId,
+      guestName: booking.guestName,
+      roomName: booking.roomName,
+      status: booking.status,
+      needsReply: booking.status === "needs-reply",
+      lastSender: preview.sender,
+      lastBody: truncateInboxPreview(preview.body),
+      lastAt: preview.createdAt,
+      ageLabel: formatInboxMessageAge(preview.createdAt, nowMs),
+    });
+  }
+
+  return threads.sort(
+    (left, right) => Date.parse(right.lastAt) - Date.parse(left.lastAt),
+  );
+}
+
 /** Latest message snippet per booking for the staff inbox list. */
 export async function getInboxMessagePreviews(bookingIds: string[]) {
   const uniqueIds = [...new Set(bookingIds.filter(Boolean))];

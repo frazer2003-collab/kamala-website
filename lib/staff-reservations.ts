@@ -75,6 +75,7 @@ export type ReservationRow = {
   needsRoom: boolean;
   nights: number;
   phone: string | null;
+  email: string | null;
   sourceLabel: string;
   moneyLabel: string | null;
   /** Paid, Unpaid, No charge, No price, or Transfer to verify. */
@@ -310,6 +311,7 @@ export function buildReservationRows({
     const key = getStaffBookingKey(booking);
     const pay = websitePay(booking, currency);
     const phone = booking.phone.trim();
+    const email = booking.contact.trim();
     const bookedAt = bookedDateFromTimestamp(booking.createdAt);
 
     rows.push({
@@ -333,6 +335,7 @@ export function buildReservationRows({
       needsRoom,
       nights: stayNightCount(booking.arrivalDate, booking.departureDate),
       phone: phone || null,
+      email: email || null,
       sourceLabel: websiteSourceLabel(booking),
       moneyLabel: pay.moneyLabel,
       payLabel: pay.payLabel,
@@ -366,6 +369,8 @@ export function buildReservationRows({
         ? formatBookingSource(block.bookingSource)
         : block.channelLabel || "Channel";
     const bookedAt = bookedDateFromTimestamp(block.createdAt);
+    const phone = block.guestPhone.trim();
+    const email = block.guestEmail.trim();
 
     rows.push({
       id: key,
@@ -387,7 +392,8 @@ export function buildReservationRows({
           : null,
       needsRoom,
       nights: stayNightCount(block.startDate, block.endDate),
-      phone: block.guestPhone.trim() || null,
+      phone: phone || null,
+      email: email || null,
       sourceLabel,
       moneyLabel: null,
       payLabel: "No price",
@@ -456,7 +462,14 @@ export function rowMatchesReservationQuery(row: ReservationRow, query: string) {
     return true;
   }
 
-  const haystack = [row.label, row.sublabel, row.doorLabel, row.phone, row.sourceLabel]
+  const haystack = [
+    row.label,
+    row.sublabel,
+    row.doorLabel,
+    row.phone,
+    row.email,
+    row.sourceLabel,
+  ]
     .filter((part): part is string => Boolean(part))
     .join(" ")
     .toLowerCase();
@@ -563,13 +576,37 @@ function compareReservationSortValue(
   }
 }
 
+export function defaultReservationsSortDir(
+  sort: ReservationsSortKey,
+): ReservationsSortDir {
+  return sort === "booked" || sort === "stay" ? "desc" : "asc";
+}
+
 export function sortReservationRows(
   rows: ReservationRow[],
-  sort: ReservationsSortKey = "stay",
-  dir: ReservationsSortDir = "asc",
+  sort: ReservationsSortKey = "booked",
+  dir: ReservationsSortDir = "desc",
 ) {
   const direction = dir === "desc" ? -1 : 1;
-  return [...rows].sort((a, b) => compareReservationSortValue(a, b, sort) * direction);
+  return [...rows].sort((a, b) => {
+    // Keep unknown booked dates at the end regardless of direction.
+    if (sort === "booked") {
+      if (!a.bookedAt && !b.bookedAt) {
+        return a.label.localeCompare(b.label);
+      }
+      if (!a.bookedAt) {
+        return 1;
+      }
+      if (!b.bookedAt) {
+        return -1;
+      }
+      return (
+        (a.bookedAt.localeCompare(b.bookedAt) || a.label.localeCompare(b.label)) *
+        direction
+      );
+    }
+    return compareReservationSortValue(a, b, sort) * direction;
+  });
 }
 
 export function parseReservationsLedgerFilter(value?: string): ReservationsLedgerFilter {
@@ -634,11 +671,17 @@ export function parseReservationsSort(value?: string): ReservationsSortKey {
   ) {
     return value;
   }
-  return "stay";
+  return "booked";
 }
 
-export function parseReservationsSortDir(value?: string): ReservationsSortDir {
-  return value === "desc" ? "desc" : "asc";
+export function parseReservationsSortDir(
+  value?: string,
+  sort: ReservationsSortKey = "booked",
+): ReservationsSortDir {
+  if (value === "asc" || value === "desc") {
+    return value;
+  }
+  return defaultReservationsSortDir(sort);
 }
 
 export function parseReservationsRoomFilter(value?: string) {
@@ -666,7 +709,7 @@ export function nextReservationsSortDir(
   if (currentSort === nextSort) {
     return currentDir === "asc" ? "desc" : "asc";
   }
-  return nextSort === "booked" || nextSort === "stay" ? "desc" : "asc";
+  return defaultReservationsSortDir(nextSort);
 }
 
 export function reservationsListHref(options: {
@@ -679,8 +722,10 @@ export function reservationsListHref(options: {
   pay?: ReservationsPayFilter;
   sort?: ReservationsSortKey;
   dir?: ReservationsSortDir;
+  open?: string | null;
 }) {
   const params = new URLSearchParams();
+  params.set("month", options.from.slice(0, 7));
   params.set("from", options.from);
   params.set("to", options.to);
   if (options.ledger && options.ledger !== "all") {
@@ -701,13 +746,16 @@ export function reservationsListHref(options: {
   if (pay !== "all") {
     params.set("pay", pay);
   }
-  const sort = options.sort ?? "stay";
-  const dir = options.dir ?? "asc";
-  if (sort !== "stay") {
+  const sort = options.sort ?? "booked";
+  const dir = options.dir ?? defaultReservationsSortDir(sort);
+  if (sort !== "booked") {
     params.set("sort", sort);
   }
-  if (dir !== "asc") {
+  if (dir !== defaultReservationsSortDir(sort)) {
     params.set("dir", dir);
+  }
+  if (options.open) {
+    params.set("open", options.open);
   }
   return `/staff/reservations?${params.toString()}`;
 }

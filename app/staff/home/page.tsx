@@ -136,7 +136,7 @@ export default async function StaffHomePage() {
       ? `${openBills} open · ${formatSatang(openBillsTotalSatang)} · ${oldestOpenBillAge(oldestOpenServiceDate, todayIso)}`
       : "No open desk bills";
   const openLaundryList = laundry.filter(
-    (record) => record.status === "sent" || record.status === "incomplete",
+    (record) => record.status === "unpaid" || !record.receivedAt,
   );
   const openLaundry = openLaundryList.length;
   const lowStockList = counted.filter(

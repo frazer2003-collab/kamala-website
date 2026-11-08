@@ -10,10 +10,12 @@ export type StaffNavCurrent =
   | "requests"
   | "calendar"
   | "reservations"
+  | "messages"
   | "bills"
   | "laundry"
   | "items"
   | "expenses"
+  | "trips"
   | "sold"
   | "promotions"
   | "gallery"
@@ -97,6 +99,33 @@ function IconReservations() {
   );
 }
 
+function IconMessages() {
+  return (
+    <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
+      <path
+        d="M4 5.5h12v8.5H9l-3 2.2V14H4z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function IconFood() {
+  return (
+    <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
+      <path
+        d="M6 3.5v6.5M6 10v6.5M4.5 3.5c0 2.2.7 3.5 1.5 3.5s1.5-1.3 1.5-3.5M12 3.5v13M14.5 3.5V9a2.5 2.5 0 0 1-2.5 2.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 function IconFinance() {
   return (
     <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
@@ -126,14 +155,6 @@ function IconExpenses() {
   );
 }
 
-function IconBill() {
-  return (
-    <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
-      <path d="M5 3.5h10v13l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2zM7.5 7h5M7.5 10h5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
 function IconLaundry() {
   return (
     <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
@@ -151,6 +172,21 @@ function IconItems() {
       <circle cx="6" cy="5.5" fill="currentColor" r=".8" />
       <circle cx="10" cy="10" fill="currentColor" r=".8" />
       <circle cx="14" cy="14.5" fill="currentColor" r=".8" />
+    </svg>
+  );
+}
+
+function IconTrips() {
+  return (
+    <svg aria-hidden="true" className="staff-nav__icon" fill="none" viewBox="0 0 20 20">
+      <path
+        d="M3.5 14.5 10 4.5l6.5 10H3.5ZM10 8v3.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+      <circle cx="10" cy="14" fill="currentColor" r=".9" />
     </svg>
   );
 }
@@ -219,39 +255,44 @@ function IconSettings() {
 export function StaffSidebar({ current }: StaffSidebarProps) {
   const { t } = useStaffLocale();
   const [collapsed, setCollapsed] = useState(false);
-  const homeItem = useMemo<NavItem>(
-    () => ({ id: "home", href: "/staff/home", label: t("nav.home"), icon: <IconHome /> }),
+
+  const topItems = useMemo<NavItem[]>(
+    () => [
+      { id: "home", href: "/staff/home", label: t("nav.home"), icon: <IconHome /> },
+      {
+        id: "requests",
+        href: "/staff/transfers",
+        label: t("nav.pendingPayments"),
+        icon: <IconTransfers />,
+      },
+      {
+        id: "calendar",
+        href: "/staff/calendar",
+        label: t("nav.calendar"),
+        icon: <IconCalendar />,
+      },
+      {
+        id: "reservations",
+        href: "/staff/reservations",
+        label: t("nav.allBookings"),
+        icon: <IconReservations />,
+      },
+      {
+        id: "messages",
+        href: "/staff/messages",
+        label: t("nav.messages"),
+        icon: <IconMessages />,
+      },
+    ],
     [t],
   );
+
   const navGroups = useMemo(
     () => [
       {
-        label: t("nav.stay"),
+        label: t("nav.otherIncome"),
         items: [
-          {
-            id: "requests" as const,
-            href: "/staff/transfers",
-            label: t("nav.transfers"),
-            icon: <IconTransfers />,
-          },
-          {
-            id: "calendar" as const,
-            href: "/staff/calendar",
-            label: t("nav.calendar"),
-            icon: <IconCalendar />,
-          },
-          {
-            id: "reservations" as const,
-            href: "/staff/reservations",
-            label: t("nav.reservations"),
-            icon: <IconReservations />,
-          },
-        ],
-      },
-      {
-        label: t("nav.desk"),
-        items: [
-          { id: "bills" as const, href: "/staff/bills", label: t("nav.bills"), icon: <IconBill /> },
+          { id: "bills" as const, href: "/staff/bills", label: t("nav.fnb"), icon: <IconFood /> },
           {
             id: "laundry" as const,
             href: "/staff/laundry",
@@ -269,6 +310,12 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
             href: "/staff/expenses?view=day",
             label: t("nav.expenses"),
             icon: <IconExpenses />,
+          },
+          {
+            id: "trips" as const,
+            href: "/staff/trips",
+            label: t("nav.trips"),
+            icon: <IconTrips />,
           },
         ],
       },
@@ -369,16 +416,19 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
       </div>
       <nav className="staff-nav" id="staff-nav">
         <div className="staff-nav__group">
-          <Link
-            aria-current={current === homeItem.id ? "page" : undefined}
-            aria-label={collapsed ? homeItem.label : undefined}
-            href={homeItem.href}
-            prefetch={false}
-            title={collapsed ? homeItem.label : undefined}
-          >
-            {homeItem.icon}
-            <span className="staff-nav__label">{homeItem.label}</span>
-          </Link>
+          {topItems.map((item) => (
+            <Link
+              aria-current={current === item.id ? "page" : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              href={item.href}
+              key={item.id}
+              prefetch={false}
+              title={collapsed ? item.label : undefined}
+            >
+              {item.icon}
+              <span className="staff-nav__label">{item.label}</span>
+            </Link>
+          ))}
         </div>
         {navGroups.map((group) => (
           <div className="staff-nav__group" key={group.label}>

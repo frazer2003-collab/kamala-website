@@ -363,7 +363,7 @@ export default async function StaffBookingsPage({
       <section className="staff-main" aria-labelledby="staff-title">
         <div className="staff-header staff-header--compact">
           <div>
-            <h1 id="staff-title">Transfers</h1>
+            <h1 id="staff-title">Pending payments</h1>
             <p>
               Card stays confirm on their own. Use this page to verify Thai bank
               transfers, answer guests, and send bank refunds.

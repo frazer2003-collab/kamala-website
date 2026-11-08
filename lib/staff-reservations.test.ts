@@ -343,9 +343,28 @@ describe("filterReservationRows", () => {
     assert.equal(airbnb[0]?.sourceLabel, "Airbnb");
   });
 
-  it("sorts by arrival date by default", () => {
+  it("sorts by booked date newest first by default", () => {
     const sorted = sortReservationRows(rows);
-    assert.equal(sorted[0]?.arrivalDate, "2026-08-03");
+    // Channel block defaults to a later createdAt than website fixtures.
+    assert.equal(sorted[0]?.id, "chan");
+    assert.equal(parseReservationsSort(undefined), "booked");
+    const byStay = sortReservationRows(rows, "stay", "asc");
+    assert.equal(byStay[0]?.arrivalDate, "2026-08-03");
+  });
+
+  it("keeps unknown booked dates last when sorting newest first", () => {
+    const withMissing = [
+      ...rows,
+      {
+        ...rows[0]!,
+        id: "no-booked",
+        label: "Unknown booked",
+        bookedAt: null,
+        bookedLabel: null,
+      },
+    ];
+    const sorted = sortReservationRows(withMissing, "booked", "desc");
+    assert.equal(sorted.at(-1)?.id, "no-booked");
   });
 
   it("filters by room and payment, and sorts by booked date", () => {

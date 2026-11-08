@@ -10,7 +10,10 @@ import {
   deleteDeskCountedItem,
   deleteDeskExpense,
   deleteDeskLaundry,
+  deleteDeskTourSale,
   deleteDeskSellable,
+  markDeskLaundryReceived,
+  saveDeskTourSale,
   ensureSellableForCountedItem,
   listDeskCountedItems,
   listDeskItemCategories,
@@ -75,6 +78,7 @@ function revalidateDesk() {
   revalidatePath("/staff/laundry");
   revalidatePath("/staff/items");
   revalidatePath("/staff/expenses");
+  revalidatePath("/staff/trips");
   revalidatePath("/staff/sold");
   revalidatePath("/staff/portal/bills");
   revalidatePath("/staff/portal/laundry");
@@ -168,13 +172,15 @@ export async function createLaundryRecord(formData: FormData) {
   const categoryRaw = value(formData, "category") as DeskLaundryCategory;
   const category =
     portal?.kind === "laundry" ? ("sheets" as const) : categoryRaw;
-  const status = value(formData, "status") as DeskLaundryStatus;
+  const statusRaw = value(formData, "status") as DeskLaundryStatus;
+  const status = DESK_LAUNDRY_STATUSES.includes(statusRaw)
+    ? statusRaw
+    : "unpaid";
   if (!DESK_LAUNDRY_CATEGORIES.includes(category)) {
     throw new Error("Choose a laundry category.");
   }
-  if (!DESK_LAUNDRY_STATUSES.includes(status)) {
-    throw new Error("Choose a laundry status.");
-  }
+  const priceSatang = parseBahtToSatang(value(formData, "price-baht"));
+  if (priceSatang === null) throw new Error("Enter a laundry price.");
 
   let grams: number | null = null;
   let count: number | null = null;
@@ -211,6 +217,7 @@ export async function createLaundryRecord(formData: FormData) {
     ...input,
     staffNote: value(formData, "staff-note") || null,
     status,
+    priceSatang,
   });
   revalidateDesk();
   return finishDeskMutation(
@@ -231,6 +238,8 @@ export async function updateLaundryRecord(formData: FormData) {
   if (!DESK_LAUNDRY_STATUSES.includes(status)) {
     throw new Error("Choose a laundry status.");
   }
+  const priceSatang = parseBahtToSatang(value(formData, "price-baht"));
+  if (priceSatang === null) throw new Error("Enter a laundry price.");
   const grams = nonNegativeInteger(formData, "grams") || null;
   const count = nonNegativeInteger(formData, "count") || null;
   const lines =
@@ -250,6 +259,7 @@ export async function updateLaundryRecord(formData: FormData) {
     ...input,
     staffNote: value(formData, "staff-note") || null,
     status,
+    priceSatang,
   });
   revalidateDesk();
   return finishDeskMutation(
@@ -259,11 +269,56 @@ export async function updateLaundryRecord(formData: FormData) {
   );
 }
 
+export async function receiveLaundryRecord(formData: FormData) {
+  await requireDeskWriteAccess("laundry");
+  await markDeskLaundryReceived(required(formData, "id", "Laundry record"));
+  revalidateDesk();
+  return finishDeskMutation(
+    formData,
+    safeDeskReturnTo(formData, "/staff/laundry"),
+    { ok: true },
+  );
+}
+
 export async function deleteLaundryRecord(formData: FormData) {
   await requireDeskWriteAccess("laundry");
   await deleteDeskLaundry(required(formData, "id", "Laundry record"));
   revalidateDesk();
   return finishDeskMutation(formData, safeDeskReturnTo(formData, "/staff/laundry"));
+}
+
+export async function createTourSale(formData: FormData) {
+  await requireStaffSession();
+  const amountSatang = parseBahtToSatang(value(formData, "amount-baht"));
+  if (amountSatang === null) throw new Error("Enter a valid sale amount.");
+  const guests = positiveInteger(formData, "guests", 1);
+  const saleDate = value(formData, "sale-date") || getPropertyTodayIso();
+  if (!isIsoDate(saleDate)) throw new Error("Choose a sale date.");
+  const session = await getStaffSession();
+  const id = await saveDeskTourSale({
+    name: required(formData, "name", "Trip or tour name"),
+    amountSatang,
+    guests,
+    staffNote: value(formData, "staff-note") || null,
+    saleDate,
+    actedBy: session?.subject ?? null,
+  });
+  revalidateDesk();
+  return finishDeskMutation(
+    formData,
+    safeDeskReturnTo(formData, "/staff/trips"),
+    { ok: true, id },
+  );
+}
+
+export async function deleteTourSale(formData: FormData) {
+  await requireStaffSession();
+  await deleteDeskTourSale(required(formData, "id", "Tour sale"));
+  revalidateDesk();
+  return finishDeskMutation(
+    formData,
+    safeDeskReturnTo(formData, "/staff/trips"),
+  );
 }
 
 export async function deactivateSellableItem(formData: FormData) {
