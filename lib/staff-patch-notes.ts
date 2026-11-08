@@ -31,7 +31,7 @@ export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
       "Bank to confirm: Thai bank website payments with confirm/reject on Home.",
       "Check-in / check-out today lists with door numbers.",
       "Tours show from 24h before pickup until 6h after — set Pickup time on Trips.",
-      "Deep clean due after 3 nights in-house; Cleaned clears the row until the next 3 nights.",
+      "Deep clean due after 3 nights in-house; Cleaned greys the row and moves it to the bottom until the next 3 nights.",
       "Needs reply lists unanswered guest threads. Notifications removed from Stay nav.",
     ],
   },

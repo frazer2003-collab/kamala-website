@@ -33,6 +33,8 @@ export type HomeCleanRow = {
   room: string;
   doorLabel: string | null;
   nightsSinceClean: number;
+  /** True when staff marked Cleaned and the next 3-night cycle has not started. */
+  cleaned: boolean;
   href: string;
 };
 
@@ -165,6 +167,10 @@ export function homeTourPickups(
   });
 }
 
+/**
+ * In-house stays that have reached 3 nights since arrival stay on the board.
+ * Due rows first; recently cleaned rows are greyed and sorted to the bottom.
+ */
 export function homeDeepCleanDue(
   bookings: Array<
     StaffBooking & { housekeepingCleanedOn?: string | null }
@@ -174,15 +180,27 @@ export function homeDeepCleanDue(
   const rows: HomeCleanRow[] = [];
   for (const booking of bookings) {
     if (
-      !stayNeedsDeepClean({
-        arrivalDate: booking.arrivalDate,
-        departureDate: booking.departureDate,
-        cleanedOn: booking.housekeepingCleanedOn,
+      !bookingOccupiesDay(
+        {
+          arrivalDate: booking.arrivalDate,
+          departureDate: booking.departureDate,
+        },
         todayIso,
-      })
+      )
     ) {
       continue;
     }
+    const nightsSinceArrival = countStayNights(booking.arrivalDate, todayIso);
+    if (nightsSinceArrival === null || nightsSinceArrival < 3) {
+      continue;
+    }
+
+    const due = stayNeedsDeepClean({
+      arrivalDate: booking.arrivalDate,
+      departureDate: booking.departureDate,
+      cleanedOn: booking.housekeepingCleanedOn,
+      todayIso,
+    });
     const since =
       booking.housekeepingCleanedOn &&
       booking.housekeepingCleanedOn >= booking.arrivalDate
@@ -194,13 +212,19 @@ export function homeDeepCleanDue(
       guest: booking.guest,
       room: booking.room,
       doorLabel: booking.roomNumber ? `#${booking.roomNumber}` : null,
-      nightsSinceClean: countStayNights(since, todayIso) ?? 3,
+      nightsSinceClean: countStayNights(since, todayIso) ?? nightsSinceArrival,
+      cleaned: !due,
       href: `/staff/calendar?month=${booking.arrivalDate.slice(0, 7)}&booking=${encodeURIComponent(id)}`,
     });
   }
-  return rows.sort(
-    (a, b) => b.nightsSinceClean - a.nightsSinceClean || a.guest.localeCompare(b.guest),
-  );
+  return rows.sort((a, b) => {
+    if (a.cleaned !== b.cleaned) {
+      return a.cleaned ? 1 : -1;
+    }
+    return (
+      b.nightsSinceClean - a.nightsSinceClean || a.guest.localeCompare(b.guest)
+    );
+  });
 }
 
 export function homeNeedsReply(threads: StaffMessageThread[]) {

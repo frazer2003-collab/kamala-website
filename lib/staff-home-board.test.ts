@@ -1,11 +1,49 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import type { StaffBooking } from "./booking-requests";
 import {
   bangkokPickupMs,
+  homeDeepCleanDue,
   isTourPickupOnHomeBoard,
   parsePickupTime,
   stayNeedsDeepClean,
 } from "./staff-home-board";
+
+function cleanBooking(
+  partial: Partial<StaffBooking> &
+    Pick<StaffBooking, "id" | "arrivalDate" | "departureDate">,
+): StaffBooking & { housekeepingCleanedOn?: string | null } {
+  return {
+    databaseId: partial.databaseId ?? partial.id,
+    id: partial.id,
+    guest: partial.guest ?? "Guest",
+    room: partial.room ?? "Superior",
+    dates: "",
+    nights: 5,
+    status: "confirmed",
+    requestedAt: "",
+    createdAt: null,
+    note: "",
+    contact: "",
+    phone: "",
+    arrivalDate: partial.arrivalDate,
+    departureDate: partial.departureDate,
+    roomId: "courtyard",
+    estimatedTotal: 0,
+    depositAmount: 0,
+    depositPaid: true,
+    bookingSource: "walk-in",
+    bankTransferClaimed: false,
+    stripePaymentIntentId: null,
+    stayStatus: "checked-in",
+    stayEndReason: null,
+    staffNote: "",
+    roomUnitId: null,
+    roomNumber: "101",
+    bedSetup: null,
+    housekeepingCleanedOn: partial.housekeepingCleanedOn ?? null,
+  };
+}
 
 describe("tour pickup home window", () => {
   it("parses HH:MM pickup times", () => {
@@ -91,5 +129,32 @@ describe("deep clean due", () => {
       }),
       true,
     );
+  });
+
+  it("keeps cleaned stays on the list, greyed at the bottom", () => {
+    const rows = homeDeepCleanDue(
+      [
+        cleanBooking({
+          id: "due",
+          guest: "Due",
+          arrivalDate: "2026-11-08",
+          departureDate: "2026-11-20",
+          housekeepingCleanedOn: null,
+        }),
+        cleanBooking({
+          id: "done",
+          guest: "Done",
+          arrivalDate: "2026-11-08",
+          departureDate: "2026-11-20",
+          housekeepingCleanedOn: "2026-11-11",
+        }),
+      ],
+      "2026-11-12",
+    );
+    assert.equal(rows.length, 2);
+    assert.equal(rows[0]?.id, "due");
+    assert.equal(rows[0]?.cleaned, false);
+    assert.equal(rows[1]?.id, "done");
+    assert.equal(rows[1]?.cleaned, true);
   });
 });

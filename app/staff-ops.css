@@ -748,6 +748,22 @@
   align-items: center;
 }
 
+.staff-home-board__row--muted,
+.staff-home-board__clean--done {
+  opacity: 0.55;
+}
+
+.staff-home-board__row--muted:hover,
+.staff-home-board__row--muted:focus-visible {
+  opacity: 0.75;
+}
+
+.staff-home-board__done-label {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 @media (max-width: 800px) {
   .staff-home-board__split {
     grid-template-columns: 1fr;

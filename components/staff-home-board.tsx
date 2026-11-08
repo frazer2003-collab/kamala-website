@@ -20,20 +20,23 @@ function Section({
   title,
   count,
   empty,
+  hasItems,
   children,
 }: {
   title: string;
   count: number;
   empty: string;
+  hasItems?: boolean;
   children: ReactNode;
 }) {
+  const showList = hasItems ?? count > 0;
   return (
     <section className="staff-home-board__section" aria-label={title}>
       <header className="staff-home-board__section-head">
         <h2>{title}</h2>
         <span className="staff-home-board__count">{count}</span>
       </header>
-      {count === 0 ? (
+      {!showList ? (
         <p className="staff-home-board__empty">{empty}</p>
       ) : (
         <ul className="staff-home-board__list">{children}</ul>
@@ -155,27 +158,50 @@ export function StaffHomeBoard({
       </Section>
 
       <Section
-        count={cleanDue.length}
+        count={cleanDue.filter((row) => !row.cleaned).length}
         empty="No rooms due for a 3-night clean."
+        hasItems={cleanDue.length > 0}
         title="Deep clean due"
       >
         {cleanDue.map((row) => (
-          <li className="staff-home-board__clean" key={row.id}>
-            <Link className="staff-home-board__row" href={row.href} prefetch={false}>
+          <li
+            className={[
+              "staff-home-board__clean",
+              row.cleaned ? "staff-home-board__clean--done" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            key={row.id}
+          >
+            <Link
+              className={[
+                "staff-home-board__row",
+                row.cleaned ? "staff-home-board__row--muted" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              href={row.href}
+              prefetch={false}
+            >
               <strong>{row.guest}</strong>
               <span>
                 {row.room}
                 {row.doorLabel ? ` · ${row.doorLabel}` : ""} · {row.nightsSinceClean}n
+                {row.cleaned ? " · cleaned" : ""}
               </span>
             </Link>
-            <button
-              className="button button--secondary button--compact"
-              disabled={!canManage || pending}
-              onClick={() => markCleaned(row.id)}
-              type="button"
-            >
-              Cleaned
-            </button>
+            {row.cleaned ? (
+              <span className="staff-home-board__done-label">Cleaned</span>
+            ) : (
+              <button
+                className="button button--secondary button--compact"
+                disabled={!canManage || pending}
+                onClick={() => markCleaned(row.id)}
+                type="button"
+              >
+                Cleaned
+              </button>
+            )}
           </li>
         ))}
       </Section>
