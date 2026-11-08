@@ -18,6 +18,23 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-notifications-digest",
+    date: "2026-11-08",
+    title: "Notifications digest: Needs you vs activity",
+    summary:
+      "Notifications now leads with work that needs you, then quieter booking activity — with counts, filters, and mark-all-read.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Notifications page with Needs you section and summary counts",
+    },
+    changes: [
+      "Summary strip shows Needs you / Messages / Money / Unread at a glance.",
+      "Feed splits into Needs you (reply, bank, refund, holds) and Recent activity (confirmed, cancelled, moved).",
+      "Filters: All · Needs you · Bookings · Messages. Duplicate new+confirmed pairs collapse to one line.",
+      "Mark all read clears activity noise without losing open action cards.",
+    ],
+  },
+  {
     id: "2026-11-08-nav-trips-notices",
     date: "2026-11-08",
     title: "Stay/Desk nav, trip slips, notification feed",

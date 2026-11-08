@@ -313,7 +313,8 @@ const en: Dict = {
   "transfers.empty": "Nothing waiting",
   "transfers.emptyHint":
     "New bookings, cancellations, moves, bank checks, and replies show here.",
-  "transfers.feedHint": "Tap a notice for dates and details.",
+  "transfers.feedHint":
+    "Needs you first — then recent booking changes. Scan the strip, don’t open every row.",
   "transfers.openActions": "Open action inbox",
   "transfers.openItem": "Open item",
   "transfers.back": "Notifications",
@@ -321,6 +322,16 @@ const en: Dict = {
   "transfers.filterMoney": "Money",
   "transfers.filterReply": "Need reply",
   "transfers.filterNew": "New",
+  "transfers.summary": "Notification summary",
+  "transfers.needsYou": "Needs you",
+  "transfers.moneyDue": "Money",
+  "transfers.unread": "Unread",
+  "transfers.markAllRead": "Mark all read",
+  "transfers.focusFilter": "Notification focus",
+  "transfers.focusAction": "Needs you",
+  "transfers.focusBookings": "Bookings",
+  "transfers.focusMessages": "Messages",
+  "transfers.recentActivity": "Recent activity",
   "ai.title": "AI search",
 };
 
@@ -624,7 +635,8 @@ const th: Dict = {
   "transfers.empty": "ไม่มีรายการรอ",
   "transfers.emptyHint":
     "การจองใหม่ ยกเลิก ย้ายวัน ตรวจโอน และข้อความจะโชว์ที่นี่",
-  "transfers.feedHint": "แตะการแจ้งเตือนเพื่อดูวันที่และรายละเอียด",
+  "transfers.feedHint":
+    "งานที่ต้องทำขึ้นก่อน แล้วค่อยดูการเปลี่ยนแปลงการจอง — กวาดตาแถบสรุป ไม่ต้องเปิดทุกรายการ",
   "transfers.openActions": "เปิดกล่องงานค้าง",
   "transfers.openItem": "เปิดรายการ",
   "transfers.back": "การแจ้งเตือน",
@@ -632,6 +644,16 @@ const th: Dict = {
   "transfers.filterMoney": "เงิน",
   "transfers.filterReply": "รอตอบ",
   "transfers.filterNew": "ใหม่",
+  "transfers.summary": "สรุปการแจ้งเตือน",
+  "transfers.needsYou": "ต้องจัดการ",
+  "transfers.moneyDue": "เงิน",
+  "transfers.unread": "ยังไม่อ่าน",
+  "transfers.markAllRead": "อ่านทั้งหมด",
+  "transfers.focusFilter": "ตัวกรองการแจ้งเตือน",
+  "transfers.focusAction": "ต้องจัดการ",
+  "transfers.focusBookings": "การจอง",
+  "transfers.focusMessages": "ข้อความ",
+  "transfers.recentActivity": "กิจกรรมล่าสุด",
   "ai.title": "ค้นหา AI",
 };
 

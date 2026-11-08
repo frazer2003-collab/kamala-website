@@ -40,6 +40,7 @@ import {
 import {
   listStaffDeskNotifications,
 } from "@/lib/staff-desk-notifications";
+import { parseNotificationFocus } from "@/lib/staff-notification-digest";
 import { syncActionNotifications } from "@/lib/staff-notification-sync";
 import { StaffNotificationsFeed } from "@/components/staff-notifications-feed";
 import {
@@ -209,6 +210,7 @@ export default async function StaffBookingsPage({
     filter?: string;
     view?: string;
     open?: string;
+    focus?: string;
     error?: string;
     detail?: string;
     overlap?: string;
@@ -226,6 +228,7 @@ export default async function StaffBookingsPage({
     filter: filterParam,
     view: viewParam,
     open: openNoticeId,
+    focus: focusParam,
     error,
     detail: errorDetail,
     overlap,
@@ -234,6 +237,7 @@ export default async function StaffBookingsPage({
     refund,
   } = await searchParams;
   const inboxFilter = parseStaffNotificationFilter(filterParam);
+  const noticeFocus = parseNotificationFocus(focusParam);
   const preferInboxView = viewParam === "inbox" || viewParam === "actions";
 
   // Abandoned carts are purged by /api/cron/abandoned-checkouts (not on every
@@ -282,13 +286,7 @@ export default async function StaffBookingsPage({
           <header className="staff-header staff-header--compact staff-desk__header">
             <div>
               <h1 id="staff-title">{staffT(locale, "transfers.title")}</h1>
-              <p>
-                {staffT(locale, "transfers.feedHint")}
-                {" · "}
-                <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
-                  {staffT(locale, "transfers.openActions")}
-                </Link>
-              </p>
+              <p>{staffT(locale, "transfers.feedHint")}</p>
             </div>
           </header>
           {feed.error ? (
@@ -297,8 +295,10 @@ export default async function StaffBookingsPage({
             </p>
           ) : null}
           <StaffNotificationsFeed
+            focus={noticeFocus}
             initialOpenId={openNoticeId ?? null}
             notifications={feed.notifications}
+            openBookings={staffBookings.bookings}
           />
         </section>
       </StaffShell>

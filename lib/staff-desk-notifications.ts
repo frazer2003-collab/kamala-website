@@ -202,3 +202,15 @@ export async function markStaffDeskNotificationRead(id: string) {
     console.error("markStaffDeskNotificationRead", error);
   }
 }
+
+export async function markAllStaffDeskNotificationsRead() {
+  if (!hasStaffSupabaseConfig()) return;
+  try {
+    await notificationsTable()
+      .update({ read_at: new Date().toISOString() })
+      .eq("property_id", PROPERTY_ID)
+      .is("read_at", null);
+  } catch (error) {
+    console.error("markAllStaffDeskNotificationsRead", error);
+  }
+}
