@@ -14,6 +14,7 @@ import {
   deleteDeskSellable,
   markDeskLaundryReceived,
   saveDeskTourSale,
+  updateDeskTourSale,
   ensureSellableForCountedItem,
   listDeskCountedItems,
   listDeskItemCategories,
@@ -293,21 +294,70 @@ export async function createTourSale(formData: FormData) {
   if (amountSatang === null) throw new Error("Enter a valid sale amount.");
   const guests = positiveInteger(formData, "guests", 1);
   const saleDate = value(formData, "sale-date") || getPropertyTodayIso();
+  const tripDate = value(formData, "trip-date") || saleDate;
   if (!isIsoDate(saleDate)) throw new Error("Choose a sale date.");
+  if (!isIsoDate(tripDate)) throw new Error("Choose a trip date.");
+  const paymentRaw = value(formData, "payment-status");
+  const paymentStatus =
+    paymentRaw === "stripe" ||
+    paymentRaw === "qr" ||
+    paymentRaw === "cash" ||
+    paymentRaw === "unpaid"
+      ? paymentRaw
+      : "unpaid";
   const session = await getStaffSession();
+  const name = required(formData, "name", "Trip or tour name");
+  const guestName = value(formData, "guest-name") || null;
   const id = await saveDeskTourSale({
-    name: required(formData, "name", "Trip or tour name"),
+    name,
     amountSatang,
     guests,
     staffNote: value(formData, "staff-note") || null,
     saleDate,
+    tripDate,
+    paymentStatus,
+    guestName,
+    guestPhone: value(formData, "guest-phone") || null,
+    guestEmail: value(formData, "guest-email") || null,
     actedBy: session?.subject ?? null,
+  });
+  const { recordStaffDeskNotification } = await import(
+    "@/lib/staff-desk-notifications"
+  );
+  await recordStaffDeskNotification({
+    kind: "trip_sold",
+    title: guestName ? `${guestName} · ${name}` : name,
+    body: `Trip ${tripDate} · ${paymentStatus}`,
+    tripSaleId: id,
+    stayArrival: tripDate,
+    stayDeparture: tripDate,
+    href: `/staff/trips?open=${encodeURIComponent(id)}`,
   });
   revalidateDesk();
   return finishDeskMutation(
     formData,
     safeDeskReturnTo(formData, "/staff/trips"),
     { ok: true, id },
+  );
+}
+
+export async function updateTourSalePayment(formData: FormData) {
+  await requireStaffSession();
+  const id = required(formData, "id", "Tour sale");
+  const paymentRaw = value(formData, "payment-status");
+  if (
+    paymentRaw !== "unpaid" &&
+    paymentRaw !== "stripe" &&
+    paymentRaw !== "qr" &&
+    paymentRaw !== "cash"
+  ) {
+    throw new Error("Choose a payment status.");
+  }
+  await updateDeskTourSale({ id, paymentStatus: paymentRaw });
+  revalidateDesk();
+  return finishDeskMutation(
+    formData,
+    safeDeskReturnTo(formData, "/staff/trips"),
   );
 }
 

@@ -257,40 +257,43 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const topItems = useMemo<NavItem[]>(
-    () => [
-      { id: "home", href: "/staff/home", label: t("nav.home"), icon: <IconHome /> },
-      {
-        id: "requests",
-        href: "/staff/transfers",
-        label: t("nav.pendingPayments"),
-        icon: <IconTransfers />,
-      },
-      {
-        id: "calendar",
-        href: "/staff/calendar",
-        label: t("nav.calendar"),
-        icon: <IconCalendar />,
-      },
-      {
-        id: "reservations",
-        href: "/staff/reservations",
-        label: t("nav.allBookings"),
-        icon: <IconReservations />,
-      },
-      {
-        id: "messages",
-        href: "/staff/messages",
-        label: t("nav.messages"),
-        icon: <IconMessages />,
-      },
-    ],
+    () => [{ id: "home", href: "/staff/home", label: t("nav.home"), icon: <IconHome /> }],
     [t],
   );
 
   const navGroups = useMemo(
     () => [
       {
-        label: t("nav.otherIncome"),
+        label: t("nav.stay"),
+        items: [
+          {
+            id: "requests" as const,
+            href: "/staff/transfers",
+            label: t("nav.notifications"),
+            icon: <IconTransfers />,
+          },
+          {
+            id: "calendar" as const,
+            href: "/staff/calendar",
+            label: t("nav.calendar"),
+            icon: <IconCalendar />,
+          },
+          {
+            id: "reservations" as const,
+            href: "/staff/reservations",
+            label: t("nav.allBookings"),
+            icon: <IconReservations />,
+          },
+          {
+            id: "messages" as const,
+            href: "/staff/messages",
+            label: t("nav.messages"),
+            icon: <IconMessages />,
+          },
+        ],
+      },
+      {
+        label: t("nav.desk"),
         items: [
           { id: "bills" as const, href: "/staff/bills", label: t("nav.fnb"), icon: <IconFood /> },
           {
@@ -300,22 +303,16 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
             icon: <IconLaundry />,
           },
           {
-            id: "items" as const,
-            href: "/staff/items",
-            label: t("nav.menuItems"),
-            icon: <IconItems />,
-          },
-          {
-            id: "expenses" as const,
-            href: "/staff/expenses?view=day",
-            label: t("nav.expenses"),
-            icon: <IconExpenses />,
-          },
-          {
             id: "trips" as const,
             href: "/staff/trips",
             label: t("nav.trips"),
             icon: <IconTrips />,
+          },
+          {
+            id: "items" as const,
+            href: "/staff/items",
+            label: t("nav.sku"),
+            icon: <IconItems />,
           },
         ],
       },
@@ -323,6 +320,12 @@ export function StaffSidebar({ current }: StaffSidebarProps) {
         label: t("nav.money"),
         items: [
           { id: "sold" as const, href: "/staff/sold", label: t("nav.finance"), icon: <IconFinance /> },
+          {
+            id: "expenses" as const,
+            href: "/staff/expenses?view=day",
+            label: t("nav.expenses"),
+            icon: <IconExpenses />,
+          },
           {
             id: "promotions" as const,
             href: "/staff/promotions",

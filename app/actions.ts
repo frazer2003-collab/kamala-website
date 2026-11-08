@@ -543,6 +543,22 @@ export async function createBookingRequest(
 
     await Promise.all([seedGuestNoteMessage(booking), saveFoundVia(booking.id, formData)]);
 
+    after(() =>
+      import("@/lib/staff-desk-notifications")
+        .then(({ recordStaffDeskNotification }) =>
+          recordStaffDeskNotification({
+            kind: "booking_created",
+            title: `${booking.guest_name} · new booking`,
+            body: `${booking.room_name} · ${booking.arrival_date} → ${booking.departure_date}`,
+            bookingId: booking.id,
+            stayArrival: booking.arrival_date,
+            stayDeparture: booking.departure_date,
+            href: `/staff/transfers?booking=${encodeURIComponent(booking.id)}&view=inbox`,
+          }),
+        )
+        .catch(() => null),
+    );
+
     const stayTotal = resolveBookingStayTotal({
       depositAmount: booking.deposit_amount,
       estimatedTotal: booking.estimated_total,
@@ -1952,6 +1968,22 @@ export async function declineBookingRequest(formData: FormData) {
 
   const supabase = createStaffSupabaseClient();
   await supabase.from("booking_requests").delete().eq("id", bookingId);
+
+  after(() =>
+    import("@/lib/staff-desk-notifications")
+      .then(({ recordStaffDeskNotification }) =>
+        recordStaffDeskNotification({
+          kind: "booking_cancelled",
+          title: `${booking.guest_name} · cancelled`,
+          body: `${booking.room_name} · ${booking.arrival_date} → ${booking.departure_date}`,
+          bookingId,
+          stayArrival: booking.arrival_date,
+          stayDeparture: booking.departure_date,
+          href: "/staff/transfers",
+        }),
+      )
+      .catch(() => null),
+  );
 
   revalidatePath("/");
   revalidatePath("/staff");

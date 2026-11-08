@@ -38,12 +38,18 @@ import {
   type StaffNotificationFilter,
 } from "@/lib/staff-notifications";
 import {
+  listStaffDeskNotifications,
+} from "@/lib/staff-desk-notifications";
+import { syncActionNotifications } from "@/lib/staff-notification-sync";
+import { StaffNotificationsFeed } from "@/components/staff-notifications-feed";
+import {
   formatOverlapErrorMessage,
   parseOverlapDays,
 } from "@/lib/stay-overlap";
 import { formatBedSetup } from "@/lib/bed-setup";
 import { formatStayDateRange } from "@/lib/stay-dates";
 import type { BookingStatus } from "@/lib/content";
+import "@/app/staff-desk.css";
 
 const BookingChat = nextDynamic(
   () => import("@/components/booking-chat").then((module) => module.BookingChat),
@@ -202,6 +208,7 @@ export default async function StaffBookingsPage({
     booking?: string;
     filter?: string;
     view?: string;
+    open?: string;
     error?: string;
     detail?: string;
     overlap?: string;
@@ -218,6 +225,7 @@ export default async function StaffBookingsPage({
     booking: selectedBookingId,
     filter: filterParam,
     view: viewParam,
+    open: openNoticeId,
     error,
     detail: errorDetail,
     overlap,
@@ -226,7 +234,7 @@ export default async function StaffBookingsPage({
     refund,
   } = await searchParams;
   const inboxFilter = parseStaffNotificationFilter(filterParam);
-  const preferInboxView = viewParam === "inbox";
+  const preferInboxView = viewParam === "inbox" || viewParam === "actions";
 
   // Abandoned carts are purged by /api/cron/abandoned-checkouts (not on every
   // Transfers view) to keep Fluid Active CPU off the hot staff path.
@@ -256,10 +264,45 @@ export default async function StaffBookingsPage({
     selected = await getStaffBookingById(selectedBookingId);
   }
 
-  // Auto-open the top filtered row only — never invent a selection from outside
-  // the visible list (avoids closed / wrong-filter placeholders beside an empty inbox).
-  if (!preferInboxView && !selectedBookingId) {
+  // Notification feed is the default home for this page. Only auto-open a
+  // booking when staff explicitly open the actions inbox.
+  if (preferInboxView && !selectedBookingId) {
     selected ??= visibleOpen[0] ?? null;
+  }
+
+  if (!selectedBookingId && !preferInboxView) {
+    await syncActionNotifications(staffBookings.bookings);
+    const feed = await listStaffDeskNotifications();
+    return (
+      <StaffShell current="requests">
+        <section
+          className="staff-main staff-desk staff-desk--fill"
+          aria-labelledby="staff-title"
+        >
+          <header className="staff-header staff-header--compact staff-desk__header">
+            <div>
+              <h1 id="staff-title">{staffT(locale, "transfers.title")}</h1>
+              <p>
+                {staffT(locale, "transfers.feedHint")}
+                {" · "}
+                <Link href={buildStaffHref({ filter: "all", view: "inbox" })}>
+                  {staffT(locale, "transfers.openActions")}
+                </Link>
+              </p>
+            </div>
+          </header>
+          {feed.error ? (
+            <p className="form-message form-message--warning" role="status">
+              {feed.error}
+            </p>
+          ) : null}
+          <StaffNotificationsFeed
+            initialOpenId={openNoticeId ?? null}
+            notifications={feed.notifications}
+          />
+        </section>
+      </StaffShell>
+    );
   }
 
   const isPracticeMode =

@@ -201,9 +201,24 @@ export async function fulfillBookingDeposit({
     }
   }
 
+  await import("@/lib/staff-desk-notifications")
+    .then(({ recordStaffDeskNotification }) =>
+      recordStaffDeskNotification({
+        kind: "booking_confirmed",
+        title: `${booking.guest_name} · confirmed`,
+        body: `${booking.room_name} · ${booking.arrival_date} → ${booking.departure_date}`,
+        bookingId,
+        stayArrival: booking.arrival_date,
+        stayDeparture: booking.departure_date,
+        href: `/staff/calendar?booking=${encodeURIComponent(bookingId)}`,
+      }),
+    )
+    .catch(() => null);
+
   revalidatePath("/");
   revalidatePath("/staff");
   revalidatePath("/staff/calendar");
+  revalidatePath("/staff/transfers");
 
   return { ok: true as const, alreadyPaid: false as const, overbooked };
 }

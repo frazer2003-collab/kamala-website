@@ -35,6 +35,23 @@ export async function confirmStayChangeTransfer(formData: FormData) {
     )}.`,
   });
 
+  await import("@/lib/staff-desk-notifications")
+    .then(({ recordStaffDeskNotification }) =>
+      recordStaffDeskNotification({
+        kind: "booking_moved",
+        title: `${booking.guest_name} · stay moved`,
+        body: `${booking.room_name} · ${formatStayDateRange(
+          booking.arrival_date,
+          booking.departure_date,
+        )}`,
+        bookingId,
+        stayArrival: booking.arrival_date,
+        stayDeparture: booking.departure_date,
+        href: bookingHref(bookingId, "view=inbox"),
+      }),
+    )
+    .catch(() => null);
+
   redirect(bookingHref(bookingId, "stay-change=confirmed"));
 }
 

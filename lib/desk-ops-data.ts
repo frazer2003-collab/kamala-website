@@ -130,6 +130,15 @@ type LaundryRow = {
   updated_at: string;
 };
 
+export const DESK_TOUR_PAYMENT_STATUSES = [
+  "unpaid",
+  "stripe",
+  "qr",
+  "cash",
+] as const;
+
+export type DeskTourPaymentStatus = (typeof DESK_TOUR_PAYMENT_STATUSES)[number];
+
 type TourSaleRow = {
   id: string;
   property_id: string;
@@ -138,6 +147,11 @@ type TourSaleRow = {
   guests: number;
   staff_note: string | null;
   sale_date: string;
+  trip_date: string | null;
+  payment_status: string;
+  guest_name: string | null;
+  guest_phone: string | null;
+  guest_email: string | null;
   acted_by: string | null;
   created_at: string;
   updated_at: string;
@@ -292,6 +306,11 @@ export type DeskTourSale = {
   guests: number;
   staffNote: string | null;
   saleDate: string;
+  tripDate: string | null;
+  paymentStatus: DeskTourPaymentStatus;
+  guestName: string | null;
+  guestPhone: string | null;
+  guestEmail: string | null;
   actedBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -433,6 +452,18 @@ export function mapLaundryRow(row: LaundryRow): DeskLaundryRecord {
   };
 }
 
+function parseTourPaymentStatus(value: string | null | undefined): DeskTourPaymentStatus {
+  if (
+    value === "unpaid" ||
+    value === "stripe" ||
+    value === "qr" ||
+    value === "cash"
+  ) {
+    return value;
+  }
+  return "unpaid";
+}
+
 export function mapTourSaleRow(row: TourSaleRow): DeskTourSale {
   return {
     id: row.id,
@@ -441,6 +472,11 @@ export function mapTourSaleRow(row: TourSaleRow): DeskTourSale {
     guests: row.guests,
     staffNote: row.staff_note,
     saleDate: row.sale_date,
+    tripDate: row.trip_date,
+    paymentStatus: parseTourPaymentStatus(row.payment_status),
+    guestName: row.guest_name,
+    guestPhone: row.guest_phone,
+    guestEmail: row.guest_email,
     actedBy: row.acted_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -1039,17 +1075,40 @@ export async function listDeskTourSalesInRange(
     .from("desk_tour_sales")
     .select("*")
     .eq("property_id", DESK_PROPERTY_ID)
-    .gte("sale_date", fromIso)
-    .lte("sale_date", toIso)
+    .or(
+      `and(sale_date.gte.${fromIso},sale_date.lte.${toIso}),and(trip_date.gte.${fromIso},trip_date.lte.${toIso})`,
+    )
     .order("sale_date", { ascending: false })
     .order("created_at", { ascending: false });
   throwIfError(error);
-  const sales = (data ?? []).map(mapTourSaleRow);
+  const sales = (data ?? [])
+    .map(mapTourSaleRow)
+    .filter((sale) => {
+      const day = sale.tripDate || sale.saleDate;
+      return day >= fromIso && day <= toIso;
+    })
+    .sort((left, right) => {
+      const leftDay = left.tripDate || left.saleDate;
+      const rightDay = right.tripDate || right.saleDate;
+      return rightDay.localeCompare(leftDay) || right.createdAt.localeCompare(left.createdAt);
+    });
   return {
     sales,
     totalSatang: sales.reduce((sum, row) => sum + row.amountSatang, 0),
     count: sales.length,
   };
+}
+
+export async function getDeskTourSale(id: string): Promise<DeskTourSale | null> {
+  if (!hasStaffSupabaseConfig() || !id) return null;
+  const { data, error } = await client()
+    .from("desk_tour_sales")
+    .select("*")
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", id)
+    .maybeSingle();
+  throwIfError(error);
+  return data ? mapTourSaleRow(data) : null;
 }
 
 export async function saveDeskTourSale(input: {
@@ -1058,8 +1117,14 @@ export async function saveDeskTourSale(input: {
   guests: number;
   staffNote?: string | null;
   saleDate: string;
+  tripDate?: string | null;
+  paymentStatus?: DeskTourPaymentStatus;
+  guestName?: string | null;
+  guestPhone?: string | null;
+  guestEmail?: string | null;
   actedBy?: string | null;
 }): Promise<string> {
+  const tripDate = input.tripDate || input.saleDate;
   const { data, error } = await client()
     .from("desk_tour_sales")
     .insert({
@@ -1069,6 +1134,11 @@ export async function saveDeskTourSale(input: {
       guests: input.guests,
       staff_note: input.staffNote || null,
       sale_date: input.saleDate,
+      trip_date: tripDate,
+      payment_status: input.paymentStatus ?? "unpaid",
+      guest_name: input.guestName?.trim() || null,
+      guest_phone: input.guestPhone?.trim() || null,
+      guest_email: input.guestEmail?.trim() || null,
       acted_by: input.actedBy || null,
     })
     .select("id")
@@ -1076,6 +1146,21 @@ export async function saveDeskTourSale(input: {
   throwIfError(error);
   if (!data) throw new Error("Tour sale was not created.");
   return data.id;
+}
+
+export async function updateDeskTourSale(input: {
+  id: string;
+  paymentStatus: DeskTourPaymentStatus;
+}): Promise<void> {
+  const { error } = await client()
+    .from("desk_tour_sales")
+    .update({
+      payment_status: input.paymentStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("property_id", DESK_PROPERTY_ID)
+    .eq("id", input.id);
+  throwIfError(error);
 }
 
 export async function deleteDeskTourSale(id: string) {

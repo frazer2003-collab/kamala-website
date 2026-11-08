@@ -18,6 +18,24 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-08-nav-trips-notices",
+    date: "2026-11-08",
+    title: "Stay/Desk nav, trip slips, notification feed",
+    summary:
+      "Sidebar grouped Stay / Desk / Money / Site. Trips get payment status, trip dates, and a printable slip. Notifications are a real feed with date popups; Messages open in a chat popup.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff sidebar groups, trips slip, and notification cards",
+    },
+    changes: [
+      "Sidebar: Stay (Notifications, Calendar, All bookings, Messages), Desk (F&B, Laundry, Trips, SKU), Money, Site.",
+      "Menu renamed to SKU.",
+      "Trips & Tours: unpaid / Stripe / QR / cash, trip date, guest details, Print/PDF confirmation slip.",
+      "Notifications feed with unread cards and a popup showing stay dates; booking created / confirmed / cancelled / moved are logged.",
+      "Messages stays on its page and opens the chat in a popup.",
+    ],
+  },
+  {
     id: "2026-11-08-notifications-date-mode",
     date: "2026-11-08",
     title: "Notifications + All bookings date mode",
