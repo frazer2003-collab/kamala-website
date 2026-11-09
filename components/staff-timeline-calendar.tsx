@@ -36,7 +36,10 @@ import {
   pickLeadingVisibleCalendarDayHeadIso,
   type CalendarDay,
 } from "@/lib/calendar";
-import { formatCalendarGuestLabel } from "@/lib/bed-setup";
+import {
+  formatCalendarGuestLabel,
+  splitCalendarGuestLabel,
+} from "@/lib/bed-setup";
 import type { StaffBooking } from "@/lib/booking-requests";
 import { getStaffBookingKey } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
@@ -451,7 +454,17 @@ function DoorReservationRow({
               >
                 {bar.showLabel ? (
                   <>
-                    <strong>{bar.label}</strong>
+                    {(() => {
+                      const parts = splitCalendarGuestLabel(bar.label);
+                      return (
+                        <strong className="extranet-bar__guest">
+                          {parts.bedCode ? (
+                            <span className="extranet-bar__bed">{parts.bedCode}</span>
+                          ) : null}
+                          <span className="extranet-bar__name">{parts.guestName}</span>
+                        </strong>
+                      );
+                    })()}
                     {bar.compact || !bar.sublabel ? null : <span>{bar.sublabel}</span>}
                   </>
                 ) : (
@@ -667,7 +680,17 @@ function UnassignedReservationRow({
               >
                 {bar.showLabel ? (
                   <>
-                    <strong>{bar.label}</strong>
+                    {(() => {
+                      const parts = splitCalendarGuestLabel(bar.label);
+                      return (
+                        <strong className="extranet-bar__guest">
+                          {parts.bedCode ? (
+                            <span className="extranet-bar__bed">{parts.bedCode}</span>
+                          ) : null}
+                          <span className="extranet-bar__name">{parts.guestName}</span>
+                        </strong>
+                      );
+                    })()}
                     {bar.compact ? null : <span>{sublabel}</span>}
                   </>
                 ) : (

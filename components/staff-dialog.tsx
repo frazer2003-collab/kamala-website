@@ -32,7 +32,11 @@ export function StaffDialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
+  // Run once per open cycle. Do not re-focus when footer/children rerender
+  // (e.g. Clear bill → payment radios) — that steals focus back to the body.
   useEffect(() => {
     if (!open) return;
 
@@ -50,7 +54,7 @@ export function StaffDialog({
 
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -86,7 +90,7 @@ export function StaffDialog({
         previousFocus.focus();
       }
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   addBillLine,
   clearBill,
@@ -10,7 +11,6 @@ import {
   updateBill,
   updateBillLinePrice,
 } from "@/app/desk-actions";
-import { StaffDeskActionsMenu } from "@/components/staff-desk-actions-menu";
 import {
   DeskQuietForm,
   deskPendingLabel,
@@ -58,10 +58,13 @@ export function StaffDeskBills({
 }) {
   const { t, locale } = useStaffLocale();
   const router = useRouter();
+  const clearNoteId = useId();
+  const clearWarnId = useId();
   const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
   const [confirmClear, setConfirmClear] = useState(false);
   const [dialogBusy, setDialogBusy] = useState(false);
   const dialogBusyGate = useRef(false);
+  const firstPaymentRailRef = useRef<HTMLInputElement>(null);
   const [stockPick, setStockPick] = useState<{
     countedId: string;
     priceBaht: string;
@@ -140,6 +143,16 @@ export function StaffDeskBills({
     if ((selected?.lines.length ?? 0) === 0) setConfirmClear(false);
   }, [selected?.lines.length]);
 
+  useEffect(() => {
+    if (!confirmClear) return;
+    // After Clear bill, move focus to the payment choice in the footer —
+    // StaffDialog only focuses body fields on open, not on this step.
+    const frame = window.requestAnimationFrame(() => {
+      firstPaymentRailRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [confirmClear]);
+
   function softUrl(next: string) {
     window.history.replaceState(null, "", next);
   }
@@ -203,11 +216,9 @@ export function StaffDeskBills({
             ? `${bills.length} ${t("bills.countLabel")}`
             : t("bills.noOpen")}
         </span>
-        <StaffDeskActionsMenu label={t("common.actions")}>
-          <div className="staff-desk__actions-item staff-desk__actions-item--form">
-            {newBillForm}
-          </div>
-        </StaffDeskActionsMenu>
+        <div className="staff-desk__list-toolbar-actions">
+          {sellables.length > 0 ? newBillForm : null}
+        </div>
       </div>
 
       <div className="staff-desk__panel staff-desk__panel--fill">
@@ -259,8 +270,17 @@ export function StaffDeskBills({
         ) : (
           <div className="staff-desk__empty-state">
             <h2>{t("bills.noOpen")}</h2>
-            <p>{t("bills.createHint")}</p>
-            {newBillForm}
+            {sellables.length === 0 ? (
+              <p>
+                {t("bills.needMenuFirst")}{" "}
+                <Link className="staff-desk__quiet-link" href="/staff/items">
+                  {t("nav.items")}
+                </Link>
+              </p>
+            ) : (
+              <p>{t("bills.createHint")}</p>
+            )}
+            {sellables.length > 0 ? newBillForm : null}
           </div>
         )}
 
@@ -303,14 +323,25 @@ export function StaffDeskBills({
                       {" · "}
                       {formatSatang(billTotalSatang(selected.lines, sellables))}
                     </p>
-                    <p className="staff-desk__clear-confirm-note">
+                    <p
+                      className="staff-desk__clear-confirm-note"
+                      id={clearNoteId}
+                    >
                       {t("bills.clearConfirmNote")}
                     </p>
-                    <fieldset className="payment-collected-via">
+                    <fieldset
+                      aria-describedby={
+                        clearWithoutStockIds.length
+                          ? `${clearNoteId} ${clearWarnId}`
+                          : clearNoteId
+                      }
+                      className="payment-collected-via"
+                    >
                       <legend>{t("bills.paidHow")}</legend>
                       <label>
                         <input
                           name="payment-collected-via"
+                          ref={firstPaymentRailRef}
                           required
                           type="radio"
                           value="cash"
@@ -337,7 +368,11 @@ export function StaffDeskBills({
                       </label>
                     </fieldset>
                     {clearWithoutStockIds.length ? (
-                      <p className="staff-desk__clear-confirm-note" role="status">
+                      <p
+                        className="staff-desk__clear-confirm-note"
+                        id={clearWarnId}
+                        role="status"
+                      >
                         {t("bills.clearNoStockWarn").replace(
                           "{n}",
                           String(clearWithoutStockIds.length),

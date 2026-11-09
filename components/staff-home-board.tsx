@@ -215,7 +215,7 @@ export function StaffHomeBoard({
           <li key={thread.bookingId}>
             <Link
               className="staff-home-board__row"
-              href={`/staff/messages?booking=${encodeURIComponent(thread.bookingId)}`}
+              href={`/staff/messages?open=${encodeURIComponent(thread.bookingId)}`}
               prefetch={false}
             >
               <strong>{thread.guestName}</strong>

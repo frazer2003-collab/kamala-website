@@ -63,6 +63,10 @@ export default async function TripSlipPage({
             <dd>{formatDay(tripDay)}</dd>
           </div>
           <div>
+            <dt>Pickup time</dt>
+            <dd>{sale.pickupTime?.trim() || "—"}</dd>
+          </div>
+          <div>
             <dt>Guest</dt>
             <dd>{sale.guestName || "—"}</dd>
           </div>

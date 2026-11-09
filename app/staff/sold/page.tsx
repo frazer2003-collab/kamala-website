@@ -524,32 +524,39 @@ export default async function StaffSoldPage({
           </p>
         ))}
 
-        {noRoomsConfigured ? (
-          <p className="staff-sold__empty" role="status">
-            No room types yet.{" "}
-            <Link href="/staff/settings/rooms">Add rooms in Settings</Link> before
-            you can see what sold.
-          </p>
-        ) : (
-          <div className="staff-sold__books">
-            <article
-              className="staff-sold__business staff-sold__business--rooms"
-              aria-labelledby="rooms-business-title"
-            >
-              <header className="staff-sold__business-head">
-                <p className="staff-sold__account-chip">Business 1 · Rooms</p>
-                <h2
-                  className="staff-sold__business-title"
-                  id="rooms-business-title"
-                >
-                  Rooms
-                </h2>
-                <p className="staff-sold__business-lead">
-                  Lodging book for the rooms accountant — stays, each OTA,
-                  occupancy, and room payments. Not F&amp;B.
-                </p>
-              </header>
+        <div className="staff-sold__books">
+          <nav
+            aria-label="Finance books"
+            className="staff-sold__book-jump"
+          >
+            <a href="#rooms-business-title">Rooms</a>
+            <a href="#fnb-business-title">F&amp;B</a>
+            <a href="#owner-combined-title">Combined</a>
+          </nav>
+          <article
+            className="staff-sold__business staff-sold__business--rooms"
+            aria-labelledby="rooms-business-title"
+          >
+            <header className="staff-sold__business-head">
+              <p className="staff-sold__account-chip">Business 1 · Rooms</p>
+              <h2
+                className="staff-sold__business-title"
+                id="rooms-business-title"
+              >
+                Rooms
+              </h2>
+              <p className="staff-sold__business-lead">
+                Lodging book — stays, each OTA, occupancy, and room payments.
+              </p>
+            </header>
 
+            {noRoomsConfigured ? (
+              <p className="staff-sold__empty" role="status">
+                No room types yet.{" "}
+                <Link href="/staff/settings/rooms">Add rooms in Settings</Link>{" "}
+                before you can see what sold.
+              </p>
+            ) : (
               <div className="staff-sold__business-body">
                 <FinanceRangeOverview currency={currency} report={report} />
                 <div className="staff-sold__ledger">
@@ -705,63 +712,64 @@ export default async function StaffSoldPage({
               <FinanceAccounts currency={currency} report={report} />
                 </div>
               </div>
-            </article>
+            )}
+          </article>
 
-            <article
-              className="staff-sold__business staff-sold__business--fnb"
-              aria-labelledby="fnb-business-title"
-            >
-              <header className="staff-sold__business-head">
-                <p className="staff-sold__account-chip">Business 2 · F&amp;B</p>
-                <h2
-                  className="staff-sold__business-title"
-                  id="fnb-business-title"
-                >
-                  F&amp;B
-                </h2>
-                <p className="staff-sold__business-lead">
-                  Food &amp; drink book for the F&amp;B accountant — cleared
-                  bills, cost, and payment rails only. Not room stays.
-                </p>
-              </header>
-              <FinanceFnBSales
-                currency={currency}
-                economics={billEconomics}
-                fromIso={fromIso}
-                toIso={toIso}
-              />
-            </article>
+          <article
+            className="staff-sold__business staff-sold__business--fnb"
+            aria-labelledby="fnb-business-title"
+          >
+            <header className="staff-sold__business-head">
+              <p className="staff-sold__account-chip">Business 2 · F&amp;B</p>
+              <h2
+                className="staff-sold__business-title"
+                id="fnb-business-title"
+              >
+                F&amp;B
+              </h2>
+              <p className="staff-sold__business-lead">
+                Cleared bills, food cost, and payment rails only.
+              </p>
+            </header>
+            <FinanceFnBSales
+              currency={currency}
+              economics={billEconomics}
+              fromIso={fromIso}
+              toIso={toIso}
+            />
+          </article>
 
-            <article
-              className="staff-sold__business staff-sold__business--owner"
-              aria-labelledby="owner-combined-title"
-            >
-              <header className="staff-sold__business-head">
-                <p className="staff-sold__account-chip">Owner only</p>
-                <h2
-                  className="staff-sold__business-title"
-                  id="owner-combined-title"
-                >
-                  Combined view
-                </h2>
-                <p className="staff-sold__business-lead">
-                  Mixes Rooms + F&amp;B + Expenses. Not a book for either
-                  accountant — use only when you want one owner total.
-                </p>
-              </header>
-              <FinanceGrossProfit
-                breakdown={grossProfit}
-                clearedBillCount={billEconomics.clearedBillCount}
-                currency={currency}
-                expenseCount={expenseRange.count}
-                fromIso={fromIso}
-                monthHref={`/staff/sold?month=${month.fromIso.slice(0, 7)}&from=${month.fromIso}&to=${month.toIso}`}
-                toIso={toIso}
-                weekHref={`/staff/sold?month=${week.fromIso.slice(0, 7)}&from=${week.fromIso}&to=${week.toIso}`}
-              />
-            </article>
-          </div>
-        )}
+          <article
+            className="staff-sold__business staff-sold__business--owner"
+            aria-labelledby="owner-combined-title"
+          >
+            <header className="staff-sold__business-head">
+              <p className="staff-sold__account-chip">
+                Combined · authorized finance staff
+              </p>
+              <h2
+                className="staff-sold__business-title"
+                id="owner-combined-title"
+              >
+                Combined view
+              </h2>
+              <p className="staff-sold__business-lead">
+                Rooms + F&amp;B + Expenses in one total — not either
+                accountant&apos;s book.
+              </p>
+            </header>
+            <FinanceGrossProfit
+              breakdown={grossProfit}
+              clearedBillCount={billEconomics.clearedBillCount}
+              currency={currency}
+              expenseCount={expenseRange.count}
+              fromIso={fromIso}
+              monthHref={`/staff/sold?month=${month.fromIso.slice(0, 7)}&from=${month.fromIso}&to=${month.toIso}`}
+              toIso={toIso}
+              weekHref={`/staff/sold?month=${week.fromIso.slice(0, 7)}&from=${week.fromIso}&to=${week.toIso}`}
+            />
+          </article>
+        </div>
       </section>
     </StaffShell>
   );

@@ -193,6 +193,20 @@ export function StaffDeskItems({
               </tbody>
             </table>
           </div>
+        ) : sellables.some((item) => !isHiddenMenuCategory(item.category)) ? (
+          <div className="staff-desk__empty-state">
+            <h2>{t("items.noMatches")}</h2>
+            <button
+              className="button button--secondary"
+              onClick={() => {
+                setQuery("");
+                setCategory("");
+              }}
+              type="button"
+            >
+              {t("items.clearFilters")}
+            </button>
+          </div>
         ) : (
           <div className="staff-desk__empty-state">
             <h2>{t("items.empty")}</h2>

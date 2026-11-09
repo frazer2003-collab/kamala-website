@@ -197,6 +197,9 @@ export function StaffCombo({
     }
   }
 
+  const activeOptionId =
+    open && filtered[active] ? `${listId}-opt-${filtered[active]!.value}` : undefined;
+
   const list =
     open && mounted && placement ? (
       <ul
@@ -213,38 +216,40 @@ export function StaffCombo({
         }}
       >
         {emptyLabel && !query.trim() ? (
-          <li>
-            <button
-              className="staff-combo__option"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => choose(null)}
-              type="button"
-            >
-              {emptyLabel}
-            </button>
+          <li
+            aria-selected={false}
+            className="staff-combo__option"
+            id={`${listId}-opt-empty`}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => choose(null)}
+            role="option"
+          >
+            {emptyLabel}
           </li>
         ) : null}
         {filtered.length ? (
           filtered.map((option, index) => (
-            <li key={option.value}>
-              <button
-                aria-selected={index === active}
-                className={[
-                  "staff-combo__option",
-                  index === active ? "staff-combo__option--active" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => choose(option)}
-                type="button"
-              >
-                {option.label}
-              </button>
+            <li
+              aria-selected={index === active}
+              className={[
+                "staff-combo__option",
+                index === active ? "staff-combo__option--active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              id={`${listId}-opt-${option.value}`}
+              key={option.value}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => choose(option)}
+              role="option"
+            >
+              {option.label}
             </li>
           ))
         ) : (
-          <li className="staff-combo__empty">No matches</li>
+          <li className="staff-combo__empty" role="status">
+            No matches
+          </li>
         )}
       </ul>
     ) : null;
@@ -256,6 +261,7 @@ export function StaffCombo({
         <input name={name} required={required} type="hidden" value={value} />
       ) : null}
       <input
+        aria-activedescendant={activeOptionId}
         aria-autocomplete="list"
         aria-controls={listId}
         aria-expanded={open}

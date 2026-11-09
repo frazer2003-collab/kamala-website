@@ -347,6 +347,10 @@ export function StaffDeskTrips({
                 </dd>
               </div>
               <div>
+                <dt>{t("trips.pickupTime")}</dt>
+                <dd>{selected.pickupTime?.trim() || "—"}</dd>
+              </div>
+              <div>
                 <dt>{t("trips.soldDate")}</dt>
                 <dd>{formatDay(selected.saleDate, locale)}</dd>
               </div>

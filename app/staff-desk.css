@@ -892,10 +892,6 @@
 .staff-desk__empty-state {
   margin: 0;
   padding: var(--space-5);
-  color: var(--color-muted);
-}
-
-.staff-desk__empty-state {
   display: grid;
   justify-items: start;
   gap: var(--space-3);
@@ -904,6 +900,14 @@
 .staff-desk__empty-state h2,
 .staff-desk__empty-state p {
   margin: 0;
+}
+
+.staff-desk__empty-state h2 {
+  color: var(--color-ink);
+}
+
+.staff-desk__empty-state p {
+  color: var(--color-muted);
 }
 
 .staff-desk__strip {
@@ -1216,6 +1220,8 @@
   border-radius: 0.55rem;
   background: transparent;
   color: inherit;
+  cursor: pointer;
+  text-align: left;
   font: inherit;
   text-align: left;
   cursor: pointer;

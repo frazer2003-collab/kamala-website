@@ -1284,7 +1284,29 @@ button.extranet-reservations__day {
 }
 
 .extranet-bar strong {
-  font-size: 0.7rem;
+  font-size: 0.78rem;
+}
+
+.extranet-bar__guest {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.28rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.extranet-bar__bed {
+  flex: 0 0 auto;
+  overflow: visible;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.extranet-bar__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .extranet-bar--compact {
@@ -1293,7 +1315,7 @@ button.extranet-reservations__day {
 }
 
 .extranet-bar--compact strong {
-  font-size: 0.64rem;
+  font-size: 0.72rem;
 }
 
 .extranet-bar span {

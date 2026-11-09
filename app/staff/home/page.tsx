@@ -95,7 +95,7 @@ export default async function StaffHomePage() {
         {latestPatch ? (
           <Link
             className="staff-home-patch"
-            href="/staff/whats-new"
+            href="/staff/home/patch-notes"
             prefetch={false}
           >
             <span className="staff-home-patch__eyebrow">What’s new</span>

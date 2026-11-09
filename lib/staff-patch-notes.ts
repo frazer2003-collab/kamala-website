@@ -18,6 +18,23 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-09-desk-qa-fixes",
+    date: "2026-11-09",
+    title: "Home links, Finance books, trip pickup, stock hint",
+    summary:
+      "Needs reply opens the right message thread. Finance keeps F&B visible without rooms. Trip slips show pickup time.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Staff desk fixes for Home, Finance, trips, and stock",
+    },
+    changes: [
+      "Home Needs reply opens that guest’s Messages thread; What’s new goes to patch notes.",
+      "Finance F&B and Combined stay visible even if room types are missing.",
+      "Trip slip and sale detail show pickup time; stock movements ask for change by (+/−).",
+      "Clear bill payment choices are larger; New bill stays on the bills toolbar.",
+    ],
+  },
+  {
     id: "2026-11-09-calendar-bed-prefix",
     date: "2026-11-09",
     title: "Bed code on calendar bars",

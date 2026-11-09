@@ -287,13 +287,14 @@ export function StaffDeskStock({
                   </select>
                 </div>
                 <div className="field-pair">
-                  <label htmlFor="movement-quantity">{t("common.quantity")}</label>
+                  <label htmlFor="movement-quantity">{t("stock.changeBy")}</label>
                   <input
                     id="movement-quantity"
                     name="quantity"
                     required
                     type="number"
                   />
+                  <p className="field-help">{t("stock.changeByHint")}</p>
                 </div>
               </div>
               <div className="field-pair">

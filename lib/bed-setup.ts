@@ -47,6 +47,21 @@ export function formatCalendarGuestLabel(
   return `${formatBedSetupCode(bedSetup)} ${name}`;
 }
 
+/** Split a calendar label into bed code + guest for truncation-safe bars. */
+export function splitCalendarGuestLabel(label: string): {
+  bedCode: "TWN" | "DBL" | null;
+  guestName: string;
+} {
+  const match = /^(TWN|DBL)\s+(.+)$/.exec(label.trim());
+  if (!match) {
+    return { bedCode: null, guestName: label.trim() || "Guest" };
+  }
+  return {
+    bedCode: match[1] as "TWN" | "DBL",
+    guestName: match[2]!.trim() || "Guest",
+  };
+}
+
 /** Staff create always needs a bed code; any room type may store it. */
 export function resolveStaffBedSetup(
   requested: string | null | undefined,

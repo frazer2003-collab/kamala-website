@@ -89,6 +89,27 @@
   width: min(100%, 68rem);
 }
 
+.staff-sold__book-jump {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding: var(--space-2) 0;
+  background: color-mix(in srgb, var(--color-canvas, #faf8f7) 92%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.staff-sold__book-jump a {
+  color: var(--color-maroon-deep, var(--color-maroon));
+  font-size: 0.88rem;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
 .staff-sold__business {
   display: grid;
   gap: var(--space-5);
@@ -123,6 +144,7 @@
 
 .staff-sold__business-title {
   margin: 0;
+  scroll-margin-top: 3rem;
   color: var(--color-ink);
   font-size: clamp(1.35rem, 2.4vw, 1.7rem);
   font-weight: 800;
