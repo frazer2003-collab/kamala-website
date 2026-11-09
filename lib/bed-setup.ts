@@ -35,6 +35,18 @@ export function formatBedSetupCode(setup: BedSetup): string {
   return setup === "twin" ? "TWN" : "DBL";
 }
 
+/** Calendar bar / list label: `TWN Guest` so staff see bed without opening the stay. */
+export function formatCalendarGuestLabel(
+  guestName: string,
+  bedSetup?: BedSetup | null,
+): string {
+  const name = guestName.trim() || "Guest";
+  if (!bedSetup) {
+    return name;
+  }
+  return `${formatBedSetupCode(bedSetup)} ${name}`;
+}
+
 /** Staff create always needs a bed code; any room type may store it. */
 export function resolveStaffBedSetup(
   requested: string | null | undefined,

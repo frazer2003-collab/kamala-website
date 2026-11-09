@@ -18,6 +18,21 @@ export type StaffPatchNote = {
  */
 export const STAFF_PATCH_NOTES: StaffPatchNote[] = [
   {
+    id: "2026-11-09-calendar-bed-prefix",
+    date: "2026-11-09",
+    title: "Bed code on calendar bars",
+    summary:
+      "Calendar stays show TWN or DBL before the guest name so you can see bed type without opening the stay.",
+    image: {
+      src: "/staff/patch-notes/desk-ops.jpg",
+      alt: "Calendar stay bar with TWN or DBL before the guest name",
+    },
+    changes: [
+      "Door bars and day stay lists prefix TWN / DBL when a bed type is set.",
+      "Demo menu items, stock, bills, laundry, and tour sales were cleared — live bookings stay.",
+    ],
+  },
+  {
     id: "2026-11-08-finance-two-businesses",
     date: "2026-11-08",
     title: "Finance: Rooms vs F&B as two businesses",

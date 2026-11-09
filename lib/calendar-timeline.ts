@@ -8,6 +8,7 @@ import {
   getStaffBookingKey,
   isInventoryHoldBooking,
 } from "@/lib/booking-requests";
+import { formatCalendarGuestLabel } from "@/lib/bed-setup";
 import type { Room } from "@/lib/content";
 import type { StaffRoomBlock } from "@/lib/room-blocks";
 import { getStaffRoomBlockKey, isChannelReservation } from "@/lib/room-blocks";
@@ -266,11 +267,12 @@ export function buildRoomTimelineBars({
 
     const needsRoom = stayNeedsRoomAssignment(booking, knownUnitIds);
     const hold = inventoryHoldLabel(booking);
+    const label = formatCalendarGuestLabel(booking.guest, booking.bedSetup);
     bars.push({
       key: `booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
-      label: booking.guest,
+      label,
       sublabel: needsRoom
         ? hold
           ? `Needs room # · ${hold}`
@@ -354,11 +356,12 @@ export function buildUnitTimelineBars({
     }
 
     const hold = inventoryHoldLabel(booking);
+    const label = formatCalendarGuestLabel(booking.guest, booking.bedSetup);
     bars.push({
       key: `unit-booking-${getStaffBookingKey(booking)}-${range.startCol}`,
       itemKey: getStaffBookingKey(booking),
       kind: "booking",
-      label: booking.guest,
+      label,
       sublabel: hold ?? "",
       colorKey: normalizeGuestColorKey(booking.guest),
       showLabel: true,

@@ -15,6 +15,7 @@ function booking(partial: {
   arrivalDate: string;
   departureDate: string;
   roomUnitId?: string | null;
+  bedSetup?: "double" | "twin" | null;
 }): StaffBooking {
   return {
     id: partial.id,
@@ -39,7 +40,7 @@ function booking(partial: {
     staffNote: "",
     roomUnitId: partial.roomUnitId ?? "unit-1",
     roomNumber: "1",
-    bedSetup: null,
+    bedSetup: partial.bedSetup ?? null,
     databaseId: partial.id,
     bankTransferClaimed: false,
     stripePaymentIntentId: null,
@@ -144,5 +145,23 @@ describe("buildUnitTimelineBars same-day turnover lanes", () => {
 
     assert.equal(bars[0]?.compact, true);
     assert.equal(bars[0]?.span, 1);
+  });
+
+  it("prefixes bed code before the guest name on door bars", () => {
+    const bars = buildUnitTimelineBars({
+      bookings: [
+        booking({
+          id: "twin",
+          guest: "Somchai",
+          arrivalDate: "2026-07-01",
+          departureDate: "2026-07-03",
+          bedSetup: "twin",
+        }),
+      ],
+      calendarDays: days,
+    });
+
+    assert.equal(bars[0]?.label, "TWN Somchai");
+    assert.equal(bars[0]?.colorKey.includes("somchai"), true);
   });
 });

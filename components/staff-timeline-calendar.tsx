@@ -36,6 +36,7 @@ import {
   pickLeadingVisibleCalendarDayHeadIso,
   type CalendarDay,
 } from "@/lib/calendar";
+import { formatCalendarGuestLabel } from "@/lib/bed-setup";
 import type { StaffBooking } from "@/lib/booking-requests";
 import { getStaffBookingKey } from "@/lib/booking-requests";
 import type { Room } from "@/lib/content";
@@ -147,7 +148,7 @@ function bookingDropStay(booking: StaffBooking) {
     roomUnitId: booking.roomUnitId,
     arrivalDate: booking.arrivalDate,
     departureDate: booking.departureDate,
-    label: booking.guest,
+    label: formatCalendarGuestLabel(booking.guest, booking.bedSetup),
   };
 }
 

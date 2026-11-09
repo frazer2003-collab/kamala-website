@@ -5,6 +5,7 @@ import {
   defaultBedSetupForRoom,
   formatBedSetup,
   formatBedSetupCode,
+  formatCalendarGuestLabel,
   getAllowedBedSetups,
   parseBedSetup,
   resolveBedSetupForRoom,
@@ -13,6 +14,13 @@ import {
 } from "./bed-setup";
 
 describe("bed setup by room", () => {
+  it("prefixes TWN/DBL on calendar guest labels", () => {
+    assert.equal(formatCalendarGuestLabel("Ana", "twin"), "TWN Ana");
+    assert.equal(formatCalendarGuestLabel("Ana", "double"), "DBL Ana");
+    assert.equal(formatCalendarGuestLabel("Ana", null), "Ana");
+    assert.equal(formatCalendarGuestLabel("  ", "twin"), "TWN Guest");
+  });
+
   it("offers king or twin only on Superior (courtyard), with no silent default", () => {
     assert.deepEqual(getAllowedBedSetups("courtyard"), ["double", "twin"]);
     assert.equal(roomOffersBedSetupChoice("courtyard"), true);

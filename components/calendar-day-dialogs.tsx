@@ -8,6 +8,7 @@ import {
   getStaffBookingKey,
   type StaffBooking,
 } from "@/lib/booking-requests";
+import { formatCalendarGuestLabel } from "@/lib/bed-setup";
 import type { Room } from "@/lib/content";
 import type { PropertyCurrency } from "@/lib/currency";
 import { getNightlyRateDetails, type RoomPromotionRate } from "@/lib/pricing";
@@ -128,7 +129,7 @@ export function CalendarDayDialogs({
         return {
           key: getStaffBookingKey(booking),
           href: `/staff/calendar?month=${monthKey}&from=${fromIso}&to=${toIso}&booking=${encodeURIComponent(getStaffBookingKey(booking))}`,
-          label: booking.guest,
+          label: formatCalendarGuestLabel(booking.guest, booking.bedSetup),
           sublabel: hold ? `${roomBit} · ${hold}` : `${roomBit} · direct`,
         };
       }),
